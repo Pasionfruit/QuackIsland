@@ -10,15 +10,13 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-const out = join(mkdtempSync(join(tmpdir(), 'polyland-')), 'engine.mjs')
-await build({
-  entryPoints: ['src/games/smash/engine/engine.ts'],
-  bundle: true,
-  format: 'esm',
-  platform: 'neutral',
-  outfile: out,
-  logLevel: 'error',
-})
+const tmp = mkdtempSync(join(tmpdir(), 'polyland-'))
+const out = join(tmp, 'engine.mjs')
+const charsOut = join(tmp, 'characters.mjs')
+const bundle = (entry, outfile) =>
+  build({ entryPoints: [entry], bundle: true, format: 'esm', platform: 'neutral', outfile, logLevel: 'error' })
+await bundle('src/games/smash/engine/engine.ts', out)
+await bundle('src/games/smash/engine/characters.ts', charsOut)
 
 const { SmashEngine } = await import(pathToFileURL(out).href)
 
@@ -335,6 +333,105 @@ console.log('\nPolyland Smash - engine smoke test\n')
   } finally {
     server.kill()
   }
+}
+
+// 15. Roster integrity: every fighter is complete and sanely tuned.
+{
+  const { ROSTER } = await import(pathToFileURL(charsOut).href)
+  const ids = new Set()
+  let bad = 0
+  const problems = []
+  for (const c of ROSTER) {
+    if (ids.has(c.id)) problems.push(`duplicate id ${c.id}`)
+    ids.add(c.id)
+    for (const key of ['jab', 'side', 'up', 'down', 'special']) {
+      const m = c.moves[key]
+      if (!m) {
+        problems.push(`${c.id} is missing ${key}`)
+        continue
+      }
+      if (m.startup < 2 || m.startup > 16) problems.push(`${c.id}.${key} startup ${m.startup}`)
+      if (m.damage < 1 || m.damage > 20) problems.push(`${c.id}.${key} damage ${m.damage}`)
+      if (m.hit.w <= 0 || m.hit.h <= 0) problems.push(`${c.id}.${key} has an empty hitbox`)
+      // A hitbox you cannot reach is a dead move.
+      if (m.hit.x - m.hit.w / 2 > c.hurt.w) problems.push(`${c.id}.${key} hitbox is detached`)
+    }
+    if (!c.moves.special.helplessAfter) problems.push(`${c.id} special is not a recovery`)
+    if (c.jumps < 2) problems.push(`${c.id} cannot double jump`)
+    if (c.height < 20 || c.height > 42) problems.push(`${c.id} height ${c.height}`)
+    if (c.hurt.h < 20) problems.push(`${c.id} hurtbox is tiny`)
+  }
+  bad = problems.length
+  check('every fighter is complete and in range', bad === 0, problems.slice(0, 4).join('; '))
+  check('the roster has twelve fighters', ROSTER.length === 12, `${ROSTER.length}`)
+  check('both animals and campers are present', ROSTER.some((c) => c.art.kind === 'critter') && ROSTER.some((c) => c.art.kind === 'camper'))
+}
+
+// 16. Every fighter can actually fight: land a hit and get home from off-stage.
+{
+  const { ROSTER } = await import(pathToFileURL(charsOut).href)
+  const cantHit = []
+  const cantRecover = []
+
+  for (const c of ROSTER) {
+    // Can they connect a jab on a neighbour?
+    const eng = newMatch({ chars: [c.id, 'basil'] })
+    const [a, b] = eng.fighters
+    a.x = 200
+    b.x = 200 + (c.hurt.w + b.def.hurt.w) / 2 + 2
+    a.facing = 1
+    run(eng, 1, held({ attack: true }))
+    run(eng, c.moves.jab.startup + c.moves.jab.active + 2, idle)
+    if (b.percent <= 0) cantHit.push(c.id)
+
+    // Dropped off the left edge at head height, can they get back?
+    const r = newMatch({ chars: [c.id, 'basil'] })
+    const me = r.fighters[0]
+    me.x = 70
+    me.y = 220
+    me.vy = 1
+    me.grounded = false
+    me.jumpsLeft = c.jumps
+    let home = false
+    for (let i = 0; i < 240 && !home; i++) {
+      // Hold right, jump early, then use the recovery special.
+      const wantJump = i > 6 && i < 60 && i % 12 < 3 && me.jumpsLeft > 0
+      const wantSpecial = i >= 60 && i < 200 && i % 24 < 3 && me.state !== 'helpless'
+      run(r, 1, held({ right: true, up: wantJump, special: wantSpecial }))
+      if (me.grounded && me.x > 96) home = true
+      if (me.state === 'dead') break
+    }
+    if (!home) cantRecover.push(c.id)
+  }
+
+  check('every fighter can land a jab point blank', cantHit.length === 0, cantHit.join(', '))
+  check('every fighter can recover from off the ledge', cantRecover.length === 0, cantRecover.join(', '))
+}
+
+// 17. No fighter is wildly out of line on raw killing power.
+{
+  const { ROSTER } = await import(pathToFileURL(charsOut).href)
+  const kb = []
+  for (const c of ROSTER) {
+    const eng = newMatch({ chars: [c.id, 'basil'] })
+    const [a, b] = eng.fighters
+    a.x = 200
+    b.x = 200 + (c.hurt.w + b.def.hurt.w) / 2
+    a.facing = 1
+    b.percent = 100
+    const m = c.moves.side
+    run(eng, 1, held({ attack: true, right: true }))
+    run(eng, m.startup + m.active + 1, idle)
+    kb.push([c.id, Math.hypot(b.vx, b.vy)])
+  }
+  const values = kb.map(([, v]) => v).filter((v) => v > 0)
+  const lo = Math.min(...values)
+  const hi = Math.max(...values)
+  check(
+    'side attacks all land within a sane power band',
+    values.length === ROSTER.length && hi < lo * 2.2,
+    kb.map(([id, v]) => `${id}:${v.toFixed(1)}`).join(' '),
+  )
 }
 
 console.log(failures === 0 ? '\nAll checks passed.\n' : `\n${failures} check(s) failed.\n`)

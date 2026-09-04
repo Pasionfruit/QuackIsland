@@ -1,4 +1,4 @@
-import { clamp, rand } from '../../../lib/pixel'
+import { clamp, rand } from '../../../lib/draw'
 import { charById } from './characters'
 import { LAKESIDE_CAMP, MAIN_PLATFORM, type Platform, type Stage } from './stage'
 import type { CharDef, FighterState, MoveDef, MoveId, Phase, RawInput } from './types'

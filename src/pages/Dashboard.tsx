@@ -1,10 +1,10 @@
 import { PAL } from '../art/palette'
 import { campfire, pine } from '../art/props'
-import { PixelCanvas } from '../components/PixelCanvas'
+import { SceneCanvas } from '../components/SceneCanvas'
 import { ART_H, ART_W, GAMES, type GameEntry } from '../games/registry'
 import { ROSTER, drawChar } from '../games/smash/engine/characters'
 import type { CharDef } from '../games/smash/engine/types'
-import { px } from '../lib/pixel'
+import { rect } from '../lib/draw'
 
 const STATUS_LABEL: Record<GameEntry['status'], string> = {
   live: 'Playable',
@@ -30,7 +30,7 @@ function GameCard({ game, onOpen }: { game: GameEntry; onOpen: (id: string) => v
       aria-disabled={!playable}
     >
       <div className="card__art">
-        <PixelCanvas width={ART_W} height={ART_H} draw={game.art} fluid />
+        <SceneCanvas width={ART_W} height={ART_H} draw={game.art} fluid />
         <span className={`chip card__badge ${playable ? 'chip--live' : 'chip--soon'}`}>
           <span className="dot" /> {STATUS_LABEL[game.status]}
         </span>
@@ -65,13 +65,13 @@ function StatBar({ label, value }: { label: string; value: number }) {
 function FighterCard({ def }: { def: CharDef }) {
   return (
     <div className="fighter">
-      <PixelCanvas
+      <SceneCanvas
         width={48}
         height={48}
         draw={(ctx, frame) => {
-          px(ctx, 0, 0, 48, 48, '#cfdfd8')
-          px(ctx, 0, 30, 48, 18, PAL.grass)
-          px(ctx, 0, 30, 48, 2, PAL.grassLit)
+          rect(ctx, 0, 0, 48, 48, '#cfdfd8')
+          rect(ctx, 0, 30, 48, 18, PAL.grass)
+          rect(ctx, 0, 30, 48, 2, PAL.grassLit)
           pine(ctx, 7, 32, 16)
           pine(ctx, 41, 32, 13)
           const bob = Math.sin(frame * 0.06) * 1
@@ -147,14 +147,14 @@ export function Dashboard({ onOpen }: { onOpen: (id: string) => void }) {
             </div>
           </div>
           <div className="firestrip">
-            <PixelCanvas
+            <SceneCanvas
               width={150}
               height={40}
               fluid
               draw={(ctx, frame) => {
-                px(ctx, 0, 0, 150, 40, '#dfe6d9')
-                px(ctx, 0, 28, 150, 12, PAL.grass)
-                px(ctx, 0, 28, 150, 2, PAL.grassLit)
+                rect(ctx, 0, 0, 150, 40, '#dfe6d9')
+                rect(ctx, 0, 28, 150, 12, PAL.grass)
+                rect(ctx, 0, 28, 150, 2, PAL.grassLit)
                 pine(ctx, 14, 30, 22)
                 pine(ctx, 134, 30, 18)
                 campfire(ctx, 75, 32, frame, 0.9)

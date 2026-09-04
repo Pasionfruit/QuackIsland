@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PAL } from '../../art/palette'
 import { pine } from '../../art/props'
-import { PixelCanvas } from '../../components/PixelCanvas'
+import { SceneCanvas } from '../../components/SceneCanvas'
 import { CONTROL_HINTS, Keyboard, packInput, unpackInput } from '../../lib/input'
-import { px } from '../../lib/pixel'
+import { rect } from '../../lib/draw'
 import { NetClient, defaultServerUrl } from '../../net/client'
 import { normalizeCode, type PeerInfo, type SmashPayload } from '../../net/protocol'
 import { ROSTER, charById, drawChar } from './engine/characters'
@@ -33,21 +33,38 @@ type Role = 'host' | 'guest'
 
 // ---------------------------------------------------------------- portraits
 
-function Portrait({ def, size = 60 }: { def: CharDef; size?: number }) {
+function Portrait({
+  def,
+  size = 64,
+  animate = true,
+  scenery = true,
+}: {
+  def: CharDef
+  size?: number
+  animate?: boolean
+  scenery?: boolean
+}) {
   return (
-    <PixelCanvas
+    <SceneCanvas
       width={size}
       height={size}
+      animate={animate}
       draw={(ctx, frame) => {
-        px(ctx, 0, 0, size, size, '#cfdfd8')
-        px(ctx, 0, size * 0.62, size, size, PAL.grass)
-        px(ctx, 0, size * 0.62, size, 2, PAL.grassLit)
-        pine(ctx, size * 0.14, size * 0.66, size * 0.34)
-        pine(ctx, size * 0.86, size * 0.66, size * 0.28)
-        const bob = Math.sin(frame * 0.06) * 1
-        drawChar(ctx, def, size / 2, size * 0.88 + bob, {
+        const g = ctx.createLinearGradient(0, 0, 0, size)
+        g.addColorStop(0, '#cfe1e4')
+        g.addColorStop(1, '#e6e7d3')
+        ctx.fillStyle = g
+        ctx.fillRect(0, 0, size, size)
+        rect(ctx, 0, size * 0.72, size, size * 0.28, PAL.grass)
+        rect(ctx, 0, size * 0.72, size, size * 0.05, PAL.grassLit)
+        if (scenery) {
+          pine(ctx, size * 0.12, size * 0.76, size * 0.3)
+          pine(ctx, size * 0.9, size * 0.76, size * 0.24)
+        }
+        const bob = Math.sin(frame * 0.06) * 0.8
+        drawChar(ctx, def, size / 2, size * 0.9 + bob, {
           facing: 1,
-          scale: (size * 0.74) / def.height,
+          scale: (size * 0.72) / def.height,
           phase: frame,
           shadow: true,
         })
@@ -131,24 +148,33 @@ function Slot({
         </span>
         <span className="chip">{subtitle}</span>
       </div>
+
       <div className="picks">
         {ROSTER.map((c) => (
           <button
             key={c.id}
             type="button"
-            className={`pick ${c.id === picked ? 'pick--on' : ''}`}
+            className={['pick', c.id === picked ? 'pick--on' : ''].join(' ')}
             style={c.id === picked ? { color: c.theme.dark } : undefined}
             onClick={() => onPick?.(c.id)}
             disabled={locked}
+            title={c.name + ' - ' + c.title}
           >
-            <Portrait def={c} size={60} />
+            <Portrait def={c} size={52} animate={c.id === picked} scenery={false} />
             <span className="pick__name">{c.name}</span>
-            <span style={{ fontSize: 9, letterSpacing: '0.1em' }}>{c.title.toUpperCase()}</span>
           </button>
         ))}
       </div>
-      <StatBars def={def} />
-      <p className="blurb">{def.blurb}</p>
+
+      <div className="chosen">
+        <Portrait def={def} size={78} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="chosen__title">{def.title}</div>
+          <h3 style={{ color: def.theme.dark }}>{def.name}</h3>
+          <StatBars def={def} />
+          <p className="blurb">{def.blurb}</p>
+        </div>
+      </div>
     </div>
   )
 }
@@ -487,14 +513,14 @@ function ModeScreen({
       <div className="modegrid">
         <div className="panel">
           <div className="panel__title">Play here</div>
-          <PixelCanvas
+          <SceneCanvas
             width={150}
             height={54}
             fluid
             draw={(ctx, frame) => {
-              px(ctx, 0, 0, 150, 54, '#cfdfd8')
-              px(ctx, 0, 38, 150, 16, PAL.grass)
-              px(ctx, 0, 38, 150, 2, PAL.grassLit)
+              rect(ctx, 0, 0, 150, 54, '#cfdfd8')
+              rect(ctx, 0, 38, 150, 16, PAL.grass)
+              rect(ctx, 0, 38, 150, 2, PAL.grassLit)
               pine(ctx, 16, 40, 24)
               pine(ctx, 132, 40, 20)
               drawChar(ctx, ROSTER[0], 62, 44, {

@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react'
+import { SUPERSAMPLE, setupScene } from '../lib/draw'
 
-export interface PixelCanvasProps {
-  /** Backing-store size in real pixels; CSS size is this times `scale`. */
+export interface SceneCanvasProps {
+  /** Size in world units; the backing store is this times the supersample. */
   width: number
   height: number
+  /** CSS size multiplier when not fluid. */
   scale?: number
   /** Called every animation frame (or once, when `animate` is false). */
   draw: (ctx: CanvasRenderingContext2D, frame: number) => void
@@ -11,9 +13,14 @@ export interface PixelCanvasProps {
   className?: string
   /** Stretch to the container width instead of using `scale`. */
   fluid?: boolean
+  ss?: number
 }
 
-export function PixelCanvas({
+/**
+ * A canvas that draws in world units at a higher device resolution, so the
+ * flat-shaded polygons stay clean at any display size.
+ */
+export function SceneCanvas({
   width,
   height,
   scale = 1,
@@ -21,7 +28,8 @@ export function PixelCanvas({
   animate = true,
   className,
   fluid = false,
-}: PixelCanvasProps) {
+  ss = SUPERSAMPLE,
+}: SceneCanvasProps) {
   const ref = useRef<HTMLCanvasElement | null>(null)
   const drawRef = useRef(draw)
   drawRef.current = draw
@@ -29,9 +37,7 @@ export function PixelCanvas({
   useEffect(() => {
     const canvas = ref.current
     if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    ctx.imageSmoothingEnabled = false
+    const ctx = setupScene(canvas, width, height, ss)
 
     let frame = 0
     let raf = 0
@@ -43,18 +49,16 @@ export function PixelCanvas({
     }
     tick()
     return () => cancelAnimationFrame(raf)
-  }, [width, height, animate])
+  }, [width, height, animate, ss])
 
   return (
     <canvas
       ref={ref}
-      width={width}
-      height={height}
       className={className}
       style={
         fluid
-          ? { width: '100%', height: 'auto', imageRendering: 'pixelated' }
-          : { width: width * scale, height: height * scale, imageRendering: 'pixelated' }
+          ? { width: '100%', height: 'auto', display: 'block' }
+          : { width: width * scale, height: height * scale, display: 'block' }
       }
     />
   )
