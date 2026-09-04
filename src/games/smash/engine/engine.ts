@@ -1,8 +1,16 @@
 import { clamp, rand } from '../../../lib/pixel'
 import { charById } from './characters'
-import { MAIN_PLATFORM, PRISM_POINT, type Platform, type Stage } from './stage'
+import { LAKESIDE_CAMP, MAIN_PLATFORM, type Platform, type Stage } from './stage'
 import type { CharDef, FighterState, MoveDef, MoveId, Phase, RawInput } from './types'
 import { emptyInput } from './types'
+import {
+  MOVES,
+  PHASES,
+  STATES,
+  round2,
+  type FighterSnap,
+  type Snapshot,
+} from '../../../net/protocol'
 
 export const TICK = 1 / 60
 
@@ -69,20 +77,20 @@ export interface MatchConfig {
 }
 
 export const DEFAULT_CONFIG: MatchConfig = {
-  chars: ['vex', 'grum'],
+  chars: ['basil', 'juniper'],
   stocks: 3,
   cpu: true,
   cpuLevel: 2,
 }
 
-const PLAYER_COLORS = ['#5ac8ff', '#ff5f6d']
+const PLAYER_COLORS = ['#4f8fbf', '#e0794f']
 const INTRO_FRAMES = 190
 const KO_FREEZE = 44
 const RESPAWN_FRAMES = 54
 const RESPAWN_INVULN = 110
 
 export class SmashEngine {
-  readonly stage: Stage = PRISM_POINT
+  readonly stage: Stage = LAKESIDE_CAMP
   config: MatchConfig
   fighters: [Fighter, Fighter]
   particles: Particle[] = []
@@ -248,7 +256,7 @@ export class SmashEngine {
       if (f.hitstun <= 0) f.state = f.grounded ? 'idle' : 'air'
       this.integrate(f)
       if (Math.abs(f.vx) + Math.abs(f.vy) > 5 && this.frame % 3 === 0) {
-        this.spark(f.x, f.y - def.hurt.h / 2, 1, '#ffffff', 0.6)
+        this.spark(f.x, f.y - def.hurt.h / 2, 1, '#fdf6e6', 0.6)
       }
       return
     }
@@ -347,7 +355,7 @@ export class SmashEngine {
           life: 16,
           maxLife: 16,
           size: 1,
-          color: def.colors.accent,
+          color: def.theme.primary,
           gravity: 0.02,
         })
       }
@@ -390,7 +398,7 @@ export class SmashEngine {
               life: 18,
               maxLife: 18,
               size: 1,
-              color: i % 2 ? def.colors.accent : '#ffffff',
+              color: i % 2 ? def.theme.primary : '#fdf6e6',
               gravity: 0.03,
             })
           }
@@ -541,19 +549,7 @@ export class SmashEngine {
     this.shake = Math.max(this.shake, mv.shake ?? 2)
     this.flash = Math.max(this.flash, Math.min(6, 2 + mv.damage * 0.2))
 
-    for (let i = 0; i < 8 + mv.damage; i++) {
-      this.particles.push({
-        x: cx + rand(-4, 4),
-        y: cy + rand(-4, 4),
-        vx: rand(-2.6, 2.6) + victim.vx * 0.22,
-        vy: rand(-2.6, 2.6) + victim.vy * 0.22,
-        life: 14 + Math.random() * 12,
-        maxLife: 26,
-        size: Math.random() < 0.3 ? 2 : 1,
-        color: i % 3 === 0 ? '#ffffff' : i % 3 === 1 ? attacker.def.colors.accent : attacker.def.colors.body,
-        gravity: 0.05,
-      })
-    }
+    this.hitBurst(cx, cy, mv.damage, attacker.def.theme, victim.vx, victim.vy)
 
     this.texts.push({
       x: cx,
@@ -598,20 +594,7 @@ export class SmashEngine {
     this.shake = 14
     this.flash = 10
 
-    for (let i = 0; i < 40; i++) {
-      const a = (i / 40) * Math.PI * 2
-      this.particles.push({
-        x: clamp(f.x, 8, 472),
-        y: clamp(f.y - 10, 8, 262),
-        vx: Math.cos(a) * rand(1, 4.5),
-        vy: Math.sin(a) * rand(1, 4.5),
-        life: 26 + Math.random() * 16,
-        maxLife: 42,
-        size: Math.random() < 0.4 ? 2 : 1,
-        color: i % 4 === 0 ? '#ffffff' : f.def.colors.body,
-        gravity: 0.02,
-      })
-    }
+    this.koBurst(f.x, f.y, f.def.theme.primary)
 
     this.phase = 'ko'
     this.phaseTimer = KO_FREEZE
@@ -695,10 +678,158 @@ export class SmashEngine {
         life: 14,
         maxLife: 14,
         size: 1,
-        color: '#cfe4f2',
+        color: '#e8dcc4',
         gravity: 0.03,
       })
     }
+  }
+
+  // ---------------------------------------------------------- shared visuals
+
+  /** Sparks, damage number and shake for one connected hit. */
+  private hitBurst(
+    cx: number,
+    cy: number,
+    damage: number,
+    theme: { primary: string; dark: string },
+    vx = 0,
+    vy = 0,
+  ): void {
+    for (let i = 0; i < 8 + damage; i++) {
+      this.particles.push({
+        x: cx + rand(-4, 4),
+        y: cy + rand(-4, 4),
+        vx: rand(-2.6, 2.6) + vx * 0.22,
+        vy: rand(-2.6, 2.6) + vy * 0.22,
+        life: 14 + Math.random() * 12,
+        maxLife: 26,
+        size: Math.random() < 0.3 ? 2 : 1,
+        color: i % 3 === 0 ? '#fdf6e6' : i % 3 === 1 ? theme.primary : theme.dark,
+        gravity: 0.05,
+      })
+    }
+  }
+
+  private koBurst(x: number, y: number, color: string): void {
+    for (let i = 0; i < 40; i++) {
+      const a = (i / 40) * Math.PI * 2
+      this.particles.push({
+        x: clamp(x, 8, 472),
+        y: clamp(y - 10, 8, 262),
+        vx: Math.cos(a) * rand(1, 4.5),
+        vy: Math.sin(a) * rand(1, 4.5),
+        life: 26 + Math.random() * 16,
+        maxLife: 42,
+        size: Math.random() < 0.4 ? 2 : 1,
+        color: i % 4 === 0 ? '#fdf6e6' : color,
+        gravity: 0.02,
+      })
+    }
+  }
+
+  // ------------------------------------------------------------- networking
+
+  /** Everything a guest needs to draw this frame. */
+  snapshot(): Snapshot {
+    return {
+      m: [
+        this.frame,
+        PHASES.indexOf(this.phase),
+        this.phaseTimer,
+        this.bannerTimer,
+        this.winner ?? -1,
+      ],
+      banner: this.banner,
+      a: this.fighters.map(
+        (f): FighterSnap => [
+          round2(f.x),
+          round2(f.y),
+          round2(f.vx),
+          round2(f.vy),
+          f.facing,
+          STATES.indexOf(f.state),
+          f.move ? MOVES.indexOf(f.move.id) : -1,
+          f.moveFrame,
+          f.percent,
+          f.stocks,
+          f.hitstun,
+          f.hitlag,
+          f.invuln,
+          f.grounded ? 1 : 0,
+          round2(f.spin),
+          round2(f.squash),
+          f.animTimer,
+        ],
+      ),
+    }
+  }
+
+  /**
+   * Guest side: adopt the host's state, then rebuild the local juice
+   * (sparks, dust, screen shake) by diffing against the previous frame, so
+   * both players see the same hit without sending particles over the wire.
+   */
+  applySnapshot(s: Snapshot): void {
+    const [frame, phaseIdx, phaseTimer, bannerTimer, winner] = s.m
+    this.frame = frame
+    this.phase = PHASES[phaseIdx] ?? 'fight'
+    this.phaseTimer = phaseTimer
+    this.banner = s.banner
+    this.bannerTimer = bannerTimer
+    this.winner = winner < 0 ? null : winner
+
+    for (let i = 0; i < this.fighters.length; i++) {
+      const f = this.fighters[i]
+      const d = s.a[i]
+      if (!d) continue
+      const wasPercent = f.percent
+      const wasStocks = f.stocks
+      const wasGrounded = f.grounded
+
+      f.x = d[0]
+      f.y = d[1]
+      f.vx = d[2]
+      f.vy = d[3]
+      f.facing = d[4] >= 0 ? 1 : -1
+      f.state = STATES[d[5]] ?? 'idle'
+      f.move = d[6] >= 0 ? f.def.moves[MOVES[d[6]]] : null
+      f.moveFrame = d[7]
+      f.percent = d[8]
+      f.stocks = d[9]
+      f.hitstun = d[10]
+      f.hitlag = d[11]
+      f.invuln = d[12]
+      f.grounded = d[13] === 1
+      f.spin = d[14]
+      f.squash = d[15]
+      f.animTimer = d[16]
+
+      if (f.percent > wasPercent) {
+        const dmg = f.percent - wasPercent
+        const other = this.fighters[i === 0 ? 1 : 0]
+        this.hitBurst(f.x, f.y - f.def.hurt.h * 0.6, dmg, other.def.theme, f.vx, f.vy)
+        this.texts.push({
+          x: f.x,
+          y: f.y - f.def.hurt.h * 0.6 - 10,
+          vy: -0.55,
+          life: 44,
+          text: `${dmg}`,
+          color: SmashEngine.playerColor(other.index),
+          scale: 1,
+        })
+        this.shake = Math.max(this.shake, Math.min(6, 2 + dmg * 0.25))
+        this.flash = Math.max(this.flash, Math.min(6, 2 + dmg * 0.2))
+      }
+      if (f.stocks < wasStocks) {
+        this.koBurst(f.x, f.y, f.def.theme.primary)
+        this.shake = 14
+        this.flash = 10
+      }
+      if (!wasGrounded && f.grounded) this.dust(f.x, f.y, 4)
+    }
+
+    this.updateEffects()
+    this.version++
   }
 
   // --------------------------------------------------------------------- CPU

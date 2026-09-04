@@ -66,8 +66,8 @@ export default function App() {
       )}
 
       <footer className="footer">
-        <span>Polyland // pixel arcade for polygon people</span>
-        <span>Local build - no server, no accounts</span>
+        <span>Polyland // a little camp of games</span>
+        <span>Two on one keyboard, or host a room for friends</span>
       </footer>
     </div>
   )

@@ -1,6 +1,9 @@
-import { fillPoly, px, regularPoly, shapePoly, transformPts, type Pt } from '../lib/pixel'
-import { ROSTER } from './smash/engine/characters'
-import { drawBody } from './smash/engine/render'
+import { drawAvatar } from '../art/avatar'
+import { CHEF, FISHER, HIKER, HOODIE } from '../art/cast'
+import { PAL } from '../art/palette'
+import { bush, campfire, cat, pine, seagull, tent } from '../art/props'
+import { fillPoly, px } from '../lib/pixel'
+import { ROSTER, drawChar } from './smash/engine/characters'
 
 export type GameStatus = 'live' | 'prototype' | 'concept'
 
@@ -18,169 +21,152 @@ export interface GameEntry {
 export const ART_W = 160
 export const ART_H = 90
 
-function skyBands(ctx: CanvasRenderingContext2D, colors: string[]): void {
-  const h = ART_H / colors.length
+function skyBands(ctx: CanvasRenderingContext2D, colors: string[], to = ART_H): void {
+  const h = to / colors.length
   colors.forEach((c, i) => px(ctx, 0, Math.round(i * h), ART_W, Math.ceil(h) + 1, c))
 }
 
-function stars(ctx: CanvasRenderingContext2D, frame: number, n = 26): void {
-  for (let i = 0; i < n; i++) {
-    const x = (i * 37) % ART_W
-    const y = (i * 53) % 46
-    const twinkle = (frame + i * 9) % 90 < 60
-    if (twinkle) px(ctx, x, y, 1, 1, i % 4 === 0 ? '#ffffff' : '#bdb2ff')
-  }
-}
+const DAY = ['#b3d4de', '#c6dde0', '#dae3d4', '#ece4c8']
 
 const SMASH: GameEntry = {
   id: 'smash',
   title: 'Polyland Smash',
   genre: 'Platform fighter',
-  players: '1-2 local',
+  players: '1-2 local, 2 online',
   status: 'live',
   blurb:
-    'Knock the other polygon off the map. Percent-based knockback, stocks, air dodging physics and two very different fighters.',
+    'A friendly scrap on the bluff above the lake. Percent-based knockback, stocks, and two campers who fight very differently.',
   art: (ctx, frame) => {
-    skyBands(ctx, ['#0c0a22', '#221450', '#54205f', '#9b2f5d', '#e46d5c'])
-    stars(ctx, frame)
-    const sun = transformPts(regularPoly(16, Math.PI / 16), { x: 80, y: 58, sx: 22, sy: 22 })
-    fillPoly(ctx, sun, '#ffc978')
-    px(ctx, 58, 56, 44, 2, '#9b2f5d')
-    px(ctx, 58, 62, 44, 3, '#9b2f5d')
-    px(ctx, 58, 69, 44, 4, '#9b2f5d')
-
-    // Island.
-    px(ctx, 30, 66, 100, 3, '#d7e6f5')
-    px(ctx, 30, 69, 100, 10, '#414f74')
+    skyBands(ctx, DAY, 58)
+    seagull(ctx, 26 + ((frame * 0.2) % 130), 16 + Math.sin(frame * 0.04) * 3, frame)
+    for (let i = 0; i < 12; i++) pine(ctx, 4 + i * 14, 58, 14 + ((i * 7) % 9))
+    px(ctx, 0, 58, ART_W, ART_H - 58, PAL.water)
+    px(ctx, 0, 58, ART_W, 1, '#c6dbdc')
+    for (let i = 0; i < 7; i++) {
+      px(ctx, (i * 27 + Math.floor(frame * 0.3)) % ART_W, 64 + (i % 4) * 6, 4, 1, '#cfe4e2')
+    }
+    // Bluff.
+    px(ctx, 20, 62, 120, 3, PAL.grassLit)
+    px(ctx, 20, 65, 120, 3, PAL.grass)
+    px(ctx, 20, 68, 120, 10, PAL.dirt)
     fillPoly(
       ctx,
       [
-        { x: 30, y: 79 },
-        { x: 130, y: 79 },
-        { x: 106, y: 90 },
-        { x: 54, y: 90 },
+        { x: 20, y: 78 },
+        { x: 140, y: 78 },
+        { x: 124, y: 88 },
+        { x: 38, y: 86 },
       ],
-      '#242c46',
+      PAL.dirtShade,
     )
-    px(ctx, 44, 50, 26, 2, '#9b7bff')
-    px(ctx, 92, 44, 26, 2, '#9b7bff')
-
-    const bob = Math.sin(frame * 0.06) * 1.5
-    drawBody(ctx, ROSTER[0], 58, 66 + bob, { facing: 1, scale: 0.85 })
-    drawBody(ctx, ROSTER[1], 104, 66 - bob, { facing: -1, scale: 0.85 })
-
-    // Clash spark in the middle.
-    const k = (frame % 40) / 40
-    for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * Math.PI * 2 + frame * 0.12
-      const r = 4 + k * 8
-      px(ctx, 81 + Math.cos(a) * r, 54 + Math.sin(a) * r, 2, 2, i % 2 ? '#ffe066' : '#ffffff')
+    tent(ctx, 36, 62, 22)
+    campfire(ctx, 124, 62, frame, 0.7)
+    const bob = Math.sin(frame * 0.06) * 1.2
+    drawChar(ctx, ROSTER[0], 68, 62 + bob, { facing: 1, scale: 0.82, phase: frame })
+    drawChar(ctx, ROSTER[1], 100, 62 - bob, { facing: -1, scale: 0.78, phase: frame })
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 + frame * 0.1
+      const r = 4 + ((frame % 30) / 30) * 5
+      px(ctx, 84 + Math.cos(a) * r, 50 + Math.sin(a) * r, 2, 2, i % 2 ? '#fff6dd' : PAL.fire)
     }
   },
 }
 
-const DRIFT: GameEntry = {
-  id: 'drift',
-  title: 'Prism Drift',
-  genre: 'Kart racer',
-  players: '1-4 local',
+const TRAIL: GameEntry = {
+  id: 'trail',
+  title: 'Trail Rally',
+  genre: 'Downhill race',
+  players: '1-2 local, 4 online',
   status: 'concept',
-  blurb: 'Corner-cutting polygon karts on neon circuits. Drift charge, shell physics, and a rubber-band rival AI.',
+  blurb:
+    'Freewheel down a forest trail with the whole camp. Pick your line, hop the roots, do not end up in the creek.',
   art: (ctx, frame) => {
-    skyBands(ctx, ['#0c0a22', '#1c1247', '#3d1a5c', '#6d2360'])
-    stars(ctx, frame, 18)
-    px(ctx, 0, 50, ART_W, 40, '#1b1638')
+    skyBands(ctx, DAY, 46)
+    for (let i = 0; i < 14; i++) pine(ctx, 2 + i * 12, 50, 18 + ((i * 5) % 10))
+    px(ctx, 0, 50, ART_W, ART_H - 50, PAL.grass)
+    // Winding trail.
+    for (let y = 50; y < ART_H; y++) {
+      const t = (y - 50) / (ART_H - 50)
+      const cx = 80 + Math.sin(t * 2.2) * 26
+      const w = 10 + t * 44
+      px(ctx, cx - w / 2, y, w, 1, t > 0.5 ? PAL.dirt : PAL.dirtShade)
+    }
+    for (let i = 0; i < 5; i++) {
+      const t = ((frame * 0.01 + i * 0.2) % 1)
+      const y = 52 + t * 34
+      px(ctx, 80 + Math.sin(t * 2.2) * 26 - 8, y, 3, 2, PAL.rock)
+    }
+    const bob = Math.sin(frame * 0.2) * 1
+    drawAvatar(ctx, HOODIE, 74, 82 + bob, { facing: 1, height: 26, pose: 'jump', phase: frame })
+    px(ctx, 64, 82, 22, 2, '#4a4740')
+    px(ctx, 66, 84, 5, 5, '#33302b')
+    px(ctx, 80, 84, 5, 5, '#33302b')
+  },
+}
+
+const CATCH: GameEntry = {
+  id: 'catch',
+  title: 'Catch of the Day',
+  genre: 'Fishing / collecting',
+  players: '1-2 local, 4 online',
+  status: 'concept',
+  blurb:
+    'Sit on the dock, read the ripples, fill the record book. Nobody loses, the fish just get bigger.',
+  art: (ctx, frame) => {
+    skyBands(ctx, ['#b9d6dd', '#cfe0dd', '#e6e2cd'], 40)
+    for (let i = 0; i < 12; i++) pine(ctx, 4 + i * 14, 42, 12 + ((i * 3) % 8))
+    px(ctx, 0, 42, ART_W, ART_H - 42, PAL.water)
+    px(ctx, 0, 42, ART_W, 1, '#c6dbdc')
     for (let i = 0; i < 9; i++) {
-      const y = 52 + i * 4
-      const inset = i * 5
-      px(ctx, 12 + inset, y, ART_W - 24 - inset * 2, 2, i % 2 ? '#2f2a63' : '#3b3480')
+      px(ctx, (i * 21 + Math.floor(frame * 0.24)) % ART_W, 50 + (i % 5) * 7, 5, 1, '#cfe4e2')
     }
-    for (let i = 0; i < 6; i++) {
-      const x = ((frame * 1.6 + i * 30) % 180) - 20
-      px(ctx, x, 60 + (i % 3) * 8, 12, 2, '#ffe066')
-    }
-    const bob = Math.sin(frame * 0.14) * 1
-    drawBody(ctx, ROSTER[0], 60, 74 + bob, { facing: 1, scale: 0.8 })
-    px(ctx, 48, 74, 26, 3, '#ff5f6d')
-    px(ctx, 50, 77, 4, 3, '#37317a')
-    px(ctx, 68, 77, 4, 3, '#37317a')
-    drawBody(ctx, ROSTER[1], 104, 68 - bob, { facing: 1, scale: 0.7 })
-    px(ctx, 94, 68, 24, 3, '#4fd6ff')
+    // Dock.
+    px(ctx, 8, 62, 74, 3, PAL.wood)
+    px(ctx, 8, 65, 74, 2, PAL.woodShade)
+    for (let i = 0; i < 4; i++) px(ctx, 14 + i * 20, 67, 3, 12, PAL.woodShade)
+    drawAvatar(ctx, FISHER, 52, 62, { facing: 1, height: 30, pose: 'idle', phase: frame })
+    // Line and float.
+    const dip = Math.sin(frame * 0.08) * 1.5
+    px(ctx, 84, 46, 1, 22 + dip, '#8a8378')
+    px(ctx, 82, 68 + dip, 5, 3, '#d0664f')
+    cat(ctx, 22, 62, 10, 1, frame)
+    seagull(ctx, 120, 24 + Math.sin(frame * 0.05) * 4, frame, -1)
   },
 }
 
-const TESSERA: GameEntry = {
-  id: 'tessera',
-  title: 'Tessera',
-  genre: 'Falling-block puzzle',
-  players: '1-2 versus',
+const KITCHEN: GameEntry = {
+  id: 'kitchen',
+  title: 'Camp Kitchen',
+  genre: 'Co-op cooking',
+  players: '2-4 local or online',
   status: 'concept',
-  blurb: 'Tile the plane with polygon pieces. Chain clears to bury your opponent in garbage shapes.',
+  blurb:
+    'One pan, one fire, four hungry campers. Chop, pass and plate before the light goes.',
   art: (ctx, frame) => {
-    px(ctx, 0, 0, ART_W, ART_H, '#0d0b26')
-    for (let x = 46; x <= 114; x += 10) px(ctx, x, 8, 1, 74, '#1e1a45')
-    for (let y = 8; y <= 82; y += 10) px(ctx, 46, y, 68, 1, '#1e1a45')
-    const colors = ['#4fd6ff', '#ff8a3d', '#ffe066', '#6ee7a8', '#ff5f6d']
-    const stack = [4, 2, 5, 3, 1, 3, 6]
-    stack.forEach((h, col) => {
-      for (let i = 0; i < h; i++) {
-        const pts = transformPts(regularPoly(3 + ((col + i) % 4), 0.4), {
-          x: 51 + col * 10,
-          y: 77 - i * 10,
-          sx: 4.6,
-          sy: 4.6,
-        })
-        shapePoly(ctx, pts, colors[(col + i) % colors.length], '#0a0820', 1)
-      }
-    })
-    const drop = 8 + ((frame * 0.9) % 40)
-    const falling = transformPts(regularPoly(5, frame * 0.04), { x: 91, y: drop, sx: 5.5, sy: 5.5 })
-    shapePoly(ctx, falling, '#ffe066', '#0a0820', 1)
-    px(ctx, 46, 6, 68, 1, '#554ec2')
-  },
-}
-
-const DUNGEON: GameEntry = {
-  id: 'dungeon',
-  title: 'Dungeon of Angles',
-  genre: 'Roguelike crawler',
-  players: '1 player',
-  status: 'concept',
-  blurb: 'Descend the tessellated depths. Every floor is generated, every enemy is a shape with a grudge.',
-  art: (ctx, frame) => {
-    px(ctx, 0, 0, ART_W, ART_H, '#0a0918')
-    px(ctx, 16, 22, 128, 56, '#191634')
-    for (let x = 16; x < 144; x += 16) px(ctx, x, 22, 1, 56, '#221d47')
-    for (let y = 22; y < 78; y += 14) px(ctx, 16, y, 128, 1, '#221d47')
-    px(ctx, 16, 22, 128, 3, '#2f2860')
-    // Torches.
-    for (const tx of [28, 132]) {
-      const flick = (frame + tx) % 20 < 10 ? 1 : 0
-      px(ctx, tx, 30, 2, 6, '#6b5a2a')
-      px(ctx, tx - 1, 26 - flick, 4, 5, '#ffb347')
-      px(ctx, tx, 24 - flick, 2, 3, '#ffe066')
+    skyBands(ctx, ['#9db9c4', '#c0cfc6', '#e2d9bd', '#eecfa2'], 54)
+    for (let i = 0; i < 11; i++) pine(ctx, 6 + i * 15, 56, 16 + ((i * 4) % 8))
+    px(ctx, 0, 56, ART_W, ART_H - 56, PAL.grass)
+    px(ctx, 0, 56, ART_W, 2, PAL.grassLit)
+    // Prep table.
+    px(ctx, 44, 70, 72, 4, PAL.wood)
+    px(ctx, 44, 74, 72, 2, PAL.woodShade)
+    px(ctx, 48, 76, 3, 12, PAL.woodShade)
+    px(ctx, 110, 76, 3, 12, PAL.woodShade)
+    campfire(ctx, 26, 78, frame, 0.9)
+    drawAvatar(ctx, CHEF, 66, 70, { facing: 1, height: 30, pose: 'swingDown', phase: frame })
+    drawAvatar(ctx, HIKER, 104, 70, { facing: -1, height: 32, pose: 'idle', phase: frame })
+    // Steam.
+    for (let i = 0; i < 4; i++) {
+      const t = ((frame * 0.02 + i * 0.25) % 1)
+      px(ctx, 84 + Math.sin((frame + i * 20) * 0.06) * 3, 68 - t * 16, 2, 2, PAL.cloud)
     }
-    const bob = Math.sin(frame * 0.07) * 1.5
-    drawBody(ctx, ROSTER[0], 56, 66 + bob, { facing: 1, scale: 0.8 })
-    const slime = transformPts(regularPoly(5, -Math.PI / 2), { x: 104, y: 60, sx: 9, sy: 8 })
-    shapePoly(ctx, slime, '#6ee7a8', '#123a2a', 1)
-    px(ctx, 101, 58, 2, 2, '#123a2a')
-    px(ctx, 107, 58, 2, 2, '#123a2a')
-    // Loot.
-    const gleam = frame % 60 < 30
-    const chest: Pt[] = [
-      { x: 76, y: 40 },
-      { x: 88, y: 40 },
-      { x: 88, y: 48 },
-      { x: 76, y: 48 },
-    ]
-    fillPoly(ctx, chest, gleam ? '#ffe066' : '#c9a642')
-    px(ctx, 76, 43, 12, 1, '#7a5c14')
+    bush(ctx, 140, 76, 18)
   },
 }
 
-export const GAMES: GameEntry[] = [SMASH, DRIFT, TESSERA, DUNGEON]
+export const GAMES: GameEntry[] = [SMASH, TRAIL, CATCH, KITCHEN]
 
 export function gameById(id: string): GameEntry | undefined {
   return GAMES.find((g) => g.id === id)
 }
+

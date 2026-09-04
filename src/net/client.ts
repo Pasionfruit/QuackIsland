@@ -1,0 +1,146 @@
+import { DEFAULT_PORT, type ClientMessage, type PeerInfo, type ServerMessage, type Slot } from './protocol'
+
+export type NetStatus = 'idle' | 'connecting' | 'lobby' | 'closed' | 'error'
+
+export interface NetEvents {
+  onStatus?: (status: NetStatus, detail?: string) => void
+  onRoom?: (code: string, slot: Slot) => void
+  onPeers?: (players: PeerInfo[]) => void
+  onPayload?: (payload: unknown, from: Slot) => void
+}
+
+/** Where the relay lives by default: the machine that served this page. */
+export function defaultServerUrl(): string {
+  const host = typeof window === 'undefined' ? 'localhost' : window.location.hostname || 'localhost'
+  return `ws://${host}:${DEFAULT_PORT}`
+}
+
+/**
+ * A thin wrapper over one WebSocket. It knows about rooms and slots; anything
+ * game-specific rides along inside `send`.
+ */
+export class NetClient {
+  private ws: WebSocket | null = null
+  private events: NetEvents = {}
+  private queue: ClientMessage[] = []
+
+  status: NetStatus = 'idle'
+  code = ''
+  slot: Slot = -1
+  peers: PeerInfo[] = []
+  url = ''
+
+  get isHost(): boolean {
+    return this.slot === 0
+  }
+
+  get connected(): boolean {
+    return this.ws?.readyState === WebSocket.OPEN
+  }
+
+  on(events: NetEvents): void {
+    this.events = { ...this.events, ...events }
+  }
+
+  private setStatus(status: NetStatus, detail?: string): void {
+    this.status = status
+    this.events.onStatus?.(status, detail)
+  }
+
+  private connect(url: string, first: ClientMessage): void {
+    this.close()
+    this.url = url
+    this.setStatus('connecting')
+    let ws: WebSocket
+    try {
+      ws = new WebSocket(url)
+    } catch {
+      this.setStatus('error', `Could not open ${url}`)
+      return
+    }
+    this.ws = ws
+    this.queue = [first]
+
+    ws.onopen = () => {
+      for (const m of this.queue) ws.send(JSON.stringify(m))
+      this.queue = []
+    }
+    ws.onmessage = (ev) => {
+      let msg: ServerMessage
+      try {
+        msg = JSON.parse(String(ev.data)) as ServerMessage
+      } catch {
+        return
+      }
+      this.handle(msg)
+    }
+    ws.onerror = () => {
+      this.setStatus('error', 'Could not reach the Polyland server. Is `npm run server` running?')
+    }
+    ws.onclose = () => {
+      if (this.status !== 'error') this.setStatus('closed', 'Connection closed')
+      this.ws = null
+    }
+  }
+
+  private handle(msg: ServerMessage): void {
+    switch (msg.t) {
+      case 'hosted':
+      case 'joined':
+        this.code = msg.code
+        this.slot = msg.slot
+        this.setStatus('lobby')
+        this.events.onRoom?.(msg.code, msg.slot)
+        break
+      case 'peers':
+        this.peers = msg.players
+        this.events.onPeers?.(msg.players)
+        break
+      case 'relay':
+        this.events.onPayload?.(msg.payload, msg.from)
+        break
+      case 'closed':
+        this.setStatus('closed', msg.reason)
+        break
+      case 'error':
+        this.setStatus('error', msg.message)
+        break
+      default:
+        break
+    }
+  }
+
+  host(url: string, name: string, game = 'smash', max = 4): void {
+    this.connect(url, { t: 'host', game, name, max })
+  }
+
+  join(url: string, code: string, name: string): void {
+    this.connect(url, { t: 'join', code, name })
+  }
+
+  /** Sends a game payload to everyone else in the room. */
+  send(payload: unknown): void {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ t: 'relay', payload }))
+    }
+  }
+
+  close(): void {
+    const ws = this.ws
+    this.ws = null
+    if (ws) {
+      ws.onclose = null
+      ws.onerror = null
+      ws.onmessage = null
+      try {
+        ws.close()
+      } catch {
+        /* already gone */
+      }
+    }
+    this.code = ''
+    this.slot = -1
+    this.peers = []
+    if (this.status !== 'idle') this.setStatus('idle')
+  }
+}

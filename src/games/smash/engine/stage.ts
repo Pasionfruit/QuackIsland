@@ -1,4 +1,4 @@
-/** Stage geometry for PRISM POINT, the first Polyland arena. */
+/** Stage geometry for LAKESIDE CAMP, the first Polyland arena. */
 
 export const VIEW_W = 480
 export const VIEW_H = 270
@@ -22,21 +22,22 @@ export interface Stage {
   respawn: { x: number; y: number }
 }
 
-export const PRISM_POINT: Stage = {
-  id: 'prism-point',
-  name: 'Prism Point',
+export const LAKESIDE_CAMP: Stage = {
+  id: 'lakeside-camp',
+  name: 'Lakeside Camp',
   platforms: [
-    { x1: 100, x2: 380, top: 206, depth: 30, solid: true },
-    { x1: 142, x2: 214, top: 156, depth: 7, solid: false },
-    { x1: 266, x2: 338, top: 156, depth: 7, solid: false },
-    { x1: 204, x2: 276, top: 108, depth: 7, solid: false },
+    { x1: 96, x2: 384, top: 202, depth: 32, solid: true },
+    { x1: 138, x2: 214, top: 152, depth: 6, solid: false },
+    { x1: 266, x2: 342, top: 152, depth: 6, solid: false },
+    { x1: 202, x2: 278, top: 104, depth: 6, solid: false },
   ],
   blast: { left: -86, right: 566, top: -130, bottom: 372 },
   spawns: [
-    { x: 178, y: 206 },
-    { x: 302, y: 206 },
+    { x: 176, y: 202 },
+    { x: 304, y: 202 },
   ],
-  respawn: { x: 240, y: 54 },
+  respawn: { x: 240, y: 50 },
 }
 
-export const MAIN_PLATFORM = PRISM_POINT.platforms[0]
+export const MAIN_PLATFORM = LAKESIDE_CAMP.platforms[0]
+

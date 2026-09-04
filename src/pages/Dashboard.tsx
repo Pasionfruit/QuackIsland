@@ -1,9 +1,10 @@
+import { PAL } from '../art/palette'
+import { campfire, pine } from '../art/props'
 import { PixelCanvas } from '../components/PixelCanvas'
 import { ART_H, ART_W, GAMES, type GameEntry } from '../games/registry'
-import { ROSTER } from '../games/smash/engine/characters'
-import { drawBody } from '../games/smash/engine/render'
-import { px } from '../lib/pixel'
+import { ROSTER, drawChar } from '../games/smash/engine/characters'
 import type { CharDef } from '../games/smash/engine/types'
+import { px } from '../lib/pixel'
 
 const STATUS_LABEL: Record<GameEntry['status'], string> = {
   live: 'Playable',
@@ -65,19 +66,25 @@ function FighterCard({ def }: { def: CharDef }) {
   return (
     <div className="fighter">
       <PixelCanvas
-        width={44}
-        height={44}
-        scale={1}
+        width={48}
+        height={48}
         draw={(ctx, frame) => {
-          px(ctx, 0, 0, 44, 44, '#0a0920')
-          for (let i = 0; i < 8; i++) px(ctx, (i * 13) % 44, (i * 7) % 30, 1, 1, '#2a2560')
-          const bob = Math.sin(frame * 0.07) * 1.2
-          drawBody(ctx, def, 22, 38 + bob, { facing: 1, scale: 1.05 })
-          px(ctx, 8, 40, 28, 2, '#161238')
+          px(ctx, 0, 0, 48, 48, '#cfdfd8')
+          px(ctx, 0, 30, 48, 18, PAL.grass)
+          px(ctx, 0, 30, 48, 2, PAL.grassLit)
+          pine(ctx, 7, 32, 16)
+          pine(ctx, 41, 32, 13)
+          const bob = Math.sin(frame * 0.06) * 1
+          drawChar(ctx, def, 24, 42 + bob, {
+            facing: 1,
+            scale: 36 / def.height,
+            phase: frame,
+            shadow: true,
+          })
         }}
       />
       <div style={{ flex: 1 }}>
-        <div className="fighter__name" style={{ color: def.colors.body }}>
+        <div className="fighter__name" style={{ color: def.theme.dark }}>
           {def.name}
         </div>
         <div className="fighter__title">{def.title}</div>
@@ -100,21 +107,27 @@ export function Dashboard({ onOpen }: { onOpen: (id: string) => void }) {
         <div className="panel hero__copy">
           <div className="panel__title">Welcome to Polyland</div>
           <h2>
-            One roster.
+            One camp.
             <br />
             Many games.
           </h2>
           <p>
-            Polyland is a little arcade cabinet for a cast of polygon characters. Every game here
-            reuses the same fighters, the same palette and the same chunky pixels - start with the
-            fighter, then take the cast anywhere.
+            Polyland is a little camp full of low-poly people. Every game here shares the same
+            cast, the same palette and the same two-players-one-keyboard rule - and anything on
+            the shelf can be hosted for friends to join.
           </p>
+          <div className="chiprow">
+            <span className="chip">Keyboard only</span>
+            <span className="chip">Two players, one keyboard</span>
+            <span className="chip">Host a room, friends join</span>
+            <span className="chip">Runs in the browser</span>
+          </div>
           <button className="btn btn--primary" onClick={() => onOpen('smash')}>
             Play Polyland Smash
           </button>
         </div>
         <div className="panel">
-          <div className="panel__title">Cabinet status</div>
+          <div className="panel__title">Around the camp</div>
           <div className="statgrid">
             <div className="stat">
               <div className="stat__num">{live}</div>
@@ -126,25 +139,48 @@ export function Dashboard({ onOpen }: { onOpen: (id: string) => void }) {
             </div>
             <div className="stat">
               <div className="stat__num">{ROSTER.length}</div>
-              <div className="stat__label">Fighters</div>
+              <div className="stat__label">Campers</div>
             </div>
             <div className="stat">
               <div className="stat__num">1</div>
-              <div className="stat__label">Stage</div>
+              <div className="stat__label">Map</div>
             </div>
           </div>
-          <div className="keys" style={{ marginTop: 14 }}>
+          <div className="firestrip">
+            <PixelCanvas
+              width={150}
+              height={40}
+              fluid
+              draw={(ctx, frame) => {
+                px(ctx, 0, 0, 150, 40, '#dfe6d9')
+                px(ctx, 0, 28, 150, 12, PAL.grass)
+                px(ctx, 0, 28, 150, 2, PAL.grassLit)
+                pine(ctx, 14, 30, 22)
+                pine(ctx, 134, 30, 18)
+                campfire(ctx, 75, 32, frame, 0.9)
+                drawChar(ctx, ROSTER[0], 54, 32, {
+                  facing: 1,
+                  scale: 24 / ROSTER[0].height,
+                  phase: frame,
+                  shadow: true,
+                })
+                drawChar(ctx, ROSTER[1], 98, 32, {
+                  facing: -1,
+                  scale: 26 / ROSTER[1].height,
+                  phase: frame + 40,
+                  shadow: true,
+                })
+              }}
+            />
+          </div>
+          <div className="keys" style={{ marginTop: 12 }}>
             <div className="keyrow">
-              <span>Renderer</span>
-              <kbd>480 x 270</kbd>
+              <span>Two on one keyboard</span>
+              <kbd>Always</kbd>
             </div>
             <div className="keyrow">
-              <span>Simulation</span>
-              <kbd>60 Hz fixed</kbd>
-            </div>
-            <div className="keyrow">
-              <span>Input</span>
-              <kbd>Keyboard</kbd>
+              <span>Host &amp; join</span>
+              <kbd>Room code</kbd>
             </div>
           </div>
         </div>
@@ -160,14 +196,14 @@ export function Dashboard({ onOpen }: { onOpen: (id: string) => void }) {
       </section>
 
       <section className="section">
-        <div className="panel__title">Roster</div>
+        <div className="panel__title">The campers</div>
         <div className="roster">
           {ROSTER.map((def) => (
             <FighterCard key={def.id} def={def} />
           ))}
           <div className="fighter" style={{ justifyContent: 'center', color: 'var(--dimmer)' }}>
             <span className="pixel" style={{ fontSize: 9 }}>
-              + MORE SHAPES SOON
+              + MORE CAMPERS SOON
             </span>
           </div>
         </div>

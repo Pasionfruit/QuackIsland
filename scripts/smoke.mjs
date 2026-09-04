@@ -128,7 +128,7 @@ console.log('\nPolyland Smash - engine smoke test\n')
 // 6. Heavier fighters take less knockback from the same hit.
 {
   const measure = (victimId) => {
-    const eng = new SmashEngine({ cpu: false, chars: ['vex', victimId] })
+    const eng = new SmashEngine({ cpu: false, chars: ['basil', victimId] })
     run(eng, 200)
     const [a, b] = eng.fighters
     a.x = 200
@@ -139,9 +139,9 @@ console.log('\nPolyland Smash - engine smoke test\n')
     run(eng, 8, idle)
     return Math.hypot(b.vx, b.vy)
   }
-  const light = measure('vex')
-  const heavy = measure('grum')
-  check('weight resists knockback', heavy < light, `vex=${light.toFixed(2)} grum=${heavy.toFixed(2)}`)
+  const light = measure('basil')
+  const heavy = measure('juniper')
+  check('weight resists knockback', heavy < light, `basil=${light.toFixed(2)} juniper=${heavy.toFixed(2)}`)
 }
 
 // 7. Leaving the blast zone costs a stock and respawns you clean.
@@ -192,17 +192,17 @@ console.log('\nPolyland Smash - engine smoke test\n')
 {
   const eng = newMatch()
   const a = eng.fighters[0]
-  a.x = 178
+  a.x = 176
   a.y = 100
   a.vy = 0
   a.grounded = false
   run(eng, 60, idle)
-  check('lands on the soft platform', a.grounded && Math.abs(a.y - 156) < 1, `y=${a.y.toFixed(1)}`)
+  check('lands on the soft platform', a.grounded && Math.abs(a.y - 152) < 1, `y=${a.y.toFixed(1)}`)
   run(eng, 1, held({ down: true }))
   run(eng, 10, held({ down: true }))
-  check('down drops through the soft platform', a.y > 158, `y=${a.y.toFixed(1)}`)
+  check('down drops through the soft platform', a.y > 154, `y=${a.y.toFixed(1)}`)
   run(eng, 200, idle)
-  check('falls to the main stage below', a.grounded && Math.abs(a.y - 206) < 1, `y=${a.y.toFixed(1)}`)
+  check('falls to the main stage below', a.grounded && Math.abs(a.y - 202) < 1, `y=${a.y.toFixed(1)}`)
 }
 
 // 11. The main stage is solid: you cannot walk into its side.
@@ -213,7 +213,7 @@ console.log('\nPolyland Smash - engine smoke test\n')
   a.y = 230
   a.grounded = false
   run(eng, 20, held({ right: true }))
-  check('solid stage blocks you from the side', a.x < 100, `x=${a.x.toFixed(1)}`)
+  check('solid stage blocks you from the side', a.x < 96, `x=${a.x.toFixed(1)}`)
 }
 
 // 12. The CPU actually plays: it damages a passive opponent and stays alive.
@@ -228,6 +228,113 @@ console.log('\nPolyland Smash - engine smoke test\n')
   check('CPU lands hits on a standing target', a.percent > 0, `player percent=${a.percent}`)
   check('CPU does not self-destruct constantly', b.stocks >= 3, `cpu stocks=${b.stocks}`)
   check('CPU stays on the stage', b.state !== 'dead' || b.stocks > 0)
+}
+
+// 13. A guest can rebuild the host's match from a snapshot alone.
+{
+  const host = newMatch()
+  const guest = newMatch()
+  run(host, 24, held({ right: true }))
+  const [ha, hb] = host.fighters
+  hb.x = ha.x + 14
+  run(host, 1, held({ attack: true }))
+  run(host, ha.def.moves.jab.startup + ha.def.moves.jab.active + 1, idle)
+
+  guest.applySnapshot(host.snapshot())
+  const [ga, gb] = guest.fighters
+  check('snapshot carries position', Math.abs(ga.x - ha.x) < 0.02, `${ga.x} vs ${ha.x}`)
+  check('snapshot carries damage', gb.percent === hb.percent, `${gb.percent} vs ${hb.percent}`)
+  check('snapshot carries stocks', gb.stocks === hb.stocks)
+  check('snapshot carries state', ga.state === ha.state, `${ga.state} vs ${ha.state}`)
+  check('guest rebuilds hit effects locally', guest.particles.length > 0)
+
+  // And it keeps tracking as the host plays on.
+  run(host, 30, held({ left: true }))
+  guest.applySnapshot(host.snapshot())
+  check('guest keeps following the host', Math.abs(guest.fighters[0].x - ha.x) < 0.02)
+
+  const wire = JSON.stringify(host.snapshot())
+  check('a snapshot is small enough to send 60x a second', wire.length < 700, `${wire.length} bytes`)
+}
+
+// 14. The relay server really does put two browsers in the same room.
+{
+  const { spawn } = await import('node:child_process')
+  const { WebSocket } = await import('ws')
+  const PORT = 8899
+  const server = spawn(process.execPath, ['server/index.mjs'], {
+    env: { ...process.env, PORT: String(PORT) },
+    stdio: 'ignore',
+  })
+
+  const open = (url) =>
+    new Promise((resolve, reject) => {
+      const ws = new WebSocket(url)
+      ws.once('open', () => resolve(ws))
+      ws.once('error', reject)
+    })
+  const next = (ws, want) =>
+    new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(`timed out waiting for ${want}`)), 3000)
+      const onMsg = (data) => {
+        const msg = JSON.parse(String(data))
+        if (msg.t === want) {
+          clearTimeout(timer)
+          ws.off('message', onMsg)
+          resolve(msg)
+        }
+      }
+      ws.on('message', onMsg)
+    })
+
+  try {
+    // Give the server a moment to bind.
+    let hostWs = null
+    for (let i = 0; i < 20 && !hostWs; i++) {
+      try {
+        hostWs = await open(`ws://127.0.0.1:${PORT}`)
+      } catch {
+        await new Promise((r) => setTimeout(r, 100))
+      }
+    }
+    if (!hostWs) throw new Error('server never came up')
+
+    hostWs.send(JSON.stringify({ t: 'host', game: 'smash', name: 'Host', max: 2 }))
+    const hosted = await next(hostWs, 'hosted')
+    check('host gets a room code', /^[A-Z0-9]{4}$/.test(hosted.code), hosted.code)
+    check('host takes slot 0', hosted.slot === 0)
+
+    const guestWs = await open(`ws://127.0.0.1:${PORT}`)
+    guestWs.send(JSON.stringify({ t: 'join', code: hosted.code, name: 'Guest' }))
+    const joined = await next(guestWs, 'joined')
+    check('guest joins the room', joined.code === hosted.code)
+    check('guest takes slot 1', joined.slot === 1)
+
+    const peers = await next(hostWs, 'peers')
+    check('host is told who is in the room', peers.players.length === 2, JSON.stringify(peers.players))
+
+    const relayed = next(guestWs, 'relay')
+    hostWs.send(JSON.stringify({ t: 'relay', payload: { k: 'start', chars: ['basil', 'juniper'], stocks: 3 } }))
+    const got = await relayed
+    check('payloads reach the other player', got.payload.k === 'start' && got.from === 0)
+
+    const badWs = await open(`ws://127.0.0.1:${PORT}`)
+    badWs.send(JSON.stringify({ t: 'join', code: 'ZZZZ', name: 'Nobody' }))
+    const err = await next(badWs, 'error')
+    check('joining a room that does not exist is rejected', /ZZZZ/.test(err.message), err.message)
+
+    const closed = next(guestWs, 'closed')
+    hostWs.close()
+    const bye = await closed
+    check('the room closes when the host leaves', /host left/i.test(bye.reason), bye.reason)
+
+    guestWs.close()
+    badWs.close()
+  } catch (err) {
+    check('relay server round trip', false, String(err.message ?? err))
+  } finally {
+    server.kill()
+  }
 }
 
 console.log(failures === 0 ? '\nAll checks passed.\n' : `\n${failures} check(s) failed.\n`)

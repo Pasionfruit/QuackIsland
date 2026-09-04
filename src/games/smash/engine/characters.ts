@@ -1,203 +1,195 @@
+import { drawAvatar, type AvatarOpts } from '../../../art/avatar'
+import { CHEF, HIKER } from '../../../art/cast'
 import type { CharDef, MoveArt, MoveDef, MoveId } from './types'
 
-function move(id: MoveId, name: string, art: MoveArt, rest: Omit<MoveDef, 'id' | 'name' | 'art'>): MoveDef {
+function move(
+  id: MoveId,
+  name: string,
+  art: MoveArt,
+  rest: Omit<MoveDef, 'id' | 'name' | 'art'>,
+): MoveDef {
   return { id, name, art, ...rest }
 }
 
-
 /**
- * VEX - the triangle. Light, quick, awkward to land a kill with until high
- * percent, but she gets in and out fast and has the best recovery.
+ * BASIL - the camp cook. Middleweight, quick on his feet, and the cast-iron
+ * pan turns any exchange in his favour if he lands it.
  */
-const VEX: CharDef = {
-  id: 'vex',
-  name: 'Vex',
-  title: 'The Triangle',
-  blurb: 'Three points, no patience. Fast frames and a huge recovery, but she folds the moment you catch her.',
-  sides: 3,
-  rotation: -Math.PI / 2,
-  radius: 13,
-  colors: {
-    body: '#4fd6ff',
-    shade: '#1f8ec9',
-    outline: '#0a2536',
-    accent: '#ffe066',
-    eye: '#0a2536',
-  },
-  weight: 0.86,
-  walk: 2.05,
-  groundAccel: 0.55,
-  friction: 0.72,
-  airAccel: 0.32,
-  airMax: 1.85,
-  gravity: 0.42,
-  fallMax: 6.6,
-  fastFallMax: 10.2,
-  jump: -8.0,
-  doubleJump: -7.2,
+const BASIL: CharDef = {
+  id: 'basil',
+  name: 'Basil',
+  title: 'The Camp Cook',
+  blurb:
+    'Runs the campsite kitchen and swings a cast-iron pan like he means it. Quick, balanced, happiest at close range.',
+  avatar: CHEF,
+  height: 32,
+  theme: { primary: '#e8b45f', dark: '#a97b32', soft: '#f8f5ed' },
+  weight: 1.0,
+  walk: 1.75,
+  groundAccel: 0.48,
+  friction: 0.74,
+  airAccel: 0.3,
+  airMax: 1.55,
+  gravity: 0.44,
+  fallMax: 6.9,
+  fastFallMax: 10.4,
+  jump: -7.9,
+  doubleJump: -7.05,
   jumps: 2,
-  hurt: { w: 20, h: 20 },
-  face: { dy: 4, spread: 3.4, size: 2 },
-  stats: { power: 2, speed: 5, weight: 2 },
+  hurt: { w: 18, h: 32 },
+  stats: { power: 3, speed: 4, weight: 3 },
   moves: {
-    jab: move('jab', 'Point Blank', 'jab', {
-      startup: 3,
+    jab: move('jab', 'Pan Tap', 'jab', {
+      startup: 4,
       active: 3,
-      recovery: 7,
-      damage: 3,
-      baseKb: 11,
-      kbScale: 0.3,
-      angle: 42,
-      hit: { x: 12, y: 13, w: 12, h: 10 },
+      recovery: 8,
+      damage: 4,
+      baseKb: 12,
+      kbScale: 0.32,
+      angle: 40,
+      hit: { x: 14, y: 19, w: 14, h: 11 },
     }),
-    side: move('side', 'Edge Dash', 'swing', {
-      startup: 7,
+    side: move('side', 'Skillet Swing', 'swing', {
+      startup: 10,
       active: 4,
+      recovery: 16,
+      damage: 13,
+      baseKb: 26,
+      kbScale: 0.7,
+      angle: 36,
+      hit: { x: 17, y: 19, w: 18, h: 16 },
+      selfVel: { x: 1.8 },
+      shake: 5,
+    }),
+    up: move('up', 'Souffle', 'rise', {
+      startup: 7,
+      active: 5,
       recovery: 13,
       damage: 9,
-      baseKb: 20,
+      baseKb: 22,
       kbScale: 0.62,
-      angle: 33,
-      hit: { x: 15, y: 12, w: 16, h: 14 },
-      selfVel: { x: 2.6 },
-      shake: 2,
-    }),
-    up: move('up', 'Apex Spin', 'spin', {
-      startup: 5,
-      active: 5,
-      recovery: 11,
-      damage: 7,
-      baseKb: 19,
-      kbScale: 0.6,
-      angle: 84,
-      hit: { x: 0, y: 27, w: 22, h: 15 },
-      symmetric: true,
-      shake: 2,
-    }),
-    down: move('down', 'Wedge Drop', 'stomp', {
-      startup: 8,
-      active: 5,
-      recovery: 15,
-      damage: 8,
-      baseKb: 14,
-      kbScale: 0.42,
-      angle: -72,
-      hit: { x: 0, y: 3, w: 20, h: 11 },
-      symmetric: true,
-      selfVel: { y: 3.4 },
+      angle: 86,
+      hit: { x: 2, y: 36, w: 19, h: 18 },
+      selfVel: { y: -2.2 },
       shake: 3,
     }),
-    special: move('special', 'Ricochet', 'burst', {
-      startup: 4,
-      active: 9,
-      recovery: 14,
-      damage: 6,
-      baseKb: 17,
-      kbScale: 0.42,
-      angle: 76,
-      hit: { x: 0, y: 24, w: 18, h: 22 },
+    down: move('down', 'Sizzle', 'quake', {
+      startup: 9,
+      active: 5,
+      recovery: 16,
+      damage: 10,
+      baseKb: 19,
+      kbScale: 0.5,
+      angle: 62,
+      hit: { x: 0, y: 7, w: 30, h: 13 },
       symmetric: true,
-      selfVel: { x: 1.6, y: -8.4 },
+      killsMomentum: true,
+      shake: 4,
+    }),
+    special: move('special', 'Steam Lift', 'burst', {
+      startup: 6,
+      active: 9,
+      recovery: 16,
+      damage: 7,
+      baseKb: 18,
+      kbScale: 0.42,
+      angle: 80,
+      hit: { x: 0, y: 26, w: 20, h: 24 },
+      symmetric: true,
+      selfVel: { x: 1.2, y: -7.9 },
       killsMomentum: true,
       helplessAfter: true,
-      shake: 2,
+      shake: 3,
     }),
   },
 }
 
 /**
- * GRUM - the hexagon. Slow, heavy, and every button he presses is a threat.
- * Struggles to get back on stage, so knock him off and keep him there.
+ * JUNIPER - the long-haul hiker. Heavy and slow, but the walking staff
+ * out-ranges everyone on the map.
  */
-const GRUM: CharDef = {
-  id: 'grum',
-  name: 'Grum',
-  title: 'The Hexagon',
-  blurb: 'Six sides of bad news. Everything he throws kills, but he moves like a boulder and dies off the edge.',
-  sides: 6,
-  rotation: Math.PI / 6,
-  radius: 15,
-  colors: {
-    body: '#ff8a3d',
-    shade: '#c4531a',
-    outline: '#361005',
-    accent: '#ffe066',
-    eye: '#361005',
-  },
-  weight: 1.32,
-  walk: 1.35,
-  groundAccel: 0.34,
+const JUNIPER: CharDef = {
+  id: 'juniper',
+  name: 'Juniper',
+  title: 'The Long-Hauler',
+  blurb:
+    'Twenty miles before lunch and still smiling. Slow off the mark, but the walking staff keeps everyone at arm’s length.',
+  avatar: HIKER,
+  height: 36,
+  theme: { primary: '#88a86f', dark: '#4f6a42', soft: '#e6e2d4' },
+  weight: 1.3,
+  walk: 1.32,
+  groundAccel: 0.33,
   friction: 0.78,
   airAccel: 0.22,
-  airMax: 1.25,
+  airMax: 1.22,
   gravity: 0.47,
   fallMax: 7.4,
   fastFallMax: 11.0,
-  jump: -7.5,
+  jump: -7.45,
   doubleJump: -6.6,
   jumps: 2,
-  hurt: { w: 26, h: 28 },
-  face: { dy: -1, spread: 4.2, size: 2.4 },
+  hurt: { w: 21, h: 36 },
   stats: { power: 5, speed: 2, weight: 5 },
   moves: {
-    jab: move('jab', 'Knuckle', 'jab', {
+    jab: move('jab', 'Staff Poke', 'jab', {
       startup: 5,
       active: 4,
-      recovery: 10,
+      recovery: 9,
       damage: 5,
-      baseKb: 13,
-      kbScale: 0.36,
-      angle: 36,
-      hit: { x: 14, y: 15, w: 14, h: 12 },
+      baseKb: 12,
+      kbScale: 0.34,
+      angle: 34,
+      hit: { x: 19, y: 20, w: 18, h: 9 },
     }),
-    side: move('side', 'Haymaker', 'swing', {
-      startup: 13,
-      active: 4,
-      recovery: 21,
-      damage: 16,
-      baseKb: 30,
-      kbScale: 0.8,
-      angle: 39,
-      hit: { x: 17, y: 15, w: 19, h: 17 },
-      selfVel: { x: 1.6 },
+    side: move('side', 'Trail Sweep', 'swing', {
+      startup: 12,
+      active: 5,
+      recovery: 20,
+      damage: 15,
+      baseKb: 29,
+      kbScale: 0.76,
+      angle: 40,
+      hit: { x: 22, y: 18, w: 24, h: 15 },
+      selfVel: { x: 1.3 },
       shake: 6,
     }),
-    up: move('up', 'Girder', 'rise', {
+    up: move('up', 'Pole Vault', 'rise', {
       startup: 8,
       active: 6,
       recovery: 17,
       damage: 12,
-      baseKb: 26,
-      kbScale: 0.72,
+      baseKb: 25,
+      kbScale: 0.68,
       angle: 88,
-      hit: { x: 3, y: 32, w: 20, h: 19 },
-      selfVel: { y: -3.2 },
+      hit: { x: 4, y: 40, w: 20, h: 22 },
+      selfVel: { y: -3.0 },
       shake: 4,
     }),
-    down: move('down', 'Quake', 'quake', {
+    down: move('down', 'Boot Stomp', 'quake', {
       startup: 10,
-      active: 6,
-      recovery: 19,
+      active: 5,
+      recovery: 18,
       damage: 11,
-      baseKb: 22,
-      kbScale: 0.52,
-      angle: 58,
-      hit: { x: 0, y: 7, w: 34, h: 13 },
+      baseKb: 20,
+      kbScale: 0.5,
+      angle: 55,
+      hit: { x: 0, y: 8, w: 32, h: 14 },
       symmetric: true,
       killsMomentum: true,
       shake: 5,
     }),
-    special: move('special', 'Bunker Buster', 'burst', {
+    special: move('special', 'Pack Boost', 'burst', {
       startup: 7,
       active: 10,
       recovery: 18,
-      damage: 9,
-      baseKb: 19,
+      damage: 8,
+      baseKb: 18,
       kbScale: 0.4,
-      angle: 80,
-      hit: { x: 0, y: 28, w: 22, h: 24 },
+      angle: 78,
+      hit: { x: 0, y: 30, w: 22, h: 26 },
       symmetric: true,
-      selfVel: { x: 0.9, y: -7.2 },
+      selfVel: { x: 0.8, y: -7.1 },
       killsMomentum: true,
       helplessAfter: true,
       shake: 3,
@@ -205,8 +197,20 @@ const GRUM: CharDef = {
   },
 }
 
-export const ROSTER: CharDef[] = [VEX, GRUM]
+export const ROSTER: CharDef[] = [BASIL, JUNIPER]
 
 export function charById(id: string): CharDef {
   return ROSTER.find((c) => c.id === id) ?? ROSTER[0]
+}
+
+/** Draws a roster character at their canonical size. */
+export function drawChar(
+  ctx: CanvasRenderingContext2D,
+  def: CharDef,
+  x: number,
+  y: number,
+  opts: Omit<AvatarOpts, 'height'> & { scale?: number } = {},
+): void {
+  const { scale = 1, ...rest } = opts
+  drawAvatar(ctx, def.avatar, x, y, { ...rest, height: def.height * scale })
 }

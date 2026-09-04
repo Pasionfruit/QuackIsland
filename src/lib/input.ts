@@ -1,8 +1,27 @@
-import type { RawInput } from './types'
-import { emptyInput } from './types'
+/**
+ * Shared keyboard input for every Polyland game.
+ *
+ * Two players on one keyboard is the house standard, so the bindings live here
+ * rather than inside any one game. Key *codes* are used, not `key`, so the
+ * layout does not matter.
+ */
 
-/** Keyboard codes are used (not `key`) so the layout does not matter. */
-export const BINDINGS: Record<0 | 1, Record<keyof RawInput, string[]>> = {
+export interface GameInput {
+  left: boolean
+  right: boolean
+  up: boolean
+  down: boolean
+  attack: boolean
+  special: boolean
+}
+
+export function emptyInput(): GameInput {
+  return { left: false, right: false, up: false, down: false, attack: false, special: false }
+}
+
+export type PlayerIndex = 0 | 1
+
+export const BINDINGS: Record<PlayerIndex, Record<keyof GameInput, string[]>> = {
   0: {
     left: ['KeyA'],
     right: ['KeyD'],
@@ -56,13 +75,36 @@ export class Keyboard {
     }
   }
 
-  read(player: 0 | 1): RawInput {
+  read(player: PlayerIndex): GameInput {
     const map = BINDINGS[player]
     const out = emptyInput()
-    for (const key of Object.keys(map) as (keyof RawInput)[]) {
+    for (const key of Object.keys(map) as (keyof GameInput)[]) {
       out[key] = map[key].some((code) => this.down.has(code))
     }
     return out
+  }
+}
+
+/** Packs an input into one byte, for sending over the wire. */
+export function packInput(i: GameInput): number {
+  return (
+    (i.left ? 1 : 0) |
+    (i.right ? 2 : 0) |
+    (i.up ? 4 : 0) |
+    (i.down ? 8 : 0) |
+    (i.attack ? 16 : 0) |
+    (i.special ? 32 : 0)
+  )
+}
+
+export function unpackInput(b: number): GameInput {
+  return {
+    left: (b & 1) !== 0,
+    right: (b & 2) !== 0,
+    up: (b & 4) !== 0,
+    down: (b & 8) !== 0,
+    attack: (b & 16) !== 0,
+    special: (b & 32) !== 0,
   }
 }
 
@@ -78,7 +120,7 @@ export const CONTROL_HINTS: { player: string; rows: [string, string][] }[] = [
     ],
   },
   {
-    player: 'Player 2 / CPU',
+    player: 'Player 2',
     rows: [
       ['Move', '< / >'],
       ['Jump', 'Up (x2)'],

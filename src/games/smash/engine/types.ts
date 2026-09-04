@@ -1,3 +1,6 @@
+import type { AvatarDef } from '../../../art/avatar'
+import { emptyInput, type GameInput } from '../../../lib/input'
+
 export type MoveId = 'jab' | 'side' | 'up' | 'down' | 'special'
 
 export type MoveArt = 'jab' | 'swing' | 'rise' | 'stomp' | 'burst' | 'quake' | 'spin'
@@ -47,18 +50,12 @@ export interface CharDef {
   name: string
   title: string
   blurb: string
-  /** Body is a regular polygon: this is how many sides it has. */
-  sides: number
-  /** Base rotation of the body polygon, in radians. */
-  rotation: number
-  radius: number
-  colors: {
-    body: string
-    shade: string
-    outline: string
-    accent: string
-    eye: string
-  }
+  /** How this camper is drawn, shared with every other game in the cabinet. */
+  avatar: AvatarDef
+  /** Drawn height in pixels. */
+  height: number
+  /** UI colours: menus, HUD plates, stock pips. */
+  theme: { primary: string; dark: string; soft: string }
   /** Heavier fighters take less knockback. */
   weight: number
   walk: number
@@ -73,25 +70,14 @@ export interface CharDef {
   doubleJump: number
   jumps: number
   hurt: { w: number; h: number }
-  /** Where the eyes sit inside the body polygon. */
-  face: { dy: number; spread: number; size: number }
   moves: Record<MoveId, MoveDef>
   /** 1-5 bars for the select screen. */
   stats: { power: number; speed: number; weight: number }
 }
 
-export interface RawInput {
-  left: boolean
-  right: boolean
-  up: boolean
-  down: boolean
-  attack: boolean
-  special: boolean
-}
-
-export function emptyInput(): RawInput {
-  return { left: false, right: false, up: false, down: false, attack: false, special: false }
-}
+/** The shared two-player keyboard input, re-exported for the engine. */
+export type RawInput = GameInput
+export { emptyInput }
 
 export type FighterState =
   | 'idle'
