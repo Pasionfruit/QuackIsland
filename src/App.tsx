@@ -3,6 +3,7 @@ import { Logo } from './components/Logo'
 import { Dashboard } from './pages/Dashboard'
 import { SmashPanel } from './games/smash/SmashPanel'
 import { gameById } from './games/registry'
+import { TemplatePanel } from './games/TemplatePanel'
 
 export type Route = { name: 'dashboard' } | { name: 'game'; id: string }
 
@@ -48,14 +49,7 @@ export default function App() {
       {route.name === 'game' && game?.id === 'smash' && <SmashPanel />}
 
       {route.name === 'game' && game && game.id !== 'smash' && (
-        <div className="panel">
-          <div className="panel__title">Not built yet</div>
-          <h2 style={{ marginBottom: 10 }}>{game.title}</h2>
-          <p className="muted">{game.blurb}</p>
-          <button className="btn btn--sm" onClick={() => go({ name: 'dashboard' })}>
-            Back to dashboard
-          </button>
-        </div>
+        <TemplatePanel game={game} onBack={() => go({ name: 'dashboard' })} />
       )}
 
       {route.name === 'game' && !game && (

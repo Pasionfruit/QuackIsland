@@ -5,7 +5,11 @@ low-poly campers, one palette, and a shelf of games that all share them.
 
 The first game is **Polyland Smash** - a platform fighter in the shape of Smash
 Ultimate / Brawlhalla: percent-based knockback, stocks, blast zones,
-drop-through platforms, and two campers who play very differently.
+drop-through platforms, and twelve fighters who play very differently.
+
+Eighteen more games are on the shelf as concept panels: art, pitch and planned
+mechanics, no implementation yet. They all live in
+[src/games/registry.ts](src/games/registry.ts) and share one panel template.
 
 Two people can always play on one keyboard. Anything on the shelf can also be
 hosted, so friends join with a four-letter room code.
@@ -60,6 +64,10 @@ there is no auth and no TLS, so do not expose it to the open internet as-is.
 | Dashboard (game shelf + roster) | [src/pages/Dashboard.tsx](src/pages/Dashboard.tsx) |
 | Game catalogue and card art | [src/games/registry.ts](src/games/registry.ts) |
 | Shared camper artwork | [src/art/avatar.ts](src/art/avatar.ts), [src/art/cast.ts](src/art/cast.ts) |
+| Animal rigs (cats, dog, birds) | [src/art/critter.ts](src/art/critter.ts) |
+| Backdrops and set dressing | [src/art/scenes.ts](src/art/scenes.ts) |
+| Drawing primitives and facet shading | [src/lib/draw.ts](src/lib/draw.ts) |
+| Panel template for unbuilt games | [src/games/TemplatePanel.tsx](src/games/TemplatePanel.tsx) |
 | Scenery pieces (tents, pines, fire, pets) | [src/art/props.ts](src/art/props.ts) |
 | Palette | [src/art/palette.ts](src/art/palette.ts) |
 | Two-player keyboard, shared by all games | [src/lib/input.ts](src/lib/input.ts) |
@@ -76,21 +84,37 @@ there is no auth and no TLS, so do not expose it to the open internet as-is.
 The look comes from [src/Game_art.png](src/Game_art.png): faceted low-poly
 chibi campers, big dark eyes, warm neutral palette, soft ground shadows.
 
-Everything is drawn into a 480x270 buffer and scaled up with
-`image-rendering: pixelated`, so the reference style is rendered *as pixel art*.
-Two consequences before you add anything:
+Everything is a **flat-shaded polygon**. There are no sprites, no textures and
+no gradients on characters - each shape is filled in a base tone, then split
+into a lit facet and a shadow facet along a fixed light direction. That split
+is what `facet()` in [src/lib/draw.ts](src/lib/draw.ts) does, and it is the
+whole style in one function.
 
-- **No canvas paths.** `ctx.fill()` anti-aliases and breaks the look. Polygons
-  go through `fillPoly` in [src/lib/pixel.ts](src/lib/pixel.ts), which
-  scanline-fills whole pixels.
-- **No webfont inside the canvas.** In-game text uses the 5x7 bitmap font in
-  [src/lib/font.ts](src/lib/font.ts). The DOM around the canvas uses
-  Press Start 2P.
+Three rules keep it looking right:
 
-A camper is data, not a sprite sheet: skin, hair style, outfit, hat and a
-carried item, in [cast.ts](src/art/cast.ts). `drawAvatar` poses that same
-description for idle, walking, jumping, swinging or tumbling, at any size - so a
-new camper is a dozen colours, and any game gets the whole cast for free.
+- **Draw in world units, render at device resolution.** Scenes are authored in
+  a 480x270 coordinate space, but the canvas backing store is sized to its real
+  displayed size in device pixels by `fitScene()`. If the two do not match, the
+  browser resamples the canvas and the flat shading turns to mush - that is the
+  single biggest thing to get wrong here.
+- **Shade in world space, not local space.** Characters are authored facing
+  right and then flipped, but the shading happens after placement, so the light
+  stays in the same corner of the screen no matter which way somebody faces or
+  how far they are tumbling.
+- **Colours are derived, not listed.** `shade(colour, amount)` warms toward
+  cream or cools toward brown, so a camper needs one colour per material rather
+  than a palette of hand-picked tints.
+
+A camper is data, not a sprite sheet: skin, hair style, outfit, hat, eyewear and
+a carried item, in [cast.ts](src/art/cast.ts). `drawAvatar` poses that same
+description for idle, walking, jumping, swinging or tumbling, at any size.
+Animals use the same trick in [critter.ts](src/art/critter.ts) with a
+four-legged and a winged rig. A new character is a dozen colours, and every
+game gets the whole cast for free.
+
+Backdrops and set dressing live in [scenes.ts](src/art/scenes.ts) and
+[props.ts](src/art/props.ts) - skies, water, treelines, rooms, tents, fires,
+tanks, ghosts - so a new game's card art is usually fifteen lines.
 
 ## Polyland Smash
 
@@ -102,10 +126,22 @@ Each has five moves - neutral, side, up and down attacks, plus a special that
 doubles as the recovery. The special throws you upward and leaves you helpless
 until you land, so spending it early off-stage is how you die.
 
-- **Basil**, the camp cook: middleweight and quick, with a cast-iron pan that
-  ends exchanges if it lands.
-- **Juniper**, the long-hauler: slow and heavy, but the walking staff
-  out-ranges everything.
+Twelve fighters, eight campers and four animals:
+
+| Fighter | Shape of them |
+| --- | --- |
+| Basil, the camp cook | Middleweight and quick; the cast-iron pan ends exchanges |
+| Juniper, the long-hauler | Slow and heavy, but the staff out-ranges everything |
+| Kai, the surfer | Floaty jumps, long board swings, in no hurry to land |
+| Wren, the angler | Longest reach in camp, and nothing up close |
+| Dash, the cyclist | Fastest thing here, folds the moment you catch her |
+| Byte, the night owl | Slow zoner who hits like a truck |
+| Rowan, the explorer | All-rounder with a grapple that reaches any ledge |
+| Vale, the runner | Tiny hits, endless combos |
+| Mochi, the calico | Three jumps, hard to pin down, dies to anything solid |
+| Pepper, the shadow | The mean cat; slower than Mochi, hits far harder |
+| Biscuit, the good dog | Enthusiasm as a fighting style |
+| Gully, the gull | Feather-light, effectively unkillable off-stage |
 
 Frame data lives in
 [characters.ts](src/games/smash/engine/characters.ts) and is meant to be tuned.

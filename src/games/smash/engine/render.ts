@@ -7,6 +7,7 @@ import {
   facet,
   fillPoly,
   makeScene,
+  sceneScale,
   path,
   noise,
   rand,
@@ -27,10 +28,10 @@ const HORIZON = 168
 
 // ------------------------------------------------------------- background
 
-let bgCache: HTMLCanvasElement | null = null
+let bgCache: { canvas: HTMLCanvasElement; scale: number } | null = null
 
-function buildBackground(): HTMLCanvasElement {
-  const { canvas, ctx } = makeScene(VIEW_W, VIEW_H)
+function buildBackground(ss: number): HTMLCanvasElement {
+  const { canvas, ctx } = makeScene(VIEW_W, VIEW_H, ss)
 
   // Sky: a smooth vertical wash through the palette.
   const grad = ctx.createLinearGradient(0, 0, 0, HORIZON)
@@ -84,8 +85,13 @@ function buildBackground(): HTMLCanvasElement {
 }
 
 function drawBackground(ctx: CanvasRenderingContext2D, frame: number): void {
-  if (!bgCache) bgCache = buildBackground()
-  ctx.drawImage(bgCache, 0, 0, VIEW_W, VIEW_H)
+  // Rebuild the cached sky whenever the canvas resolution changes, so the
+  // blit is one-to-one with device pixels and stays sharp.
+  const ss = sceneScale(ctx)
+  if (!bgCache || Math.abs(bgCache.scale - ss) > 0.01) {
+    bgCache = { canvas: buildBackground(ss), scale: ss }
+  }
+  ctx.drawImage(bgCache.canvas, 0, 0, VIEW_W, VIEW_H)
 
   for (let i = 0; i < 5; i++) {
     const speed = 0.05 + (i % 3) * 0.03
@@ -589,9 +595,13 @@ export function renderMatch(
   eng: SmashEngine,
   opts: { debug?: boolean } = {},
 ): void {
+  // Screen shake, snapped to whole device pixels so the cached background
+  // never lands on a half pixel.
   const sh = eng.shake
-  const ox = sh > 0 ? rand(-sh, sh) : 0
-  const oy = sh > 0 ? rand(-sh, sh) * 0.6 : 0
+  const px = sceneScale(ctx)
+  const snap = (v: number) => Math.round(v * px) / px
+  const ox = sh > 0 ? snap(rand(-sh, sh)) : 0
+  const oy = sh > 0 ? snap(rand(-sh, sh) * 0.6) : 0
 
   ctx.save()
   ctx.translate(ox, oy)

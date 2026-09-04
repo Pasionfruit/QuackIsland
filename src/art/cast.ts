@@ -199,4 +199,15 @@ export const SEAGULL: CritterDef = {
   tail: 'fan',
 }
 
+export const DUCK: CritterDef = {
+  kind: 'bird',
+  body: '#5f7a52',
+  belly: '#c9b98f',
+  ear: '#4a5f42',
+  nose: '#e8a33c',
+  beak: '#e0a63c',
+  feet: '#e0a63c',
+  tail: 'fan',
+}
+
 export const CRITTERS: CritterDef[] = [CALICO_CAT, BLACK_CAT, SHIBA_DOG, SEAGULL]

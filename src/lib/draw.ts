@@ -284,7 +284,7 @@ export function noise(i: number): number {
 
 // ---------------------------------------------------------------- canvases
 
-/** How many device pixels per world unit the scene is rendered at. */
+/** Fallback device pixels per world unit, for offscreen work with no layout. */
 export const SUPERSAMPLE = 3
 
 /** Sizes a canvas for supersampled drawing and returns its world-unit context. */
@@ -299,6 +299,40 @@ export function setupScene(
   const ctx = canvas.getContext('2d')!
   ctx.setTransform(ss, 0, 0, ss, 0, 0)
   return ctx
+}
+
+/**
+ * Sizes a canvas so one canvas pixel is exactly one device pixel at its
+ * current display size, then scales the context so drawing code can keep
+ * working in world units.
+ *
+ * This is what keeps the art crisp: if the backing store does not match the
+ * displayed size the browser resamples the whole canvas, and flat-shaded
+ * polygons turn to mush. Call it again whenever the element resizes.
+ */
+export function fitScene(
+  canvas: HTMLCanvasElement,
+  w: number,
+  h: number,
+  maxScale = 4,
+): CanvasRenderingContext2D {
+  const dpr = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
+  const cssW = canvas.clientWidth || canvas.getBoundingClientRect().width || w
+  const scale = clamp((cssW * dpr) / w, 1, maxScale)
+  const pxW = Math.max(1, Math.round(w * scale))
+  const pxH = Math.max(1, Math.round(h * scale))
+  if (canvas.width !== pxW || canvas.height !== pxH) {
+    canvas.width = pxW
+    canvas.height = pxH
+  }
+  const ctx = canvas.getContext('2d')!
+  ctx.setTransform(pxW / w, 0, 0, pxH / h, 0, 0)
+  return ctx
+}
+
+/** Device pixels per world unit that a context is currently drawing at. */
+export function sceneScale(ctx: CanvasRenderingContext2D): number {
+  return ctx.getTransform().a
 }
 
 export function makeScene(

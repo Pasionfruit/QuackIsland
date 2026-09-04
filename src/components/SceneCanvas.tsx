@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { SUPERSAMPLE, setupScene } from '../lib/draw'
+import { fitScene } from '../lib/draw'
 
 export interface SceneCanvasProps {
   /** Size in world units; the backing store is this times the supersample. */
@@ -13,7 +13,6 @@ export interface SceneCanvasProps {
   className?: string
   /** Stretch to the container width instead of using `scale`. */
   fluid?: boolean
-  ss?: number
 }
 
 /**
@@ -28,7 +27,6 @@ export function SceneCanvas({
   animate = true,
   className,
   fluid = false,
-  ss = SUPERSAMPLE,
 }: SceneCanvasProps) {
   const ref = useRef<HTMLCanvasElement | null>(null)
   const drawRef = useRef(draw)
@@ -37,19 +35,34 @@ export function SceneCanvas({
   useEffect(() => {
     const canvas = ref.current
     if (!canvas) return
-    const ctx = setupScene(canvas, width, height, ss)
 
+    let ctx = fitScene(canvas, width, height)
     let frame = 0
     let raf = 0
-    const tick = () => {
+
+    const paint = () => {
       ctx.clearRect(0, 0, width, height)
       drawRef.current(ctx, frame)
+    }
+    const tick = () => {
+      paint()
       frame++
       if (animate) raf = requestAnimationFrame(tick)
     }
+
+    // Refit whenever the element changes size, or the canvas gets resampled.
+    const observer = new ResizeObserver(() => {
+      ctx = fitScene(canvas, width, height)
+      if (!animate) paint()
+    })
+    observer.observe(canvas)
+
     tick()
-    return () => cancelAnimationFrame(raf)
-  }, [width, height, animate, ss])
+    return () => {
+      cancelAnimationFrame(raf)
+      observer.disconnect()
+    }
+  }, [width, height, animate])
 
   return (
     <canvas
@@ -57,7 +70,7 @@ export function SceneCanvas({
       className={className}
       style={
         fluid
-          ? { width: '100%', height: 'auto', display: 'block' }
+          ? { width: '100%', height: 'auto', aspectRatio: width + ' / ' + height, display: 'block' }
           : { width: width * scale, height: height * scale, display: 'block' }
       }
     />

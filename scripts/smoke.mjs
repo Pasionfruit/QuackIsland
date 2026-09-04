@@ -17,6 +17,8 @@ const bundle = (entry, outfile) =>
   build({ entryPoints: [entry], bundle: true, format: 'esm', platform: 'neutral', outfile, logLevel: 'error' })
 await bundle('src/games/smash/engine/engine.ts', out)
 await bundle('src/games/smash/engine/characters.ts', charsOut)
+const regOut = join(tmp, 'registry.mjs')
+await bundle('src/games/registry.ts', regOut)
 
 const { SmashEngine } = await import(pathToFileURL(out).href)
 
@@ -219,13 +221,47 @@ console.log('\nPolyland Smash - engine smoke test\n')
   const eng = new SmashEngine({ cpu: true, cpuLevel: 3, stocks: 5 })
   run(eng, 200)
   const [a, b] = eng.fighters
+  // Watch the whole match rather than the final frame: a good CPU KOs the
+  // dummy, and a KO resets percent back to zero.
+  let peak = 0
+  const startStocks = a.stocks
   for (let i = 0; i < 3600 && eng.phase !== 'over'; i++) {
     eng.setInput(0, idle)
     eng.step()
+    if (a.percent > peak) peak = a.percent
   }
-  check('CPU lands hits on a standing target', a.percent > 0, `player percent=${a.percent}`)
+  const taken = startStocks - a.stocks
+  check(
+    'CPU lands hits on a standing target',
+    peak > 0 || taken > 0,
+    `peak percent=${peak}, stocks taken=${taken}`,
+  )
   check('CPU does not self-destruct constantly', b.stocks >= 3, `cpu stocks=${b.stocks}`)
   check('CPU stays on the stage', b.state !== 'dead' || b.stocks > 0)
+}
+
+// 12b. Regression: the CPU used to park on a soft platform directly above its
+// target and stand there for the whole match, because the "drop down" branch
+// only ran while airborne.
+{
+  const eng = new SmashEngine({ cpu: true, cpuLevel: 3, stocks: 5 })
+  run(eng, 200)
+  const [a, b] = eng.fighters
+  // Put the CPU on the left plank, the player on the stage right below it.
+  b.x = 176
+  b.y = 152
+  b.vx = 0
+  b.vy = 0
+  b.grounded = true
+  a.x = 176
+  a.y = 202
+  let cameDown = false
+  for (let i = 0; i < 400 && !cameDown; i++) {
+    eng.setInput(0, idle)
+    eng.step()
+    if (b.y > 190) cameDown = true
+  }
+  check('CPU drops off a platform to reach a target below', cameDown, `cpu y=${b.y.toFixed(1)}`)
 }
 
 // 13. A guest can rebuild the host's match from a snapshot alone.
@@ -432,6 +468,65 @@ console.log('\nPolyland Smash - engine smoke test\n')
     values.length === ROSTER.length && hi < lo * 2.2,
     kb.map(([id, v]) => `${id}:${v.toFixed(1)}`).join(' '),
   )
+}
+
+// 18. The game shelf itself: every entry is complete and paints without crashing.
+{
+  const { GAMES } = await import(pathToFileURL(regOut).href)
+  const problems = []
+  const ids = new Set()
+  for (const g of GAMES) {
+    if (ids.has(g.id)) problems.push(`duplicate id ${g.id}`)
+    ids.add(g.id)
+    if (!/^[a-z0-9-]+$/.test(g.id)) problems.push(`${g.id} is not url safe`)
+    for (const key of ['title', 'tagline', 'genre', 'players', 'blurb']) {
+      if (!g[key] || typeof g[key] !== 'string') problems.push(`${g.id} is missing ${key}`)
+    }
+    if (!Array.isArray(g.plan) || g.plan.length < 2) problems.push(`${g.id} has no plan`)
+    if (typeof g.art !== 'function') problems.push(`${g.id} has no card art`)
+    if (g.blurb && g.blurb.length > 200) problems.push(`${g.id} blurb is too long`)
+  }
+  check('every game entry is complete', problems.length === 0, problems.slice(0, 4).join('; '))
+  check('the shelf has one playable game', GAMES.filter((g) => g.status === 'live').length === 1)
+  check('every other game is marked concept', GAMES.every((g) => g.status === 'live' || g.status === 'concept'))
+  check('party games are all 2-8 players', GAMES.filter((g) => g.status === 'concept').every((g) => g.players === '2-8 players'))
+
+  // Paint each card into a stub context: this catches typos in the art code
+  // that a type check cannot see.
+  const calls = []
+  const stub = new Proxy(
+    {
+      canvas: { width: 480, height: 270 },
+      measureText: () => ({ width: 10 }),
+      createLinearGradient: () => ({ addColorStop() {} }),
+      createRadialGradient: () => ({ addColorStop() {} }),
+      getTransform: () => ({ a: 3 }),
+      save() {}, restore() {}, beginPath() {}, closePath() {},
+      moveTo() {}, lineTo() {}, arc() {}, arcTo() {}, ellipse() {}, quadraticCurveTo() {},
+      fill() {}, stroke() {}, fillRect() {}, clearRect() {}, fillText() {},
+      translate() {}, rotate() {}, scale() {}, setTransform() {}, setLineDash() {},
+      drawImage() {},
+    },
+    {
+      get(target, prop) {
+        if (prop in target) return target[prop]
+        return undefined
+      },
+      set() {
+        return true
+      },
+    },
+  )
+  let painted = 0
+  for (const g of GAMES) {
+    try {
+      for (const frame of [0, 37, 240]) g.art(stub, frame)
+      painted++
+    } catch (err) {
+      calls.push(`${g.id}: ${err.message}`)
+    }
+  }
+  check('every card paints without throwing', painted === GAMES.length, calls.slice(0, 3).join('; '))
 }
 
 console.log(failures === 0 ? '\nAll checks passed.\n' : `\n${failures} check(s) failed.\n`)

@@ -890,8 +890,12 @@ export class SmashEngine {
     if (dy < -26 && me.grounded && this.cpu.decision < 0.5 + level * 0.15) {
       out.up = this.frame % 18 < 3
     }
-    if (foe.y > me.y + 30 && !me.grounded && this.cpu.decision > 0.7) {
-      out.down = true
+    if (dy > 30) {
+      // The opponent is below. If we are standing on a soft platform we have
+      // to drop through it, which needs a fresh press, so pulse the input.
+      // Without this the CPU parks above its target and never comes down.
+      if (me.grounded) out.down = this.frame % 8 < 2
+      else if (this.cpu.decision > 0.7) out.down = true
     }
 
     const canSwing = this.cpu.cooldown <= 0 && adx < reach + (level >= 3 ? 10 : 4) && Math.abs(dy) < 30

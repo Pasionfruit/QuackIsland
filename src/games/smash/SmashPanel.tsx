@@ -3,7 +3,7 @@ import { PAL } from '../../art/palette'
 import { pine } from '../../art/props'
 import { SceneCanvas } from '../../components/SceneCanvas'
 import { CONTROL_HINTS, Keyboard, packInput, unpackInput } from '../../lib/input'
-import { rect } from '../../lib/draw'
+import { fitScene, rect } from '../../lib/draw'
 import { NetClient, defaultServerUrl } from '../../net/client'
 import { normalizeCode, type PeerInfo, type SmashPayload } from '../../net/protocol'
 import { ROSTER, charById, drawChar } from './engine/characters'
@@ -234,9 +234,13 @@ function Arena({ config, net, registerHandler, onChangeFighters, onLeave }: Aren
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    ctx.imageSmoothingEnabled = false
+    // One canvas pixel per device pixel: anything else and the browser
+    // resamples the whole arena.
+    let ctx = fitScene(canvas, VIEW_W, VIEW_H)
+    const refit = new ResizeObserver(() => {
+      ctx = fitScene(canvas, VIEW_W, VIEW_H)
+    })
+    refit.observe(canvas)
 
     // A guest never simulates; it keeps an engine purely to draw into.
     const eng = new SmashEngine({ ...config, cpu: role ? false : config.cpu })
@@ -317,6 +321,7 @@ function Arena({ config, net, registerHandler, onChangeFighters, onLeave }: Aren
 
     return () => {
       cancelAnimationFrame(raf)
+      refit.disconnect()
       detach()
       engineRef.current = null
     }
@@ -328,7 +333,7 @@ function Arena({ config, net, registerHandler, onChangeFighters, onLeave }: Aren
   return (
     <div>
       <div className="stage-wrap">
-        <canvas ref={canvasRef} width={VIEW_W} height={VIEW_H} />
+        <canvas ref={canvasRef} style={{ width: '100%', aspectRatio: VIEW_W + ' / ' + VIEW_H }} />
 
         {paused && winner === null && (
           <div className="overlay">
