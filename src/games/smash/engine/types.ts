@@ -1,5 +1,4 @@
 import type { AvatarDef } from '../../../art/avatar'
-import type { CritterDef } from '../../../art/critter'
 import { emptyInput, type GameInput } from '../../../lib/input'
 
 export type MoveId = 'jab' | 'side' | 'up' | 'down' | 'special'
@@ -46,18 +45,13 @@ export interface MoveDef {
   art: MoveArt
 }
 
-/** A roster entry is either one of the campers or one of the animals. */
-export type CharArt =
-  | { kind: 'camper'; avatar: AvatarDef }
-  | { kind: 'critter'; critter: CritterDef }
-
 export interface CharDef {
   id: string
   name: string
   title: string
   blurb: string
-  /** How this fighter is drawn, shared with every other game in the camp. */
-  art: CharArt
+  /** How this fighter is drawn, shared with every other game in Polyland. */
+  avatar: AvatarDef
   /** Drawn height in pixels. */
   height: number
   /** UI colours: menus, HUD plates, stock pips. */

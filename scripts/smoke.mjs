@@ -69,8 +69,9 @@ console.log('\nPolyland Smash - engine smoke test\n')
   run(eng, 30, held({ right: true }))
   check('holding right walks forward', a.x > startX + 20, `moved ${(a.x - startX).toFixed(1)}px`)
   check('facing follows input', a.facing === 1)
-  run(eng, 120, held({ right: true }))
-  check('walking off the edge starts a fall', !a.grounded || a.state === 'dead')
+  // Long enough that even the slowest fighter reaches the ledge.
+  run(eng, 260, held({ right: true }))
+  check('walking off the edge starts a fall', !a.grounded || a.state === 'dead', `x=${a.x.toFixed(1)}`)
 }
 
 // 3. Jumping: two jumps, then nothing until you land.
@@ -128,7 +129,7 @@ console.log('\nPolyland Smash - engine smoke test\n')
 // 6. Heavier fighters take less knockback from the same hit.
 {
   const measure = (victimId) => {
-    const eng = new SmashEngine({ cpu: false, chars: ['basil', victimId] })
+    const eng = new SmashEngine({ cpu: false, chars: ['contrlzee', victimId] })
     run(eng, 200)
     const [a, b] = eng.fighters
     a.x = 200
@@ -139,9 +140,14 @@ console.log('\nPolyland Smash - engine smoke test\n')
     run(eng, 8, idle)
     return Math.hypot(b.vx, b.vy)
   }
-  const light = measure('basil')
-  const heavy = measure('juniper')
-  check('weight resists knockback', heavy < light, `basil=${light.toFixed(2)} juniper=${heavy.toFixed(2)}`)
+  // The lightest fighter against the heaviest, taking the identical hit.
+  const light = measure('mrpasionfruit')
+  const heavy = measure('teninchtoenail')
+  check(
+    'weight resists knockback',
+    heavy < light,
+    `cat=${light.toFixed(2)} lion=${heavy.toFixed(2)}`,
+  )
 }
 
 // 7. Leaving the blast zone costs a stock and respawns you clean.
@@ -348,7 +354,7 @@ console.log('\nPolyland Smash - engine smoke test\n')
     check('host is told who is in the room', peers.players.length === 2, JSON.stringify(peers.players))
 
     const relayed = next(guestWs, 'relay')
-    hostWs.send(JSON.stringify({ t: 'relay', payload: { k: 'start', chars: ['basil', 'juniper'], stocks: 3 } }))
+    hostWs.send(JSON.stringify({ t: 'relay', payload: { k: 'start', chars: ['contrlzee', 'ninjapenguin'], stocks: 3 } }))
     const got = await relayed
     check('payloads reach the other player', got.payload.k === 'start' && got.from === 0)
 
@@ -399,8 +405,9 @@ console.log('\nPolyland Smash - engine smoke test\n')
   }
   bad = problems.length
   check('every fighter is complete and in range', bad === 0, problems.slice(0, 4).join('; '))
-  check('the roster has twelve fighters', ROSTER.length === 12, `${ROSTER.length}`)
-  check('both animals and campers are present', ROSTER.some((c) => c.art.kind === 'critter') && ROSTER.some((c) => c.art.kind === 'camper'))
+  check('the roster has five fighters', ROSTER.length === 5, `${ROSTER.length}`)
+  const species = new Set(ROSTER.map((c) => c.avatar.species))
+  check('every fighter is a different species', species.size === ROSTER.length, [...species].join(', '))
 }
 
 // 16. Every fighter can actually fight: land a hit and get home from off-stage.
@@ -411,7 +418,7 @@ console.log('\nPolyland Smash - engine smoke test\n')
 
   for (const c of ROSTER) {
     // Can they connect a jab on a neighbour?
-    const eng = newMatch({ chars: [c.id, 'basil'] })
+    const eng = newMatch({ chars: [c.id, 'contrlzee'] })
     const [a, b] = eng.fighters
     a.x = 200
     b.x = 200 + (c.hurt.w + b.def.hurt.w) / 2 + 2
@@ -421,7 +428,7 @@ console.log('\nPolyland Smash - engine smoke test\n')
     if (b.percent <= 0) cantHit.push(c.id)
 
     // Dropped off the left edge at head height, can they get back?
-    const r = newMatch({ chars: [c.id, 'basil'] })
+    const r = newMatch({ chars: [c.id, 'contrlzee'] })
     const me = r.fighters[0]
     me.x = 70
     me.y = 220
@@ -449,7 +456,7 @@ console.log('\nPolyland Smash - engine smoke test\n')
   const { ROSTER } = await import(pathToFileURL(charsOut).href)
   const kb = []
   for (const c of ROSTER) {
-    const eng = newMatch({ chars: [c.id, 'basil'] })
+    const eng = newMatch({ chars: [c.id, 'contrlzee'] })
     const [a, b] = eng.fighters
     a.x = 200
     b.x = 200 + (c.hurt.w + b.def.hurt.w) / 2

@@ -394,7 +394,7 @@ function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, frame: number): 
 
   if (f.state === 'attack') drawMoveFx(ctx, f)
 
-  // A little pennant above the head so you never lose your camper.
+  // A little pennant above the head so you never lose your fighter.
   const color = Engine.playerColor(f.index)
   const top = f.y - f.def.hurt.h - 8
   const bobY = Math.sin(frame * 0.08) * 0.6

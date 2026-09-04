@@ -1,7 +1,7 @@
 /**
  * The four-legged and winged half of the roster.
  *
- * Same idea as the campers: authored in local space (origin at the feet, +x
+ * Same idea as the main cast: authored in local space (origin at the feet, +x
  * forward, -y up, sized in fractions of the character's height), shaded in
  * world space so the light never moves.
  */

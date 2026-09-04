@@ -112,9 +112,9 @@ export function Dashboard({ onOpen }: { onOpen: (id: string) => void }) {
             Many games.
           </h2>
           <p>
-            Polyland is a little camp full of low-poly people. Every game here shares the same
-            cast, the same palette and the same two-players-one-keyboard rule - and anything on
-            the shelf can be hosted for friends to join.
+            Polyland is a little world of low-poly animals with jobs and opinions. Every game
+            here shares the same cast, the same palette and the same two-players-one-keyboard
+            rule - and anything on the shelf can be hosted for friends to join.
           </p>
           <div className="chiprow">
             <span className="chip">Keyboard only</span>
@@ -139,7 +139,7 @@ export function Dashboard({ onOpen }: { onOpen: (id: string) => void }) {
             </div>
             <div className="stat">
               <div className="stat__num">{ROSTER.length}</div>
-              <div className="stat__label">Campers</div>
+              <div className="stat__label">Characters</div>
             </div>
             <div className="stat">
               <div className="stat__num">1</div>
@@ -196,14 +196,14 @@ export function Dashboard({ onOpen }: { onOpen: (id: string) => void }) {
       </section>
 
       <section className="section">
-        <div className="panel__title">The campers</div>
+        <div className="panel__title">The cast</div>
         <div className="roster">
           {ROSTER.map((def) => (
             <FighterCard key={def.id} def={def} />
           ))}
           <div className="fighter" style={{ justifyContent: 'center', color: 'var(--dimmer)' }}>
             <span className="pixel" style={{ fontSize: 9 }}>
-              + MORE CAMPERS SOON
+              + MORE ANIMALS SOON
             </span>
           </div>
         </div>

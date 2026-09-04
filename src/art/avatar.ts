@@ -1,12 +1,15 @@
 /**
- * The Polyland campers: chunky low-poly chibi people, flat-shaded facet by
+ * The Polyland cast: upright, chunky, low-poly animals, flat-shaded facet by
  * facet.
  *
  * Everything is authored in "local" space - origin at the feet, +x forward,
  * -y up, sized in fractions of the character's height - and then placed into
  * the world with facing, squash and spin applied. Shading happens in world
- * space, so the light stays in the same place no matter which way a camper
+ * space, so the light stays in the same place no matter which way a character
  * faces or how far they are tumbling.
+ *
+ * One rig covers every species. A raccoon and a penguin differ by a head
+ * shape, a pair of ears and a tail, not by a separate drawing routine.
  */
 import {
   ellipse,
@@ -20,45 +23,55 @@ import {
   type Pt,
 } from '../lib/draw'
 
-export type HairStyle = 'short' | 'long' | 'curly' | 'bob' | 'bun' | 'buzz' | 'ponytail'
-export type HatStyle =
+export type Species = 'raccoon' | 'penguin' | 'lion' | 'frog' | 'cat'
+export type TailStyle = 'ringed' | 'long' | 'tufted' | 'stub' | 'none'
+export type HatStyle = 'none' | 'hood' | 'headband' | 'beanie' | 'visor' | 'cap' | 'bow'
+export type Accessory =
   | 'none'
-  | 'toque'
-  | 'bucket'
-  | 'cap'
-  | 'beanie'
-  | 'helmet'
-  | 'safari'
-  | 'hood'
-  | 'visor'
-export type Accessory = 'none' | 'pan' | 'staff' | 'rod' | 'board' | 'laptop' | 'bottle'
-export type Eyewear = 'none' | 'goggles' | 'shades' | 'snorkel'
-export type Sleeves = 'long' | 'short' | 'tank'
+  | 'laptop'
+  | 'briefcase'
+  | 'handbag'
+  | 'mug'
+  | 'bottle'
+  | 'staff'
+  | 'fan'
+export type Eyewear = 'none' | 'shades' | 'goggles'
+export type Sleeves = 'long' | 'short' | 'tank' | 'none'
 
 export interface AvatarDef {
-  skin: string
-  hair: string
-  hairStyle: HairStyle
-  top: string
-  legs: string
-  shoes?: string
+  species: Species
+  /** Main coat colour. */
+  fur: string
+  /** Muzzle, chest and belly. */
+  belly: string
+  /** Mask, mane or tail tuft; the species decides how it gets used. */
+  markings?: string
+  nose: string
+  /** Beak and feet, for birds. */
+  beak?: string
+  earInner?: string
+  tail: TailStyle
+
+  // Clothing and kit.
+  top?: string
+  topAccent?: string
   sleeves?: Sleeves
+  legs?: string
+  feet?: string
   hat: HatStyle
   hatColor?: string
   hatAccent?: string
   accessory: Accessory
   accessoryColor?: string
   accessoryAccent?: string
-  /** Backpack colour; omit for none. */
   pack?: string
-  /** Shoulder-bag strap colour. */
   satchel?: string
   eyewear?: Eyewear
   eyewearColor?: string
-  /** Over-ear headphones in this colour. */
   headphones?: string
-  /** Apron, bib or jersey panel. */
-  accent?: string
+  /** A small symbol printed on the chest. */
+  print?: 'code' | 'braces' | 'tie' | 'star' | 'none'
+  printColor?: string
 }
 
 export type Pose =
@@ -91,20 +104,28 @@ export interface AvatarOpts {
   shadow?: boolean
 }
 
-// Proportions, as fractions of total height. Chibi: the head is enormous.
-const LEG_H = 0.24
-const TORSO_H = 0.3
-const HEAD_H = 0.46
-const TORSO_W = 0.44
-const HEAD_W = 0.54
-const LEG_W = 0.14
-const ARM_W = 0.11
-const ARM_L = 0.24
+// Proportions, as fractions of total height. These animals are mostly head.
+const LEG_H = 0.19
+const TORSO_H = 0.34
+const HEAD_H = 0.47
+const TORSO_W = 0.5
+const HEAD_W = 0.58
+const LEG_W = 0.15
+const ARM_W = 0.13
+const ARM_L = 0.23
 
 interface Brush {
   facet: (pts: Pt[], color: string, opts?: FacetOpts) => void
   flat: (pts: Pt[], color: string) => void
   blob: (cx: number, cy: number, rx: number, ry: number, color: string) => void
+}
+
+interface Rig {
+  hx: number
+  headCy: number
+  hw: number
+  hh: number
+  lean: number
 }
 
 export function drawAvatar(
@@ -137,8 +158,7 @@ export function drawAvatar(
 
   const prevAlpha = ctx.globalAlpha
   if (o.alpha !== undefined) ctx.globalAlpha = o.alpha
-
-  if (o.shadow) softShadow(ctx, x, y + h * 0.02, h * 0.3, h * 0.075, 0.24)
+  if (o.shadow) softShadow(ctx, x, y + h * 0.02, h * 0.33, h * 0.08, 0.24)
 
   const brush: Brush = {
     facet: (pts, color, opts) => {
@@ -167,15 +187,18 @@ export function drawAvatar(
   const headCy = shoulderY - headH / 2
   const hw = headW / 2
   const hh = headH / 2
-  const shoes = def.shoes ?? shade(def.legs, -0.3)
-  const sleeves = def.sleeves ?? 'long'
+  const bird = def.species === 'penguin'
+  const legColor = def.legs ?? def.fur
+  const footColor = def.feet ?? (bird ? def.beak ?? '#e8a33c' : shade(def.fur, -0.2))
+  const sleeves = def.sleeves ?? (def.top ? 'long' : 'none')
+  const armColor = sleeves === 'none' || sleeves === 'tank' ? def.fur : def.top ?? def.fur
 
   // --------------------------------------------------------------- posing
-  const walkSwing = Math.sin(phase * 0.3) * 0.45
+  const walkSwing = Math.sin(phase * 0.3) * 0.42
   let legFront = 0.06
   let legBack = -0.06
-  let armFront = 1.35
-  let armBack = 1.75
+  let armFront = 1.32
+  let armBack = 1.78
   let lean = 0
   let propAngle = 0.5
   let eyes: 'open' | 'hurt' | 'focus' = 'open'
@@ -184,29 +207,29 @@ export function drawAvatar(
     case 'walk':
       legFront = walkSwing
       legBack = -walkSwing
-      armFront = 1.35 - walkSwing * 0.5
-      armBack = 1.75 + walkSwing * 0.5
-      lean = 0.35
+      armFront = 1.32 - walkSwing * 0.5
+      armBack = 1.78 + walkSwing * 0.5
+      lean = 0.3
       break
     case 'jump':
       legFront = 0.5
       legBack = -0.35
-      armFront = 0.35
-      armBack = 0.15
+      armFront = 0.3
+      armBack = 0.1
       lean = -0.3
       break
     case 'fall':
       legFront = -0.3
       legBack = 0.35
-      armFront = 0.7
-      armBack = 0.5
+      armFront = 0.66
+      armBack = 0.46
       break
     case 'hurt':
       legFront = -0.5
       legBack = 0.5
       armFront = -0.2
       armBack = -0.5
-      lean = -1.2
+      lean = -1.1
       eyes = 'hurt'
       break
     case 'tumble':
@@ -219,9 +242,9 @@ export function drawAvatar(
     case 'swingFwd':
       legFront = 0.4
       legBack = -0.45
-      armFront = -0.08
+      armFront = -0.06
       armBack = 2.1
-      lean = 1.1
+      lean = 1.0
       propAngle = -0.15
       eyes = 'focus'
       break
@@ -239,530 +262,680 @@ export function drawAvatar(
       legBack = -0.15
       armFront = 1.05
       armBack = 2.3
-      lean = 0.6
+      lean = 0.55
       propAngle = 1.25
       eyes = 'focus'
       break
     case 'brace':
       legFront = 0.25
       legBack = -0.25
-      armFront = 0.9
+      armFront = 0.88
       armBack = 2.2
-      lean = 0.5
+      lean = 0.45
       eyes = 'focus'
       break
     default:
-      armFront = 1.35 + Math.sin(phase * 0.08) * 0.06
-      armBack = 1.78 - Math.sin(phase * 0.08) * 0.06
+      armFront = 1.32 + Math.sin(phase * 0.08) * 0.06
+      armBack = 1.8 - Math.sin(phase * 0.08) * 0.06
   }
 
-  const headTilt = lean * 0.5
-  const hx = lean * 1.9
+  const hx = lean * 1.8
+  const rig: Rig = { hx, headCy, hw, hh, lean }
 
-  // ------------------------------------------------------------- back arm
-  const backSleeve = sleeves === 'tank' ? def.skin : def.top
-  brush.facet(
-    limb(-torsoW * 0.16, shoulderY + torsoH * 0.16, Math.PI / 2 + armBack - 1.57, armL, armW, 0.85),
-    shade(backSleeve, -0.18),
-    { flat: true, dark: 0.12 },
-  )
+  // ------------------------------------------------------------------ tail
+  drawTail(brush, def, torsoW, torsoH, hipY, h, phase, pose)
+
+  // -------------------------------------------------------------- back arm
+  drawArm(brush, def, {
+    shoulderX: -torsoW * 0.16,
+    shoulderY: shoulderY + torsoH * 0.18,
+    angle: Math.PI / 2 + armBack - 1.57,
+    len: armL,
+    w: armW,
+    color: shade(armColor, -0.16),
+    back: true,
+    bird,
+  })
 
   // ----------------------------------------------------------------- legs
   const drawLeg = (swing: number, tone: number) => {
-    const ox = swing >= 0 ? legW * 0.34 : -legW * 0.34
+    const ox = swing >= 0 ? legW * 0.32 : -legW * 0.32
     const ang = Math.PI / 2 - swing
-    brush.facet(limb(ox, hipY, ang, legH * 1.02, legW, 0.88), shade(def.legs, tone), {
+    brush.facet(limb(ox, hipY, ang, legH * 0.98, legW, 0.9), shade(legColor, tone), {
       dark: 0.2,
       light: 0.1,
     })
-    const footX = ox + Math.cos(ang) * legH
-    const footY = hipY + Math.sin(ang) * legH
-    brush.facet(
-      [
-        { x: footX - legW * 0.5, y: footY - legW * 0.34 },
-        { x: footX + legW * 0.62, y: footY - legW * 0.3 },
-        { x: footX + legW * 0.7, y: footY + legW * 0.06 },
-        { x: footX - legW * 0.5, y: footY + legW * 0.06 },
-      ],
-      shade(shoes, tone),
-      { dark: 0.18 },
-    )
+    const footX = ox + Math.cos(ang) * legH * 0.95
+    const footY = hipY + Math.sin(ang) * legH * 0.95
+    if (bird) {
+      brush.facet(
+        [
+          { x: footX - legW * 0.5, y: footY - legW * 0.2 },
+          { x: footX + legW * 1.0, y: footY - legW * 0.14 },
+          { x: footX + legW * 1.08, y: footY + legW * 0.18 },
+          { x: footX - legW * 0.5, y: footY + legW * 0.18 },
+        ],
+        shade(footColor, tone),
+        { dark: 0.2 },
+      )
+    } else {
+      brush.facet(
+        [
+          { x: footX - legW * 0.48, y: footY - legW * 0.36 },
+          { x: footX + legW * 0.7, y: footY - legW * 0.3 },
+          { x: footX + legW * 0.78, y: footY + legW * 0.1 },
+          { x: footX - legW * 0.48, y: footY + legW * 0.1 },
+        ],
+        shade(footColor, tone),
+        { dark: 0.2 },
+      )
+    }
   }
   drawLeg(legBack, -0.18)
   drawLeg(legFront, 0)
 
   // ----------------------------------------------------------------- pack
   if (def.pack) {
-    const packW = torsoW * 0.58
-    const packH = torsoH * 1.06
-    const px0 = -torsoW * 0.5 - packW * 0.5
-    const py0 = shoulderY + torsoH * 0.04
+    const packW = torsoW * 0.5
+    const packH = torsoH * 0.98
+    const px0 = -torsoW * 0.48 - packW * 0.5
+    const py0 = shoulderY + torsoH * 0.1
     brush.facet(
       [
-        { x: px0 + packW * 0.2, y: py0 },
-        { x: px0 + packW, y: py0 - packH * 0.05 },
+        { x: px0 + packW * 0.22, y: py0 },
+        { x: px0 + packW, y: py0 - packH * 0.04 },
         { x: px0 + packW, y: py0 + packH },
         { x: px0 + packW * 0.1, y: py0 + packH * 0.88 },
-        { x: px0 - packW * 0.05, y: py0 + packH * 0.34 },
+        { x: px0 - packW * 0.06, y: py0 + packH * 0.36 },
       ],
       def.pack,
       { dark: 0.2 },
     )
     brush.flat(
-      rectPts(px0 + packW * 0.12, py0 + packH * 0.42, packW * 0.7, packH * 0.12),
+      rectPts(px0 + packW * 0.14, py0 + packH * 0.44, packW * 0.72, packH * 0.13),
       shade(def.pack, -0.3),
     )
   }
 
   // ---------------------------------------------------------------- torso
   const tw = torsoW / 2
+  // Rounded and slightly pear shaped: these are round animals.
   const torso: Pt[] = [
-    { x: -tw * 0.84 + lean * 1.2, y: shoulderY },
-    { x: tw * 0.84 + lean * 1.2, y: shoulderY },
-    { x: tw, y: shoulderY + torsoH * 0.46 },
-    { x: tw * 0.9, y: hipY },
-    { x: -tw * 0.9, y: hipY },
-    { x: -tw, y: shoulderY + torsoH * 0.46 },
+    { x: -tw * 0.7 + lean * 1.1, y: shoulderY },
+    { x: tw * 0.7 + lean * 1.1, y: shoulderY },
+    { x: tw * 0.98, y: shoulderY + torsoH * 0.4 },
+    { x: tw, y: shoulderY + torsoH * 0.78 },
+    { x: tw * 0.8, y: hipY },
+    { x: -tw * 0.8, y: hipY },
+    { x: -tw, y: shoulderY + torsoH * 0.78 },
+    { x: -tw * 0.98, y: shoulderY + torsoH * 0.4 },
   ]
-  brush.facet(torso, def.top, { dark: 0.24, light: 0.14 })
+  brush.facet(torso, def.top ?? def.fur, { dark: 0.24, light: 0.14 })
 
-  if (def.accent) {
-    brush.flat(
+  // Chest and belly, for anyone not fully dressed.
+  if (!def.top || bird) {
+    brush.facet(
       [
-        { x: -tw * 0.4 + lean, y: shoulderY + torsoH * 0.24 },
-        { x: tw * 0.5 + lean, y: shoulderY + torsoH * 0.24 },
-        { x: tw * 0.44, y: hipY },
-        { x: -tw * 0.34, y: hipY },
+        { x: -tw * 0.56 + lean * 0.8, y: shoulderY + torsoH * 0.1 },
+        { x: tw * 0.62 + lean * 0.8, y: shoulderY + torsoH * 0.06 },
+        { x: tw * 0.72, y: shoulderY + torsoH * 0.6 },
+        { x: tw * 0.5, y: hipY },
+        { x: -tw * 0.5, y: hipY },
+        { x: -tw * 0.7, y: shoulderY + torsoH * 0.6 },
       ],
-      def.accent,
+      def.belly,
+      { dark: 0.12, light: 0.08 },
     )
   }
+  if (def.topAccent) {
+    brush.flat(
+      [
+        { x: -tw * 0.7 + lean * 1.1, y: shoulderY },
+        { x: tw * 0.7 + lean * 1.1, y: shoulderY },
+        { x: tw * 0.5 + lean, y: shoulderY + torsoH * 0.22 },
+        { x: -tw * 0.5 + lean, y: shoulderY + torsoH * 0.22 },
+      ],
+      def.topAccent,
+    )
+  }
+  drawPrint(brush, def, lean, shoulderY, torsoH, tw)
+
   if (def.satchel) {
     brush.flat(
       [
-        { x: -tw * 0.7 + lean * 1.1, y: shoulderY + torsoH * 0.02 },
-        { x: -tw * 0.4 + lean * 1.1, y: shoulderY },
-        { x: tw * 0.8, y: hipY + torsoH * 0.1 },
-        { x: tw * 0.55, y: hipY + torsoH * 0.14 },
+        { x: -tw * 0.62 + lean, y: shoulderY + torsoH * 0.04 },
+        { x: -tw * 0.32 + lean, y: shoulderY + torsoH * 0.01 },
+        { x: tw * 0.78, y: hipY + torsoH * 0.12 },
+        { x: tw * 0.52, y: hipY + torsoH * 0.16 },
       ],
       def.satchel,
     )
-    brush.facet(
-      rectPts(tw * 0.5, hipY - torsoH * 0.06, tw * 0.7, torsoH * 0.34),
-      def.satchel,
-      { dark: 0.2 },
-    )
-  }
-
-  // ----------------------------------------------------------------- head
-  const headPts: Pt[] = [
-    { x: hx - hw, y: headCy - hh * 0.4 },
-    { x: hx - hw * 0.72, y: headCy - hh * 0.88 },
-    { x: hx - hw * 0.28, y: headCy - hh },
-    { x: hx + hw * 0.32, y: headCy - hh },
-    { x: hx + hw * 0.74, y: headCy - hh * 0.86 },
-    { x: hx + hw, y: headCy - hh * 0.36 },
-    { x: hx + hw * 0.94, y: headCy + hh * 0.4 },
-    { x: hx + hw * 0.54, y: headCy + hh * 0.92 },
-    { x: hx - hw * 0.5, y: headCy + hh * 0.94 },
-    { x: hx - hw * 0.94, y: headCy + hh * 0.42 },
-  ]
-
-  // Long hair sits behind the head.
-  if (def.hairStyle === 'long' || def.hairStyle === 'bob' || def.hairStyle === 'ponytail') {
-    const drop = def.hairStyle === 'long' ? hh * 1.55 : def.hairStyle === 'bob' ? hh * 0.8 : hh * 1.1
-    brush.facet(
-      [
-        { x: hx - hw * 1.08, y: headCy - hh * 0.86 },
-        { x: hx + hw * 1.08, y: headCy - hh * 0.86 },
-        { x: hx + hw * 1.02, y: headCy + drop * 0.9 },
-        { x: hx + hw * 0.46, y: headCy + drop * 0.78 },
-        { x: hx - hw * 0.46, y: headCy + drop * 0.84 },
-        { x: hx - hw * 1.02, y: headCy + drop },
-      ],
-      shade(def.hair, -0.12),
-      { dark: 0.2 },
-    )
-  }
-  if (def.hairStyle === 'ponytail') {
-    brush.facet(
-      [
-        { x: hx - hw * 0.9, y: headCy - hh * 0.5 },
-        { x: hx - hw * 1.5, y: headCy - hh * 0.1 },
-        { x: hx - hw * 1.62, y: headCy + hh * 0.7 },
-        { x: hx - hw * 1.2, y: headCy + hh * 0.5 },
-        { x: hx - hw * 0.86, y: headCy + hh * 0.1 },
-      ],
-      def.hair,
-      { dark: 0.24 },
-    )
-  }
-
-  brush.facet(headPts, def.skin, { dark: 0.16, light: 0.12, split: 0.15 })
-
-  // ----------------------------------------------------------------- hair
-  if (def.hairStyle !== 'buzz' || def.hat === 'none') {
-    brush.facet(hairShape(def.hairStyle, hx, headCy, hw, hh), def.hair, {
-      dark: 0.24,
-      light: 0.16,
+    brush.facet(rectPts(tw * 0.46, hipY - torsoH * 0.02, tw * 0.66, torsoH * 0.32), def.satchel, {
+      dark: 0.2,
     })
   }
-  if (def.hairStyle === 'bun') {
-    brush.blob(hx - hw * 0.5, headCy - hh * 1.12, hw * 0.36, hh * 0.34, shade(def.hair, 0.06))
-  }
 
-  // ------------------------------------------------------------------ hat
-  drawHat(brush, def, hx, headCy, hw, hh)
-
-  // ----------------------------------------------------------------- face
-  const eyeW = hw * 0.4
-  const eyeH = hh * 0.54
-  const eyeY = headCy + hh * 0.08 + headTilt * 1.2
-  const eyeSpread = hw * 0.42
-  const eyeCx = hx + hw * 0.16
-
-  if (def.eyewear && def.eyewear !== 'none') {
-    drawEyewear(brush, def, eyeCx, eyeY, hh, eyeW, eyeSpread)
-  } else if (eyes === 'hurt') {
-    for (const side of [-1, 1]) {
-      const ex = eyeCx + side * eyeSpread
-      const t = hh * 0.09
-      brush.flat(
-        [
-          { x: ex - eyeW * 0.5, y: eyeY - eyeH * 0.3 },
-          { x: ex + eyeW * 0.5, y: eyeY + eyeH * 0.1 },
-          { x: ex + eyeW * 0.5, y: eyeY + eyeH * 0.1 + t },
-          { x: ex - eyeW * 0.5, y: eyeY - eyeH * 0.3 + t },
-        ],
-        '#2b2723',
-      )
-      brush.flat(
-        [
-          { x: ex - eyeW * 0.5, y: eyeY + eyeH * 0.1 },
-          { x: ex + eyeW * 0.5, y: eyeY - eyeH * 0.3 },
-          { x: ex + eyeW * 0.5, y: eyeY - eyeH * 0.3 + t },
-          { x: ex - eyeW * 0.5, y: eyeY + eyeH * 0.1 + t },
-        ],
-        '#2b2723',
-      )
-    }
-  } else {
-    const hgt = eyes === 'focus' ? eyeH * 0.66 : eyeH
-    for (const side of [-1, 1]) {
-      const ex = eyeCx + side * eyeSpread
-      brush.blob(ex, eyeY, eyeW * 0.5, hgt * 0.5, '#26221f')
-      brush.blob(ex - eyeW * 0.16, eyeY - hgt * 0.2, eyeW * 0.17, hgt * 0.2, '#fdfbf5')
-    }
-  }
+  // ------------------------------------------------------------------ head
+  drawEarsBehind(brush, def, rig)
+  brush.facet(headShape(def.species, hx, headCy, hw, hh), def.fur, {
+    dark: 0.18,
+    light: 0.13,
+    split: 0.12,
+  })
+  drawFace(brush, def, rig, eyes, lean)
+  drawEarsFront(brush, def, rig)
+  drawHat(brush, def, rig)
 
   if (def.headphones) {
     const band: Pt[] = []
     for (let i = 0; i <= 12; i++) {
       const a = Math.PI + (i / 12) * Math.PI
-      band.push({ x: hx + Math.cos(a) * hw * 1.02, y: headCy - hh * 0.34 + Math.sin(a) * hh * 0.86 })
+      band.push({ x: hx + Math.cos(a) * hw * 1.0, y: headCy - hh * 0.3 + Math.sin(a) * hh * 0.86 })
     }
     for (let i = 12; i >= 0; i--) {
       const a = Math.PI + (i / 12) * Math.PI
-      band.push({
-        x: hx + Math.cos(a) * hw * 0.84,
-        y: headCy - hh * 0.34 + Math.sin(a) * hh * 0.68,
-      })
+      band.push({ x: hx + Math.cos(a) * hw * 0.84, y: headCy - hh * 0.3 + Math.sin(a) * hh * 0.68 })
     }
     brush.facet(band, def.headphones, { dark: 0.24 })
+    brush.facet(rectPts(hx + hw * 0.66, headCy - hh * 0.36, hw * 0.4, hh * 0.6), def.headphones, {
+      dark: 0.2,
+    })
     brush.facet(
-      rectPts(hx + hw * 0.68, headCy - hh * 0.42, hw * 0.42, hh * 0.62),
-      def.headphones,
-      { dark: 0.2 },
-    )
-    brush.facet(
-      rectPts(hx - hw * 1.1, headCy - hh * 0.42, hw * 0.42, hh * 0.62),
+      rectPts(hx - hw * 1.06, headCy - hh * 0.36, hw * 0.4, hh * 0.6),
       shade(def.headphones, -0.16),
       { flat: true },
     )
   }
 
   // ------------------------------------------------- front arm and the prop
-  const shoulderX = torsoW * 0.2 + lean * 1.4
+  const shoulderX = torsoW * 0.2 + lean * 1.3
   const armAngle = Math.PI / 2 + armFront - 1.57
   const handX = shoulderX + Math.cos(armAngle) * armL
-  const handY = shoulderY + torsoH * 0.16 + Math.sin(armAngle) * armL
+  const handY = shoulderY + torsoH * 0.18 + Math.sin(armAngle) * armL
 
   drawProp(brush, def, handX, handY, propAngle, h, pose)
-
-  const frontSleeve = sleeves === 'tank' ? def.skin : def.top
-  brush.facet(limb(shoulderX, shoulderY + torsoH * 0.16, armAngle, armL, armW, 0.85), frontSleeve, {
-    dark: 0.18,
-    light: 0.12,
+  drawArm(brush, def, {
+    shoulderX,
+    shoulderY: shoulderY + torsoH * 0.18,
+    angle: armAngle,
+    len: armL,
+    w: armW,
+    color: armColor,
+    back: false,
+    bird,
   })
-  if (sleeves === 'long') {
-    brush.blob(handX, handY, armW * 0.55, armW * 0.55, def.skin)
-  } else {
-    brush.facet(
-      limb(
-        shoulderX + Math.cos(armAngle) * armL * 0.45,
-        shoulderY + torsoH * 0.16 + Math.sin(armAngle) * armL * 0.45,
-        armAngle,
-        armL * 0.6,
-        armW * 0.92,
-        0.9,
-      ),
-      def.skin,
-      { dark: 0.16 },
-    )
-  }
 
   ctx.globalAlpha = prevAlpha
 }
 
-// --------------------------------------------------------------------- hair
+// ---------------------------------------------------------------------- arms
 
-function hairShape(style: HairStyle, hx: number, cy: number, hw: number, hh: number): Pt[] {
-  const top = cy - hh * 1.1
-  switch (style) {
-    case 'curly':
+function drawArm(
+  brush: Brush,
+  def: AvatarDef,
+  a: {
+    shoulderX: number
+    shoulderY: number
+    angle: number
+    len: number
+    w: number
+    color: string
+    back: boolean
+    bird: boolean
+  },
+): void {
+  if (a.bird) {
+    // A flipper: wide at the shoulder, tapering to a rounded tip.
+    const c = Math.cos(a.angle)
+    const s = Math.sin(a.angle)
+    const nx = -s
+    const ny = c
+    const tipX = a.shoulderX + c * a.len * 1.15
+    const tipY = a.shoulderY + s * a.len * 1.15
+    brush.facet(
+      [
+        { x: a.shoulderX + nx * a.w * 0.7, y: a.shoulderY + ny * a.w * 0.7 },
+        { x: tipX + nx * a.w * 0.24, y: tipY + ny * a.w * 0.24 },
+        { x: tipX - nx * a.w * 0.24, y: tipY - ny * a.w * 0.24 },
+        { x: a.shoulderX - nx * a.w * 0.7, y: a.shoulderY - ny * a.w * 0.7 },
+      ],
+      a.color,
+      a.back ? { flat: true, dark: 0.14 } : { dark: 0.2, light: 0.12 },
+    )
+    return
+  }
+  brush.facet(
+    limb(a.shoulderX, a.shoulderY, a.angle, a.len, a.w, 0.86),
+    a.color,
+    a.back ? { flat: true, dark: 0.12 } : { dark: 0.18, light: 0.12 },
+  )
+  const px = a.shoulderX + Math.cos(a.angle) * a.len
+  const py = a.shoulderY + Math.sin(a.angle) * a.len
+  brush.blob(px, py, a.w * 0.55, a.w * 0.55, a.back ? shade(def.fur, -0.18) : def.fur)
+}
+
+// --------------------------------------------------------------------- heads
+
+function headShape(species: Species, hx: number, cy: number, hw: number, hh: number): Pt[] {
+  switch (species) {
+    case 'frog':
+      // Wide, low, and flat on top where the eyes sit.
       return [
-        { x: hx - hw * 1.08, y: cy - hh * 0.16 },
-        { x: hx - hw * 1.14, y: cy - hh * 0.66 },
-        { x: hx - hw * 0.74, y: top + hh * 0.12 },
-        { x: hx - hw * 0.26, y: top - hh * 0.08 },
-        { x: hx + hw * 0.24, y: top + hh * 0.14 },
-        { x: hx + hw * 0.72, y: top - hh * 0.02 },
-        { x: hx + hw * 1.12, y: cy - hh * 0.52 },
-        { x: hx + hw * 1.04, y: cy - hh * 0.08 },
-        { x: hx + hw * 0.62, y: cy - hh * 0.46 },
-        { x: hx + hw * 0.16, y: cy - hh * 0.2 },
-        { x: hx - hw * 0.32, y: cy - hh * 0.48 },
-        { x: hx - hw * 0.7, y: cy - hh * 0.18 },
+        { x: hx - hw * 1.02, y: cy - hh * 0.18 },
+        { x: hx - hw * 0.78, y: cy - hh * 0.72 },
+        { x: hx - hw * 0.24, y: cy - hh * 0.86 },
+        { x: hx + hw * 0.34, y: cy - hh * 0.86 },
+        { x: hx + hw * 0.86, y: cy - hh * 0.66 },
+        { x: hx + hw * 1.04, y: cy - hh * 0.1 },
+        { x: hx + hw * 0.96, y: cy + hh * 0.52 },
+        { x: hx + hw * 0.5, y: cy + hh * 0.92 },
+        { x: hx - hw * 0.52, y: cy + hh * 0.92 },
+        { x: hx - hw * 0.96, y: cy + hh * 0.5 },
       ]
-    case 'bob':
+    case 'penguin':
+      // An egg, a little heavier at the jaw.
       return [
-        { x: hx - hw * 1.04, y: cy - hh * 0.06 },
-        { x: hx - hw * 1.04, y: cy - hh * 0.72 },
-        { x: hx - hw * 0.52, y: top },
-        { x: hx + hw * 0.54, y: top },
-        { x: hx + hw * 1.04, y: cy - hh * 0.7 },
-        { x: hx + hw * 1.04, y: cy - hh * 0.02 },
-        { x: hx + hw * 0.5, y: cy - hh * 0.4 },
-        { x: hx - hw * 0.18, y: cy - hh * 0.32 },
-      ]
-    case 'long':
-    case 'ponytail':
-      return [
-        { x: hx - hw * 1.06, y: cy - hh * 0.2 },
-        { x: hx - hw * 1.06, y: cy - hh * 0.76 },
-        { x: hx - hw * 0.46, y: top },
-        { x: hx + hw * 0.48, y: top },
-        { x: hx + hw * 1.06, y: cy - hh * 0.68 },
-        { x: hx + hw * 1.02, y: cy - hh * 0.02 },
-        { x: hx + hw * 0.44, y: cy - hh * 0.52 },
-        { x: hx - hw * 0.34, y: cy - hh * 0.34 },
-      ]
-    case 'bun':
-    case 'buzz':
-      return [
-        { x: hx - hw * 1.02, y: cy - hh * 0.4 },
-        { x: hx - hw * 0.86, y: cy - hh * 0.92 },
-        { x: hx - hw * 0.2, y: top + hh * 0.04 },
-        { x: hx + hw * 0.5, y: cy - hh * 0.94 },
-        { x: hx + hw * 1.02, y: cy - hh * 0.44 },
-        { x: hx + hw * 0.98, y: cy - hh * 0.2 },
-        { x: hx - hw * 0.98, y: cy - hh * 0.24 },
+        { x: hx - hw * 0.94, y: cy - hh * 0.3 },
+        { x: hx - hw * 0.68, y: cy - hh * 0.86 },
+        { x: hx - hw * 0.12, y: cy - hh * 1.0 },
+        { x: hx + hw * 0.46, y: cy - hh * 0.88 },
+        { x: hx + hw * 0.88, y: cy - hh * 0.4 },
+        { x: hx + hw * 0.94, y: cy + hh * 0.24 },
+        { x: hx + hw * 0.6, y: cy + hh * 0.86 },
+        { x: hx - hw * 0.44, y: cy + hh * 0.92 },
+        { x: hx - hw * 0.9, y: cy + hh * 0.36 },
       ]
     default:
-      // Short and slightly spiky.
+      // A round skull with a slight brow and a jaw.
       return [
-        { x: hx - hw * 1.04, y: cy - hh * 0.22 },
-        { x: hx - hw * 1.1, y: cy - hh * 0.76 },
-        { x: hx - hw * 0.54, y: top + hh * 0.08 },
-        { x: hx - hw * 0.12, y: top - hh * 0.06 },
-        { x: hx + hw * 0.36, y: top + hh * 0.06 },
-        { x: hx + hw * 0.88, y: top - hh * 0.02 },
-        { x: hx + hw * 1.1, y: cy - hh * 0.5 },
-        { x: hx + hw * 1.0, y: cy - hh * 0.14 },
-        { x: hx + hw * 0.42, y: cy - hh * 0.5 },
-        { x: hx - hw * 0.22, y: cy - hh * 0.32 },
-        { x: hx - hw * 0.62, y: cy - hh * 0.52 },
+        { x: hx - hw * 0.98, y: cy - hh * 0.36 },
+        { x: hx - hw * 0.7, y: cy - hh * 0.88 },
+        { x: hx - hw * 0.16, y: cy - hh * 1.0 },
+        { x: hx + hw * 0.42, y: cy - hh * 0.9 },
+        { x: hx + hw * 0.86, y: cy - hh * 0.44 },
+        { x: hx + hw * 0.98, y: cy + hh * 0.18 },
+        { x: hx + hw * 0.72, y: cy + hh * 0.78 },
+        { x: hx - hw * 0.42, y: cy + hh * 0.9 },
+        { x: hx - hw * 0.92, y: cy + hh * 0.34 },
       ]
   }
 }
 
-// ---------------------------------------------------------------------- hats
+function drawEarsBehind(brush: Brush, def: AvatarDef, r: Rig): void {
+  const { hx, headCy: cy, hw, hh } = r
+  if (def.species === 'lion') {
+    // The mane is a ring of facets sitting behind the head.
+    const mane: Pt[] = []
+    const spikes = 13
+    for (let i = 0; i < spikes; i++) {
+      const a = (i / spikes) * Math.PI * 2
+      const rr = i % 2 === 0 ? 1.36 : 1.12
+      mane.push({ x: hx + Math.cos(a) * hw * rr, y: cy + Math.sin(a) * hh * rr })
+    }
+    brush.facet(mane, def.markings ?? shade(def.fur, -0.28), { dark: 0.24, light: 0.14 })
+    for (const side of [-1, 1]) {
+      brush.blob(hx + side * hw * 0.72, cy - hh * 0.78, hw * 0.2, hh * 0.22, def.fur)
+    }
+    return
+  }
+  if (def.species === 'raccoon' || def.species === 'cat') {
+    const pointy = def.species === 'cat'
+    for (const side of [-1, 1]) {
+      const ex = hx + side * hw * 0.6 + (side > 0 ? hw * 0.06 : 0)
+      const tip = pointy ? hh * 1.5 : hh * 1.32
+      const wide = pointy ? 0.3 : 0.4
+      brush.facet(
+        [
+          { x: ex - hw * wide, y: cy - hh * 0.6 },
+          { x: ex + hw * (side > 0 ? 0.06 : -0.02), y: cy - tip },
+          { x: ex + hw * wide, y: cy - hh * 0.58 },
+        ],
+        def.fur,
+        { dark: 0.22, light: 0.12 },
+      )
+      brush.flat(
+        [
+          { x: ex - hw * wide * 0.5, y: cy - hh * 0.62 },
+          { x: ex + hw * (side > 0 ? 0.04 : -0.01), y: cy - tip * 0.86 },
+          { x: ex + hw * wide * 0.5, y: cy - hh * 0.6 },
+        ],
+        def.earInner ?? shade(def.nose, 0.2),
+      )
+    }
+  }
+}
 
-function drawHat(brush: Brush, def: AvatarDef, hx: number, cy: number, hw: number, hh: number): void {
-  const col = def.hatColor ?? '#f4f1e6'
-  const accent = def.hatAccent ?? shade(col, -0.3)
-  const hatY = cy - hh * 0.9
+function drawEarsFront(brush: Brush, def: AvatarDef, r: Rig): void {
+  // Only the frog needs something on the side of the head: an eardrum.
+  if (def.species !== 'frog') return
+  const { hx, headCy: cy, hw, hh } = r
+  brush.blob(hx + hw * 0.68, cy + hh * 0.16, hw * 0.2, hh * 0.2, shade(def.fur, -0.16))
+}
 
-  switch (def.hat) {
-    case 'toque':
-      brush.facet(rectPts(hx - hw * 0.84, hatY - hh * 0.3, hw * 1.68, hh * 0.34), col, { dark: 0.16 })
-      brush.facet(
-        [
-          { x: hx - hw * 0.88, y: hatY - hh * 0.28 },
-          { x: hx - hw * 1.0, y: hatY - hh * 0.8 },
-          { x: hx - hw * 0.56, y: hatY - hh * 1.18 },
-          { x: hx - hw * 0.06, y: hatY - hh * 0.88 },
-          { x: hx + hw * 0.44, y: hatY - hh * 1.2 },
-          { x: hx + hw * 0.94, y: hatY - hh * 0.86 },
-          { x: hx + hw * 0.9, y: hatY - hh * 0.28 },
-        ],
-        col,
-        { dark: 0.18, light: 0.1 },
-      )
-      break
+function drawFace(
+  brush: Brush,
+  def: AvatarDef,
+  r: Rig,
+  eyes: 'open' | 'hurt' | 'focus',
+  lean: number,
+): void {
+  const { hx, headCy: cy, hw, hh } = r
+  const tilt = lean * 0.5
 
-    case 'bucket':
-      brush.facet(
-        [
-          { x: hx - hw * 1.36, y: hatY + hh * 0.16 },
-          { x: hx - hw * 0.88, y: hatY - hh * 0.14 },
-          { x: hx + hw * 0.9, y: hatY - hh * 0.14 },
-          { x: hx + hw * 1.36, y: hatY + hh * 0.16 },
-          { x: hx + hw * 0.84, y: hatY + hh * 0.36 },
-          { x: hx - hw * 0.84, y: hatY + hh * 0.36 },
-        ],
-        col,
-        { dark: 0.22 },
-      )
-      brush.facet(
-        [
-          { x: hx - hw * 0.82, y: hatY - hh * 0.06 },
-          { x: hx - hw * 0.62, y: hatY - hh * 0.66 },
-          { x: hx + hw * 0.6, y: hatY - hh * 0.66 },
-          { x: hx + hw * 0.82, y: hatY - hh * 0.06 },
-        ],
-        col,
-        { dark: 0.18, light: 0.12 },
-      )
-      break
+  let eyeCx = hx + hw * 0.16
+  let eyeY = cy + hh * 0.04 + tilt * 1.2
+  let eyeW = hw * 0.4
+  let eyeH = hh * 0.5
+  let eyeSpread = hw * 0.42
 
-    case 'safari':
-      brush.facet(
+  switch (def.species) {
+    case 'raccoon': {
+      // Cream forehead and muzzle, with the bandit mask between them.
+      brush.flat(
         [
-          { x: hx - hw * 1.5, y: hatY + hh * 0.2 },
-          { x: hx - hw * 0.9, y: hatY - hh * 0.1 },
-          { x: hx + hw * 0.92, y: hatY - hh * 0.1 },
-          { x: hx + hw * 1.5, y: hatY + hh * 0.2 },
-          { x: hx + hw * 0.86, y: hatY + hh * 0.44 },
-          { x: hx - hw * 0.86, y: hatY + hh * 0.44 },
+          { x: hx - hw * 0.86, y: cy - hh * 0.42 },
+          { x: hx - hw * 0.3, y: cy - hh * 0.94 },
+          { x: hx + hw * 0.44, y: cy - hh * 0.84 },
+          { x: hx + hw * 0.7, y: cy - hh * 0.38 },
         ],
-        col,
-        { dark: 0.24 },
+        def.belly,
       )
       brush.facet(
         [
-          { x: hx - hw * 0.84, y: hatY - hh * 0.02 },
-          { x: hx - hw * 0.66, y: hatY - hh * 0.78 },
-          { x: hx + hw * 0.64, y: hatY - hh * 0.78 },
-          { x: hx + hw * 0.84, y: hatY - hh * 0.02 },
+          { x: hx - hw * 0.92, y: cy - hh * 0.36 },
+          { x: hx + hw * 0.82, y: cy - hh * 0.4 },
+          { x: hx + hw * 0.86, y: cy + hh * 0.24 },
+          { x: hx - hw * 0.88, y: cy + hh * 0.28 },
         ],
-        col,
-        { dark: 0.18, light: 0.12 },
-      )
-      brush.flat(rectPts(hx - hw * 0.84, hatY - hh * 0.26, hw * 1.68, hh * 0.22), accent)
-      break
-
-    case 'cap':
-      brush.facet(
-        [
-          { x: hx - hw * 0.96, y: hatY + hh * 0.12 },
-          { x: hx - hw * 0.76, y: hatY - hh * 0.62 },
-          { x: hx + hw * 0.7, y: hatY - hh * 0.56 },
-          { x: hx + hw * 0.96, y: hatY + hh * 0.1 },
-        ],
-        col,
-        { dark: 0.2, light: 0.12 },
-      )
-      brush.facet(
-        [
-          { x: hx + hw * 0.6, y: hatY + hh * 0.02 },
-          { x: hx + hw * 1.5, y: hatY + hh * 0.06 },
-          { x: hx + hw * 1.48, y: hatY + hh * 0.24 },
-          { x: hx + hw * 0.6, y: hatY + hh * 0.26 },
-        ],
-        accent,
+        def.markings ?? '#3a3733',
         { flat: true },
       )
+      brush.blob(hx + hw * 0.26, cy + hh * 0.56, hw * 0.52, hh * 0.36, def.belly)
+      brush.blob(hx + hw * 0.42, cy + hh * 0.36, hw * 0.16, hh * 0.13, def.nose)
       break
-
-    case 'visor':
-      brush.flat(rectPts(hx - hw * 0.96, hatY - hh * 0.12, hw * 1.92, hh * 0.28), col)
+    }
+    case 'penguin': {
       brush.facet(
         [
-          { x: hx + hw * 0.5, y: hatY - hh * 0.06 },
-          { x: hx + hw * 1.52, y: hatY },
-          { x: hx + hw * 1.5, y: hatY + hh * 0.2 },
-          { x: hx + hw * 0.5, y: hatY + hh * 0.2 },
+          { x: hx - hw * 0.5, y: cy - hh * 0.62 },
+          { x: hx + hw * 0.5, y: cy - hh * 0.56 },
+          { x: hx + hw * 0.8, y: cy + hh * 0.16 },
+          { x: hx + hw * 0.5, y: cy + hh * 0.8 },
+          { x: hx - hw * 0.42, y: cy + hh * 0.84 },
+          { x: hx - hw * 0.62, y: cy + hh * 0.1 },
         ],
-        accent,
-        { flat: true },
+        def.belly,
+        { dark: 0.1, light: 0.06 },
       )
-      break
-
-    case 'beanie':
       brush.facet(
         [
-          { x: hx - hw * 1.02, y: hatY + hh * 0.28 },
-          { x: hx - hw * 0.88, y: hatY - hh * 0.56 },
-          { x: hx - hw * 0.3, y: hatY - hh * 0.86 },
-          { x: hx + hw * 0.42, y: hatY - hh * 0.8 },
-          { x: hx + hw * 0.88, y: hatY - hh * 0.5 },
-          { x: hx + hw * 1.02, y: hatY + hh * 0.28 },
+          { x: hx + hw * 0.36, y: cy + hh * 0.12 },
+          { x: hx + hw * 1.02, y: cy + hh * 0.3 },
+          { x: hx + hw * 0.36, y: cy + hh * 0.52 },
         ],
-        col,
-        { dark: 0.2, light: 0.12 },
+        def.beak ?? '#e8a33c',
+        { dark: 0.22, light: 0.14 },
       )
-      brush.flat(rectPts(hx - hw * 1.04, hatY + hh * 0.16, hw * 2.08, hh * 0.3), shade(col, -0.16))
+      eyeSpread = hw * 0.36
+      eyeCx = hx + hw * 0.1
+      eyeY = cy - hh * 0.1 + tilt
       break
-
-    case 'helmet':
-      brush.facet(
-        [
-          { x: hx - hw * 1.06, y: hatY + hh * 0.26 },
-          { x: hx - hw * 1.0, y: hatY - hh * 0.5 },
-          { x: hx - hw * 0.44, y: hatY - hh * 0.96 },
-          { x: hx + hw * 0.4, y: hatY - hh * 0.92 },
-          { x: hx + hw * 1.02, y: hatY - hh * 0.42 },
-          { x: hx + hw * 1.24, y: hatY + hh * 0.24 },
-          { x: hx + hw * 0.9, y: hatY + hh * 0.3 },
-          { x: hx - hw * 0.9, y: hatY + hh * 0.32 },
-        ],
-        col,
-        { dark: 0.22, light: 0.16 },
-      )
-      // Vents.
-      for (let i = 0; i < 3; i++) {
-        brush.flat(
-          [
-            { x: hx - hw * 0.6 + i * hw * 0.5, y: hatY - hh * 0.82 },
-            { x: hx - hw * 0.36 + i * hw * 0.5, y: hatY - hh * 0.86 },
-            { x: hx - hw * 0.42 + i * hw * 0.5, y: hatY - hh * 0.28 },
-            { x: hx - hw * 0.62 + i * hw * 0.5, y: hatY - hh * 0.24 },
-          ],
-          accent,
+    }
+    case 'lion': {
+      brush.blob(hx + hw * 0.24, cy + hh * 0.54, hw * 0.56, hh * 0.36, def.belly)
+      brush.blob(hx + hw * 0.4, cy + hh * 0.32, hw * 0.17, hh * 0.13, def.nose)
+      for (let i = 0; i < 2; i++) {
+        brush.blob(
+          hx + hw * (0.16 + i * 0.24),
+          cy + hh * 0.6,
+          hw * 0.04,
+          hh * 0.04,
+          shade(def.belly, -0.3),
         )
       }
       break
-
-    case 'hood':
+    }
+    case 'frog': {
       brush.facet(
         [
-          { x: hx - hw * 1.22, y: cy + hh * 0.9 },
-          { x: hx - hw * 1.24, y: cy - hh * 0.5 },
-          { x: hx - hw * 0.6, y: cy - hh * 1.24 },
-          { x: hx + hw * 0.44, y: cy - hh * 1.2 },
-          { x: hx + hw * 1.2, y: cy - hh * 0.42 },
-          { x: hx + hw * 1.16, y: cy + hh * 0.5 },
-          { x: hx + hw * 0.8, y: cy + hh * 1.0 },
-          { x: hx - hw * 0.9, y: cy + hh * 1.02 },
+          { x: hx - hw * 0.92, y: cy + hh * 0.16 },
+          { x: hx + hw * 0.98, y: cy + hh * 0.1 },
+          { x: hx + hw * 0.78, y: cy + hh * 0.78 },
+          { x: hx - hw * 0.62, y: cy + hh * 0.82 },
+        ],
+        def.belly,
+        { dark: 0.1, light: 0.06 },
+      )
+      brush.flat(
+        [
+          { x: hx - hw * 0.72, y: cy + hh * 0.2 },
+          { x: hx + hw * 0.9, y: cy + hh * 0.14 },
+          { x: hx + hw * 0.9, y: cy + hh * 0.24 },
+          { x: hx - hw * 0.72, y: cy + hh * 0.3 },
+        ],
+        shade(def.belly, -0.3),
+      )
+      brush.blob(hx + hw * 0.3, cy - hh * 0.1, hw * 0.05, hh * 0.04, shade(def.fur, -0.4))
+      brush.blob(hx + hw * 0.06, cy - hh * 0.08, hw * 0.05, hh * 0.04, shade(def.fur, -0.4))
+      // The eyes are domes sitting on top of the skull.
+      eyeY = cy - hh * 0.82 + tilt
+      eyeSpread = hw * 0.52
+      eyeCx = hx + hw * 0.08
+      eyeW = hw * 0.56
+      eyeH = hh * 0.6
+      for (const side of [-1, 1]) {
+        brush.blob(eyeCx + side * eyeSpread, eyeY, eyeW * 0.62, eyeH * 0.62, def.fur)
+      }
+      break
+    }
+    default: {
+      brush.blob(hx + hw * 0.28, cy + hh * 0.52, hw * 0.44, hh * 0.3, def.belly)
+      brush.blob(hx + hw * 0.42, cy + hh * 0.34, hw * 0.14, hh * 0.11, def.nose)
+      break
+    }
+  }
+
+  if (def.eyewear && def.eyewear !== 'none') {
+    drawEyewear(brush, def, eyeCx, eyeY, hh, eyeW, eyeSpread)
+    return
+  }
+
+  const scale = def.species === 'frog' ? 0.5 : 1
+  if (eyes === 'hurt') {
+    for (const side of [-1, 1]) {
+      const ex = eyeCx + side * eyeSpread
+      const t = hh * 0.08
+      brush.flat(
+        [
+          { x: ex - eyeW * 0.45 * scale, y: eyeY - eyeH * 0.28 * scale },
+          { x: ex + eyeW * 0.45 * scale, y: eyeY + eyeH * 0.1 * scale },
+          { x: ex + eyeW * 0.45 * scale, y: eyeY + eyeH * 0.1 * scale + t },
+          { x: ex - eyeW * 0.45 * scale, y: eyeY - eyeH * 0.28 * scale + t },
+        ],
+        '#2b2723',
+      )
+      brush.flat(
+        [
+          { x: ex - eyeW * 0.45 * scale, y: eyeY + eyeH * 0.1 * scale },
+          { x: ex + eyeW * 0.45 * scale, y: eyeY - eyeH * 0.28 * scale },
+          { x: ex + eyeW * 0.45 * scale, y: eyeY - eyeH * 0.28 * scale + t },
+          { x: ex - eyeW * 0.45 * scale, y: eyeY + eyeH * 0.1 * scale + t },
+        ],
+        '#2b2723',
+      )
+    }
+    return
+  }
+
+  const hgt = (eyes === 'focus' ? eyeH * 0.66 : eyeH) * scale
+  const wid = eyeW * scale
+  for (const side of [-1, 1]) {
+    const ex = eyeCx + side * eyeSpread
+    brush.blob(ex, eyeY, wid * 0.5, hgt * 0.5, '#241f1c')
+    brush.blob(ex - wid * 0.16, eyeY - hgt * 0.22, wid * 0.18, hgt * 0.2, '#fdfbf5')
+  }
+}
+
+// ---------------------------------------------------------------- chest print
+
+function drawPrint(
+  brush: Brush,
+  def: AvatarDef,
+  lean: number,
+  shoulderY: number,
+  torsoH: number,
+  tw: number,
+): void {
+  if (!def.print || def.print === 'none') return
+  const cx = lean * 0.8 + tw * 0.08
+  const cy = shoulderY + torsoH * 0.52
+  const s = tw * 0.3
+  const col = def.printColor ?? '#e8dfd0'
+
+  switch (def.print) {
+    case 'code':
+      brush.flat(
+        [
+          { x: cx - s * 1.1, y: cy },
+          { x: cx - s * 0.5, y: cy - s * 0.6 },
+          { x: cx - s * 0.28, y: cy - s * 0.4 },
+          { x: cx - s * 0.7, y: cy },
+          { x: cx - s * 0.28, y: cy + s * 0.4 },
+          { x: cx - s * 0.5, y: cy + s * 0.6 },
         ],
         col,
-        { dark: 0.24, light: 0.14 },
+      )
+      brush.flat(
+        [
+          { x: cx + s * 1.1, y: cy },
+          { x: cx + s * 0.5, y: cy - s * 0.6 },
+          { x: cx + s * 0.28, y: cy - s * 0.4 },
+          { x: cx + s * 0.7, y: cy },
+          { x: cx + s * 0.28, y: cy + s * 0.4 },
+          { x: cx + s * 0.5, y: cy + s * 0.6 },
+        ],
+        col,
+      )
+      brush.flat(
+        [
+          { x: cx + s * 0.16, y: cy - s * 0.62 },
+          { x: cx - s * 0.02, y: cy + s * 0.62 },
+          { x: cx - s * 0.2, y: cy + s * 0.62 },
+          { x: cx - s * 0.02, y: cy - s * 0.62 },
+        ],
+        col,
       )
       break
-
-    default:
+    case 'braces':
+      brush.flat(rectPts(cx - s * 0.7, cy - s * 0.5, s * 0.2, s), col)
+      brush.flat(rectPts(cx + s * 0.5, cy - s * 0.5, s * 0.2, s), col)
       break
+    case 'tie':
+      brush.flat(
+        [
+          { x: cx - s * 0.3, y: cy - s * 1.5 },
+          { x: cx + s * 0.3, y: cy - s * 1.5 },
+          { x: cx + s * 0.42, y: cy + s * 0.7 },
+          { x: cx, y: cy + s * 1.1 },
+          { x: cx - s * 0.42, y: cy + s * 0.7 },
+        ],
+        col,
+      )
+      break
+    case 'star':
+      brush.flat(
+        [
+          { x: cx, y: cy - s * 0.9 },
+          { x: cx + s * 0.28, y: cy - s * 0.2 },
+          { x: cx + s * 0.9, y: cy - s * 0.1 },
+          { x: cx + s * 0.4, y: cy + s * 0.34 },
+          { x: cx + s * 0.56, y: cy + s * 0.96 },
+          { x: cx, y: cy + s * 0.58 },
+          { x: cx - s * 0.56, y: cy + s * 0.96 },
+          { x: cx - s * 0.4, y: cy + s * 0.34 },
+          { x: cx - s * 0.9, y: cy - s * 0.1 },
+          { x: cx - s * 0.28, y: cy - s * 0.2 },
+        ],
+        col,
+      )
+      break
+  }
+}
+
+// ----------------------------------------------------------------------- tail
+
+function drawTail(
+  brush: Brush,
+  def: AvatarDef,
+  torsoW: number,
+  torsoH: number,
+  hipY: number,
+  h: number,
+  phase: number,
+  pose: Pose,
+): void {
+  if (def.tail === 'none') return
+  const baseX = -torsoW * 0.42
+  const baseY = pose === 'jump' || pose === 'fall' ? hipY - torsoH * 0.3 : hipY - torsoH * 0.16
+  const sway = Math.sin(phase * 0.05) * 0.2 + (pose === 'walk' ? Math.sin(phase * 0.3) * 0.2 : 0)
+
+  switch (def.tail) {
+    case 'ringed': {
+      // A thick banded raccoon tail curling up behind.
+      const segs = 5
+      const len = h * 0.5
+      for (let i = segs - 1; i >= 0; i--) {
+        const t = i / segs
+        const a = -0.5 - sway + t * -1.05
+        const cx = baseX - Math.cos(a) * len * t * 0.9
+        const cy = baseY + Math.sin(a) * len * t * 0.9 - t * h * 0.06
+        const rr = h * (0.115 - t * 0.022)
+        brush.blob(cx, cy, rr, rr * 0.94, i % 2 === 0 ? shade(def.fur, -0.34) : shade(def.fur, 0.1))
+      }
+      break
+    }
+    case 'long': {
+      const segs = 6
+      const len = h * 0.6
+      const top: Pt[] = []
+      const bottom: Pt[] = []
+      for (let i = 0; i <= segs; i++) {
+        const t = i / segs
+        const a = -0.35 - sway * 1.4 - t * t * 1.7
+        const cx = baseX - Math.cos(a) * len * t
+        const cy = baseY + Math.sin(a) * len * t
+        const w = h * 0.055 * (1 - t * 0.5)
+        top.push({ x: cx, y: cy - w })
+        bottom.unshift({ x: cx, y: cy + w })
+      }
+      brush.facet([...top, ...bottom], shade(def.fur, -0.06), { dark: 0.2 })
+      break
+    }
+    case 'tufted': {
+      const len = h * 0.46
+      const a = -0.3 - sway
+      const tipX = baseX - Math.cos(a) * len
+      const tipY = baseY + Math.sin(a) * len * 0.4 + h * 0.12
+      brush.facet(
+        limb(baseX, baseY, Math.atan2(tipY - baseY, tipX - baseX), len, h * 0.05, 0.7),
+        shade(def.fur, -0.1),
+        { dark: 0.2 },
+      )
+      brush.blob(tipX, tipY, h * 0.075, h * 0.075, def.markings ?? shade(def.fur, -0.3))
+      break
+    }
+    case 'stub': {
+      brush.facet(
+        [
+          { x: baseX + h * 0.02, y: baseY - h * 0.05 },
+          { x: baseX - h * 0.14, y: baseY + h * 0.02 },
+          { x: baseX + h * 0.02, y: baseY + h * 0.08 },
+        ],
+        shade(def.fur, -0.14),
+        { dark: 0.18 },
+      )
+      break
+    }
   }
 }
 
@@ -777,36 +950,192 @@ function drawEyewear(
   eyeW: number,
   spread: number,
 ): void {
-  const col = def.eyewearColor ?? '#3b4a55'
-  switch (def.eyewear) {
-    case 'shades':
-      brush.flat(
-        rectPts(eyeCx - spread - eyeW * 0.7, eyeY - hh * 0.2, spread * 2 + eyeW * 1.4, hh * 0.42),
+  const col = def.eyewearColor ?? '#2b2723'
+  if (def.eyewear === 'shades') {
+    for (const side of [-1, 1]) {
+      const ex = eyeCx + side * spread
+      brush.facet(
+        [
+          { x: ex - eyeW * 0.62, y: eyeY - hh * 0.24 },
+          { x: ex + eyeW * 0.62, y: eyeY - hh * 0.28 },
+          { x: ex + eyeW * 0.5, y: eyeY + hh * 0.3 },
+          { x: ex - eyeW * 0.5, y: eyeY + hh * 0.26 },
+        ],
         col,
+        { dark: 0.2, light: 0.24 },
       )
       brush.flat(
-        rectPts(eyeCx - spread - eyeW * 0.66, eyeY - hh * 0.16, eyeW * 0.5, hh * 0.12),
-        'rgba(255,255,255,0.35)',
+        [
+          { x: ex - eyeW * 0.5, y: eyeY - hh * 0.16 },
+          { x: ex - eyeW * 0.1, y: eyeY - hh * 0.18 },
+          { x: ex - eyeW * 0.3, y: eyeY + hh * 0.06 },
+          { x: ex - eyeW * 0.46, y: eyeY + hh * 0.04 },
+        ],
+        'rgba(255,255,255,0.4)',
+      )
+    }
+    brush.flat(
+      [
+        { x: eyeCx - spread * 0.3, y: eyeY - hh * 0.14 },
+        { x: eyeCx + spread * 0.3, y: eyeY - hh * 0.14 },
+        { x: eyeCx + spread * 0.3, y: eyeY - hh * 0.04 },
+        { x: eyeCx - spread * 0.3, y: eyeY - hh * 0.04 },
+      ],
+      col,
+    )
+    return
+  }
+  brush.flat(
+    [
+      { x: eyeCx - spread - eyeW * 0.8, y: eyeY - hh * 0.28 },
+      { x: eyeCx + spread + eyeW * 0.8, y: eyeY - hh * 0.28 },
+      { x: eyeCx + spread + eyeW * 0.8, y: eyeY + hh * 0.28 },
+      { x: eyeCx - spread - eyeW * 0.8, y: eyeY + hh * 0.28 },
+    ],
+    col,
+  )
+  for (const side of [-1, 1]) {
+    brush.blob(eyeCx + side * spread, eyeY, eyeW * 0.56, hh * 0.22, '#cfe9f2')
+  }
+}
+
+// ---------------------------------------------------------------------- hats
+
+function drawHat(brush: Brush, def: AvatarDef, r: Rig): void {
+  const { hx, headCy: cy, hw, hh } = r
+  const col = def.hatColor ?? '#3a3733'
+  const accent = def.hatAccent ?? '#c8483c'
+  const hatY = cy - hh * 0.86
+
+  switch (def.hat) {
+    case 'hood': {
+      // Pushed back off the head, bunched around the shoulders.
+      brush.facet(
+        [
+          { x: hx - hw * 1.16, y: cy + hh * 1.05 },
+          { x: hx - hw * 1.2, y: cy + hh * 0.12 },
+          { x: hx - hw * 0.7, y: cy + hh * 0.54 },
+          { x: hx + hw * 0.72, y: cy + hh * 0.52 },
+          { x: hx + hw * 1.16, y: cy + hh * 0.1 },
+          { x: hx + hw * 1.12, y: cy + hh * 1.06 },
+        ],
+        col,
+        { dark: 0.24, light: 0.12 },
       )
       break
-    case 'goggles':
-    case 'snorkel': {
-      brush.flat(
-        rectPts(eyeCx - spread - eyeW * 0.9, eyeY - hh * 0.3, spread * 2 + eyeW * 1.8, hh * 0.6),
+    }
+    case 'beanie': {
+      brush.facet(
+        [
+          { x: hx - hw * 1.0, y: hatY + hh * 0.36 },
+          { x: hx - hw * 0.88, y: hatY - hh * 0.4 },
+          { x: hx - hw * 0.28, y: hatY - hh * 0.74 },
+          { x: hx + hw * 0.44, y: hatY - hh * 0.66 },
+          { x: hx + hw * 0.9, y: hatY - hh * 0.34 },
+          { x: hx + hw * 1.0, y: hatY + hh * 0.36 },
+        ],
         col,
+        { dark: 0.2, light: 0.12 },
       )
+      break
+    }
+    case 'headband': {
+      // Ninja: a dark cap, a bright band, two trailing tails.
+      brush.facet(
+        [
+          { x: hx - hw * 1.0, y: hatY + hh * 0.34 },
+          { x: hx - hw * 0.9, y: hatY - hh * 0.42 },
+          { x: hx - hw * 0.26, y: hatY - hh * 0.78 },
+          { x: hx + hw * 0.46, y: hatY - hh * 0.68 },
+          { x: hx + hw * 0.92, y: hatY - hh * 0.32 },
+          { x: hx + hw * 1.0, y: hatY + hh * 0.34 },
+        ],
+        col,
+        { dark: 0.22, light: 0.12 },
+      )
+      brush.facet(
+        [
+          { x: hx - hw * 1.02, y: hatY + hh * 0.06 },
+          { x: hx + hw * 1.02, y: hatY + hh * 0.02 },
+          { x: hx + hw * 1.0, y: hatY + hh * 0.42 },
+          { x: hx - hw * 1.0, y: hatY + hh * 0.46 },
+        ],
+        accent,
+        { dark: 0.18, light: 0.12 },
+      )
+      brush.blob(hx - hw * 1.02, hatY + hh * 0.24, hw * 0.16, hh * 0.18, accent)
+      brush.facet(
+        [
+          { x: hx - hw * 1.06, y: hatY + hh * 0.12 },
+          { x: hx - hw * 1.72, y: hatY + hh * 0.02 },
+          { x: hx - hw * 1.62, y: hatY + hh * 0.3 },
+        ],
+        shade(accent, -0.12),
+        { flat: true },
+      )
+      brush.facet(
+        [
+          { x: hx - hw * 1.04, y: hatY + hh * 0.3 },
+          { x: hx - hw * 1.66, y: hatY + hh * 0.52 },
+          { x: hx - hw * 1.5, y: hatY + hh * 0.68 },
+        ],
+        shade(accent, -0.24),
+        { flat: true },
+      )
+      break
+    }
+    case 'visor': {
+      brush.flat(rectPts(hx - hw * 0.96, hatY + hh * 0.02, hw * 1.92, hh * 0.3), col)
+      brush.facet(
+        [
+          { x: hx + hw * 0.5, y: hatY + hh * 0.06 },
+          { x: hx + hw * 1.6, y: hatY + hh * 0.12 },
+          { x: hx + hw * 1.56, y: hatY + hh * 0.34 },
+          { x: hx + hw * 0.5, y: hatY + hh * 0.32 },
+        ],
+        accent,
+        { flat: true },
+      )
+      break
+    }
+    case 'cap': {
+      brush.facet(
+        [
+          { x: hx - hw * 0.96, y: hatY + hh * 0.24 },
+          { x: hx - hw * 0.76, y: hatY - hh * 0.5 },
+          { x: hx + hw * 0.7, y: hatY - hh * 0.44 },
+          { x: hx + hw * 0.96, y: hatY + hh * 0.22 },
+        ],
+        col,
+        { dark: 0.2, light: 0.12 },
+      )
+      brush.facet(
+        [
+          { x: hx + hw * 0.6, y: hatY + hh * 0.14 },
+          { x: hx + hw * 1.56, y: hatY + hh * 0.18 },
+          { x: hx + hw * 1.52, y: hatY + hh * 0.38 },
+          { x: hx + hw * 0.6, y: hatY + hh * 0.38 },
+        ],
+        accent,
+        { flat: true },
+      )
+      break
+    }
+    case 'bow': {
+      const bx = hx - hw * 0.5
+      const by = hatY - hh * 0.3
       for (const side of [-1, 1]) {
-        const ex = eyeCx + side * spread
-        brush.blob(ex, eyeY, eyeW * 0.62, hh * 0.24, '#cfe9f2')
-        brush.blob(ex - eyeW * 0.2, eyeY - hh * 0.06, eyeW * 0.2, hh * 0.08, '#ffffff')
-      }
-      if (def.eyewear === 'snorkel') {
         brush.facet(
-          rectPts(eyeCx + spread + eyeW * 0.9, eyeY - hh * 0.9, eyeW * 0.42, hh * 1.5),
-          '#e8dcc4',
-          { flat: true },
+          [
+            { x: bx, y: by },
+            { x: bx + side * hw * 0.62, y: by - hh * 0.34 },
+            { x: bx + side * hw * 0.66, y: by + hh * 0.26 },
+          ],
+          col,
+          { dark: 0.2, light: 0.16 },
         )
       }
+      brush.blob(bx, by, hw * 0.15, hh * 0.16, shade(col, -0.2))
       break
     }
     default:
@@ -831,97 +1160,26 @@ function drawProp(
   const s = Math.sin(angle)
 
   switch (def.accessory) {
-    case 'pan': {
-      const len = h * 0.26
-      const r = h * 0.13
-      brush.facet(limb(hx, hy, angle, len, h * 0.055), accent, { flat: true })
-      const cx = hx + c * (len + r * 0.6)
-      const cy = hy + s * (len + r * 0.6)
-      const pan: Pt[] = []
-      for (let i = 0; i < 10; i++) {
-        const a = (i / 10) * Math.PI * 2 + Math.PI / 10
-        pan.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r * 0.94 })
-      }
-      brush.facet(pan, col, { dark: 0.3, light: 0.2 })
-      break
-    }
-    case 'staff': {
-      const len = h * 0.94
-      brush.facet(limb(hx - c * len * 0.34, hy - s * len * 0.34, angle, len, h * 0.055), col, {
-        dark: 0.24,
-      })
-      break
-    }
-    case 'rod': {
-      const len = h * 0.86
-      brush.facet(limb(hx - c * len * 0.2, hy - s * len * 0.2, angle, len, h * 0.038, 0.5), col, {
-        flat: true,
-      })
-      // Line and float.
-      const tipX = hx + c * len * 0.8
-      const tipY = hy + s * len * 0.8
-      brush.flat(
-        [
-          { x: tipX, y: tipY },
-          { x: tipX + h * 0.02, y: tipY },
-          { x: tipX + h * 0.06, y: tipY + h * 0.3 },
-          { x: tipX + h * 0.04, y: tipY + h * 0.3 },
-        ],
-        '#cfd6d2',
-      )
-      brush.blob(tipX + h * 0.05, tipY + h * 0.33, h * 0.035, h * 0.035, accent)
-      break
-    }
-    case 'board': {
-      const len = h * 0.92
-      const wide = h * 0.2
-      const bx = hx - c * len * 0.28
-      const by = hy - s * len * 0.28
-      const nx = -s
-      const ny = c
-      brush.facet(
-        [
-          { x: bx - nx * wide * 0.2, y: by - ny * wide * 0.2 },
-          { x: bx + c * len * 0.5 - nx * wide * 0.5, y: by + s * len * 0.5 - ny * wide * 0.5 },
-          { x: bx + c * len, y: by + s * len },
-          { x: bx + c * len * 0.5 + nx * wide * 0.5, y: by + s * len * 0.5 + ny * wide * 0.5 },
-          { x: bx + nx * wide * 0.2, y: by + ny * wide * 0.2 },
-          { x: bx - c * len * 0.16, y: by - s * len * 0.16 },
-        ],
-        col,
-        { dark: 0.24, light: 0.16 },
-      )
-      brush.flat(
-        [
-          { x: bx + c * len * 0.12, y: by + s * len * 0.12 },
-          { x: bx + c * len * 0.9, y: by + s * len * 0.9 },
-          { x: bx + c * len * 0.9 + nx * h * 0.03, y: by + s * len * 0.9 + ny * h * 0.03 },
-          { x: bx + c * len * 0.12 + nx * h * 0.03, y: by + s * len * 0.12 + ny * h * 0.03 },
-        ],
-        accent,
-      )
-      break
-    }
     case 'laptop': {
-      const w = h * 0.3
-      const d = h * 0.22
+      const w = h * 0.32
+      const d = h * 0.23
       const open = pose === 'swingFwd' || pose === 'swingUp' ? 0.5 : 1
       brush.facet(
         [
-          { x: hx - w * 0.1, y: hy + d * 0.1 },
+          { x: hx - w * 0.12, y: hy + d * 0.1 },
           { x: hx + w, y: hy + d * 0.1 },
-          { x: hx + w * 0.9, y: hy + d * 0.28 },
-          { x: hx - w * 0.2, y: hy + d * 0.28 },
+          { x: hx + w * 0.9, y: hy + d * 0.3 },
+          { x: hx - w * 0.22, y: hy + d * 0.3 },
         ],
         accent,
         { flat: true },
       )
       brush.facet(
         [
-          { x: hx - w * 0.1, y: hy + d * 0.1 },
+          { x: hx - w * 0.12, y: hy + d * 0.1 },
           { x: hx + w * 0.86, y: hy + d * 0.1 },
           { x: hx + w * 0.78, y: hy + d * 0.1 - d * open },
-          { x: hx - w * 0.16, y: hy + d * 0.1 - d * open },
+          { x: hx - w * 0.18, y: hy + d * 0.1 - d * open },
         ],
         col,
         { dark: 0.2, light: 0.14 },
@@ -933,13 +1191,101 @@ function drawProp(
           { x: hx + w * 0.7, y: hy + d * 0.06 - d * open * 0.84 },
           { x: hx - w * 0.04, y: hy + d * 0.06 - d * open * 0.84 },
         ],
-        '#9fd7e6',
+        '#7fd6e0',
       )
       break
     }
+    case 'briefcase': {
+      const w = h * 0.3
+      const d = h * 0.24
+      brush.facet(
+        [
+          { x: hx - w * 0.5, y: hy + d * 0.16 },
+          { x: hx + w * 0.5, y: hy + d * 0.16 },
+          { x: hx + w * 0.5, y: hy + d * 1.05 },
+          { x: hx - w * 0.5, y: hy + d * 1.05 },
+        ],
+        col,
+        { dark: 0.26, light: 0.14 },
+      )
+      brush.flat(rectPts(hx - w * 0.5, hy + d * 0.5, w, d * 0.12), accent)
+      brush.flat(
+        [
+          { x: hx - w * 0.2, y: hy + d * 0.16 },
+          { x: hx + w * 0.2, y: hy + d * 0.16 },
+          { x: hx + w * 0.2, y: hy },
+          { x: hx + w * 0.12, y: hy },
+          { x: hx + w * 0.12, y: hy + d * 0.08 },
+          { x: hx - w * 0.12, y: hy + d * 0.08 },
+          { x: hx - w * 0.12, y: hy },
+          { x: hx - w * 0.2, y: hy },
+        ],
+        accent,
+      )
+      break
+    }
+    case 'handbag': {
+      const w = h * 0.24
+      const d = h * 0.2
+      brush.flat(
+        [
+          { x: hx - w * 0.24, y: hy },
+          { x: hx - w * 0.16, y: hy },
+          { x: hx - w * 0.02, y: hy + d * 0.5 },
+          { x: hx - w * 0.1, y: hy + d * 0.5 },
+        ],
+        accent,
+      )
+      brush.facet(
+        [
+          { x: hx - w * 0.5, y: hy + d * 0.5 },
+          { x: hx + w * 0.5, y: hy + d * 0.5 },
+          { x: hx + w * 0.38, y: hy + d * 1.3 },
+          { x: hx - w * 0.38, y: hy + d * 1.3 },
+        ],
+        col,
+        { dark: 0.24, light: 0.18 },
+      )
+      brush.blob(hx, hy + d * 0.78, w * 0.12, d * 0.12, accent)
+      break
+    }
+    case 'mug': {
+      const w = h * 0.13
+      brush.facet(rectPts(hx - w * 0.5, hy - w * 0.2, w, w * 1.1), col, { dark: 0.22, light: 0.14 })
+      brush.flat(rectPts(hx - w * 0.5, hy - w * 0.2, w, w * 0.18), shade(col, 0.2))
+      break
+    }
     case 'bottle': {
-      brush.facet(rectPts(hx - h * 0.03, hy - h * 0.12, h * 0.07, h * 0.16), col, { dark: 0.2 })
+      brush.facet(rectPts(hx - h * 0.03, hy - h * 0.12, h * 0.07, h * 0.17), col, { dark: 0.2 })
       brush.flat(rectPts(hx - h * 0.02, hy - h * 0.16, h * 0.045, h * 0.05), accent)
+      break
+    }
+    case 'staff': {
+      const len = h * 0.94
+      brush.facet(limb(hx - c * len * 0.34, hy - s * len * 0.34, angle, len, h * 0.05), col, {
+        dark: 0.24,
+      })
+      const lx = hx + c * len * 0.5
+      const ly = hy + s * len * 0.5
+      brush.facet(
+        [
+          { x: lx, y: ly },
+          { x: lx + h * 0.1, y: ly - h * 0.07 },
+          { x: lx + h * 0.14, y: ly + h * 0.01 },
+        ],
+        accent,
+        { dark: 0.2 },
+      )
+      break
+    }
+    case 'fan': {
+      const r = h * 0.22
+      const pts: Pt[] = [{ x: hx, y: hy }]
+      for (let i = 0; i <= 6; i++) {
+        const a = angle - 0.7 + (i / 6) * 1.4
+        pts.push({ x: hx + Math.cos(a) * r, y: hy + Math.sin(a) * r })
+      }
+      brush.facet(pts, col, { dark: 0.2, light: 0.18 })
       break
     }
     default:

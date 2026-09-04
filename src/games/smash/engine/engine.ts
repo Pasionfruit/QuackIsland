@@ -77,7 +77,7 @@ export interface MatchConfig {
 }
 
 export const DEFAULT_CONFIG: MatchConfig = {
-  chars: ['basil', 'juniper'],
+  chars: ['contrlzee', 'ninjapenguin'],
   stocks: 3,
   cpu: true,
   cpuLevel: 2,

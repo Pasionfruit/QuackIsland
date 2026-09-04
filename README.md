@@ -1,11 +1,12 @@
 # Polyland
 
-A little camp of games, played in a desktop browser with a keyboard. One cast of
-low-poly campers, one palette, and a shelf of games that all share them.
+A little world of games, played in a desktop browser with a keyboard. One cast of
+low-poly animals with jobs and opinions, one palette, and a shelf of games that
+all share them.
 
 The first game is **Polyland Smash** - a platform fighter in the shape of Smash
 Ultimate / Brawlhalla: percent-based knockback, stocks, blast zones,
-drop-through platforms, and twelve fighters who play very differently.
+drop-through platforms, and five fighters who play very differently.
 
 Eighteen more games are on the shelf as concept panels: art, pitch and planned
 mechanics, no implementation yet. They all live in
@@ -41,7 +42,7 @@ No setup, no menu to find - it is the house rule for every Polyland game.
 **Online.** Run `npm run dev:all` - it prints your LAN address. Whoever is
 hosting opens the game, clicks **Host game**, and reads out the four-letter
 code. Everyone else opens the same address, enters the code, and picks a
-camper. Online players each use the *left-hand* keys on their own keyboard.
+fighter. Online players each use the *left-hand* keys on their own keyboard.
 
 How it works: the host's browser runs the match and broadcasts the state sixty
 times a second; guests send only their key state back. The server in
@@ -63,8 +64,8 @@ there is no auth and no TLS, so do not expose it to the open internet as-is.
 | --- | --- |
 | Dashboard (game shelf + roster) | [src/pages/Dashboard.tsx](src/pages/Dashboard.tsx) |
 | Game catalogue and card art | [src/games/registry.ts](src/games/registry.ts) |
-| Shared camper artwork | [src/art/avatar.ts](src/art/avatar.ts), [src/art/cast.ts](src/art/cast.ts) |
-| Animal rigs (cats, dog, birds) | [src/art/critter.ts](src/art/critter.ts) |
+| Character rig and cast | [src/art/avatar.ts](src/art/avatar.ts), [src/art/cast.ts](src/art/cast.ts) |
+| Background animal rigs | [src/art/critter.ts](src/art/critter.ts) |
 | Backdrops and set dressing | [src/art/scenes.ts](src/art/scenes.ts) |
 | Drawing primitives and facet shading | [src/lib/draw.ts](src/lib/draw.ts) |
 | Panel template for unbuilt games | [src/games/TemplatePanel.tsx](src/games/TemplatePanel.tsx) |
@@ -81,8 +82,10 @@ there is no auth and no TLS, so do not expose it to the open internet as-is.
 
 ## The art rules
 
-The look comes from [src/Game_art.png](src/Game_art.png): faceted low-poly
-chibi campers, big dark eyes, warm neutral palette, soft ground shadows.
+The look comes from [src/Initial_Characters.png](src/Initial_Characters.png):
+upright low-poly animals, big dark eyes, warm neutral palette, soft ground
+shadows. [src/Game_art.png](src/Game_art.png) is the earlier reference for the
+world around them.
 
 Everything is a **flat-shaded polygon**. There are no sprites, no textures and
 no gradients on characters - each shape is filled in a base tone, then split
@@ -102,14 +105,16 @@ Three rules keep it looking right:
   stays in the same corner of the screen no matter which way somebody faces or
   how far they are tumbling.
 - **Colours are derived, not listed.** `shade(colour, amount)` warms toward
-  cream or cools toward brown, so a camper needs one colour per material rather
+  cream or cools toward brown, so a character needs one colour per material rather
   than a palette of hand-picked tints.
 
-A camper is data, not a sprite sheet: skin, hair style, outfit, hat, eyewear and
-a carried item, in [cast.ts](src/art/cast.ts). `drawAvatar` poses that same
+A character is data, not a sprite sheet: a species, a coat, a muzzle, a tail, an
+outfit and a carried item, in [cast.ts](src/art/cast.ts). One rig draws all of
+them - a raccoon and a penguin differ by a head shape, a pair of ears and a
+tail, not by a separate drawing routine - and `drawAvatar` poses that same
 description for idle, walking, jumping, swinging or tumbling, at any size.
-Animals use the same trick in [critter.ts](src/art/critter.ts) with a
-four-legged and a winged rig. A new character is a dozen colours, and every
+Background animals stay on four legs (or wings) via
+[critter.ts](src/art/critter.ts). A new character is a dozen colours, and every
 game gets the whole cast for free.
 
 Backdrops and set dressing live in [scenes.ts](src/art/scenes.ts) and
@@ -118,30 +123,23 @@ tanks, ghosts - so a new game's card art is usually fifteen lines.
 
 ## Polyland Smash
 
-Damage builds a percentage; knockback scales with it, so a fresh camper barely
+Damage builds a percentage; knockback scales with it, so a fresh fighter barely
 budges and one at 130% flies. Leave the blast zone and you lose a stock. Last
-camper standing wins.
+fighter standing wins.
 
 Each has five moves - neutral, side, up and down attacks, plus a special that
 doubles as the recovery. The special throws you upward and leaves you helpless
 until you land, so spending it early off-stage is how you die.
 
-Twelve fighters, eight campers and four animals:
+Five fighters, no two alike:
 
-| Fighter | Shape of them |
-| --- | --- |
-| Basil, the camp cook | Middleweight and quick; the cast-iron pan ends exchanges |
-| Juniper, the long-hauler | Slow and heavy, but the staff out-ranges everything |
-| Kai, the surfer | Floaty jumps, long board swings, in no hurry to land |
-| Wren, the angler | Longest reach in camp, and nothing up close |
-| Dash, the cyclist | Fastest thing here, folds the moment you catch her |
-| Byte, the night owl | Slow zoner who hits like a truck |
-| Rowan, the explorer | All-rounder with a grapple that reaches any ledge |
-| Vale, the runner | Tiny hits, endless combos |
-| Mochi, the calico | Three jumps, hard to pin down, dies to anything solid |
-| Pepper, the shadow | The mean cat; slower than Mochi, hits far harder |
-| Biscuit, the good dog | Enthusiasm as a fighting style |
-| Gully, the gull | Feather-light, effectively unkillable off-stage |
+| Fighter | Who they are | How they play |
+| --- | --- | --- |
+| **ContrlZee** | Raccoon programmer | Sets up two moves early, then runs it. Slow, heavy hits |
+| **NinjaPenguin** | Penguin ninja | Belly-slides in, flurries you down, gone before the dust settles |
+| **teninchtoenail** | Lion salesman | Slowest on the roster; the briefcase closes every conversation |
+| **diva** | Frog fashionista | Floaty, three jumps, longest reach, unkillable off-stage |
+| **MrPasionfruit** | Athletic black cat | Fastest thing here. Tiny hits, endless combos |
 
 Frame data lives in
 [characters.ts](src/games/smash/engine/characters.ts) and is meant to be tuned.

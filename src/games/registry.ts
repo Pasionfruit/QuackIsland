@@ -1,18 +1,15 @@
-import { drawAvatar } from '../art/avatar'
+import { drawAvatar, type AvatarDef } from '../art/avatar'
 import {
-  BIKER,
-  BLACK_CAT,
   CALICO_CAT,
-  CHEF,
-  CODER,
+  CONTRLZEE,
+  DIVA,
   DUCK,
-  EXPLORER,
-  FISHER,
-  HIKER,
-  HOODIE,
-  RUNNER,
+  MRPASIONFRUIT,
+  NINJAPENGUIN,
+  BLACK_CAT,
+  SEAGULL,
   SHIBA_DOG,
-  SURFER,
+  TENINCHTOENAIL,
 } from '../art/cast'
 import { drawCritter } from '../art/critter'
 import { PAL } from '../art/palette'
@@ -76,9 +73,9 @@ const SMASH: GameEntry = {
   players: '1-2 local, 2 online',
   status: 'live',
   blurb:
-    'Percent-based knockback, stocks and blast zones, with twelve campers who all fight completely differently.',
+    'Percent-based knockback, stocks and blast zones, with five animals who all fight completely differently.',
   plan: [
-    'Twelve fighters: eight campers, two cats, a dog and a gull.',
+    'Five fighters: a raccoon, a penguin, a lion, a frog and a cat.',
     'Lakeside Camp, with drop-through plank platforms.',
     'Local versus, CPU opponents, and host-and-join online.',
   ],
@@ -111,8 +108,8 @@ const SMASH: GameEntry = {
     tent(ctx, 38, 62, 22)
     campfire(ctx, 122, 62, frame, 0.72)
     const bob = Math.sin(frame * 0.06) * 1.2
-    drawAvatar(ctx, CHEF, 68, 62 + bob, { facing: 1, height: 27, pose: 'swingFwd', phase: frame })
-    drawAvatar(ctx, HIKER, 98, 62 - bob, { facing: -1, height: 29, pose: 'hurt', phase: frame })
+    drawAvatar(ctx, TENINCHTOENAIL, 68, 62 + bob, { facing: 1, height: 27, pose: 'swingFwd', phase: frame })
+    drawAvatar(ctx, NINJAPENGUIN, 98, 62 - bob, { facing: -1, height: 29, pose: 'hurt', phase: frame })
     ctx.globalAlpha = 0.9
     for (let i = 0; i < 6; i++) {
       const a = (i / 6) * Math.PI * 2 + frame * 0.1
@@ -162,7 +159,7 @@ const DUCK_SZN: GameEntry = {
         phase: frame + i * 12,
       })
     }
-    drawAvatar(ctx, FISHER, 126, H - 4, { facing: -1, height: 28, pose: 'swingUp', phase: frame })
+    drawAvatar(ctx, NINJAPENGUIN, 126, H - 4, { facing: -1, height: 28, pose: 'swingUp', phase: frame })
     drawCritter(ctx, SHIBA_DOG, 146, H - 2, { facing: -1, height: 15, pose: 'idle', phase: frame })
   },
 }
@@ -229,7 +226,7 @@ const SKETCH: GameEntry = {
   players: PARTY,
   status: 'concept',
   blurb:
-    'One camper draws, everyone else shouts guesses. The word is always harder than it looked when you picked it.',
+    'One of you draws, everyone else shouts guesses. The word is always harder than it looked when you picked it.',
   plan: [
     'Rotating artist, live shared canvas, typed guessing.',
     'Word packs: camp things, animals, and deliberately unfair ones.',
@@ -276,8 +273,8 @@ const SKETCH: GameEntry = {
       for (const q of sPts.slice(1)) ctx.lineTo(q.x, q.y)
       ctx.stroke()
     })
-    drawAvatar(ctx, CODER, 116, 78, { facing: -1, height: 30, pose: 'swingFwd', phase: frame })
-    drawAvatar(ctx, HOODIE, 26, 78, { facing: 1, height: 29, pose: 'idle', phase: frame })
+    drawAvatar(ctx, CONTRLZEE, 116, 78, { facing: -1, height: 30, pose: 'swingFwd', phase: frame })
+    drawAvatar(ctx, DIVA, 26, 78, { facing: 1, height: 29, pose: 'idle', phase: frame })
     // Guess bubble.
     fillPoly(
       ctx,
@@ -321,8 +318,8 @@ const FLAGS: GameEntry = {
     flag(ctx, 30, 58, 20, '#5f92b8', frame)
     flag(ctx, 132, 58, 20, '#e0794f', frame)
     const dash = Math.sin(frame * 0.06) * 6
-    drawAvatar(ctx, RUNNER, 74 + dash, 84, { facing: 1, height: 28, pose: 'walk', phase: frame * 2 })
-    drawAvatar(ctx, BIKER, 96 + dash, 82, { facing: -1, height: 27, pose: 'walk', phase: frame * 2 + 20 })
+    drawAvatar(ctx, MRPASIONFRUIT, 74 + dash, 84, { facing: 1, height: 28, pose: 'walk', phase: frame * 2 })
+    drawAvatar(ctx, DIVA, 96 + dash, 82, { facing: -1, height: 27, pose: 'walk', phase: frame * 2 + 20 })
     // Dust puffs.
     ctx.globalAlpha = 0.45
     for (let i = 0; i < 3; i++) {
@@ -342,7 +339,7 @@ const HIDE: GameEntry = {
   blurb:
     'One seeker counts while everyone scatters into the trees. Props, bushes and the tent are all fair game.',
   plan: [
-    'Hiders can disguise themselves as camp props and hold still.',
+    'Hiders can disguise themselves as scenery and hold still.',
     'The seeker gets warmer-colder audio as they close in.',
     'Found hiders join the seeking team for the rest of the round.',
   ],
@@ -353,10 +350,10 @@ const HIDE: GameEntry = {
     // Big foreground tree the seeker is counting against.
     rect(ctx, 24, 44, 9, 40, PAL.trunk)
     pine(ctx, 28, 50, 46)
-    drawAvatar(ctx, EXPLORER, 42, 82, { facing: -1, height: 29, pose: 'brace', phase: frame })
+    drawAvatar(ctx, DIVA, 42, 82, { facing: -1, height: 29, pose: 'brace', phase: frame })
     bush(ctx, 96, 84, 26)
     // A hider peeking out of the bush.
-    drawAvatar(ctx, HOODIE, 104, 84, { facing: -1, height: 22, pose: 'idle', phase: frame + 40 })
+    drawAvatar(ctx, CONTRLZEE, 104, 84, { facing: -1, height: 22, pose: 'idle', phase: frame + 40 })
     bush(ctx, 100, 86, 30)
     tent(ctx, 138, 84, 30)
     drawCritter(ctx, BLACK_CAT, 128, 84, { facing: -1, height: 12, pose: 'idle', phase: frame })
@@ -392,7 +389,7 @@ const GHOST_HUNT: GameEntry = {
     ground(ctx, W, H, 64, shade(PAL.grass, -0.48))
     lightCone(ctx, 34, 66, -0.5, 62, 0.28)
     ghost(ctx, 104, 60, 20, frame)
-    drawAvatar(ctx, HIKER, 30, 84, { facing: 1, height: 29, pose: 'brace', phase: frame })
+    drawAvatar(ctx, NINJAPENGUIN, 30, 84, { facing: 1, height: 29, pose: 'brace', phase: frame })
     lantern(ctx, 132, 52, 14, frame)
     drawCritter(ctx, SHIBA_DOG, 60, 84, { facing: 1, height: 15, pose: 'brace', phase: frame })
   },
@@ -408,7 +405,7 @@ const MOVING: GameEntry = {
   blurb:
     'Wobbly furniture, narrow doorways and friends who let go early. Load the cart before the light goes.',
   plan: [
-    'Two-handed carrying: big things need two campers in step.',
+    'Two-handed carrying: big things need two animals in step.',
     'Physics props that snag on doorframes and each other.',
     'A packing score for how much survives the trip intact.',
   ],
@@ -437,10 +434,10 @@ const MOVING: GameEntry = {
     }
     crate(ctx, 118, 46, 16)
     crate(ctx, 136, 46, 13)
-    // Two campers carrying a crate between them.
+    // Two of them carrying a crate between them.
     const lift = Math.sin(frame * 0.06) * 1.6
-    drawAvatar(ctx, RUNNER, 30, 84, { facing: 1, height: 28, pose: 'brace', phase: frame })
-    drawAvatar(ctx, EXPLORER, 66, 84, { facing: -1, height: 29, pose: 'brace', phase: frame })
+    drawAvatar(ctx, MRPASIONFRUIT, 30, 84, { facing: 1, height: 28, pose: 'brace', phase: frame })
+    drawAvatar(ctx, DIVA, 66, 84, { facing: -1, height: 29, pose: 'brace', phase: frame })
     crate(ctx, 48, 62 + lift, 18)
   },
 }
@@ -498,8 +495,8 @@ const LOCKED: GameEntry = {
     }
     ellipse(ctx, 100, 46, 2.4, 2.4, '#d9c07a')
     lantern(ctx, 24, 40, 16, frame)
-    drawAvatar(ctx, CODER, 30, 86, { facing: 1, height: 29, pose: 'brace', phase: frame })
-    drawAvatar(ctx, CHEF, 132, 86, { facing: -1, height: 28, pose: 'idle', phase: frame })
+    drawAvatar(ctx, CONTRLZEE, 30, 86, { facing: 1, height: 29, pose: 'brace', phase: frame })
+    drawAvatar(ctx, TENINCHTOENAIL, 132, 86, { facing: -1, height: 28, pose: 'idle', phase: frame })
   },
 }
 
@@ -511,7 +508,7 @@ const CASE: GameEntry = {
   players: PARTY,
   status: 'concept',
   blurb:
-    'Clues get dealt out unevenly, everyone compares notes, and exactly one camper is quietly steering you wrong.',
+    'Clues get dealt out unevenly, everyone compares notes, and exactly one of you is quietly steering the rest wrong.',
   plan: [
     'Private clue hands, public accusation rounds, one hidden culprit.',
     'A shared evidence board everyone can pin to during discussion.',
@@ -560,8 +557,8 @@ const CASE: GameEntry = {
       ctx.restore()
       ellipse(ctx, x, y - 6, 1.4, 1.4, '#b8483c')
     }
-    drawAvatar(ctx, EXPLORER, 22, 88, { facing: 1, height: 30, pose: 'brace', phase: frame })
-    drawAvatar(ctx, FISHER, 142, 88, { facing: -1, height: 29, pose: 'idle', phase: frame })
+    drawAvatar(ctx, DIVA, 22, 88, { facing: 1, height: 30, pose: 'brace', phase: frame })
+    drawAvatar(ctx, NINJAPENGUIN, 142, 88, { facing: -1, height: 29, pose: 'idle', phase: frame })
     // Magnifier.
     const drift = Math.sin(frame * 0.04) * 3
     ctx.strokeStyle = '#6f6659'
@@ -611,8 +608,8 @@ const PARADE: GameEntry = {
       ellipse(ctx, x, y, 6 * pop, 4 * pop, c)
       ellipse(ctx, x, y - 1, 4.4 * pop, 2.6 * pop, shade(c, 0.2))
     })
-    drawAvatar(ctx, HOODIE, 66, 56, { facing: 1, height: 24, pose: 'jump', phase: frame })
-    drawAvatar(ctx, CHEF, 116, 62, { facing: -1, height: 23, pose: 'idle', phase: frame })
+    drawAvatar(ctx, CONTRLZEE, 66, 56, { facing: 1, height: 24, pose: 'jump', phase: frame })
+    drawAvatar(ctx, TENINCHTOENAIL, 116, 62, { facing: -1, height: 23, pose: 'idle', phase: frame })
     confetti(ctx, W, H, frame)
   },
 }
@@ -659,8 +656,8 @@ const CANDY: GameEntry = {
       const hop = i % 5 === Math.floor(frame * 0.06) % 5 ? -2 : 0
       ellipse(ctx, x, y + hop, 2.6, 2.2, colors[i % colors.length])
     }
-    drawAvatar(ctx, RUNNER, 78, 88, { facing: 1, height: 28, pose: 'swingDown', phase: frame })
-    drawAvatar(ctx, BIKER, 118, 86, { facing: -1, height: 27, pose: 'walk', phase: frame * 2 })
+    drawAvatar(ctx, MRPASIONFRUIT, 78, 88, { facing: 1, height: 28, pose: 'swingDown', phase: frame })
+    drawAvatar(ctx, TENINCHTOENAIL, 118, 86, { facing: -1, height: 27, pose: 'walk', phase: frame * 2 })
     drawCritter(ctx, CALICO_CAT, 146, 88, { facing: -1, height: 14, pose: 'brace', phase: frame })
   },
 }
@@ -673,7 +670,7 @@ const LAST_RUN: GameEntry = {
   players: PARTY,
   status: 'concept',
   blurb:
-    'The safe ring closes in and the ground behind it drops away. Last camper still on solid grass takes it.',
+    'The safe ring closes in and the ground behind it drops away. Last one still on solid grass takes it.',
   plan: [
     'A shrinking safe zone with a visible, fair warning before each step.',
     'Stamina: sprinting is free early and expensive late.',
@@ -698,10 +695,10 @@ const LAST_RUN: GameEntry = {
     ctx.ellipse(80, 70, 52 * pulse, 20 * pulse, 0, 0, Math.PI * 2)
     ctx.fill()
     ctx.globalAlpha = 1
-    const runners: [number, number, typeof RUNNER][] = [
-      [58, 74, RUNNER],
-      [86, 70, BIKER],
-      [108, 78, HOODIE],
+    const runners: [number, number, AvatarDef][] = [
+      [58, 74, MRPASIONFRUIT],
+      [86, 70, DIVA],
+      [108, 78, CONTRLZEE],
     ]
     runners.forEach(([x, y, def], i) => {
       drawAvatar(ctx, def, x + Math.sin((frame + i * 40) * 0.05) * 4, y, {
@@ -711,9 +708,9 @@ const LAST_RUN: GameEntry = {
         phase: frame * 2 + i * 25,
       })
     })
-    // One camper already out, beyond the ring.
+    // One already out, beyond the ring.
     ctx.globalAlpha = 0.45
-    drawAvatar(ctx, CODER, 142, 84, { facing: -1, height: 24, pose: 'hurt', phase: frame })
+    drawAvatar(ctx, TENINCHTOENAIL, 142, 84, { facing: -1, height: 24, pose: 'hurt', phase: frame })
     ctx.globalAlpha = 1
   },
 }
@@ -728,7 +725,7 @@ const PANIC: GameEntry = {
   blurb:
     'Chop, fry, plate, repeat, in a kitchen that was clearly designed to make you fail. Nobody is in charge.',
   plan: [
-    'Recipes that need several stations and several campers in sequence.',
+    'Recipes that need several stations and several animals in sequence.',
     'Kitchens that fight back: moving floors, fires, blocked paths.',
     'A tip jar score, and a rating you will argue about afterwards.',
   ],
@@ -772,8 +769,8 @@ const PANIC: GameEntry = {
     }
     // Plates waiting.
     for (let i = 0; i < 3; i++) ellipse(ctx, 112 + i * 14, 58, 6, 2.4, '#f6f2e6')
-    drawAvatar(ctx, CHEF, 56, 88, { facing: 1, height: 29, pose: 'swingDown', phase: frame })
-    drawAvatar(ctx, SURFER, 104, 88, { facing: -1, height: 28, pose: 'brace', phase: frame })
+    drawAvatar(ctx, TENINCHTOENAIL, 56, 88, { facing: 1, height: 29, pose: 'swingDown', phase: frame })
+    drawAvatar(ctx, MRPASIONFRUIT, 104, 88, { facing: -1, height: 28, pose: 'brace', phase: frame })
     // Airborne plate.
     const t = (frame % 90) / 90
     ellipse(ctx, 60 + t * 44, 40 - Math.sin(t * Math.PI) * 22, 6, 2.4, '#f6f2e6')
@@ -790,7 +787,7 @@ const BUILD: GameEntry = {
   blurb:
     'Everyone adds one piece to the level, then everyone has to complete it. The trick is making it hard for them and survivable for you.',
   plan: [
-    'A drafting phase where each camper places one block or trap.',
+    'A drafting phase where everyone places one block or trap.',
     'Scoring that rewards being the only one to reach the end.',
     'A growing library of parts: platforms, saws, springs, glue.',
   ],
@@ -845,13 +842,13 @@ const BUILD: GameEntry = {
       { flat: true },
     )
     ctx.globalAlpha = 1
-    drawAvatar(ctx, HOODIE, 28, 66, {
+    drawAvatar(ctx, CONTRLZEE, 28, 66, {
       facing: 1,
       height: 25,
       pose: 'jump',
       phase: frame,
     })
-    drawAvatar(ctx, EXPLORER, 136, 58, { facing: -1, height: 26, pose: 'brace', phase: frame })
+    drawAvatar(ctx, DIVA, 136, 58, { facing: -1, height: 26, pose: 'brace', phase: frame })
   },
 }
 
@@ -908,8 +905,8 @@ const FRIENDSHIP: GameEntry = {
       ],
       '#c8613f',
     )
-    drawAvatar(ctx, RUNNER, 26 + pull * 0.4, 84, { facing: 1, height: 28, pose: 'brace', phase: frame })
-    drawAvatar(ctx, HIKER, 136 + pull * 0.4, 84, { facing: -1, height: 29, pose: 'brace', phase: frame })
+    drawAvatar(ctx, MRPASIONFRUIT, 26 + pull * 0.4, 84, { facing: 1, height: 28, pose: 'brace', phase: frame })
+    drawAvatar(ctx, NINJAPENGUIN, 136 + pull * 0.4, 84, { facing: -1, height: 29, pose: 'brace', phase: frame })
   },
 }
 
@@ -921,7 +918,7 @@ const BLACKSTONE: GameEntry = {
   players: PARTY,
   status: 'concept',
   blurb:
-    'Place a stone, take the ground, cut your neighbour off. The calmest game in the camp and the one that ends friendships.',
+    'Place a stone, take the ground, cut your neighbour off. The calmest game in Polyland and the one that ends friendships.',
   plan: [
     'Territory capture on a small board that resolves in minutes.',
     'Free-for-all rounds for up to eight, with alliances that will not hold.',
@@ -967,7 +964,7 @@ const BLACKSTONE: GameEntry = {
       ellipse(ctx, x, y, 5 * pop, 2.8 * pop, black ? '#3b352f' : '#f2ece0')
     })
     ctx.restore()
-    drawAvatar(ctx, CODER, 140, 84, { facing: -1, height: 27, pose: 'brace', phase: frame })
+    drawAvatar(ctx, CONTRLZEE, 140, 84, { facing: -1, height: 27, pose: 'brace', phase: frame })
     const g = ctx.createRadialGradient(22, 54, 4, 22, 54, 70)
     g.addColorStop(0, 'rgba(255, 186, 96, 0.28)')
     g.addColorStop(1, 'rgba(255, 186, 96, 0)')
@@ -984,9 +981,9 @@ const KNOCKOUT: GameEntry = {
   players: PARTY,
   status: 'concept',
   blurb:
-    'No health, no stocks, just a shrinking platform over cold water and eight campers who all want you off it.',
+    'No health, no stocks, just a shrinking platform over cold water and everyone else wanting you off it.',
   plan: [
-    'Momentum shoving: heavier campers push, lighter ones dodge.',
+    'Momentum shoving: heavy animals push, light ones dodge.',
     'Arenas that tilt, crumble and shrink as the round goes on.',
     'Instant rounds, running score across a whole set.',
   ],
@@ -1000,9 +997,15 @@ const KNOCKOUT: GameEntry = {
     ctx.globalAlpha = 0.4
     ellipse(ctx, 80, 78 + bobY, 52, 4, '#cfe4e2')
     ctx.globalAlpha = 1
+    drawCritter(ctx, SEAGULL, 132, 46 + Math.sin(frame * 0.04) * 3, {
+      facing: -1,
+      height: 14,
+      pose: 'jump',
+      phase: frame,
+    })
     const shove = Math.sin(frame * 0.09) * 5
-    drawAvatar(ctx, HIKER, 58 + shove, 66 + bobY, { facing: 1, height: 29, pose: 'swingFwd', phase: frame })
-    drawAvatar(ctx, SURFER, 96 + shove * 1.6, 66 + bobY, { facing: -1, height: 28, pose: 'hurt', phase: frame })
+    drawAvatar(ctx, NINJAPENGUIN, 58 + shove, 66 + bobY, { facing: 1, height: 29, pose: 'swingFwd', phase: frame })
+    drawAvatar(ctx, MRPASIONFRUIT, 96 + shove * 1.6, 66 + bobY, { facing: -1, height: 28, pose: 'hurt', phase: frame })
     // Impact.
     ctx.globalAlpha = 0.9
     for (let i = 0; i < 5; i++) {
@@ -1025,7 +1028,7 @@ const STUCK: GameEntry = {
     'Pairs share a rope with real physics. Getting anywhere means agreeing on where anywhere is, which is the hard part.',
   plan: [
     'A springy tether that swings, snags and drags you both.',
-    'Obstacles that only work if one camper anchors the other.',
+    'Obstacles that only work if one of you anchors the other.',
     'Pairs racing pairs, with a shared clock and shared blame.',
   ],
   art: (ctx, frame) => {
@@ -1068,8 +1071,8 @@ const STUCK: GameEntry = {
     ctx.moveTo(ax, ay)
     ctx.quadraticCurveTo((ax + bx) / 2, ay + 18 + swing, bx, by)
     ctx.stroke()
-    drawAvatar(ctx, HOODIE, ax, 62, { facing: 1, height: 27, pose: 'brace', phase: frame })
-    drawAvatar(ctx, BIKER, bx, by + 14, { facing: -1, height: 26, pose: 'fall', phase: frame })
+    drawAvatar(ctx, CONTRLZEE, ax, 62, { facing: 1, height: 27, pose: 'brace', phase: frame })
+    drawAvatar(ctx, TENINCHTOENAIL, bx, by + 14, { facing: -1, height: 26, pose: 'fall', phase: frame })
     rock(ctx, 20, 62, 10)
     bush(ctx, 140, 54, 16)
   },

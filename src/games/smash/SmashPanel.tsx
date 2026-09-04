@@ -354,7 +354,7 @@ function Arena({ config, net, registerHandler, onChangeFighters, onLeave }: Aren
                 </button>
               ) : (
                 <button className="btn btn--ghost btn--sm" onClick={onChangeFighters}>
-                  Change campers
+                  Change character
                 </button>
               )}
             </div>
@@ -389,7 +389,7 @@ function Arena({ config, net, registerHandler, onChangeFighters, onLeave }: Aren
                 </button>
               ) : (
                 <button className="btn btn--ghost btn--sm" onClick={onChangeFighters}>
-                  Change campers
+                  Change character
                 </button>
               )}
             </div>
@@ -568,7 +568,7 @@ function ModeScreen({
                 ))}
               </ul>
               <p className="muted">
-                {peers.length < 2 ? 'Waiting for someone to join…' : 'Ready - pick your campers.'}
+                {peers.length < 2 ? 'Waiting for someone to join…' : 'Ready - pick your fighters.'}
               </p>
               <button className="btn btn--ghost btn--sm" onClick={onCancel}>
                 Cancel
@@ -636,8 +636,8 @@ export function SmashPanel() {
   const [mode, setMode] = useState<Mode>('local')
   const [role, setRole] = useState<Role | null>(null)
 
-  const [p1, setP1] = useState('basil')
-  const [p2, setP2] = useState('juniper')
+  const [p1, setP1] = useState(ROSTER[0].id)
+  const [p2, setP2] = useState(ROSTER[1].id)
   const [cpu, setCpu] = useState(true)
   const [cpuLevel, setCpuLevel] = useState<1 | 2 | 3>(2)
   const [stocks, setStocks] = useState(3)
@@ -679,7 +679,7 @@ export function SmashPanel() {
       },
       onPeers: (players) => {
         setPeers(players)
-        // Once a friend arrives, the host moves on to picking campers.
+        // Once a friend arrives, the host moves on to picking fighters.
         if (roleRef.current === 'host' && players.length >= 2 && screenRef.current === 'mode') {
           setScreen('select')
         }
@@ -788,7 +788,7 @@ export function SmashPanel() {
         <div className="spacer" />
         {screen === 'play' && !guest && (
           <button className="btn btn--ghost btn--sm" onClick={backToSelect}>
-            Camper select
+            Character select
           </button>
         )}
         {screen !== 'mode' && (
@@ -824,7 +824,7 @@ export function SmashPanel() {
           {online && (
             <div className="notice">
               {guest
-                ? `Joined room ${code}. Pick your camper - the host starts the match.`
+                ? `Joined room ${code}. Pick your fighter - the host starts the match.`
                 : peers.length >= 2
                   ? `Room ${code}: ${peers.map((p) => p.name).join(' and ')} are here.`
                   : `Room ${code}: waiting for a friend to join.`}

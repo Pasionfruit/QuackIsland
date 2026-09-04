@@ -2,158 +2,128 @@ import type { AvatarDef } from './avatar'
 import type { CritterDef } from './critter'
 
 /**
- * Everyone who lives in Polyland. Games reference these by name, so a camper
- * added here shows up anywhere the cast is drawn.
+ * The Polyland cast.
+ *
+ * Five animals with jobs and opinions. Games reference these by name, so a
+ * character added here shows up anywhere the cast is drawn.
  */
 
-// ------------------------------------------------------------------ campers
-
-export const CHEF: AvatarDef = {
-  skin: '#f7ddc0',
-  hair: '#5c3f2c',
-  hairStyle: 'bob',
-  top: '#f8f5ed',
-  legs: '#3b3730',
-  shoes: '#2a2722',
-  hat: 'toque',
-  hatColor: '#fcfaf4',
-  accessory: 'pan',
-  accessoryColor: '#4b4740',
-  accent: '#efe9db',
-}
-
-export const HIKER: AvatarDef = {
-  skin: '#f3d4b6',
-  hair: '#2f2823',
-  hairStyle: 'short',
-  top: '#41504e',
-  legs: '#38342f',
-  shoes: '#2b2723',
-  hat: 'none',
-  accessory: 'staff',
-  accessoryColor: '#a07a4d',
-  pack: '#33566b',
-}
-
-export const SURFER: AvatarDef = {
-  skin: '#e8bd92',
-  hair: '#8a6a3f',
-  hairStyle: 'curly',
-  top: '#f0d9b8',
-  sleeves: 'tank',
-  legs: '#2f6f86',
-  shoes: '#e7ded0',
-  hat: 'none',
-  eyewear: 'goggles',
-  eyewearColor: '#2f6f86',
-  accessory: 'board',
-  accessoryColor: '#7cc4d6',
-  accessoryAccent: '#f2f0e4',
-}
-
-export const FISHER: AvatarDef = {
-  skin: '#f5d8ba',
-  hair: '#6b4a33',
-  hairStyle: 'long',
-  top: '#5d6f4e',
-  legs: '#3a3630',
-  shoes: '#4a4038',
-  hat: 'bucket',
-  hatColor: '#cbb98f',
-  accessory: 'rod',
-  accessoryColor: '#8a8378',
-  accessoryAccent: '#d0664f',
-  satchel: '#8d6b45',
-}
-
-export const BIKER: AvatarDef = {
-  skin: '#e9c39c',
-  hair: '#3a2f28',
-  hairStyle: 'ponytail',
-  top: '#3f8ea3',
-  sleeves: 'short',
-  legs: '#2c2a28',
-  shoes: '#1f1d1b',
-  hat: 'helmet',
-  hatColor: '#f4f2ea',
-  hatAccent: '#3b4650',
-  eyewear: 'shades',
-  eyewearColor: '#2b3238',
-  accessory: 'bottle',
-  accessoryColor: '#d0664f',
-  accent: '#2f6f86',
-}
-
-export const CODER: AvatarDef = {
-  skin: '#f2d2b2',
-  hair: '#4a3527',
-  hairStyle: 'short',
-  top: '#4a6fa8',
-  legs: '#33302b',
-  shoes: '#26241f',
-  hat: 'none',
-  headphones: '#3b3f45',
+/** ContrlZee - raccoon, programmer, permanently mid-refactor. */
+export const CONTRLZEE: AvatarDef = {
+  species: 'raccoon',
+  fur: '#9a978f',
+  belly: '#e8dfd0',
+  markings: '#38352f',
+  nose: '#2a2622',
+  earInner: '#6f6a62',
+  tail: 'ringed',
+  top: '#2f2d2a',
+  sleeves: 'long',
+  legs: '#3a3733',
+  feet: '#2a2724',
+  hat: 'hood',
+  hatColor: '#2f2d2a',
   accessory: 'laptop',
-  accessoryColor: '#b9bec4',
-  accessoryAccent: '#6f757c',
+  accessoryColor: '#8f959b',
+  accessoryAccent: '#5c6167',
+  print: 'code',
+  printColor: '#d9d3c4',
 }
 
-export const EXPLORER: AvatarDef = {
-  skin: '#e5b98d',
-  hair: '#2e2622',
-  hairStyle: 'bun',
-  top: '#c9b48a',
-  sleeves: 'short',
-  legs: '#6d7a53',
-  shoes: '#5a4632',
-  hat: 'safari',
-  hatColor: '#d8c79b',
-  hatAccent: '#8d6b45',
+/** NinjaPenguin - penguin, ninja, absolutely committed to the bit. */
+export const NINJAPENGUIN: AvatarDef = {
+  species: 'penguin',
+  fur: '#2e2c2b',
+  belly: '#f2ece0',
+  nose: '#2a2622',
+  beak: '#e8a33c',
+  tail: 'stub',
+  legs: '#2e2c2b',
+  feet: '#e8a33c',
+  hat: 'headband',
+  hatColor: '#2a2826',
+  hatAccent: '#c8483c',
   accessory: 'none',
+  pack: '#7d5a3a',
   satchel: '#8d6b45',
-  pack: '#7d6a4a',
 }
 
-export const RUNNER: AvatarDef = {
-  skin: '#c98d5f',
-  hair: '#1f1a17',
-  hairStyle: 'buzz',
-  top: '#e0794f',
+/** teninchtoenail - lion, salesman, has a deal for you. */
+export const TENINCHTOENAIL: AvatarDef = {
+  species: 'lion',
+  fur: '#d9a05b',
+  belly: '#f2dfba',
+  markings: '#a8672f',
+  nose: '#8a5a3a',
+  tail: 'tufted',
+  top: '#3d4a5c',
+  topAccent: '#f4f1e8',
+  sleeves: 'long',
+  legs: '#333d4c',
+  feet: '#2b3038',
+  hat: 'none',
+  accessory: 'briefcase',
+  accessoryColor: '#7d5a3a',
+  accessoryAccent: '#4f3a26',
+  print: 'tie',
+  printColor: '#c8483c',
+}
+
+/** diva - frog, fashionista, dressed for a better party than this one. */
+export const DIVA: AvatarDef = {
+  species: 'frog',
+  fur: '#8fa86a',
+  belly: '#e8e4c6',
+  nose: '#5f7a52',
+  tail: 'none',
+  top: '#c85f96',
+  topAccent: '#f0d4e2',
+  sleeves: 'short',
+  legs: '#a8527c',
+  feet: '#7f9c62',
+  hat: 'bow',
+  hatColor: '#e8c05f',
+  eyewear: 'shades',
+  eyewearColor: '#2b2622',
+  accessory: 'handbag',
+  accessoryColor: '#d94f7f',
+  accessoryAccent: '#e8c05f',
+  print: 'star',
+  printColor: '#f0d4e2',
+}
+
+/** MrPasionfruit - black cat, athlete, already three reps ahead of you. */
+export const MRPASIONFRUIT: AvatarDef = {
+  species: 'cat',
+  fur: '#35322f',
+  belly: '#57524c',
+  nose: '#c98d92',
+  earInner: '#8a6a6c',
+  tail: 'long',
+  top: '#7a4f8c',
+  topAccent: '#e8c05f',
   sleeves: 'tank',
-  legs: '#3a3630',
-  shoes: '#f2f0e4',
+  legs: '#2b2926',
+  feet: '#f2f0e4',
   hat: 'visor',
   hatColor: '#f2f0e4',
-  hatAccent: '#e0794f',
-  accessory: 'none',
-  accent: '#f2f0e4',
+  hatAccent: '#e8c05f',
+  accessory: 'bottle',
+  accessoryColor: '#e8c05f',
+  accessoryAccent: '#7a4f8c',
 }
 
-export const HOODIE: AvatarDef = {
-  skin: '#f7ddc0',
-  hair: '#33291f',
-  hairStyle: 'curly',
-  top: '#3f7d8c',
-  legs: '#33302b',
-  shoes: '#26241f',
-  hat: 'hood',
-  hatColor: '#3f7d8c',
-  accessory: 'none',
-}
-
-export const CAMPERS: AvatarDef[] = [
-  CHEF,
-  HIKER,
-  SURFER,
-  FISHER,
-  BIKER,
-  CODER,
-  EXPLORER,
-  RUNNER,
-  HOODIE,
+export const CAST: AvatarDef[] = [
+  CONTRLZEE,
+  NINJAPENGUIN,
+  TENINCHTOENAIL,
+  DIVA,
+  MRPASIONFRUIT,
 ]
 
 // ------------------------------------------------------------------ critters
+
+/** Background animals. These stay on four legs (or wings). */
 
 export const CALICO_CAT: CritterDef = {
   kind: 'cat',
@@ -210,4 +180,4 @@ export const DUCK: CritterDef = {
   tail: 'fan',
 }
 
-export const CRITTERS: CritterDef[] = [CALICO_CAT, BLACK_CAT, SHIBA_DOG, SEAGULL]
+export const CRITTERS: CritterDef[] = [CALICO_CAT, BLACK_CAT, SHIBA_DOG, SEAGULL, DUCK]
