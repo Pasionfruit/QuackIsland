@@ -442,7 +442,8 @@ export function SketchPanel() {
   }
 
   const togglePacket = (id: string) => {
-    setPacketIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]))
+    // At least one packet has to stay selected - an empty pool leaves Scribble with no words to draw.
+    setPacketIds((cur) => (cur.includes(id) ? (cur.length > 1 ? cur.filter((x) => x !== id) : cur) : [...cur, id]))
   }
 
   // ------------------------------------------------------------------ lobby
