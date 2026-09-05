@@ -56,7 +56,8 @@ export type DuckPayload =
  * the same as every other game here.
  */
 export type SketchPayload =
-  | { k: 'stroke'; id: number; color: string; width: number; pts: [number, number][]; done: boolean }
+  | { k: 'stroke'; id: number; color: string; width: number; pts: [number, number][]; done: boolean; kind?: 'line' | 'fill' }
+  | { k: 'undo'; id: number }
   | { k: 'clear' }
   | { k: 'guess'; text: string }
   | { k: 'addWord'; word: string }

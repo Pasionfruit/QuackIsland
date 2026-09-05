@@ -11,18 +11,23 @@ import { WORD_PACKETS } from './words'
 /**
  * Sketch: three modes sharing one canvas.
  *
- * Strokes never go through the host - the relay already broadcasts a
- * sender's message to everyone else in the room, so whoever is drawing sends
- * straight to every viewer. Only the game state (turns, timers, words,
- * scores) is host-authoritative, the same split as every other Polyland game.
- * Phone is the exception: nobody watches a Phone drawing happen live, so its
- * strokes ride a single `submit` message instead of a live stream.
+ * Scribble is the one mode with a live audience - strokes never go through
+ * the host there, since the relay already broadcasts a sender's message to
+ * everyone else in the room, so whoever is drawing sends straight to every
+ * viewer. Phone and Collaborative Art are the opposite: nobody is ever meant
+ * to watch someone else's picture happen live (that is the whole point of
+ * "no one sees anyone else's screen until the reveal"), so their strokes stay
+ * local the entire time they're being drawn and only the finished picture
+ * rides a `submit` message. Only the game state itself (whose turn, the
+ * timer, chain assignments, scores) is host-authoritative, the same split as
+ * every other Polyland game.
  */
 
 const net = new NetClient()
 type Screen = 'lobby' | 'play'
 type Role = 'solo' | 'host' | 'guest'
 type Mode = 'phone' | 'scribble' | 'collab'
+type Tool = 'brush' | 'fill'
 type AnyEngine = PhoneEngine | ScribbleEngine | CollabEngine
 
 function StrokeThumb({ strokes, w = 220, h = 150 }: { strokes: Stroke[]; w?: number; h?: number }) {
@@ -39,6 +44,59 @@ function StrokeThumb({ strokes, w = 220, h = 150 }: { strokes: Stroke[]; w?: num
     renderStrokes(ctx, strokes, w, h)
   }, [strokes, w, h])
   return <canvas ref={ref} style={{ width: w, height: h, borderRadius: 8, border: '1px solid var(--line)' }} />
+}
+
+/** The palette, brush sizes, paint bucket and undo - every drawing surface in Sketch shares this toolbar. */
+function DrawTools(props: {
+  color: string
+  setColor: (c: string) => void
+  brush: number
+  setBrush: (b: number) => void
+  tool: Tool
+  setTool: (t: Tool) => void
+  onUndo: () => void
+  forcedColor?: string | null
+}) {
+  const { color, setColor, brush, setBrush, tool, setTool, onUndo, forcedColor } = props
+  const colorLocked = Boolean(forcedColor)
+  return (
+    <div className="chiprow" style={{ marginBottom: 8 }}>
+      {PALETTE.map((c) => (
+        <button
+          key={c}
+          type="button"
+          onClick={() => setColor(c)}
+          disabled={colorLocked}
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: 999,
+            background: forcedColor ?? c,
+            border: c === color ? '2px solid var(--ink, #222)' : '1px solid var(--line)',
+          }}
+        />
+      ))}
+      {BRUSH_SIZES.map((b) => (
+        <button
+          key={b}
+          type="button"
+          className={`btn btn--sm ${tool === 'brush' && b === brush ? '' : 'btn--ghost'}`}
+          onClick={() => {
+            setTool('brush')
+            setBrush(b)
+          }}
+        >
+          {b}px
+        </button>
+      ))}
+      <button type="button" className={`btn btn--sm ${tool === 'fill' ? '' : 'btn--ghost'}`} onClick={() => setTool('fill')}>
+        Paint bucket
+      </button>
+      <button type="button" className="btn btn--ghost btn--sm" onClick={onUndo}>
+        Undo
+      </button>
+    </div>
+  )
 }
 
 export function SketchPanel() {
@@ -59,7 +117,7 @@ export function SketchPanel() {
   const [scribbleRounds, setScribbleRounds] = useState(6)
   const [scribbleSeconds, setScribbleSeconds] = useState(80)
   const [phoneSeconds, setPhoneSeconds] = useState(75)
-  const [timedTurns, setTimedTurns] = useState(false)
+  const [collabSeconds, setCollabSeconds] = useState(45)
   const [chaos, setChaos] = useState<CollabConfig['chaos']>('off')
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -72,6 +130,7 @@ export function SketchPanel() {
   const drawerRef = useRef<LocalDrawer | null>(null)
   const lastVersionRef = useRef(-1)
   const prevPhase = useRef('')
+  const roundKeyRef = useRef('')
   const fullscreen = useFullscreen<HTMLDivElement>()
 
   // Small per-mode UI state that does not belong on the engine.
@@ -79,6 +138,7 @@ export function SketchPanel() {
   const [customWord, setCustomWord] = useState('')
   const [color, setColor] = useState(PALETTE[0])
   const [brush, setBrush] = useState(BRUSH_SIZES[1])
+  const [tool, setTool] = useState<Tool>('brush')
   const [phoneInput, setPhoneInput] = useState('')
   const [phoneSubmitted, setPhoneSubmitted] = useState<{ text: string; strokes: Stroke[] } | null>(null)
 
@@ -116,11 +176,16 @@ export function SketchPanel() {
           drawerRef.current?.applyRemote(from, msg)
           return
         }
+        if (msg.k === 'undo') {
+          drawerRef.current?.removeById(msg.id)
+          return
+        }
         if (msg.k === 'start') {
-          const built = buildEngine(msg.mode, msg.config)
           modeRef.current = msg.mode
-          engineRef.current = built
-          drawerRef.current = new LocalDrawer(slotRef.current, sendStroke, () => setTick((t) => t + 1))
+          engineRef.current = buildEngine(msg.mode, msg.config)
+          drawerRef.current = makeDrawer(msg.mode)
+          lastVersionRef.current = -1
+          roundKeyRef.current = ''
           setMode(msg.mode)
           setScreen('play')
           return
@@ -135,15 +200,23 @@ export function SketchPanel() {
         else if (msg.k === 'addWord' && eng instanceof ScribbleEngine) eng.addCustomWord(msg.word)
         else if (msg.k === 'submit' && eng instanceof PhoneEngine) {
           eng.submit(from, msg.text, (msg.strokes as Stroke[]) ?? [])
+        } else if (msg.k === 'submit' && eng instanceof CollabEngine) {
+          eng.submit(from, (msg.strokes as Stroke[]) ?? [])
         }
       },
     })
     return () => net.close()
   }, [])
 
-  const sendStroke = useCallback((chunk: { id: number; color: string; width: number; pts: Pt[]; done: boolean }) => {
+  const sendStroke = useCallback((chunk: { id: number; color: string; width: number; pts: Pt[]; done: boolean; kind?: 'line' | 'fill' }) => {
     net.send({ k: 'stroke', ...chunk } satisfies SketchPayload)
   }, [])
+
+  /** Scribble has a live audience, so its strokes broadcast as they happen. Phone and Collab draw privately - nothing goes out until submit. */
+  const makeDrawer = useCallback(
+    (m: Mode) => new LocalDrawer(slotRef.current, m === 'scribble' ? sendStroke : () => {}, () => setTick((t) => t + 1)),
+    [sendStroke],
+  )
 
   function buildEngine(m: Mode, config: unknown): AnyEngine {
     if (m === 'phone') return new PhoneEngine({ ...(config as object), players: 0 })
@@ -156,7 +229,7 @@ export function SketchPanel() {
       mode === 'phone'
         ? { roundSeconds: phoneSeconds }
         : mode === 'collab'
-          ? { timedTurns, turnSeconds: 30, chaos, chaosSeconds: 20 }
+          ? { roundSeconds: collabSeconds, chaos, chaosSeconds: 20 }
           : ({ packetIds, roundSeconds: scribbleSeconds, totalRounds: scribbleRounds } satisfies Partial<ScribbleConfig>)
 
     const eng = buildEngine(mode, config)
@@ -168,13 +241,15 @@ export function SketchPanel() {
     }
     eng.start()
     engineRef.current = eng
-    drawerRef.current = new LocalDrawer(slotRef.current, sendStroke, () => setTick((t) => t + 1))
+    drawerRef.current = makeDrawer(mode)
     lastVersionRef.current = -1
+    roundKeyRef.current = ''
     setPhoneSubmitted(null)
     setGuessText('')
+    setTool('brush')
     setScreen('play')
     if (role === 'host') net.send({ k: 'start', mode, config } satisfies SketchPayload)
-  }, [mode, role, peers, packetIds, scribbleSeconds, scribbleRounds, phoneSeconds, timedTurns, chaos, sendStroke])
+  }, [mode, role, peers, packetIds, scribbleSeconds, scribbleRounds, phoneSeconds, collabSeconds, chaos, makeDrawer])
 
   // ------------------------------------------------------------------ loop
 
@@ -198,9 +273,9 @@ export function SketchPanel() {
           acc -= TICK
           eng.step()
         }
-        // Only actually send when something changed - Phone's chain history
-        // can carry real drawings, and re-sending it dozens of times a
-        // second for a round nothing happened in would be wasteful.
+        // Only actually send when something changed - Phone and Collab's
+        // chain history can carry real drawings, and re-sending it dozens of
+        // times a second for a round nothing happened in would be wasteful.
         if (eng.version !== lastVersionRef.current) {
           lastVersionRef.current = eng.version
           net.send({ k: 'snap', s: eng.snapshot() } satisfies SketchPayload)
@@ -210,6 +285,27 @@ export function SketchPanel() {
       if (eng && prevPhase.current !== eng.phase) {
         prevPhase.current = eng.phase
         setTick((t) => t + 1)
+      }
+
+      // A new round starts everyone's canvas fresh: Scribble wipes it for the
+      // new word, Phone wipes it for the new draw step, and Collab seeds it
+      // with whatever picture this player was just handed. Keyed by mode,
+      // round and phase so every peer resets on the exact same transition.
+      if (eng) {
+        let key = ''
+        if (eng instanceof ScribbleEngine) key = `scribble:${eng.round}:${eng.phase}`
+        else if (eng instanceof PhoneEngine) key = `phone:${eng.round}:${eng.phase}`
+        else if (eng instanceof CollabEngine) key = `collab:${eng.round}:${eng.phase}`
+        if (key && roundKeyRef.current !== key) {
+          roundKeyRef.current = key
+          if (eng instanceof ScribbleEngine && eng.phase === 'drawing') {
+            drawerRef.current?.reset()
+          } else if (eng instanceof PhoneEngine && eng.phase === 'working' && eng.stepKind(eng.round) === 'draw') {
+            drawerRef.current?.reset()
+          } else if (eng instanceof CollabEngine && eng.phase === 'working') {
+            drawerRef.current?.reset(eng.handoff(slotRef.current)?.strokes ?? [])
+          }
+        }
       }
 
       const canvas = canvasRef.current
@@ -248,6 +344,10 @@ export function SketchPanel() {
       if (kind === 'guess') return eng.handoff(slotRef.current)?.strokes ?? []
       return []
     }
+    if (eng instanceof CollabEngine) {
+      if (eng.phase !== 'working') return []
+      return drawerRef.current?.strokes ?? []
+    }
     return drawerRef.current?.strokes ?? []
   }
 
@@ -257,7 +357,7 @@ export function SketchPanel() {
     const eng = engineRef.current
     if (!eng) return false
     if (eng instanceof ScribbleEngine) return eng.phase === 'drawing' && eng.drawer?.slot === slotRef.current
-    if (eng instanceof CollabEngine) return eng.canDraw(slotRef.current)
+    if (eng instanceof CollabEngine) return eng.phase === 'working' && !eng.hasSubmitted(slotRef.current)
     if (eng instanceof PhoneEngine) {
       return eng.phase === 'working' && eng.stepKind(eng.round) === 'draw' && !eng.hasSubmitted(slotRef.current)
     }
@@ -272,8 +372,13 @@ export function SketchPanel() {
 
   const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!canDrawNow() || !canvasRef.current || !drawerRef.current) return
+    const pt = toUnit(canvasRef.current, e.clientX, e.clientY)
+    if (tool === 'fill') {
+      drawerRef.current.fill(activeColor, pt)
+      return
+    }
     e.currentTarget.setPointerCapture(e.pointerId)
-    drawerRef.current.begin(activeColor, brush, toUnit(canvasRef.current, e.clientX, e.clientY))
+    drawerRef.current.begin(activeColor, brush, pt)
   }
   const onPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!drawerRef.current?.drawing || !canvasRef.current) return
@@ -282,6 +387,12 @@ export function SketchPanel() {
   const onPointerUp = () => {
     drawerRef.current?.end()
   }
+
+  /** Scribble's drawer has a live audience, so an undo has to tell them too. Phone and Collab never broadcast strokes at all, so undo stays local. */
+  const onUndo = useCallback(() => {
+    const id = drawerRef.current?.undo()
+    if (id != null && modeRef.current === 'scribble') net.send({ k: 'undo', id } satisfies SketchPayload)
+  }, [])
 
   const sendSubmit = (text: string) => {
     const eng = engineRef.current
@@ -292,6 +403,14 @@ export function SketchPanel() {
     else net.send({ k: 'submit', text, strokes } satisfies SketchPayload)
     setPhoneSubmitted({ text, strokes })
     setPhoneInput('')
+  }
+
+  const sendCollabSubmit = () => {
+    const eng = engineRef.current
+    if (!(eng instanceof CollabEngine)) return
+    const strokes = drawerRef.current?.strokes ?? []
+    if (roleRef.current === 'host') eng.submit(slotRef.current, strokes)
+    else net.send({ k: 'submit', text: '', strokes } satisfies SketchPayload)
   }
 
   const sendGuess = () => {
@@ -361,7 +480,7 @@ export function SketchPanel() {
               {mode === 'phone' &&
                 'Everyone writes a prompt, then the chain rotates: draw what you are handed, someone else guesses it, someone else draws that guess. The reveal at the end is the whole point.'}
               {mode === 'collab' &&
-                'One shared canvas, no scoring. Draw together, save it at the end. Turn on a challenge if casual is too easy.'}
+                'Everyone privately adds to a picture, then passes it on - nobody sees anyone else\'s screen until the album opens at the end.'}
             </p>
 
             {mode === 'scribble' && (
@@ -431,10 +550,20 @@ export function SketchPanel() {
 
             {mode === 'collab' && (
               <div style={{ display: 'grid', gap: 8 }}>
-                <label className="keyrow">
-                  <span>Timed turns (off = draw whenever)</span>
-                  <input type="checkbox" checked={timedTurns} onChange={(e) => setTimedTurns(e.target.checked)} />
-                </label>
+                <label className="fighter__title">Seconds per round: {collabSeconds}</label>
+                <input
+                  type="range"
+                  min={20}
+                  max={120}
+                  step={10}
+                  value={collabSeconds}
+                  onChange={(e) => setCollabSeconds(Number(e.target.value))}
+                />
+                <p className="muted" style={{ fontSize: 12 }}>
+                  Round 0 starts a picture from scratch; every round after, you are privately handed
+                  someone else's picture to build on. With N players the game runs N rounds - the
+                  album opens once every chain has been touched by everyone.
+                </p>
                 <label className="fighter__title">Chaos</label>
                 <div className="chiprow">
                   {(['off', 'random', 'invert'] as const).map((c) => (
@@ -520,7 +649,7 @@ export function SketchPanel() {
             ) : (
               <p className="muted" style={{ marginTop: 0 }}>
                 Host a table to get a four-letter code, or join one somebody read out to you. Phone
-                wants at least 3; Scribble and Collaborative Art work from 2.
+                and Collaborative Art want at least 2; Scribble works from 2 too.
               </p>
             )}
           </div>
@@ -557,7 +686,13 @@ export function SketchPanel() {
               </button>
               <canvas
                 ref={canvasRef}
-                style={{ width: '100%', height: 380, display: 'block', touchAction: 'none', cursor: iAmDrawing ? 'crosshair' : 'default' }}
+                style={{
+                  width: '100%',
+                  height: 380,
+                  display: 'block',
+                  touchAction: 'none',
+                  cursor: iAmDrawing ? (tool === 'fill' ? 'copy' : 'crosshair') : 'default',
+                }}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
@@ -587,32 +722,7 @@ export function SketchPanel() {
                     {iAmDrawing ? scribble.word : scribble.maskedWord() || scribble.guestMask}
                   </div>
                   {iAmDrawing && (
-                    <div className="chiprow" style={{ marginBottom: 8 }}>
-                      {PALETTE.map((c) => (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => setColor(c)}
-                          style={{
-                            width: 22,
-                            height: 22,
-                            borderRadius: 999,
-                            background: c,
-                            border: c === color ? '2px solid var(--ink, #222)' : '1px solid var(--line)',
-                          }}
-                        />
-                      ))}
-                      {BRUSH_SIZES.map((b) => (
-                        <button
-                          key={b}
-                          type="button"
-                          className={`btn btn--sm ${b === brush ? '' : 'btn--ghost'}`}
-                          onClick={() => setBrush(b)}
-                        >
-                          {b}px
-                        </button>
-                      ))}
-                    </div>
+                    <DrawTools color={color} setColor={setColor} brush={brush} setBrush={setBrush} tool={tool} setTool={setTool} onUndo={onUndo} />
                   )}
                   {!iAmDrawing && (
                     <div className="chiprow">
@@ -628,13 +738,6 @@ export function SketchPanel() {
                       </button>
                     </div>
                   )}
-                  <div style={{ marginTop: 10, display: 'grid', gap: 4, maxHeight: 120, overflowY: 'auto' }}>
-                    {scribble.feed.map((f, i) => (
-                      <div key={i} className="muted" style={{ fontSize: 12 }}>
-                        {f.correct ? `${nameFor(peers, role, f.slot)} guessed it!` : `${nameFor(peers, role, f.slot)}: ${f.text}`}
-                      </div>
-                    ))}
-                  </div>
                 </>
               )}
             </div>
@@ -656,6 +759,21 @@ export function SketchPanel() {
                 Play again
               </button>
             )}
+            <div className="panel__title" style={{ marginTop: 16 }}>
+              Guesses
+            </div>
+            <div style={{ display: 'grid', gap: 4, maxHeight: 220, overflowY: 'auto' }}>
+              {scribble.feed.length === 0 && (
+                <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+                  No guesses yet.
+                </p>
+              )}
+              {scribble.feed.map((f, i) => (
+                <div key={i} className="muted" style={{ fontSize: 12 }}>
+                  {f.correct ? `${nameFor(peers, role, f.slot)} got it!` : `${nameFor(peers, role, f.slot)}: ${f.text}`}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -676,6 +794,9 @@ export function SketchPanel() {
                 setColor={setColor}
                 brush={brush}
                 setBrush={setBrush}
+                tool={tool}
+                setTool={setTool}
+                onUndo={onUndo}
                 phoneInput={phoneInput}
                 setPhoneInput={setPhoneInput}
                 submitted={phoneSubmitted}
@@ -721,76 +842,72 @@ export function SketchPanel() {
       )}
 
       {collab && (
-        <div className="infogrid" style={{ gridTemplateColumns: '2fr 1fr' }}>
-          <div>
-            <div className="stage-wrap" ref={fullscreen.ref} style={{ background: '#fbf8f0' }}>
-              <button type="button" className="btn btn--ghost btn--sm stage-wrap__fullscreen" onClick={fullscreen.toggle}>
-                {fullscreen.active ? 'Exit fullscreen' : 'Fullscreen'}
-              </button>
-              <canvas
-                ref={canvasRef}
-                style={{ width: '100%', height: 420, display: 'block', touchAction: 'none', cursor: iAmDrawing ? 'crosshair' : 'not-allowed' }}
+        <div className="infogrid" style={{ gridTemplateColumns: collab.phase === 'reveal' ? '1fr' : '2fr 1fr' }}>
+          {collab.phase !== 'reveal' && (
+            <div>
+              <CollabWorking
+                collab={collab}
+                slot={slotRef.current}
+                canvasRef={canvasRef}
+                tool={tool}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
+                color={color}
+                setColor={setColor}
+                brush={brush}
+                setBrush={setBrush}
+                setTool={setTool}
+                onUndo={onUndo}
+                onDone={sendCollabSubmit}
               />
             </div>
-            <div className="chiprow" style={{ marginTop: 10 }}>
-              {PALETTE.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setColor(c)}
-                  disabled={Boolean(collab.forcedColor)}
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: 999,
-                    background: collab.forcedColor ?? c,
-                    border: c === color ? '2px solid var(--ink, #222)' : '1px solid var(--line)',
-                  }}
-                />
-              ))}
-              {BRUSH_SIZES.map((b) => (
-                <button key={b} type="button" className={`btn btn--sm ${b === brush ? '' : 'btn--ghost'}`} onClick={() => setBrush(b)}>
-                  {b}px
-                </button>
-              ))}
-              <button
-                className="btn btn--ghost btn--sm"
-                onClick={() => canvasRef.current && saveCanvasPng(canvasRef.current, 'polyland-sketch.png')}
-              >
-                Save PNG
-              </button>
-              <button className="btn btn--ghost btn--sm" onClick={() => drawerRef.current?.clear()}>
-                Clear
-              </button>
+          )}
+          {collab.phase !== 'reveal' && (
+            <div className="panel">
+              <div className="panel__title">The table</div>
+              <p className="muted">Waiting on {collab.waitingOn()} more.</p>
+              <div style={{ display: 'grid', gap: 4 }}>
+                {collab.players.map((p) => (
+                  <div className="keyrow" key={p.slot}>
+                    <span>{p.name}</span>
+                    <span>{collab.hasSubmitted(p.slot) ? 'done' : '...'}</span>
+                  </div>
+                ))}
+              </div>
+              {collab.config.chaos !== 'off' && (
+                <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>
+                  {collab.config.chaos === 'random' ? 'Your colours shuffle' : 'Your colours invert'} every{' '}
+                  {collab.config.chaosSeconds}s while you draw.
+                </p>
+              )}
             </div>
-          </div>
-          <div className="panel">
-            <div className="panel__title">The table</div>
-            {collab.config.timedTurns && (
-              <p>
-                {collab.currentTurn?.slot === slotRef.current ? 'Your turn' : `${collab.currentTurn?.name}'s turn`} -{' '}
-                {Math.ceil(collab.turnTimer / 60)}s
-              </p>
-            )}
-            {!collab.config.timedTurns && <p className="muted">Casual - draw whenever you like.</p>}
-            {collab.config.chaos !== 'off' && (
-              <p className="muted" style={{ fontSize: 12 }}>
-                {collab.config.chaos === 'random' ? 'Colours shuffle' : 'Colours flip'} every{' '}
-                {collab.config.chaosSeconds}s.
-              </p>
-            )}
-            <div style={{ display: 'grid', gap: 4, marginTop: 10 }}>
-              {collab.players.map((p) => (
-                <div className="keyrow" key={p.slot}>
-                  <span>{p.name}</span>
-                  <span className="muted">{collab.config.timedTurns && collab.currentTurn?.slot === p.slot ? 'drawing' : ''}</span>
+          )}
+          {collab.phase === 'reveal' && (
+            <div className="panel">
+              <div className="panel__title">The album</div>
+              {collab.chains.map((chain, ci) => (
+                <div key={ci} style={{ marginBottom: 20 }}>
+                  <div className="fighter__title" style={{ marginBottom: 6 }}>
+                    Started by {playerName(collab.players, chain[0]?.author ?? -1)}
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                    {chain.map((entry, ei) => (
+                      <div key={ei} style={{ width: 220 }}>
+                        <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>
+                          {ei === 0 ? 'Started by' : 'Added to by'} {playerName(collab.players, entry.author)}
+                        </div>
+                        <StrokeThumb strokes={entry.strokes} />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
+              <button className="btn" onClick={beginMatch}>
+                Play again
+              </button>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>
@@ -845,6 +962,9 @@ function PhoneWorking(props: {
   setColor: (c: string) => void
   brush: number
   setBrush: (b: number) => void
+  tool: Tool
+  setTool: (t: Tool) => void
+  onUndo: () => void
   phoneInput: string
   setPhoneInput: (s: string) => void
   submitted: { text: string; strokes: Stroke[] } | null
@@ -862,7 +982,11 @@ function PhoneWorking(props: {
           Round {phone.round + 1} / {phone.n} -{' '}
           {kind === 'prompt' ? 'Write a starting prompt' : kind === 'draw' ? 'Draw what you were handed' : 'Guess the drawing'}
         </div>
-        {kind !== 'draw' && handoff && kind === 'guess' && <StrokeThumb strokes={handoff.strokes} />}
+        {kind === 'draw' && handoff && (
+          <div style={{ fontWeight: 800, fontSize: 18, marginTop: 4 }}>You were handed: &quot;{handoff.text}&quot;</div>
+        )}
+        {kind === 'draw' && !handoff && <p className="muted">Nothing came through - just draw whatever you like.</p>}
+        {kind === 'guess' && handoff && <StrokeThumb strokes={handoff.strokes} />}
         {kind === 'guess' && !handoff && <p className="muted">Nothing came through - just make something up.</p>}
       </div>
 
@@ -871,37 +995,33 @@ function PhoneWorking(props: {
           <div className="stage-wrap" style={{ background: '#fbf8f0' }}>
             <canvas
               ref={props.canvasRef}
-              style={{ width: '100%', height: 320, display: 'block', touchAction: 'none', cursor: done ? 'default' : 'crosshair' }}
+              style={{
+                width: '100%',
+                height: 320,
+                display: 'block',
+                touchAction: 'none',
+                cursor: done ? 'default' : props.tool === 'fill' ? 'copy' : 'crosshair',
+              }}
               onPointerDown={props.onPointerDown}
               onPointerMove={props.onPointerMove}
               onPointerUp={props.onPointerUp}
             />
           </div>
           {!done && (
-            <div className="chiprow" style={{ marginTop: 10 }}>
-              {PALETTE.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => props.setColor(c)}
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: 999,
-                    background: c,
-                    border: c === props.color ? '2px solid var(--ink, #222)' : '1px solid var(--line)',
-                  }}
-                />
-              ))}
-              {BRUSH_SIZES.map((b) => (
-                <button key={b} type="button" className={`btn btn--sm ${b === props.brush ? '' : 'btn--ghost'}`} onClick={() => props.setBrush(b)}>
-                  {b}px
-                </button>
-              ))}
+            <>
+              <DrawTools
+                color={props.color}
+                setColor={props.setColor}
+                brush={props.brush}
+                setBrush={props.setBrush}
+                tool={props.tool}
+                setTool={props.setTool}
+                onUndo={props.onUndo}
+              />
               <button className="btn btn--sm" onClick={() => props.onSubmit('')}>
                 Done drawing
               </button>
-            </div>
+            </>
           )}
         </>
       )}
@@ -922,6 +1042,83 @@ function PhoneWorking(props: {
       )}
 
       {done && <p className="muted">Submitted{submitted?.text ? `: "${submitted.text}"` : ''}. Waiting on everyone else.</p>}
+    </div>
+  )
+}
+
+function CollabWorking(props: {
+  collab: CollabEngine
+  slot: number
+  canvasRef: React.RefObject<HTMLCanvasElement>
+  tool: Tool
+  onPointerDown: (e: React.PointerEvent<HTMLCanvasElement>) => void
+  onPointerMove: (e: React.PointerEvent<HTMLCanvasElement>) => void
+  onPointerUp: () => void
+  color: string
+  setColor: (c: string) => void
+  brush: number
+  setBrush: (b: number) => void
+  setTool: (t: Tool) => void
+  onUndo: () => void
+  onDone: () => void
+}) {
+  const { collab, slot } = props
+  const done = collab.hasSubmitted(slot)
+
+  return (
+    <div>
+      <div className="panel" style={{ marginBottom: 12 }}>
+        <div className="panel__title">
+          Round {collab.round + 1} / {collab.n}
+        </div>
+        <p className="muted" style={{ marginTop: 0 }}>
+          {collab.round === 0
+            ? "Start a picture - nobody else can see your screen until the album opens at the end."
+            : "You've been handed someone else's picture to build on - nobody else can see your screen until the album opens at the end."}
+        </p>
+      </div>
+      <div className="stage-wrap" style={{ background: '#fbf8f0' }}>
+        <canvas
+          ref={props.canvasRef}
+          style={{
+            width: '100%',
+            height: 380,
+            display: 'block',
+            touchAction: 'none',
+            cursor: done ? 'default' : props.tool === 'fill' ? 'copy' : 'crosshair',
+          }}
+          onPointerDown={props.onPointerDown}
+          onPointerMove={props.onPointerMove}
+          onPointerUp={props.onPointerUp}
+        />
+      </div>
+      {!done ? (
+        <>
+          <DrawTools
+            color={props.color}
+            setColor={props.setColor}
+            brush={props.brush}
+            setBrush={props.setBrush}
+            tool={props.tool}
+            setTool={props.setTool}
+            onUndo={props.onUndo}
+            forcedColor={collab.forcedColor}
+          />
+          <div className="chiprow">
+            <button className="btn btn--sm" onClick={props.onDone}>
+              Done - pass it on
+            </button>
+            <button
+              className="btn btn--ghost btn--sm"
+              onClick={() => props.canvasRef.current && saveCanvasPng(props.canvasRef.current, 'polyland-sketch.png')}
+            >
+              Save PNG
+            </button>
+          </div>
+        </>
+      ) : (
+        <p className="muted">Submitted. Waiting on everyone else.</p>
+      )}
     </div>
   )
 }

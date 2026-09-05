@@ -18,6 +18,17 @@ export interface Stroke {
   points: Pt[]
   /** False while still being drawn; a live stroke is redrawn every point. */
   done: boolean
+  /** A paint-bucket fill seeded at points[0], rather than a drawn line. Defaults to 'line'. */
+  kind?: 'line' | 'fill'
+}
+
+export interface StrokeChunk {
+  id: number
+  color: string
+  width: number
+  pts: Pt[]
+  done: boolean
+  kind?: 'line' | 'fill'
 }
 
 export const PALETTE = [
@@ -44,6 +55,10 @@ export function renderStrokes(ctx: CanvasRenderingContext2D, strokes: Stroke[], 
 }
 
 export function drawStroke(ctx: CanvasRenderingContext2D, s: Stroke, w: number, h: number): void {
+  if (s.kind === 'fill') {
+    drawFill(ctx, s, w, h)
+    return
+  }
   if (s.points.length === 0) return
   ctx.strokeStyle = s.color
   ctx.lineWidth = s.width
@@ -64,6 +79,113 @@ export function drawStroke(ctx: CanvasRenderingContext2D, s: Stroke, w: number, 
   ctx.stroke()
 }
 
+// ------------------------------------------------------------- paint bucket
+
+/**
+ * Colours within this Manhattan distance of the seed pixel count as "inside"
+ * the region to fill - without it, a bucket fill leaves a thin unfilled ring
+ * around any anti-aliased line, since the true edge is a gradient, not a
+ * single boundary colour.
+ */
+const FILL_TOLERANCE = 48
+
+/**
+ * Every peer replays the same ordered list of strokes onto their own canvas,
+ * so a fill re-run from scratch every frame would recompute (and re-pay for)
+ * the same flood fill sixty times a second. Caching the result keyed by the
+ * canvas size it was computed at means a resize is the only thing that ever
+ * forces a recompute.
+ */
+const fillCache = new WeakMap<Stroke, { w: number; h: number; data: Uint8ClampedArray }>()
+
+function hexToRgba(hex: string): [number, number, number, number] {
+  const clean = hex.replace('#', '')
+  const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean
+  const n = parseInt(full, 16) || 0
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255, 255]
+}
+
+function drawFill(ctx: CanvasRenderingContext2D, s: Stroke, w: number, h: number): void {
+  const cached = fillCache.get(s)
+  if (cached && cached.w === w && cached.h === h) {
+    ctx.putImageData(new ImageData(new Uint8ClampedArray(cached.data), w, h), 0, 0)
+    return
+  }
+  const img = ctx.getImageData(0, 0, w, h)
+  const x = Math.round(s.points[0][0] * w)
+  const y = Math.round(s.points[0][1] * h)
+  floodFillBuffer(img.data, w, h, x, y, hexToRgba(s.color))
+  ctx.putImageData(img, 0, 0)
+  fillCache.set(s, { w, h, data: img.data.slice() })
+}
+
+/**
+ * Stack-based scanline flood fill over a flat RGBA buffer - the one part of
+ * this file with no canvas dependency, so it runs identically in a browser or
+ * headless in a smoke test.
+ */
+export function floodFillBuffer(
+  data: Uint8ClampedArray,
+  width: number,
+  height: number,
+  startX: number,
+  startY: number,
+  fillColor: [number, number, number, number],
+): void {
+  if (startX < 0 || startY < 0 || startX >= width || startY >= height) return
+  const idx = (x: number, y: number) => (y * width + x) * 4
+  const scratch: [number, number, number, number] = [0, 0, 0, 0]
+  const readInto = (x: number, y: number) => {
+    const i = idx(x, y)
+    scratch[0] = data[i]
+    scratch[1] = data[i + 1]
+    scratch[2] = data[i + 2]
+    scratch[3] = data[i + 3]
+  }
+  const dist = (a: [number, number, number, number], b: [number, number, number, number]) =>
+    Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]) + Math.abs(a[3] - b[3])
+
+  readInto(startX, startY)
+  const target: [number, number, number, number] = [...scratch]
+  if (dist(target, fillColor) < 4) return // already this colour: nothing to do
+
+  const matches = (x: number, y: number) => {
+    readInto(x, y)
+    return dist(scratch, target) <= FILL_TOLERANCE
+  }
+  const setColor = (x: number, y: number) => {
+    const i = idx(x, y)
+    data[i] = fillColor[0]
+    data[i + 1] = fillColor[1]
+    data[i + 2] = fillColor[2]
+    data[i + 3] = fillColor[3]
+  }
+
+  const stack: Pt[] = [[startX, startY]]
+  while (stack.length) {
+    const [x, seedY] = stack.pop()!
+    if (!matches(x, seedY)) continue
+    let y = seedY
+    while (y > 0 && matches(x, y - 1)) y--
+    let leftOpen = false
+    let rightOpen = false
+    while (y < height && matches(x, y)) {
+      setColor(x, y)
+      if (x > 0) {
+        const open = matches(x - 1, y)
+        if (open && !leftOpen) stack.push([x - 1, y])
+        leftOpen = open
+      }
+      if (x < width - 1) {
+        const open = matches(x + 1, y)
+        if (open && !rightOpen) stack.push([x + 1, y])
+        rightOpen = open
+      }
+      y++
+    }
+  }
+}
+
 /**
  * Captures local pointer input into strokes and reports new points as they
  * happen, batched a little rather than one network message per pixel.
@@ -74,7 +196,7 @@ export class LocalDrawer {
   private pending: Pt[] = []
   private nextId: number
   private owner: number
-  private onFlush: (chunk: { id: number; color: string; width: number; pts: Pt[]; done: boolean }) => void
+  private onFlush: (chunk: StrokeChunk) => void
   private onChange: () => void
 
   constructor(
@@ -93,7 +215,7 @@ export class LocalDrawer {
   }
 
   begin(color: string, width: number, pt: Pt): void {
-    const s: Stroke = { id: this.nextId++, owner: this.owner, color, width, points: [pt], done: false }
+    const s: Stroke = { id: this.nextId++, owner: this.owner, color, width, points: [pt], done: false, kind: 'line' }
     this.active = s
     this.strokes.push(s)
     this.pending = [pt]
@@ -121,22 +243,62 @@ export class LocalDrawer {
     this.pending = []
   }
 
+  /** One-shot paint-bucket fill seeded at `pt` - not a drag, so it bypasses begin/extend/end. */
+  fill(color: string, pt: Pt): void {
+    const s: Stroke = { id: this.nextId++, owner: this.owner, color, width: 0, points: [pt], done: true, kind: 'fill' }
+    this.strokes.push(s)
+    this.onFlush({ id: s.id, color, width: 0, pts: [pt], done: true, kind: 'fill' })
+    this.onChange()
+  }
+
+  /** Removes this drawer's own most recent mark (line or fill). Returns its id, or null if there was nothing of theirs to undo. */
+  undo(): number | null {
+    for (let i = this.strokes.length - 1; i >= 0; i--) {
+      if (this.strokes[i].owner === this.owner) {
+        const [removed] = this.strokes.splice(i, 1)
+        if (this.active?.id === removed.id) {
+          this.active = null
+          this.pending = []
+        }
+        this.onChange()
+        return removed.id
+      }
+    }
+    return null
+  }
+
+  /** Removes one stroke by id, however it got here - how a remote undo is applied. */
+  removeById(id: number): void {
+    this.strokes = this.strokes.filter((s) => s.id !== id)
+    this.onChange()
+  }
+
   clear(): void {
-    this.strokes = []
+    this.reset()
+  }
+
+  /** Wipes the canvas and, optionally, seeds it with someone else's finished work - how a round hands a picture to the next player. */
+  reset(seedStrokes: Stroke[] = []): void {
+    this.strokes = seedStrokes.map((s) => ({ ...s, points: [...s.points] }))
     this.active = null
     this.pending = []
     this.onChange()
   }
 
   /** Merges a remote chunk into (or as) the stroke it belongs to. */
-  applyRemote(from: number, chunk: { id: number; color: string; width: number; pts: Pt[]; done: boolean }): void {
+  applyRemote(from: number, chunk: StrokeChunk): void {
     let s = this.strokes.find((x) => x.id === chunk.id)
     if (!s) {
-      s = { id: chunk.id, owner: from, color: chunk.color, width: chunk.width, points: [], done: false }
+      s = { id: chunk.id, owner: from, color: chunk.color, width: chunk.width, points: [], done: false, kind: chunk.kind ?? 'line' }
       this.strokes.push(s)
     }
-    s.points.push(...chunk.pts)
-    if (chunk.done) s.done = true
+    if (chunk.kind === 'fill') {
+      s.points = chunk.pts
+      s.done = true
+    } else {
+      s.points.push(...chunk.pts)
+      if (chunk.done) s.done = true
+    }
     this.onChange()
   }
 }

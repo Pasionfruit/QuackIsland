@@ -213,15 +213,18 @@ export class ScribbleEngine {
   // ---------------------------------------------------------------- netcode
 
   /**
-   * The true word never rides the snapshot - only `mask` does, which is all
-   * a guesser is meant to see. The drawer already knows the word locally,
-   * from the string they clicked when they picked it; there is nothing for
-   * their client to look up over the network.
+   * The true word never rides the snapshot while it is still guessable - only
+   * `mask` does, which is all a guesser is meant to see. Once the round is
+   * over (everyone got it, or time ran out) there is nothing left to protect,
+   * so the real word goes out too - that is the only way a guest ever learns
+   * what the answer was.
    */
   snapshot(): ScribbleSnapshot {
+    const revealed = this.phase === 'roundEnd' || this.phase === 'over'
     return {
       m: [PHASE_LIST.indexOf(this.phase), this.round, this.drawerIndex, this.timer],
       mask: this.maskedWord(),
+      word: revealed ? this.word : '',
       choices: this.choices,
       players: this.players.map((p) => [p.slot, p.score]),
       feed: this.feed,
@@ -237,6 +240,7 @@ export class ScribbleEngine {
     this.choices = snap.choices
     this.feed = snap.feed
     this.guestMask = snap.mask
+    this.word = snap.word
     for (const [slot, score] of snap.players) {
       const p = this.addPlayer(slot, `Player ${slot + 1}`)
       p.score = score
@@ -252,6 +256,8 @@ export interface ScribbleSnapshot {
   /** phase index, round, drawer index, timer */
   m: [number, number, number, number]
   mask: string
+  /** Empty until the round is over - see snapshot(). */
+  word: string
   choices: string[]
   players: [number, number][]
   feed: FeedEntry[]

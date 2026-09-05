@@ -29,6 +29,8 @@ const phoneOut = join(tmp, 'phone.mjs')
 await bundle('src/games/sketch/engine/phone.ts', phoneOut)
 const collabOut = join(tmp, 'collab.mjs')
 await bundle('src/games/sketch/engine/collab.ts', collabOut)
+const drawOut = join(tmp, 'draw.mjs')
+await bundle('src/games/sketch/draw.ts', drawOut)
 const duckOut = join(tmp, 'duck.mjs')
 await bundle('src/games/duck/engine/engine.ts', duckOut)
 
@@ -1346,45 +1348,160 @@ function rim(eng, f) {
   }
 }
 
-// 23. Sketch - Collaborative Art: turns, permissions, and the chaos clock.
+// 23. Sketch - Collaborative Art: the blind chain rotation, handoffs, the
+// chaos clock, and the album never opening early.
 {
   const { CollabEngine } = await import(pathToFileURL(collabOut).href)
 
-  {
-    const eng = new CollabEngine({ timedTurns: false })
-    eng.addPlayer(0, 'A')
-    eng.addPlayer(1, 'B')
+  const setup = (n, config = {}) => {
+    const eng = new CollabEngine({ roundSeconds: 60, ...config })
+    for (let i = 0; i < n; i++) eng.addPlayer(i, `P${i}`)
     eng.start()
-    check('casual mode lets everyone draw', eng.canDraw(0) && eng.canDraw(1))
+    return eng
+  }
+  const strokesOf = (owner) => [{ id: owner, owner, color: '#000', width: 4, points: [[0.1, 0.1], [0.2, 0.2]], done: true }]
+
+  check('collab needs at least two players to start', (() => {
+    const eng = new CollabEngine()
+    eng.addPlayer(0, 'Solo')
+    eng.start()
+    return eng.phase === 'lobby'
+  })())
+
+  // Every chain is visited by every player exactly once - identical rotation
+  // math to Phone.
+  for (const n of [2, 3, 5, 8]) {
+    const eng = setup(n)
+    const visits = Array.from({ length: n }, () => new Set())
+    for (let r = 0; r < n; r++) {
+      for (const p of eng.players) visits[eng.chainFor(r, p.slot)].add(p.slot)
+    }
+    check(`every chain is visited by all ${n} players exactly once`, visits.every((v) => v.size === n))
   }
 
+  // Round 0 hands nothing over; submitting carries into the next round's
+  // handoff, cumulative strokes and all.
   {
-    const eng = new CollabEngine({ timedTurns: true, turnSeconds: 5 })
-    eng.addPlayer(0, 'A')
-    eng.addPlayer(1, 'B')
-    eng.start()
-    check('a timed turn restricts drawing to one player', eng.canDraw(0) && !eng.canDraw(1))
-    for (let i = 0; i < 5 * 60 + 1; i++) eng.step()
-    check('the turn rotates to the next player', eng.canDraw(1) && !eng.canDraw(0))
+    const eng = setup(3)
+    check('round zero starts with nothing handed over', eng.handoff(eng.players[0].slot) === null)
+    for (const p of eng.players) eng.submit(p.slot, strokesOf(p.slot))
+    check('round advances once everyone submits', eng.round === 1, `${eng.round}`)
+    const handoff = eng.handoff(eng.players[0].slot)
+    check('the next round hands over a picture with strokes', handoff && handoff.strokes.length > 0)
   }
 
+  // Running out the clock hands stragglers' pictures on unchanged rather than
+  // stalling the table.
   {
-    const eng = new CollabEngine({ chaos: 'random', chaosSeconds: 3 })
-    eng.addPlayer(0, 'A')
-    eng.start()
-    const first = eng.forcedColor
+    const eng = setup(3)
+    eng.submit(eng.players[0].slot, strokesOf(eng.players[0].slot))
+    for (let i = 0; i < 60 * 60 + 5; i++) eng.step()
+    check('a timed-out round still advances', eng.round >= 1, `${eng.round}`)
+  }
+
+  // Playing every round reaches the album with a complete, cumulative history
+  // per chain - and nobody's chain shows up before then.
+  {
+    const eng = setup(3)
+    let guard = 0
+    while (eng.phase !== 'reveal' && guard++ < 2000) {
+      for (const p of eng.players) {
+        if (!eng.hasSubmitted(p.slot)) {
+          const handed = eng.handoff(p.slot)?.strokes ?? []
+          eng.submit(p.slot, [...handed, ...strokesOf(p.slot)])
+        }
+      }
+      eng.step()
+    }
+    check('the game reaches the reveal', eng.phase === 'reveal', `${eng.phase} after ${guard}`)
+    check('every chain has one entry per player', eng.chains.every((c) => c.length === eng.n))
+    check('a chain accumulates strokes round over round', eng.chains[0][eng.n - 1].strokes.length >= eng.n)
+  }
+
+  // Chaos still runs its schedule, same shape as before the rewrite.
+  {
+    const eng = setup(2, { chaos: 'random', chaosSeconds: 3 })
     for (let i = 0; i < 3 * 60 + 1; i++) eng.step()
     check('random chaos changes the forced colour on schedule', eng.forcedColor !== null, eng.forcedColor)
-    void first
   }
-
   {
-    const eng = new CollabEngine({ chaos: 'invert', chaosSeconds: 3 })
-    eng.addPlayer(0, 'A')
-    eng.start()
+    const eng = setup(2, { chaos: 'invert', chaosSeconds: 3 })
     check('inverted colours start off', !eng.inverted)
     for (let i = 0; i < 3 * 60 + 1; i++) eng.step()
     check('the invert flag flips on schedule', eng.inverted)
+  }
+
+  // Snapshot round trip - a guest can compute its own handoff from it.
+  {
+    const host = setup(3)
+    for (const p of host.players) host.submit(p.slot, strokesOf(p.slot))
+    const guest = new CollabEngine()
+    guest.applySnapshot(JSON.parse(JSON.stringify(host.snapshot())))
+    check('snapshot carries chain progress', guest.chains.flat().length === host.chains.flat().length)
+    check('a guest can compute its own handoff from the snapshot', guest.handoff(host.players[0].slot)?.strokes.length > 0)
+  }
+}
+
+// 24. Sketch - paint bucket and undo, the drawing primitives every mode shares.
+{
+  const { floodFillBuffer, LocalDrawer } = await import(pathToFileURL(drawOut).href)
+
+  // A flat 4x4 white buffer with a black vertical wall down the middle -
+  // filling one side should never leak across it.
+  const makeGrid = () => {
+    const data = new Uint8ClampedArray(4 * 4 * 4).fill(255)
+    for (let y = 0; y < 4; y++) {
+      const i = (y * 4 + 2) * 4
+      data[i] = data[i + 1] = data[i + 2] = 0
+      data[i + 3] = 255
+    }
+    return data
+  }
+  {
+    const data = makeGrid()
+    floodFillBuffer(data, 4, 4, 0, 0, [255, 0, 0, 255])
+    const at = (x, y) => data.slice((y * 4 + x) * 4, (y * 4 + x) * 4 + 4)
+    check('flood fill paints the seeded side', at(0, 0).join(',') === '255,0,0,255')
+    check('flood fill paints the rest of that side', at(1, 3).join(',') === '255,0,0,255')
+    check('flood fill does not cross the wall', at(2, 0).join(',') === '0,0,0,255')
+    check('flood fill leaves the far side alone', at(3, 0).join(',') === '255,255,255,255')
+  }
+  {
+    const data = makeGrid()
+    floodFillBuffer(data, 4, 4, 0, 0, [255, 255, 255, 255])
+    check('filling with the same colour already there is a no-op', data.every((v) => v === 255 || v === 0))
+  }
+
+  // LocalDrawer: a fill becomes a stroke of its own, and undo removes only
+  // the local owner's own most recent mark - never someone else's.
+  {
+    const sent = []
+    const drawer = new LocalDrawer(0, (chunk) => sent.push(chunk))
+    drawer.begin('#000', 4, [0.1, 0.1])
+    drawer.extend([0.2, 0.2])
+    drawer.end()
+    drawer.fill('#f00', [0.5, 0.5])
+    check('a fill is broadcast with its kind', sent.some((c) => c.kind === 'fill'))
+    check('a fill lands in the local stroke list', drawer.strokes.some((s) => s.kind === 'fill'))
+
+    drawer.applyRemote(1, { id: 999, color: '#0f0', width: 2, pts: [[0.9, 0.9]], done: true })
+    const beforeUndo = drawer.strokes.length
+    const removedId = drawer.undo()
+    check('undo removes exactly one stroke', drawer.strokes.length === beforeUndo - 1)
+    check('undo removes the local owner\'s own last mark, not a remote one', drawer.strokes.some((s) => s.id === 999))
+    check('undo reports the id it removed', removedId != null && !drawer.strokes.some((s) => s.id === removedId))
+  }
+
+  // reset() seeds a fresh drawer with someone else's finished picture - how a
+  // Collab round hands a chain to the next player.
+  {
+    const handed = [{ id: 1, owner: 3, color: '#000', width: 4, points: [[0, 0], [1, 1]], done: true }]
+    const drawer = new LocalDrawer(0, () => {})
+    drawer.reset(handed)
+    check('reset seeds the strokes handed to it', drawer.strokes.length === 1 && drawer.strokes[0].owner === 3)
+    drawer.begin('#f00', 4, [0.5, 0.5])
+    drawer.end()
+    check('drawing after reset adds to the handed picture rather than replacing it', drawer.strokes.length === 2)
   }
 }
 
