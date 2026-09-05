@@ -1,9 +1,23 @@
+/**
+ * Polyland Smash: a two-fighter arena brawl seen from above.
+ *
+ * There is no gravity here and nothing to jump onto. Fighters slide around a
+ * floating disc, and a hit sends the other player skating toward the rim -
+ * the higher their percent, the further they go. Go over the edge and you
+ * lose a stock. Everything else follows from that: "recovery" is scrambling
+ * back before the fall finishes, "weight" is how little you slide, and the
+ * whole fight is a contest over who is standing nearer the middle.
+ *
+ * The engine is DOM-free so it can be driven headlessly by `npm run smoke`
+ * and by the balance harness.
+ */
 import { clamp, rand } from '../../../lib/draw'
 import { charById } from './characters'
-import { LAKESIDE_CAMP, MAIN_PLATFORM, type Platform, type Stage } from './stage'
-import type { CharDef, FighterState, MoveDef, MoveId, Phase, RawInput } from './types'
+import { LAKESIDE_BLUFF, clampToFloor, rimDistance, type Arena } from './stage'
+import type { CharDef, Facing, FighterState, MoveDef, MoveId, Phase, RawInput } from './types'
 import { emptyInput } from './types'
 import {
+  FACINGS,
   MOVES,
   PHASES,
   STATES,
@@ -17,13 +31,15 @@ export const TICK = 1 / 60
 export interface Particle {
   x: number
   y: number
+  /** Height above the floor, so sparks can arc without leaving the plane. */
+  z: number
   vx: number
   vy: number
+  vz: number
   life: number
   maxLife: number
   size: number
   color: string
-  gravity: number
 }
 
 export interface FloatText {
@@ -45,9 +61,7 @@ export interface Fighter {
   py: number
   vx: number
   vy: number
-  facing: 1 | -1
-  grounded: boolean
-  jumpsLeft: number
+  facing: Facing
   state: FighterState
   move: MoveDef | null
   moveFrame: number
@@ -58,13 +72,11 @@ export interface Fighter {
   hitlag: number
   invuln: number
   respawnTimer: number
-  dropTimer: number
-  landingLag: number
-  fastFalling: boolean
+  /** Counts up while going over the edge; a KO lands at the end of it. */
+  fallTimer: number
   animTimer: number
   squash: number
   spin: number
-  /** Frames since the last time this fighter was hit, for combo flavour. */
   lastHitFrame: number
   comboCount: number
 }
@@ -84,13 +96,23 @@ export const DEFAULT_CONFIG: MatchConfig = {
 }
 
 const PLAYER_COLORS = ['#4f8fbf', '#e0794f']
-const INTRO_FRAMES = 190
+const INTRO_FRAMES = 170
 const KO_FREEZE = 44
-const RESPAWN_FRAMES = 54
+const RESPAWN_FRAMES = 52
 const RESPAWN_INVULN = 110
+/** Frames of scrambling before a fighter over the rim is gone for good. */
+const FALL_FRAMES = 34
+
+/** Unit vector for each facing, in floor space. */
+const DIR: Record<Facing, { x: number; y: number }> = {
+  up: { x: 0, y: -1 },
+  down: { x: 0, y: 1 },
+  left: { x: -1, y: 0 },
+  right: { x: 1, y: 0 },
+}
 
 export class SmashEngine {
-  readonly stage: Stage = LAKESIDE_CAMP
+  readonly arena: Arena = LAKESIDE_BLUFF
   config: MatchConfig
   fighters: [Fighter, Fighter]
   particles: Particle[] = []
@@ -108,7 +130,7 @@ export class SmashEngine {
 
   private inputs: [RawInput, RawInput] = [emptyInput(), emptyInput()]
   private prevInputs: [RawInput, RawInput] = [emptyInput(), emptyInput()]
-  private cpu = { cooldown: 0, decision: 0, wantJump: 0 }
+  private cpu = { cooldown: 0, decision: 0, driftX: 0, driftY: 0 }
 
   constructor(config: Partial<MatchConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config }
@@ -121,7 +143,7 @@ export class SmashEngine {
 
   private makeFighter(index: 0 | 1): Fighter {
     const def = charById(this.config.chars[index])
-    const spawn = this.stage.spawns[index]
+    const spawn = this.arena.spawns[index]
     return {
       index,
       def,
@@ -131,9 +153,7 @@ export class SmashEngine {
       py: spawn.y,
       vx: 0,
       vy: 0,
-      facing: index === 0 ? 1 : -1,
-      grounded: true,
-      jumpsLeft: def.jumps,
+      facing: index === 0 ? 'right' : 'left',
       state: 'idle',
       move: null,
       moveFrame: 0,
@@ -142,11 +162,9 @@ export class SmashEngine {
       stocks: this.config.stocks,
       hitstun: 0,
       hitlag: 0,
-      invuln: 0,
+      invuln: RESPAWN_INVULN,
       respawnTimer: 0,
-      dropTimer: 0,
-      landingLag: 0,
-      fastFalling: false,
+      fallTimer: 0,
       animTimer: 0,
       squash: 0,
       spin: 0,
@@ -155,16 +173,13 @@ export class SmashEngine {
     }
   }
 
-  reset(config: Partial<MatchConfig> = {}): void {
-    this.config = { ...this.config, ...config }
+  reset(): void {
     this.fighters = [this.makeFighter(0), this.makeFighter(1)]
-    this.particles.length = 0
-    this.texts.length = 0
+    this.particles = []
+    this.texts = []
     this.phase = 'intro'
     this.phaseTimer = INTRO_FRAMES
     this.frame = 0
-    this.shake = 0
-    this.flash = 0
     this.winner = null
     this.banner = ''
     this.bannerTimer = 0
@@ -202,44 +217,36 @@ export class SmashEngine {
         f.hitlag--
         continue
       }
-      if (this.phase === 'ko' || this.phase === 'over') {
-        this.idleDrift(f)
-        continue
-      }
       this.updateFighter(f, live ? this.inputs[f.index] : emptyInput(), live)
     }
 
     if (live) {
       this.resolveHits(this.fighters[0], this.fighters[1])
       this.resolveHits(this.fighters[1], this.fighters[0])
-      for (const f of this.fighters) this.checkBlastZones(f)
+      this.separate()
+      for (const f of this.fighters) this.checkRim(f)
     }
 
-    this.updateEffects()
+    this.stepParticles()
+    this.stepTexts()
+    if (this.shake > 0) this.shake *= 0.86
+    if (this.flash > 0) this.flash -= 1
+    if (this.bannerTimer > 0) this.bannerTimer--
     this.prevInputs = [{ ...this.inputs[0] }, { ...this.inputs[1] }]
   }
 
-  // ---------------------------------------------------------------- fighters
-
-  private idleDrift(f: Fighter): void {
-    if (f.state === 'dead') return
-    f.animTimer++
-    f.squash *= 0.85
-    if (!f.grounded) {
-      f.vy = Math.min(f.vy + f.def.gravity * 0.6, f.def.fallMax)
-      this.integrate(f)
-    } else {
-      f.vx *= 0.8
-    }
+  private setBanner(text: string, frames: number): void {
+    this.banner = text
+    this.bannerTimer = frames
+    this.version++
   }
 
+  // ----------------------------------------------------------------- fighter
+
   private updateFighter(f: Fighter, input: RawInput, live: boolean): void {
-    const def = f.def
     f.animTimer++
-    f.squash *= 0.86
+    if (f.squash !== 0) f.squash *= 0.86
     if (f.invuln > 0) f.invuln--
-    if (f.dropTimer > 0) f.dropTimer--
-    if (f.landingLag > 0) f.landingLag--
 
     if (f.state === 'dead') {
       f.respawnTimer--
@@ -247,298 +254,176 @@ export class SmashEngine {
       return
     }
 
+    if (f.state === 'falling') {
+      // Still sliding outward, but the floor is gone: a short scramble window
+      // where a fighter can be seen dropping before the stock is taken.
+      f.fallTimer++
+      f.x += f.vx
+      f.y += f.vy
+      f.vx *= 0.94
+      f.vy *= 0.94
+      f.spin += 0.06
+      if (f.fallTimer >= FALL_FRAMES) this.ko(f)
+      return
+    }
+
     if (f.hitstun > 0) {
       f.hitstun--
-      f.vy += def.gravity * 0.82
-      f.vy = Math.min(f.vy, def.fallMax + 4)
-      f.vx *= 0.965
-      f.spin += f.vx * 0.06
-      if (f.hitstun <= 0) f.state = f.grounded ? 'idle' : 'air'
-      this.integrate(f)
-      if (Math.abs(f.vx) + Math.abs(f.vy) > 5 && this.frame % 3 === 0) {
-        this.spark(f.x, f.y - def.hurt.h / 2, 1, '#fdf6e6', 0.6)
-      }
-      return
-    }
-
-    if (f.state === 'attack' && f.move) {
-      this.tickMove(f, input)
-      this.integrate(f)
-      return
-    }
-
-    if (f.state === 'helpless') {
-      const drift = (input.right ? 1 : 0) - (input.left ? 1 : 0)
-      f.vx = clamp(f.vx + drift * def.airAccel * 0.4, -def.airMax * 0.7, def.airMax * 0.7)
-      f.vy = Math.min(f.vy + def.gravity, def.fallMax)
-      f.spin += 0.22
-      this.integrate(f)
-      if (f.grounded) {
-        f.state = 'landing'
-        f.landingLag = 12
-        f.spin = 0
-        f.squash = 1
-        this.dust(f.x, f.y, 6)
-      }
-      return
-    }
-
-    // --- normal control ------------------------------------------------
-    if (live && f.landingLag <= 0) {
-      const dir = (input.right ? 1 : 0) - (input.left ? 1 : 0)
-      if (dir !== 0) {
-        f.facing = dir > 0 ? 1 : -1
-        if (f.grounded) {
-          f.vx = clamp(f.vx + dir * def.groundAccel, -def.walk, def.walk)
-          f.state = 'walk'
-          if (f.animTimer % 9 === 0) this.dust(f.x, f.y, 1)
-        } else {
-          f.vx = clamp(f.vx + dir * def.airAccel, -def.airMax, def.airMax)
-        }
-      } else if (f.grounded) {
-        f.vx *= def.friction
-        if (Math.abs(f.vx) < 0.05) f.vx = 0
+      f.x += f.vx
+      f.y += f.vy
+      f.vx *= f.def.slide
+      f.vy *= f.def.slide
+      f.spin *= 0.9
+      if (f.hitstun <= 0) {
         f.state = 'idle'
+        f.spin = 0
       }
-
-      if (this.pressed(f.index, 'up')) this.tryJump(f)
-
-      if (input.down) {
-        if (f.grounded && this.pressed(f.index, 'down') && this.onSoftPlatform(f)) {
-          f.dropTimer = 9
-          f.grounded = false
-          f.y += 2
-        } else if (!f.grounded && f.vy > -1) {
-          f.fastFalling = true
-        }
-      }
-
-      if (this.pressed(f.index, 'attack')) {
-        const id: MoveId = input.up ? 'up' : input.down ? 'down' : input.left || input.right ? 'side' : 'jab'
-        this.startMove(f, id)
-      } else if (this.pressed(f.index, 'special')) {
-        this.startMove(f, 'special')
-      }
-    } else if (f.grounded) {
-      f.vx *= def.friction
+      return
     }
 
-    if (!f.grounded) {
-      const max = f.fastFalling ? def.fastFallMax : def.fallMax
-      f.vy = Math.min(f.vy + def.gravity, max)
-      if (f.state !== 'attack') f.state = 'air'
+    if (f.move) {
+      this.tickMove(f)
+      return
     }
 
-    this.integrate(f)
-  }
+    if (!live) return
 
-  private tryJump(f: Fighter): void {
+    // ------------------------------------------------------------- movement
+    const dx = (input.right ? 1 : 0) - (input.left ? 1 : 0)
+    const dy = (input.down ? 1 : 0) - (input.up ? 1 : 0)
     const def = f.def
-    if (f.grounded) {
-      f.vy = def.jump
-      f.grounded = false
-      f.jumpsLeft = def.jumps - 1
-      f.squash = -1
-      f.fastFalling = false
-      this.dust(f.x, f.y, 5)
-    } else if (f.jumpsLeft > 0) {
-      f.vy = def.doubleJump
-      f.jumpsLeft--
-      f.squash = -1
-      f.fastFalling = false
-      for (let i = 0; i < 8; i++) {
-        this.particles.push({
-          x: f.x + rand(-7, 7),
-          y: f.y - 2,
-          vx: rand(-1.4, 1.4),
-          vy: rand(-0.3, 1.3),
-          life: 16,
-          maxLife: 16,
-          size: 1,
-          color: def.theme.primary,
-          gravity: 0.02,
-        })
+
+    if (dx !== 0 || dy !== 0) {
+      // Normalise so diagonals are not faster than the axes.
+      const len = Math.hypot(dx, dy)
+      const ax = (dx / len) * def.accel
+      const ay = (dy / len) * def.accel
+      f.vx += ax
+      f.vy += ay
+      const sp = Math.hypot(f.vx, f.vy)
+      if (sp > def.speed) {
+        f.vx = (f.vx / sp) * def.speed
+        f.vy = (f.vy / sp) * def.speed
       }
+      f.facing = facingFor(dx, dy, f.facing)
+      f.state = 'walk'
+    } else {
+      f.vx *= def.friction
+      f.vy *= def.friction
+      if (Math.abs(f.vx) < 0.02) f.vx = 0
+      if (Math.abs(f.vy) < 0.02) f.vy = 0
+      f.state = 'idle'
+    }
+
+    f.x += f.vx
+    f.y += f.vy
+
+    // -------------------------------------------------------------- attacks
+    if (this.pressed(f.index, 'attack')) {
+      this.startMove(f, moveFor('attack', input))
+    } else if (this.pressed(f.index, 'special')) {
+      this.startMove(f, moveFor('special', input))
     }
   }
 
   private startMove(f: Fighter, id: MoveId): void {
     const mv = f.def.moves[id]
     if (!mv) return
-    if (mv.groundOnly && !f.grounded) return
     f.move = mv
     f.moveFrame = 0
     f.state = 'attack'
     f.hitTargets.clear()
-    f.fastFalling = false
     if (mv.killsMomentum) {
-      f.vx *= 0.25
-      if (!f.grounded) f.vy = Math.min(f.vy, 0)
+      f.vx *= 0.2
+      f.vy *= 0.2
     }
   }
 
-  private tickMove(f: Fighter, input: RawInput): void {
+  private tickMove(f: Fighter): void {
     const mv = f.move!
-    const def = f.def
     f.moveFrame++
     const total = mv.startup + mv.active + mv.recovery
 
-    if (f.moveFrame === mv.startup + 1 && mv.selfVel) {
-      if (mv.selfVel.x !== undefined) f.vx = mv.selfVel.x * f.facing
-      if (mv.selfVel.y !== undefined) {
-        f.vy = mv.selfVel.y
-        if (mv.selfVel.y < 0) {
-          f.grounded = false
-          for (let i = 0; i < 10; i++) {
-            this.particles.push({
-              x: f.x + rand(-6, 6),
-              y: f.y - rand(0, 8),
-              vx: rand(-1, 1),
-              vy: rand(0.5, 2.2),
-              life: 18,
-              maxLife: 18,
-              size: 1,
-              color: i % 2 ? def.theme.primary : '#fdf6e6',
-              gravity: 0.03,
-            })
-          }
-        }
-      }
+    if (f.moveFrame === mv.startup + 1 && mv.drive) {
+      const d = DIR[f.facing]
+      f.vx += d.x * mv.drive
+      f.vy += d.y * mv.drive
     }
 
-    // Small amount of drift and friction while committed to a move.
-    if (f.grounded) {
-      f.vx *= 0.86
-    } else {
-      const drift = (input.right ? 1 : 0) - (input.left ? 1 : 0)
-      f.vx = clamp(f.vx + drift * def.airAccel * 0.35, -def.airMax * 1.4, def.airMax * 1.4)
-      f.vy = Math.min(f.vy + def.gravity * 0.94, def.fallMax)
-    }
+    // Committed: only a little drift, and the fighter keeps sliding.
+    f.x += f.vx
+    f.y += f.vy
+    f.vx *= 0.9
+    f.vy *= 0.9
 
     if (f.moveFrame >= total) {
       f.move = null
       f.moveFrame = 0
-      if (mv.helplessAfter && !f.grounded) {
-        f.state = 'helpless'
-      } else {
-        f.state = f.grounded ? 'idle' : 'air'
-      }
+      f.state = 'idle'
     }
   }
 
   private moveIsActive(f: Fighter): boolean {
-    if (f.state !== 'attack' || !f.move) return false
+    if (!f.move || f.state !== 'attack') return false
     return f.moveFrame > f.move.startup && f.moveFrame <= f.move.startup + f.move.active
-  }
-
-  // -------------------------------------------------------------- collision
-
-  private integrate(f: Fighter): void {
-    f.px = f.x
-    f.py = f.y
-    f.x += f.vx
-    f.y += f.vy
-
-    const wasGrounded = f.grounded
-    f.grounded = false
-    const hw = f.def.hurt.w / 2
-
-    // One-way landings: pick the highest surface crossed this frame.
-    if (f.vy >= 0) {
-      let best: Platform | null = null
-      for (const p of this.stage.platforms) {
-        if (!p.solid && f.dropTimer > 0) continue
-        if (f.x + hw < p.x1 || f.x - hw > p.x2) continue
-        if (f.py <= p.top + 0.5 && f.y >= p.top) {
-          if (!best || p.top < best.top) best = p
-        }
-      }
-      if (best) {
-        f.y = best.top
-        f.vy = 0
-        f.grounded = true
-        f.jumpsLeft = f.def.jumps
-        f.fastFalling = false
-        f.dropTimer = 0
-        if (!wasGrounded) {
-          f.squash = 1
-          this.dust(f.x, f.y, 4)
-          if (f.state === 'air') f.state = 'idle'
-        }
-      }
-    }
-
-    // Solid stage bodies also push you out from the sides.
-    if (!f.grounded) {
-      for (const p of this.stage.platforms) {
-        if (!p.solid) continue
-        const top = f.y - f.def.hurt.h
-        if (f.y <= p.top || top >= p.top + p.depth) continue
-        if (f.x + hw <= p.x1 || f.x - hw >= p.x2) continue
-        const fromLeft = Math.abs(f.x - p.x1)
-        const fromRight = Math.abs(p.x2 - f.x)
-        if (fromLeft < fromRight) {
-          f.x = p.x1 - hw
-        } else {
-          f.x = p.x2 + hw
-        }
-        if (Math.abs(f.vx) > 0.2) f.vx *= -0.15
-      }
-    }
-  }
-
-  private onSoftPlatform(f: Fighter): boolean {
-    const hw = f.def.hurt.w / 2
-    return this.stage.platforms.some(
-      (p) => !p.solid && Math.abs(f.y - p.top) < 1.5 && f.x + hw > p.x1 && f.x - hw < p.x2,
-    )
   }
 
   // ------------------------------------------------------------------ combat
 
   private resolveHits(attacker: Fighter, victim: Fighter): void {
     if (!this.moveIsActive(attacker)) return
-    if (victim.state === 'dead' || victim.invuln > 0) return
+    if (victim.state === 'dead' || victim.state === 'falling' || victim.invuln > 0) return
     if (attacker.hitTargets.has(victim.index)) return
     const mv = attacker.move!
 
-    const dir = mv.symmetric ? 1 : attacker.facing
-    const hx = attacker.x + mv.hit.x * dir
-    const hy = attacker.y - mv.hit.y
-    const hl = hx - mv.hit.w / 2
-    const hr = hx + mv.hit.w / 2
-    const ht = hy - mv.hit.h / 2
-    const hb = hy + mv.hit.h / 2
+    const dxv = victim.x - attacker.x
+    const dyv = victim.y - attacker.y
 
-    const vw = victim.def.hurt.w / 2
-    const vl = victim.x - vw
-    const vr = victim.x + vw
-    const vt = victim.y - victim.def.hurt.h
-    const vb = victim.y
-
-    if (hr < vl || hl > vr || hb < vt || ht > vb) return
+    let inside: boolean
+    if (mv.radial) {
+      inside = Math.hypot(dxv, dyv) <= mv.hit.reach + victim.def.radius
+    } else {
+      // Rotate the offset into facing space, where the box is axis aligned.
+      const d = DIR[attacker.facing]
+      const along = dxv * d.x + dyv * d.y
+      const across = dxv * -d.y + dyv * d.x
+      inside =
+        along > mv.hit.reach - mv.hit.depth / 2 - victim.def.radius &&
+        along < mv.hit.reach + mv.hit.depth / 2 + victim.def.radius &&
+        Math.abs(across) < mv.hit.width / 2 + victim.def.radius
+    }
+    if (!inside) return
 
     attacker.hitTargets.add(victim.index)
-    this.applyHit(attacker, victim, mv, (hl + hr) / 2, (ht + hb) / 2)
+    this.applyHit(attacker, victim, mv)
   }
 
-  private applyHit(attacker: Fighter, victim: Fighter, mv: MoveDef, cx: number, cy: number): void {
+  private applyHit(attacker: Fighter, victim: Fighter, mv: MoveDef): void {
     victim.percent = Math.min(999, victim.percent + mv.damage)
 
-    const launchDir: number = mv.symmetric ? (victim.x >= attacker.x ? 1 : -1) : attacker.facing
-    const kb = ((mv.baseKb + victim.percent * mv.kbScale) * 0.165) / victim.def.weight
-    const rad = (mv.angle * Math.PI) / 180
-    victim.vx = Math.cos(rad) * kb * launchDir
-    victim.vy = -Math.sin(rad) * kb
-    victim.hitstun = clamp(Math.round(kb * 5.2), 9, 62)
+    // Away from the attacker for radial moves, along the facing otherwise.
+    let lx: number
+    let ly: number
+    if (mv.radial) {
+      const d = Math.hypot(victim.x - attacker.x, victim.y - attacker.y) || 1
+      lx = (victim.x - attacker.x) / d
+      ly = (victim.y - attacker.y) / d
+    } else {
+      const d = DIR[attacker.facing]
+      lx = d.x
+      ly = d.y
+    }
+
+    const kb = ((mv.baseKb + victim.percent * mv.kbScale) * 0.05) / victim.def.weight
+    victim.vx = lx * kb
+    victim.vy = ly * kb
+    victim.hitstun = clamp(Math.round(kb * 5.5), 8, 64)
     victim.state = 'hitstun'
     victim.move = null
-    victim.grounded = false
-    victim.fastFalling = false
     victim.squash = 1
     victim.spin = 0
 
-    const lag = Math.round(4 + mv.damage * 0.55)
+    const lag = Math.round(3 + mv.damage * 0.5)
     victim.hitlag = lag
     attacker.hitlag = lag
 
@@ -549,11 +434,13 @@ export class SmashEngine {
     this.shake = Math.max(this.shake, mv.shake ?? 2)
     this.flash = Math.max(this.flash, Math.min(6, 2 + mv.damage * 0.2))
 
-    this.hitBurst(cx, cy, mv.damage, attacker.def.theme, victim.vx, victim.vy)
+    const hx = (attacker.x + victim.x) / 2
+    const hy = (attacker.y + victim.y) / 2
+    this.hitBurst(hx, hy, mv.damage, attacker.def.theme, lx, ly)
 
     this.texts.push({
-      x: cx,
-      y: cy - 10,
+      x: victim.x,
+      y: victim.y - 18,
       vy: -0.55,
       life: 44,
       text: `${mv.damage}`,
@@ -562,8 +449,8 @@ export class SmashEngine {
     })
     if (victim.comboCount >= 3) {
       this.texts.push({
-        x: cx,
-        y: cy - 22,
+        x: victim.x,
+        y: victim.y - 30,
         vy: -0.4,
         life: 40,
         text: `${victim.comboCount} HIT`,
@@ -574,11 +461,35 @@ export class SmashEngine {
     this.version++
   }
 
-  private checkBlastZones(f: Fighter): void {
-    if (f.state === 'dead') return
-    const b = this.stage.blast
-    if (f.x > b.left && f.x < b.right && f.y > b.top && f.y < b.bottom) return
-    this.ko(f)
+  /** Two fighters cannot stand in the same place; push them apart gently. */
+  private separate(): void {
+    const [a, b] = this.fighters
+    if (a.state === 'dead' || b.state === 'dead') return
+    if (a.state === 'falling' || b.state === 'falling') return
+    const dx = b.x - a.x
+    const dy = b.y - a.y
+    const d = Math.hypot(dx, dy)
+    const min = a.def.radius + b.def.radius
+    if (d >= min || d === 0) return
+    const push = (min - d) / 2
+    const nx = dx / d
+    const ny = dy / d
+    a.x -= nx * push
+    a.y -= ny * push
+    b.x += nx * push
+    b.y += ny * push
+  }
+
+  private checkRim(f: Fighter): void {
+    if (f.state === 'dead' || f.state === 'falling') return
+    if (rimDistance(this.arena, f.x, f.y) <= 1) return
+    // Over the edge: the fall plays out before the stock is taken, so there is
+    // something to watch and a moment to realise what happened.
+    f.state = 'falling'
+    f.fallTimer = 0
+    f.move = null
+    f.hitstun = 0
+    this.shake = Math.max(this.shake, 6)
   }
 
   private ko(f: Fighter): void {
@@ -590,146 +501,111 @@ export class SmashEngine {
     f.move = null
     f.vx = 0
     f.vy = 0
+    f.spin = 0
     f.comboCount = 0
     this.shake = 14
     this.flash = 10
-
     this.koBurst(f.x, f.y, f.def.theme.primary)
 
     this.phase = 'ko'
     this.phaseTimer = KO_FREEZE
-    this.setBanner(f.stocks <= 0 ? 'GAME!' : 'K.O.!', KO_FREEZE)
 
+    const other = this.fighters[1 - f.index]
     if (f.stocks <= 0) {
-      this.winner = f.index === 0 ? 1 : 0
+      this.winner = other.index
+      this.setBanner(`${other.def.name} wins`, 240)
+    } else {
+      this.setBanner('KO!', 60)
     }
     this.version++
   }
 
   private respawn(f: Fighter): void {
-    f.x = this.stage.respawn.x + (f.index === 0 ? -22 : 22)
-    f.y = this.stage.respawn.y
-    f.px = f.x
-    f.py = f.y
+    const spawn = clampToFloor(this.arena, this.arena.spawns[f.index].x, this.arena.spawns[f.index].y)
+    f.x = spawn.x
+    f.y = spawn.y
+    f.px = spawn.x
+    f.py = spawn.y
     f.vx = 0
     f.vy = 0
     f.percent = 0
-    f.state = 'air'
-    f.grounded = false
-    f.jumpsLeft = f.def.jumps
+    f.state = 'idle'
     f.invuln = RESPAWN_INVULN
-    f.facing = f.index === 0 ? 1 : -1
+    f.fallTimer = 0
     f.spin = 0
+    f.facing = f.index === 0 ? 'right' : 'left'
     this.version++
   }
 
-  // ----------------------------------------------------------------- effects
+  // --------------------------------------------------------------- particles
 
-  private updateEffects(): void {
-    for (let i = this.particles.length - 1; i >= 0; i--) {
-      const p = this.particles[i]
-      p.x += p.vx
-      p.y += p.vy
-      p.vy += p.gravity
-      p.vx *= 0.98
-      p.life--
-      if (p.life <= 0) this.particles.splice(i, 1)
-    }
-    for (let i = this.texts.length - 1; i >= 0; i--) {
-      const t = this.texts[i]
-      t.y += t.vy
-      t.vy *= 0.94
-      t.life--
-      if (t.life <= 0) this.texts.splice(i, 1)
-    }
-    if (this.shake > 0) this.shake = Math.max(0, this.shake - 0.7)
-    if (this.flash > 0) this.flash = Math.max(0, this.flash - 1)
-    if (this.bannerTimer > 0) this.bannerTimer--
-  }
-
-  private setBanner(text: string, frames: number): void {
-    this.banner = text
-    this.bannerTimer = frames
-  }
-
-  private spark(x: number, y: number, n: number, color: string, speed = 1): void {
+  private hitBurst(x: number, y: number, damage: number, theme: CharDef['theme'], lx: number, ly: number): void {
+    const n = Math.min(18, 5 + Math.round(damage))
     for (let i = 0; i < n; i++) {
       this.particles.push({
         x,
         y,
-        vx: rand(-1, 1) * speed,
-        vy: rand(-1, 1) * speed,
-        life: 12,
-        maxLife: 12,
-        size: 1,
-        color,
-        gravity: 0.02,
-      })
-    }
-  }
-
-  private dust(x: number, y: number, n: number): void {
-    for (let i = 0; i < n; i++) {
-      this.particles.push({
-        x: x + rand(-6, 6),
-        y: y - 1,
-        vx: rand(-1.2, 1.2),
-        vy: rand(-0.9, -0.1),
-        life: 14,
-        maxLife: 14,
-        size: 1,
-        color: '#e8dcc4',
-        gravity: 0.03,
-      })
-    }
-  }
-
-  // ---------------------------------------------------------- shared visuals
-
-  /** Sparks, damage number and shake for one connected hit. */
-  private hitBurst(
-    cx: number,
-    cy: number,
-    damage: number,
-    theme: { primary: string; dark: string },
-    vx = 0,
-    vy = 0,
-  ): void {
-    for (let i = 0; i < 8 + damage; i++) {
-      this.particles.push({
-        x: cx + rand(-4, 4),
-        y: cy + rand(-4, 4),
-        vx: rand(-2.6, 2.6) + vx * 0.22,
-        vy: rand(-2.6, 2.6) + vy * 0.22,
-        life: 14 + Math.random() * 12,
+        z: 10,
+        vx: lx * rand(0.6, 2.4) + rand(-0.8, 0.8),
+        vy: ly * rand(0.6, 2.4) + rand(-0.8, 0.8),
+        vz: rand(0.4, 1.8),
+        life: rand(14, 26),
         maxLife: 26,
-        size: Math.random() < 0.3 ? 2 : 1,
-        color: i % 3 === 0 ? '#fdf6e6' : i % 3 === 1 ? theme.primary : theme.dark,
-        gravity: 0.05,
+        size: rand(0.9, 2.2),
+        color: i % 3 === 0 ? '#fff3d6' : theme.primary,
       })
     }
   }
 
   private koBurst(x: number, y: number, color: string): void {
-    for (let i = 0; i < 40; i++) {
-      const a = (i / 40) * Math.PI * 2
+    for (let i = 0; i < 30; i++) {
+      const a = (i / 30) * Math.PI * 2
       this.particles.push({
-        x: clamp(x, 8, 472),
-        y: clamp(y - 10, 8, 262),
-        vx: Math.cos(a) * rand(1, 4.5),
-        vy: Math.sin(a) * rand(1, 4.5),
-        life: 26 + Math.random() * 16,
-        maxLife: 42,
-        size: Math.random() < 0.4 ? 2 : 1,
-        color: i % 4 === 0 ? '#fdf6e6' : color,
-        gravity: 0.02,
+        x,
+        y,
+        z: 8,
+        vx: Math.cos(a) * rand(1.2, 3.4),
+        vy: Math.sin(a) * rand(1.2, 3.4) * 0.6,
+        vz: rand(0.5, 2.2),
+        life: rand(22, 40),
+        maxLife: 40,
+        size: rand(1.2, 2.8),
+        color: i % 2 ? color : '#fff3d6',
       })
     }
   }
 
-  // ------------------------------------------------------------- networking
+  private stepParticles(): void {
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i]
+      p.x += p.vx
+      p.y += p.vy
+      p.z += p.vz
+      p.vz -= 0.12
+      p.vx *= 0.94
+      p.vy *= 0.94
+      if (p.z < 0) {
+        p.z = 0
+        p.vz *= -0.35
+      }
+      p.life--
+      if (p.life <= 0) this.particles.splice(i, 1)
+    }
+  }
 
-  /** Everything a guest needs to draw this frame. */
+  private stepTexts(): void {
+    for (let i = this.texts.length - 1; i >= 0; i--) {
+      const t = this.texts[i]
+      t.y += t.vy
+      t.vy *= 0.96
+      t.life--
+      if (t.life <= 0) this.texts.splice(i, 1)
+    }
+  }
+
+  // ---------------------------------------------------------------- netcode
+
+  /** A compact snapshot of everything that has to match between two peers. */
   snapshot(): Snapshot {
     return {
       m: [
@@ -746,7 +622,7 @@ export class SmashEngine {
           round2(f.y),
           round2(f.vx),
           round2(f.vy),
-          f.facing,
+          FACINGS.indexOf(f.facing),
           STATES.indexOf(f.state),
           f.move ? MOVES.indexOf(f.move.id) : -1,
           f.moveFrame,
@@ -755,7 +631,8 @@ export class SmashEngine {
           f.hitstun,
           f.hitlag,
           f.invuln,
-          f.grounded ? 1 : 0,
+          f.respawnTimer,
+          f.fallTimer,
           round2(f.spin),
           round2(f.squash),
           f.animTimer,
@@ -764,173 +641,136 @@ export class SmashEngine {
     }
   }
 
-  /**
-   * Guest side: adopt the host's state, then rebuild the local juice
-   * (sparks, dust, screen shake) by diffing against the previous frame, so
-   * both players see the same hit without sending particles over the wire.
-   */
   applySnapshot(s: Snapshot): void {
-    const [frame, phaseIdx, phaseTimer, bannerTimer, winner] = s.m
-    this.frame = frame
-    this.phase = PHASES[phaseIdx] ?? 'fight'
-    this.phaseTimer = phaseTimer
+    if (!s || !s.a || s.a.length < 2) return
+    this.frame = s.m[0]
+    this.phase = PHASES[s.m[1]] ?? this.phase
+    this.phaseTimer = s.m[2]
+    this.bannerTimer = s.m[3]
+    this.winner = s.m[4] < 0 ? null : s.m[4]
     this.banner = s.banner
-    this.bannerTimer = bannerTimer
-    this.winner = winner < 0 ? null : winner
-
-    for (let i = 0; i < this.fighters.length; i++) {
-      const f = this.fighters[i]
+    this.fighters.forEach((f, i) => {
       const d = s.a[i]
-      if (!d) continue
-      const wasPercent = f.percent
-      const wasStocks = f.stocks
-      const wasGrounded = f.grounded
-
+      if (!d) return
       f.x = d[0]
       f.y = d[1]
       f.vx = d[2]
       f.vy = d[3]
-      f.facing = d[4] >= 0 ? 1 : -1
-      f.state = STATES[d[5]] ?? 'idle'
-      f.move = d[6] >= 0 ? f.def.moves[MOVES[d[6]]] : null
+      f.facing = FACINGS[d[4]] ?? f.facing
+      f.state = STATES[d[5]] ?? f.state
+      f.move = d[6] < 0 ? null : f.def.moves[MOVES[d[6]]] ?? null
       f.moveFrame = d[7]
       f.percent = d[8]
       f.stocks = d[9]
       f.hitstun = d[10]
       f.hitlag = d[11]
       f.invuln = d[12]
-      f.grounded = d[13] === 1
-      f.spin = d[14]
-      f.squash = d[15]
-      f.animTimer = d[16]
-
-      if (f.percent > wasPercent) {
-        const dmg = f.percent - wasPercent
-        const other = this.fighters[i === 0 ? 1 : 0]
-        this.hitBurst(f.x, f.y - f.def.hurt.h * 0.6, dmg, other.def.theme, f.vx, f.vy)
-        this.texts.push({
-          x: f.x,
-          y: f.y - f.def.hurt.h * 0.6 - 10,
-          vy: -0.55,
-          life: 44,
-          text: `${dmg}`,
-          color: SmashEngine.playerColor(other.index),
-          scale: 1,
-        })
-        this.shake = Math.max(this.shake, Math.min(6, 2 + dmg * 0.25))
-        this.flash = Math.max(this.flash, Math.min(6, 2 + dmg * 0.2))
-      }
-      if (f.stocks < wasStocks) {
-        this.koBurst(f.x, f.y, f.def.theme.primary)
-        this.shake = 14
-        this.flash = 10
-      }
-      if (!wasGrounded && f.grounded) this.dust(f.x, f.y, 4)
-    }
-
-    this.updateEffects()
+      f.respawnTimer = d[13]
+      f.fallTimer = d[14]
+      f.spin = d[15]
+      f.squash = d[16]
+      f.animTimer = d[17]
+    })
     this.version++
   }
 
-  // --------------------------------------------------------------------- CPU
+  // -------------------------------------------------------------------- cpu
 
   private cpuThink(): RawInput {
     const out = emptyInput()
     const me = this.fighters[1]
     const foe = this.fighters[0]
-    if (this.phase !== 'fight' || me.state === 'dead' || me.state === 'hitstun') return out
+    if (this.phase !== 'fight' || me.state === 'dead' || me.state === 'falling') return out
+    if (me.hitstun > 0 || me.move) return out
 
     const level = this.config.cpuLevel
-    const reach = me.def.moves.jab.hit.x + me.def.moves.jab.hit.w / 2 + 4
-    const centre = (MAIN_PLATFORM.x1 + MAIN_PLATFORM.x2) / 2
-    const offStage = me.x < MAIN_PLATFORM.x1 - 4 || me.x > MAIN_PLATFORM.x2 + 4
-    const below = me.y > MAIN_PLATFORM.top + 12
-
     if (this.cpu.cooldown > 0) this.cpu.cooldown--
-
-    // Getting home always wins over offence.
-    if (offStage || below) {
-      if (me.x < centre) out.right = true
-      else out.left = true
-      if (me.state !== 'helpless') {
-        if (me.jumpsLeft > 0 && me.vy > 0.4) out.up = this.frame % 10 < 3
-        else if (me.vy > 0.8 || below) out.special = this.frame % 14 < 3
-      }
-      return out
+    if (this.frame % 20 === 0) {
+      this.cpu.decision = Math.random()
+      this.cpu.driftX = rand(-1, 1)
+      this.cpu.driftY = rand(-1, 1)
     }
 
-    if (me.state === 'helpless' || me.state === 'attack') {
-      if (me.x < centre) out.right = true
-      else out.left = true
+    // Getting away from the rim beats anything else.
+    const danger = rimDistance(this.arena, me.x, me.y)
+    if (danger > 0.72) {
+      if (me.x > this.arena.cx) out.left = true
+      else out.right = true
+      if (me.y > this.arena.cy) out.up = true
+      else out.down = true
       return out
     }
 
     const dx = foe.x - me.x
     const dy = foe.y - me.y
-    const adx = Math.abs(dx)
+    const dist = Math.hypot(dx, dy)
+    const reach = me.def.moves.attack.hit.reach + me.def.radius + 4
 
-    // Re-roll a bit of jitter so it does not look like a tracking laser.
-    if (this.frame % 24 === 0) this.cpu.decision = Math.random()
-
-    const spacing = level === 1 ? reach + 14 : reach - 2
-    if (adx > spacing) {
-      if (dx > 0) out.right = true
-      else out.left = true
-      if (level === 1 && this.cpu.decision < 0.25) {
-        out.right = false
-        out.left = false
+    // Close the gap, but not so far that we walk through them.
+    if (dist > reach) {
+      if (dx > 3) out.right = true
+      else if (dx < -3) out.left = true
+      if (dy > 3) out.down = true
+      else if (dy < -3) out.up = true
+      if (level === 1 && this.cpu.decision < 0.3) {
+        out.left = out.right = out.up = out.down = false
       }
-    } else if (adx < reach * 0.45) {
-      // Too close: back off slightly so it can swing.
+    } else if (dist < reach * 0.45) {
       if (dx > 0) out.left = true
       else out.right = true
     }
 
-    // Chase vertically.
-    if (dy < -26 && me.grounded && this.cpu.decision < 0.5 + level * 0.15) {
-      out.up = this.frame % 18 < 3
-    }
-    if (dy > 30) {
-      // The opponent is below. If we are standing on a soft platform we have
-      // to drop through it, which needs a fresh press, so pulse the input.
-      // Without this the CPU parks above its target and never comes down.
-      if (me.grounded) out.down = this.frame % 8 < 2
-      else if (this.cpu.decision > 0.7) out.down = true
-    }
-
-    const canSwing = this.cpu.cooldown <= 0 && adx < reach + (level >= 3 ? 10 : 4) && Math.abs(dy) < 30
-    if (canSwing) {
+    const base = level === 1 ? 40 : level === 2 ? 25 : 14
+    if (this.cpu.cooldown <= 0 && dist < reach + (level >= 3 ? 10 : 4)) {
       // Jittered, because a fixed cooldown makes both fighters swing on the
-      // same beat and the one with fewer startup frames wins every single
-      // exchange - which turned one frame of startup into a 50-point swing in
-      // win rate and flattened every other difference between the cast.
-      const base = level === 1 ? 42 : level === 2 ? 26 : 14
+      // same beat and whoever has fewer startup frames wins every exchange.
       this.cpu.cooldown = base + Math.floor(Math.random() * base * 0.7)
       const r = Math.random()
-      if (dy < -16) {
-        out.up = true
-        out.attack = true
-      } else if (dy > 16 && !me.grounded) {
-        out.down = true
-        out.attack = true
-      } else if (r < 0.34 || level === 1) {
-        out.attack = true
-      } else if (r < 0.8) {
-        out.attack = true
+      // Face the target before swinging, so the hitbox points the right way.
+      if (Math.abs(dx) > Math.abs(dy)) {
         if (dx > 0) out.right = true
         else out.left = true
-      } else {
-        out.attack = true
-        out.up = true
-      }
-    }
+      } else if (dy > 0) out.down = true
+      else out.up = true
 
-    // Punish a far-away opponent at high percent by closing in harder.
-    if (foe.percent > 90 && adx > 60 && level >= 2) {
-      if (dx > 0) out.right = true
-      else out.left = true
+      if (r < 0.3 || level === 1) {
+        // Neutral poke: let go of the direction so it comes out unaimed.
+        out.left = out.right = out.up = out.down = false
+        out.attack = true
+      } else if (r < 0.72) {
+        out.attack = true
+      } else if (r < 0.88) {
+        out.up = true
+        out.left = out.right = out.down = false
+        out.attack = true
+      } else {
+        out.special = true
+      }
     }
 
     return out
   }
+}
+
+// ------------------------------------------------------------------- helpers
+
+/** Which way to point, preferring the larger input and keeping the old one. */
+function facingFor(dx: number, dy: number, current: Facing): Facing {
+  if (dx === 0 && dy === 0) return current
+  if (Math.abs(dx) >= Math.abs(dy)) return dx > 0 ? 'right' : 'left'
+  return dy > 0 ? 'down' : 'up'
+}
+
+/**
+ * Which move a button press produces.
+ *
+ * Up is a launcher and down is a ground slam regardless of which way the
+ * fighter is pointed - they are different moves, not the same move aimed - so
+ * they win over a sideways press.
+ */
+function moveFor(kind: 'attack' | 'special', input: RawInput): MoveId {
+  if (input.up) return kind === 'attack' ? 'attackUp' : 'specialUp'
+  if (input.down) return kind === 'attack' ? 'attackDown' : 'specialDown'
+  if (input.left || input.right) return kind === 'attack' ? 'attackSide' : 'specialSide'
+  return kind
 }

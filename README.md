@@ -4,9 +4,9 @@ A little world of games, played in a desktop browser with a keyboard. One cast o
 low-poly animals with jobs and opinions, one palette, and a shelf of games that
 all share them.
 
-The first game is **Polyland Smash** - a platform fighter in the shape of Smash
-Ultimate / Brawlhalla: percent-based knockback, stocks, blast zones,
-drop-through platforms, and six fighters who play very differently.
+The first game is **Polyland Smash** - an arena fighter played looking down on
+a floating disc. Percent-based knockback, stocks, and no railings: hit someone
+hard enough and they go over the rim. Six fighters who play very differently.
 
 Eighteen more games are on the shelf as concept panels: art, pitch and planned
 mechanics, no implementation yet. They all live in
@@ -31,11 +31,10 @@ No setup, no menu to find - it is the house rule for every Polyland game.
 
 | | Player 1 | Player 2 |
 | --- | --- | --- |
-| Move | `A` / `D` | `<` / `>` |
-| Jump (double) | `W` | `Up` |
-| Drop through / fast fall | `S` | `Down` |
+| Move (any direction) | `W` `A` `S` `D` | Arrow keys |
 | Attack | `F` | `.` |
-| Recovery special | `G` | `/` |
+| Special | `G` | `/` |
+| Aimed move | direction + `F` / `G` | direction + `.` / `/` |
 
 `Esc` pauses, `R` rematches from the results screen, `F1` shows hitboxes.
 
@@ -77,7 +76,7 @@ there is no auth and no TLS, so do not expose it to the open internet as-is.
 | Smash panel (lobby, select, arena) | [src/games/smash/SmashPanel.tsx](src/games/smash/SmashPanel.tsx) |
 | Fighter simulation | [src/games/smash/engine/engine.ts](src/games/smash/engine/engine.ts) |
 | Characters and frame data | [src/games/smash/engine/characters.ts](src/games/smash/engine/characters.ts) |
-| Map geometry | [src/games/smash/engine/stage.ts](src/games/smash/engine/stage.ts) |
+| Arena geometry | [src/games/smash/engine/stage.ts](src/games/smash/engine/stage.ts) |
 | Renderer | [src/games/smash/engine/render.ts](src/games/smash/engine/render.ts) |
 
 ## The art rules
@@ -119,7 +118,8 @@ A character is data, not a sprite sheet: a species, a coat, a muzzle, a tail, an
 outfit and a carried item, in [cast.ts](src/art/cast.ts). One rig draws all of
 them - a raccoon and a penguin differ by a head shape, a pair of ears and a
 tail, not by a separate drawing routine - and `drawAvatar` poses that same
-description for idle, walking, jumping, swinging or tumbling, at any size.
+description for idle, walking, swinging or taking a hit, from the side, the
+front or behind, at any size.
 Background animals stay on four legs (or wings) via
 [critter.ts](src/art/critter.ts). A new character is a dozen colours, and every
 game gets the whole cast for free.
@@ -131,32 +131,91 @@ tanks, ghosts - so a new game's card art is usually fifteen lines.
 ## Polyland Smash
 
 Damage builds a percentage; knockback scales with it, so a fresh fighter barely
-budges and one at 130% flies. Leave the blast zone and you lose a stock. Last
-fighter standing wins.
+budges and one at 130% skates halfway across the floor. Go over the rim and you
+lose a stock. Last fighter standing wins.
 
-Each has five moves - neutral, side, up and down attacks, plus a special that
-doubles as the recovery. The special throws you upward and leaves you helpless
-until you land, so spending it early off-stage is how you die.
+Each fighter has **eight moves**: a quick poke, a committed lunge, a launcher
+and a ground slam, in an attack flavour and a special flavour. Pressing a
+direction with the button picks which one - the slam and the shockwave hit all
+round you, everything else fires along the way you are pointed.
+
+There is no gravity and nothing to jump onto. You slide around the floor, and a
+hit sends the other player skating toward the rim - the higher their percent,
+the further they go. Everything else follows from that: **weight** is how little
+you slide, **deceleration** is how fast that slide bleeds off, and the whole
+fight is a contest over who is standing nearer the middle.
 
 Six fighters, no two alike:
 
 | Fighter | Who they are | How they play |
 | --- | --- | --- |
-| **ContrlZee** | Raccoon programmer | Best neutral on the roster, weakest hits. Wins the spacing, not the exchange |
-| **NinjaPenguin** | Penguin ninja | Belly-slides in, flurries you down, gone before the dust settles |
-| **teninchtoenail** | Lion salesman | Heaviest and slowest; the briefcase closes every conversation |
-| **diva** | Frog fashionista | Three jumps, longest reach, hardest to edgeguard - and the first to die |
-| **MrPasionfruit** | Athletic black cat | Fastest thing here. Tiny hits, endless combos |
+| **ContrlZee** | Raccoon programmer | Reads the floor early and is already standing where you were going |
+| **NinjaPenguin** | Penguin ninja | Slides in on the diagonal, flurries you toward the rim, and is gone |
+| **teninchtoenail** | Lion salesman | Heaviest thing out there; slow to cross the floor, murder to shift off it |
+| **diva** | Frog fashionista | Lightest on the roster and the longest reach - she skids to a stop where others sail off |
+| **MrPasionfruit** | Athletic black cat | Fastest thing here. Tiny hits, endless pressure |
 | **NightShift** | Leopard night guard | Locked. One committed pounce, biggest single hit, nothing to fall back on |
 
 `locked: true` on a `CharDef` keeps a fighter on the select screen but out of
-play; `playableId()` is the guard that stops a locked id reaching a match from
-a stale pick or a remote peer. Flip the flag to let NightShift in.
+play; `playableId()` is the guard that stops a locked id reaching a match from a
+stale pick or a remote peer. Flip the flag to let NightShift in.
 
 Frame data lives in
 [characters.ts](src/games/smash/engine/characters.ts) and is meant to be tuned.
 `npm run smoke` re-checks that the mechanics still hold after you change
 numbers.
+
+### Tuning the roster
+
+**Weight is close to decisive.** In a ring-out game it sets how far a hit moves
+you toward the edge, so the weight spread has to be far tighter than it would be
+in a platform fighter - and a fighter who is genuinely light needs paying back
+somewhere else. Diva keeps the lightest weight on the roster because she also
+has the fastest deceleration: she gets launched dramatically and then skids to a
+stop, where the same hit would carry someone else over the rim.
+
+Two other things dominate, both learned the hard way on the platform version and
+still true here:
+
+- **Startup frames on the committed poke.** The CPU used to swing on a fixed
+  cooldown, so whichever fighter's hitbox appeared first won every exchange -
+  one frame of startup was worth about fifty points of win rate. The cooldown is
+  jittered now, and the roster sits in a narrow startup band.
+- **The active window.** Four active frames connect about 22% of the time
+  against a moving target, five about 53%. It is a cliff, not a slope.
+
+Balance is measured, not eyeballed: a CPU-vs-CPU round robin over every ordered
+pair, which currently reads 42-58% win rate across the six. The same harness
+with six identical fighters lands inside 2.5 points, so a spread wider than that
+is real signal rather than noise.
+
+### Character art
+
+Smash fighters are drawn from sprite sheets. One sheet per character, laid out
+like [src/Sprites.png](src/Sprites.png): four banded rows - movement, attacks,
+specials, then recover and take-hit - with evenly spaced cells and a caption
+under each. Generate a new character to that template and cut it with:
+
+```
+node scripts/slice-sprites.mjs src/YourSheet.png <character-id>
+```
+
+That writes `src/games/smash/sprites/<character-id>/` - sixteen WebP frames
+plus a manifest - and Vite picks the folder up automatically. There is no
+registry to edit. About 200KB per character.
+
+The slicer does two things worth knowing about. Backgrounds are removed by
+flooding in from the border rather than by keying a colour, because the sheet's
+dark brown is almost exactly the colour of the character's own shadows - a
+colour key eats the black half of a penguin. And it records an anchor per
+frame, because cells are cropped around their effects: an attack frame is wider
+on the side the slash comes out of, so drawing from the crop would make the
+character slide as it swung. Anchors are found by learning the character's
+palette from the effect-free movement cells, then ignoring any colour an effect
+introduced.
+
+A character with no sheet yet falls back to the procedural rig in
+[avatar.ts](src/art/avatar.ts), so the cast can be converted one at a time.
 
 ### Tuning the roster
 
@@ -177,9 +236,11 @@ ordered pair, which reads 45-55% win rate across the six. The same harness with
 six identical fighters lands inside 2.5 points, so a spread wider than that is
 real signal rather than noise.
 
-**Map: Lakeside Camp** - one grassy bluff with a walled underside, three
-drop-through plank platforms, a tent and a fire. Geometry is in
-[stage.ts](src/games/smash/engine/stage.ts).
+**Arena: Lakeside Bluff** - one grassy disc floating in the haze, ringed with
+pines and rocks and nothing else. Because the floor is an ellipse seen at an
+angle, every distance is measured in normalised arena space where the rim sits
+at radius 1, which keeps the ring-out check independent of the shape. Geometry
+is in [stage.ts](src/games/smash/engine/stage.ts).
 
 ## Adding a game
 

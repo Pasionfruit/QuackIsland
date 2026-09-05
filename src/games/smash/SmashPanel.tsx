@@ -7,17 +7,21 @@ import { fitScene, rect } from '../../lib/draw'
 import { NetClient, defaultServerUrl } from '../../net/client'
 import { normalizeCode, type PeerInfo, type SmashPayload } from '../../net/protocol'
 import { PLAYABLE, ROSTER, charById, drawChar, playableId } from './engine/characters'
+import { loadSprites } from './sprites'
 import { SmashEngine, TICK, type MatchConfig } from './engine/engine'
 import { renderMatch } from './engine/render'
-import { LAKESIDE_CAMP, VIEW_H, VIEW_W } from './engine/stage'
+import { LAKESIDE_BLUFF, VIEW_H, VIEW_W } from './engine/stage'
 import type { CharDef, MoveId } from './engine/types'
 
 const MOVE_INPUT: Record<MoveId, string> = {
-  jab: 'ATTACK',
-  side: '< or > + ATTACK',
-  up: 'UP + ATTACK',
-  down: 'DOWN + ATTACK',
+  attack: 'ATTACK',
+  attackSide: '< or > + ATTACK',
+  attackUp: 'UP + ATTACK',
+  attackDown: 'DOWN + ATTACK',
   special: 'SPECIAL',
+  specialSide: '< or > + SPECIAL',
+  specialUp: 'UP + SPECIAL',
+  specialDown: 'DOWN + SPECIAL',
 }
 
 const STOCK_CHOICES = [1, 2, 3, 5]
@@ -96,7 +100,16 @@ function StatBars({ def }: { def: CharDef }) {
 }
 
 function MoveTable({ def }: { def: CharDef }) {
-  const ids: MoveId[] = ['jab', 'side', 'up', 'down', 'special']
+  const ids: MoveId[] = [
+    'attack',
+    'attackSide',
+    'attackUp',
+    'attackDown',
+    'special',
+    'specialSide',
+    'specialUp',
+    'specialDown',
+  ]
   return (
     <table className="moves">
       <thead>
@@ -657,6 +670,12 @@ export function SmashPanel() {
   if (!netRef.current) netRef.current = new NetClient()
   const net = netRef.current
 
+  // Sheets are fetched once when the game opens, so a fighter never pops in
+  // mid-match. Anyone without art keeps drawing from the procedural rig.
+  useEffect(() => {
+    void loadSprites()
+  }, [])
+
   const roleRef = useRef<Role | null>(null)
   roleRef.current = role
   const screenRef = useRef<Screen>('mode')
@@ -792,7 +811,7 @@ export function SmashPanel() {
         <span className="chip chip--live">
           <span className="dot" /> Playable
         </span>
-        <span className="chip">Map: {LAKESIDE_CAMP.name}</span>
+        <span className="chip">Map: {LAKESIDE_BLUFF.name}</span>
         <span className="chip">{headerBits}</span>
         <div className="spacer" />
         {screen === 'play' && !guest && (

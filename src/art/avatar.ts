@@ -106,7 +106,15 @@ export interface AvatarOpts {
   alpha?: number
   /** Draws the soft contact shadow at the feet. */
   shadow?: boolean
+  /**
+   * Which way the character is turned. The rig is authored in profile; front
+   * and back reuse the same body and swap what is on the head - a face, or
+   * the back of a skull with the tail showing past it.
+   */
+  view?: View
 }
+
+export type View = 'side' | 'front' | 'back'
 
 /** Corner cut for flat markings, gentler than the one forms get. */
 const MARK_ROUND = 0.16
@@ -155,6 +163,8 @@ export function drawAvatar(
   o: AvatarOpts = {},
 ): void {
   const facing = o.facing ?? 1
+  const view = o.view ?? 'side'
+  const square = view !== 'side'
   const h = o.height ?? 32
   const pose = o.pose ?? 'idle'
   const phase = o.phase ?? 0
@@ -313,13 +323,14 @@ export function drawAvatar(
 
   // -------------------------------------------------------------- back arm
   drawArm(brush, def, {
-    shoulderX: -torsoW * 0.16,
+    // Head-on, both arms hang at the sides instead of one behind the other.
+    shoulderX: square ? -torsoW * 0.34 : -torsoW * 0.16,
     shoulderY: shoulderY + torsoH * 0.18,
-    angle: Math.PI / 2 + armBack - 1.57,
+    angle: square ? Math.PI / 2 + 0.24 : Math.PI / 2 + armBack - 1.57,
     len: armL,
     w: armW,
-    color: shade(armColor, -0.16),
-    back: true,
+    color: square ? armColor : shade(armColor, -0.16),
+    back: !square,
     bird,
   })
 
@@ -413,7 +424,7 @@ export function drawAvatar(
       { dark: 0.12, light: 0.08 },
     )
   }
-  if (def.topAccent) {
+  if (def.topAccent && view !== 'back') {
     brush.facet(
       [
         { x: -tw * 0.7 + lean * 1.1, y: shoulderY },
@@ -425,7 +436,7 @@ export function drawAvatar(
       { dark: 0.14, light: 0.08, relief: 0.5, seed: 2.4 },
     )
   }
-  drawPrint(brush, def, lean, shoulderY, torsoH, tw)
+  if (view !== 'back') drawPrint(brush, def, lean, shoulderY, torsoH, tw)
 
   if (def.satchel) {
     brush.flat(
@@ -450,8 +461,9 @@ export function drawAvatar(
     split: 0.12,
   })
   drawSpots(brush, def, rig)
-  drawFace(brush, def, rig, eyes, lean)
-  drawEarsFront(brush, def, rig)
+  if (view === 'front') drawFaceFront(brush, def, rig, eyes)
+  else if (view !== 'back') drawFace(brush, def, rig, eyes, lean)
+  if (view === 'side') drawEarsFront(brush, def, rig)
   drawHat(brush, def, rig)
 
   if (def.headphones) {
@@ -476,12 +488,12 @@ export function drawAvatar(
   }
 
   // ------------------------------------------------- front arm and the prop
-  const shoulderX = torsoW * 0.2 + lean * 1.3
-  const armAngle = Math.PI / 2 + armFront - 1.57
+  const shoulderX = square ? torsoW * 0.34 : torsoW * 0.2 + lean * 1.3
+  const armAngle = square ? Math.PI / 2 - 0.24 : Math.PI / 2 + armFront - 1.57
   const handX = shoulderX + Math.cos(armAngle) * armL
   const handY = shoulderY + torsoH * 0.18 + Math.sin(armAngle) * armL
 
-  drawProp(brush, def, handX, handY, propAngle, h, pose)
+  if (!square) drawProp(brush, def, handX, handY, propAngle, h, pose)
   drawArm(brush, def, {
     shoulderX,
     shoulderY: shoulderY + torsoH * 0.18,
@@ -663,6 +675,147 @@ function drawEarsFront(brush: Brush, def: AvatarDef, r: Rig): void {
   if (def.species !== 'frog') return
   const { hx, headCy: cy, hw, hh } = r
   brush.dome(hx + hw * 0.68, cy + hh * 0.16, hw * 0.2, hh * 0.2, shade(def.fur, -0.16), 2.6)
+}
+
+/**
+ * The face seen head-on.
+ *
+ * The profile face is built from forward offsets - a muzzle pushed out in
+ * front, one eye nearer the viewer than the other - none of which survive a
+ * turn to camera. This lays the same features out symmetrically instead, so a
+ * character looks like itself from either angle without needing a second set
+ * of shapes per species.
+ */
+function drawFaceFront(brush: Brush, def: AvatarDef, r: Rig, eyes: 'open' | 'hurt' | 'focus'): void {
+  const { hx, headCy: cy, hw, hh } = r
+  let eyeY = cy + hh * 0.02
+  let eyeSpread = hw * 0.44
+  let eyeW = hw * 0.38
+  let eyeH = hh * 0.48
+
+  switch (def.species) {
+    case 'raccoon': {
+      brush.facet(
+        [
+          { x: hx - hw * 0.84, y: cy - hh * 0.44 },
+          { x: hx, y: cy - hh * 0.96 },
+          { x: hx + hw * 0.84, y: cy - hh * 0.44 },
+          { x: hx + hw * 0.7, y: cy - hh * 0.3 },
+          { x: hx - hw * 0.7, y: cy - hh * 0.3 },
+        ],
+        def.belly,
+        { dark: 0.12, light: 0.07, relief: 0.6, seed: 1.1 },
+      )
+      brush.facet(
+        [
+          { x: hx - hw * 0.9, y: cy - hh * 0.38 },
+          { x: hx + hw * 0.9, y: cy - hh * 0.38 },
+          { x: hx + hw * 0.86, y: cy + hh * 0.26 },
+          { x: hx - hw * 0.86, y: cy + hh * 0.26 },
+        ],
+        def.markings ?? '#3a3733',
+        { flat: true },
+      )
+      brush.dome(hx, cy + hh * 0.56, hw * 0.54, hh * 0.34, def.belly, 1.4)
+      brush.dome(hx, cy + hh * 0.38, hw * 0.16, hh * 0.12, def.nose, 2.2)
+      break
+    }
+    case 'penguin': {
+      brush.facet(
+        [
+          { x: hx - hw * 0.54, y: cy - hh * 0.6 },
+          { x: hx + hw * 0.54, y: cy - hh * 0.6 },
+          { x: hx + hw * 0.68, y: cy + hh * 0.2 },
+          { x: hx + hw * 0.44, y: cy + hh * 0.84 },
+          { x: hx - hw * 0.44, y: cy + hh * 0.84 },
+          { x: hx - hw * 0.68, y: cy + hh * 0.2 },
+        ],
+        def.belly,
+        { dark: 0.1, light: 0.06 },
+      )
+      // Head-on the beak points at the viewer, so it reads as a short wedge.
+      brush.facet(
+        [
+          { x: hx - hw * 0.2, y: cy + hh * 0.14 },
+          { x: hx + hw * 0.2, y: cy + hh * 0.14 },
+          { x: hx, y: cy + hh * 0.52 },
+        ],
+        def.beak ?? '#e8a33c',
+        { dark: 0.22, light: 0.14 },
+      )
+      eyeSpread = hw * 0.36
+      eyeY = cy - hh * 0.12
+      break
+    }
+    case 'frog': {
+      brush.facet(
+        [
+          { x: hx - hw * 0.94, y: cy + hh * 0.12 },
+          { x: hx + hw * 0.94, y: cy + hh * 0.12 },
+          { x: hx + hw * 0.72, y: cy + hh * 0.8 },
+          { x: hx - hw * 0.72, y: cy + hh * 0.8 },
+        ],
+        def.belly,
+        { dark: 0.1, light: 0.06 },
+      )
+      brush.flat(
+        [
+          { x: hx - hw * 0.78, y: cy + hh * 0.18 },
+          { x: hx + hw * 0.78, y: cy + hh * 0.18 },
+          { x: hx + hw * 0.78, y: cy + hh * 0.28 },
+          { x: hx - hw * 0.78, y: cy + hh * 0.28 },
+        ],
+        shade(def.belly, -0.3),
+      )
+      for (const side of [-1, 1]) {
+        brush.dome(hx + side * hw * 0.5, cy - hh * 0.82, hw * 0.34, hh * 0.32, def.fur, 5 + side)
+      }
+      eyeY = cy - hh * 0.82
+      eyeSpread = hw * 0.5
+      eyeW = hw * 0.34
+      eyeH = hh * 0.34
+      break
+    }
+    case 'lion': {
+      brush.dome(hx, cy + hh * 0.54, hw * 0.58, hh * 0.34, def.belly, 3.1)
+      brush.dome(hx, cy + hh * 0.34, hw * 0.17, hh * 0.12, def.nose, 2.6)
+      break
+    }
+    default: {
+      brush.dome(hx, cy + hh * 0.52, hw * 0.46, hh * 0.3, def.belly, 6.3)
+      brush.dome(hx, cy + hh * 0.34, hw * 0.14, hh * 0.11, def.nose, 2.9)
+      break
+    }
+  }
+
+  if (def.eyewear && def.eyewear !== 'none') {
+    drawEyewear(brush, def, hx, eyeY, hh, eyeW, eyeSpread)
+    return
+  }
+
+  const scale = def.species === 'frog' ? 0.62 : 1
+  const hgt = (eyes === 'focus' ? eyeH * 0.66 : eyeH) * scale
+  const wid = eyeW * scale
+  for (const side of [-1, 1]) {
+    const ex = hx + side * eyeSpread
+    if (eyes === 'hurt') {
+      const t = hh * 0.07
+      for (const flip of [1, -1]) {
+        brush.flat(
+          [
+            { x: ex - wid * 0.45, y: eyeY - flip * hgt * 0.28 },
+            { x: ex + wid * 0.45, y: eyeY + flip * hgt * 0.28 },
+            { x: ex + wid * 0.45, y: eyeY + flip * hgt * 0.28 + t },
+            { x: ex - wid * 0.45, y: eyeY - flip * hgt * 0.28 + t },
+          ],
+          '#2b2723',
+        )
+      }
+      continue
+    }
+    brush.blob(ex, eyeY, wid * 0.5, hgt * 0.5, '#241f1c')
+    brush.blob(ex - wid * 0.16, eyeY - hgt * 0.22, wid * 0.18, hgt * 0.2, '#fdfbf5')
+  }
 }
 
 function drawFace(

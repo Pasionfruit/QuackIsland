@@ -68,53 +68,57 @@ const PARTY = '2-8 players'
 const SMASH: GameEntry = {
   id: 'smash',
   title: 'Polyland Smash',
-  tagline: 'A friendly scrap on the bluff above the lake.',
-  genre: 'Platform fighter',
+  tagline: 'A friendly scrap on a floating bluff, with no railings.',
+  genre: 'Arena fighter',
   players: '1-2 local, 2 online',
   status: 'live',
   blurb:
-    'Percent-based knockback, stocks and blast zones, with six animals who all fight completely differently.',
+    'Percent-based knockback on a floating disc: hit hard enough and they go over the rim. Six animals who all fight completely differently.',
   plan: [
     'Six fighters: a raccoon, a penguin, a lion, a frog, a cat, and a leopard still on shift.',
-    'Lakeside Camp, with drop-through plank platforms.',
+    'Lakeside Bluff, seen from above, with nothing at the edge to catch you.',
+    'Eight moves each - poke, lunge, launcher and slam, in attack and special.',
     'Local versus, CPU opponents, and host-and-join online.',
   ],
   art: (ctx, frame) => {
-    sky(ctx, W, 56, DAY)
-    sun(ctx, 132, 16, 7)
-    cloud(ctx, 30 + ((frame * 0.08) % 200), 14, 26)
-    treeline(ctx, W, 58)
-    water(ctx, W, H, 58, frame)
-    const bluff: Pt[] = [
-      { x: 22, y: 62 },
-      { x: 138, y: 62 },
-      { x: 138, y: 76 },
-      { x: 124, y: 88 },
-      { x: 38, y: 86 },
-      { x: 22, y: 76 },
-    ]
-    facet(ctx, bluff, PAL.dirt, { dark: 0.3, light: 0.1, split: 0.2 })
-    facet(
-      ctx,
-      [
-        { x: 22, y: 68 },
-        { x: 22, y: 62 },
-        { x: 138, y: 62 },
-        { x: 138, y: 68 },
-      ],
-      PAL.grass,
-      { dark: 0.2, light: 0.16 },
-    )
-    tent(ctx, 38, 62, 22)
-    campfire(ctx, 122, 62, frame, 0.72)
+    sky(ctx, W, H, DAY)
+    sun(ctx, 138, 14, 7)
+    cloud(ctx, 26 + ((frame * 0.07) % 190), 13, 24)
+
+    // The floating disc, matching the arena the match is played on.
+    const cx = 80
+    const cy = 52
+    const rx = 54
+    const ry = 26
+    ellipse(ctx, cx, cy + ry * 0.7, rx * 1.02, ry * 0.4, 'rgba(58, 72, 78, 0.2)')
+    const slab: Pt[] = []
+    for (let i = 0; i <= 24; i++) {
+      const t = (i / 24) * Math.PI
+      slab.push({ x: cx + Math.cos(t) * rx, y: cy + Math.sin(t) * ry })
+    }
+    for (let i = 24; i >= 0; i--) {
+      const t = (i / 24) * Math.PI
+      slab.push({ x: cx + Math.cos(t) * rx, y: cy + Math.sin(t) * ry + 12 })
+    }
+    fillPoly(ctx, slab, PAL.dirt)
+    ellipse(ctx, cx, cy, rx, ry, PAL.grass)
+    ellipse(ctx, cx, cy - ry * 0.1, rx * 0.88, ry * 0.8, PAL.grassLit)
+    pine(ctx, cx - rx * 0.86, cy - ry * 0.34, 9)
+    rock(ctx, cx + rx * 0.84, cy - ry * 0.2, 7)
+
     const bob = Math.sin(frame * 0.06) * 1.2
-    drawAvatar(ctx, TENINCHTOENAIL, 68, 62 + bob, { facing: 1, height: 27, pose: 'swingFwd', phase: frame })
-    drawAvatar(ctx, NINJAPENGUIN, 98, 62 - bob, { facing: -1, height: 29, pose: 'hurt', phase: frame })
+    drawAvatar(ctx, TENINCHTOENAIL, 66, 56 + bob, { facing: 1, height: 26, pose: 'swingFwd', phase: frame })
+    drawAvatar(ctx, NINJAPENGUIN, 94, 50 - bob, {
+      facing: -1,
+      height: 27,
+      pose: 'hurt',
+      phase: frame,
+    })
     ctx.globalAlpha = 0.9
     for (let i = 0; i < 6; i++) {
       const a = (i / 6) * Math.PI * 2 + frame * 0.1
       const r = 4 + ((frame % 30) / 30) * 6
-      ellipse(ctx, 84 + Math.cos(a) * r, 48 + Math.sin(a) * r, 1.6, 1.6, i % 2 ? '#fff6dd' : PAL.fire)
+      ellipse(ctx, 82 + Math.cos(a) * r, 46 + Math.sin(a) * r, 1.6, 1.6, i % 2 ? '#fff6dd' : PAL.fire)
     }
     ctx.globalAlpha = 1
   },

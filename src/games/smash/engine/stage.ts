@@ -1,43 +1,68 @@
-/** Stage geometry for LAKESIDE CAMP, the first Polyland arena. */
+/**
+ * The arena.
+ *
+ * Smash is played looking down on a floating disc: there is no gravity and no
+ * jumping, and the only way out is over the edge. The floor is an ellipse
+ * rather than a circle because the camera is tilted - a disc seen at an angle
+ * is exactly that - so every distance across the floor is measured in
+ * normalised arena space, where the rim is at radius 1 in both axes.
+ */
 
 export const VIEW_W = 480
 export const VIEW_H = 270
 
-export interface Platform {
-  x1: number
-  x2: number
-  top: number
-  /** Height of the platform body below `top`. */
-  depth: number
-  /** Solid platforms block you from the sides; soft ones are drop-through. */
-  solid: boolean
-}
-
-export interface Stage {
+export interface Arena {
   id: string
   name: string
-  platforms: Platform[]
-  blast: { left: number; right: number; top: number; bottom: number }
+  /** Centre of the floor, in view units. */
+  cx: number
+  cy: number
+  /** Half-width and half-depth of the floor. */
+  rx: number
+  ry: number
+  /** How thick the slab under the floor looks. */
+  depth: number
+  /** Where the two fighters start. */
   spawns: { x: number; y: number }[]
-  respawn: { x: number; y: number }
 }
 
-export const LAKESIDE_CAMP: Stage = {
-  id: 'lakeside-camp',
-  name: 'Lakeside Camp',
-  platforms: [
-    { x1: 96, x2: 384, top: 202, depth: 32, solid: true },
-    { x1: 138, x2: 214, top: 152, depth: 6, solid: false },
-    { x1: 266, x2: 342, top: 152, depth: 6, solid: false },
-    { x1: 202, x2: 278, top: 104, depth: 6, solid: false },
-  ],
-  blast: { left: -86, right: 566, top: -130, bottom: 372 },
+export const LAKESIDE_BLUFF: Arena = {
+  id: 'lakeside-bluff',
+  name: 'Lakeside Bluff',
+  cx: 240,
+  cy: 138,
+  rx: 150,
+  ry: 86,
+  depth: 26,
   spawns: [
-    { x: 176, y: 202 },
-    { x: 304, y: 202 },
+    { x: 178, y: 138 },
+    { x: 302, y: 138 },
   ],
-  respawn: { x: 240, y: 50 },
 }
 
-export const MAIN_PLATFORM = LAKESIDE_CAMP.platforms[0]
+/**
+ * How far out a point is, as a fraction of the way to the rim.
+ *
+ * Below 1 is on the floor, above 1 is over the edge. Working in this space
+ * keeps every check - knockback, the CPU's sense of danger, the ring-out -
+ * independent of the arena's shape.
+ */
+export function rimDistance(a: Arena, x: number, y: number): number {
+  const dx = (x - a.cx) / a.rx
+  const dy = (y - a.cy) / a.ry
+  return Math.sqrt(dx * dx + dy * dy)
+}
 
+/** The point on the rim nearest a position, for dust and edge effects. */
+export function rimPoint(a: Arena, x: number, y: number): { x: number; y: number } {
+  const d = rimDistance(a, x, y) || 1
+  return { x: a.cx + (x - a.cx) / d, y: a.cy + (y - a.cy) / d }
+}
+
+/** Pushes a point back inside the floor, used to keep spawns honest. */
+export function clampToFloor(a: Arena, x: number, y: number, inset = 0.94): { x: number; y: number } {
+  const d = rimDistance(a, x, y)
+  if (d <= inset) return { x, y }
+  const k = inset / (d || 1)
+  return { x: a.cx + (x - a.cx) * k, y: a.cy + (y - a.cy) * k }
+}

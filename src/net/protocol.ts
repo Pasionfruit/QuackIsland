@@ -71,24 +71,26 @@ export type FighterSnap = [
   hitstun: number,
   hitlag: number,
   invuln: number,
-  grounded: number,
+  respawnTimer: number,
+  fallTimer: number,
   spin: number,
   squash: number,
   anim: number,
 ]
 
 export const PHASES = ['intro', 'fight', 'ko', 'over'] as const
-export const STATES = [
-  'idle',
-  'walk',
-  'air',
+export const STATES = ['idle', 'walk', 'attack', 'hitstun', 'falling', 'dead'] as const
+export const FACINGS = ['up', 'down', 'left', 'right'] as const
+export const MOVES = [
   'attack',
-  'hitstun',
-  'helpless',
-  'landing',
-  'dead',
+  'attackSide',
+  'attackUp',
+  'attackDown',
+  'special',
+  'specialSide',
+  'specialUp',
+  'specialDown',
 ] as const
-export const MOVES = ['jab', 'side', 'up', 'down', 'special'] as const
 
 export function round2(n: number): number {
   return Math.round(n * 100) / 100

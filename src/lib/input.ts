@@ -112,21 +112,19 @@ export const CONTROL_HINTS: { player: string; rows: [string, string][] }[] = [
   {
     player: 'Player 1',
     rows: [
-      ['Move', 'A / D'],
-      ['Jump', 'W (x2)'],
-      ['Drop / Fast fall', 'S'],
+      ['Move', 'W A S D'],
       ['Attack', 'F'],
-      ['Recovery', 'G'],
+      ['Special', 'G'],
+      ['Aimed move', 'Direction + F / G'],
     ],
   },
   {
     player: 'Player 2',
     rows: [
-      ['Move', '< / >'],
-      ['Jump', 'Up (x2)'],
-      ['Drop / Fast fall', 'Down'],
+      ['Move', 'Arrow keys'],
       ['Attack', '.'],
-      ['Recovery', '/'],
+      ['Special', '/'],
+      ['Aimed move', 'Direction + . or /'],
     ],
   },
 ]
