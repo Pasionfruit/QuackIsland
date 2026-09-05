@@ -1,5 +1,13 @@
 /* Polyland - cosy low-poly camp theme */
 
+@font-face {
+  font-family: 'The Bomb Sound';
+  src: url('../assets/fonts/TheBombSound.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --bg: #f0e8d9;
   --bg-2: #e6dcc8;
@@ -28,6 +36,8 @@
   --shadow-lg: 0 4px 10px rgba(90, 76, 56, 0.1), 0 18px 40px rgba(90, 76, 56, 0.14);
 
   --font: 'Quicksand', 'Nunito', 'Trebuchet MS', system-ui, sans-serif;
+  /* Titles and headers only - everywhere else stays on --font. */
+  --font-display: 'The Bomb Sound', var(--font);
 
   color-scheme: light;
 }
@@ -74,9 +84,20 @@ body::before {
 h1,
 h2,
 h3,
+h4,
+.logo-word,
+.card__title {
+  font-family: var(--font-display);
+  /* The Bomb Sound's letters sit close together at 1:1 spacing - open them up
+     so headers stay readable rather than running together. */
+  letter-spacing: 0.04em;
+}
+
+h1,
+h2,
+h3,
 h4 {
   font-weight: 700;
-  letter-spacing: -0.01em;
   line-height: 1.32;
   margin: 0;
 }
@@ -135,7 +156,6 @@ canvas {
 .logo-word {
   font-size: 26px;
   font-weight: 700;
-  letter-spacing: -0.02em;
   color: var(--ink);
 }
 
@@ -378,7 +398,7 @@ canvas {
 
 .hero__copy h2 {
   font-size: 30px;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.08em;
   margin-bottom: 12px;
 }
 
@@ -489,7 +509,7 @@ canvas {
 .card__title {
   font-size: 17px;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: 0.08em;
 }
 
 .card__desc {
