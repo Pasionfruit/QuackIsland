@@ -48,6 +48,12 @@ export type DuckPayload =
   | { k: 'start' }
   | { k: 'again' }
 
+/** Tank Trouble rides the same relay: host simulates, guests send input. */
+export type TankPayload =
+  | { k: 'input'; i: { moveX: number; moveY: number; aimX: number; aimY: number; fire: boolean; mine: boolean } }
+  | { k: 'snap'; s: unknown }
+  | { k: 'start' }
+
 export type SmashPayload =
   | { k: 'pick'; slot: Slot; charId: string }
   | { k: 'rules'; stocks: number }

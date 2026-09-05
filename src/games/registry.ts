@@ -174,14 +174,15 @@ const TANKS: GameEntry = {
   title: 'Tank Trouble',
   tagline: 'Small maze. Bouncing shells. No apologies.',
   genre: 'Top-down arena',
-  players: PARTY,
-  status: 'concept',
+  players: '1-8 players',
+  status: 'live',
   blurb:
-    'A tiny randomly generated maze, one tank each, and bullets that ricochet until they hit somebody. Usually you.',
+    'Twenty levels of a freshly generated maze, one life each, bullets that ricochet until they hit somebody. Usually you.',
   plan: [
-    'Freshly generated maze every round, no two the same.',
-    'Ricocheting shells that stay live for several bounces.',
-    'Pickups: spread shot, homing, and the ill-advised laser.',
+    'Twenty levels: fresh maze every time, more sentries and faster shells as you climb.',
+    'Five bouncing shells in the air at once, plus mines that arm on a delay.',
+    'One life per level - if everybody falls the run ends; one survivor moves the party on.',
+    'Up to eight tanks over the relay, WASD and mouse each.',
   ],
   art: (ctx, frame) => {
     ctx.fillStyle = '#e0d6bf'

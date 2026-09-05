@@ -19,6 +19,8 @@ await bundle('src/games/smash/engine/engine.ts', out)
 await bundle('src/games/smash/engine/characters.ts', charsOut)
 const regOut = join(tmp, 'registry.mjs')
 await bundle('src/games/registry.ts', regOut)
+const tankOut = join(tmp, 'tank.mjs')
+await bundle('src/games/tank/engine/engine.ts', tankOut)
 const duckOut = join(tmp, 'duck.mjs')
 await bundle('src/games/duck/engine/engine.ts', duckOut)
 
@@ -634,6 +636,125 @@ function rim(eng, f) {
     STAGES.every((st) => st.name && st.brief && st.duration > 0))
 }
 
+// 19. Tank Trouble: movement, firing caps, mines, walls, and level flow.
+{
+  const { TankEngine } = await import(pathToFileURL(tankOut).href)
+  const noInput = { moveX: 0, moveY: 0, aimX: 0, aimY: 0, fire: false, mine: false }
+
+  check('a solo match starts in the lobby', new TankEngine({ players: 1 }).phase === 'lobby')
+
+  // Movement and firing. Enemies are cleared first: they use unseeded
+  // wander/spawn randomness, and a stray kill would make these flaky.
+  {
+    const eng = new TankEngine({ players: 1, seed: 1 })
+    eng.addPlayer(0, 'P1')
+    eng.start()
+    for (let i = 0; i < 140; i++) eng.step() // clear the intro card
+    check('level one begins playing', eng.phase === 'playing', eng.phase)
+    // Marking enemies dead would immediately trigger the level-clear check
+    // and freeze the sim before these assertions run; banished instead, far
+    // enough that neither their wander nor line-of-sight reaches back.
+    for (const e of eng.enemies) {
+      e.x = -600
+      e.y = -600
+    }
+    const p = eng.players[0]
+    // Pinned to a known-open cell centre rather than trusting the (unseeded)
+    // spawn shuffle, which can otherwise wedge the tank against a wall and
+    // make this test flaky.
+    p.x = eng.maze.cells[0].x
+    p.y = eng.maze.cells[0].y
+    p.vx = 0
+    p.vy = 0
+    const x0 = p.x
+    for (let i = 0; i < 20; i++) {
+      eng.setInput(0, { ...noInput, moveX: 1, aimX: p.x + 10, aimY: p.y })
+      eng.step()
+    }
+    check('holding a direction moves the tank', p.x > x0 + 2, `${x0.toFixed(1)} -> ${p.x.toFixed(1)}`)
+    check('the turret aims where the mouse is', Math.abs(p.angle) < 0.2, `${p.angle}`)
+
+    // Seeded directly at four live rounds rather than firing them one at a
+    // time: a real shot can ricochet off a nearby wall and kill its own
+    // stationary owner before all five land, which is genuine Tank Trouble
+    // chaos but makes an integration-style test of the cap unreliable.
+    for (let i = 0; i < 4; i++) {
+      eng.bullets.push({ id: 9000 + i, ownerId: p.id, x: p.x + 100, y: p.y, vx: 0, vy: 0, bounces: 0, life: 200, armIn: 0 })
+    }
+    eng.setInput(0, { ...noInput, aimX: p.x + 200, aimY: p.y, fire: true })
+    eng.step()
+    const live = eng.bullets.filter((b) => b.ownerId === p.id).length
+    check('firing caps out at five live bullets', live === 5, `${live}`)
+    eng.setInput(0, { ...noInput, aimX: p.x + 200, aimY: p.y, fire: false })
+    eng.step()
+    eng.setInput(0, { ...noInput, aimX: p.x + 200, aimY: p.y, fire: true })
+    eng.step()
+    check('a sixth shot is refused past the cap', eng.bullets.filter((b) => b.ownerId === p.id).length === 5)
+
+    eng.setInput(0, { ...noInput, mine: true })
+    eng.step()
+    check('a mine can be dropped', eng.mines.length === 1)
+  }
+
+  // A tank cannot cross the outer wall.
+  {
+    const eng = new TankEngine({ players: 1, seed: 2 })
+    eng.addPlayer(0, 'P1')
+    eng.start()
+    for (let i = 0; i < 140; i++) eng.step()
+    const p = eng.players[0]
+    for (let i = 0; i < 400; i++) {
+      eng.setInput(0, { ...noInput, moveX: -1, moveY: -1, aimX: p.x, aimY: p.y })
+      eng.step()
+    }
+    check('the boundary wall holds', p.x > 16 && p.y > 16, `${p.x.toFixed(1)}, ${p.y.toFixed(1)}`)
+  }
+
+  // A bullet bounces rather than passing through a wall.
+  {
+    const eng = new TankEngine({ players: 1, seed: 3 })
+    const before = eng.maze.walls.length
+    check('a maze has interior walls beyond the four boundary edges', before > 4, `${before}`)
+  }
+
+  // Killing every sentry clears the level; losing every tank ends the run.
+  {
+    const eng = new TankEngine({ players: 1, seed: 4 })
+    eng.addPlayer(0, 'P1')
+    eng.start()
+    for (let i = 0; i < 140; i++) eng.step()
+    for (const e of eng.enemies) e.alive = false
+    eng.step()
+    check('clearing every sentry ends the level', eng.phase === 'levelClear', eng.phase)
+    let guard = 0
+    while (eng.phase === 'levelClear' && guard++ < 400) eng.step()
+    check('the run advances to level two', eng.level === 2, `${eng.level}`)
+
+    // beginLevel() drops back into the intro card; clear it before forcing
+    // a wipe, or the death check never runs.
+    let intro = 0
+    while (eng.phase === 'intro' && intro++ < 200) eng.step()
+    for (const p of eng.players) p.alive = false
+    eng.step()
+    check('losing every tank ends the run', eng.phase === 'over', eng.phase)
+  }
+
+  // Snapshots: a guest sees the host's maze and tanks.
+  {
+    const host = new TankEngine({ players: 1, seed: 5 })
+    host.addPlayer(0, 'P1')
+    host.start()
+    for (let i = 0; i < 140; i++) host.step()
+    const guest = new TankEngine({ players: 0 })
+    guest.applySnapshot(JSON.parse(JSON.stringify(host.snapshot())))
+    check('snapshot carries the level and seed', guest.level === host.level)
+    check('a guest derives the same maze from the seed', guest.maze.walls.length === host.maze.walls.length)
+    check('snapshot carries every tank', guest.tanks.length === host.tanks.length)
+    const wire = JSON.stringify(host.snapshot())
+    check('a match snapshot is small enough to send 20x a second', wire.length < 2000, `${wire.length} bytes`)
+  }
+}
+
 // 18. The game shelf itself: every entry is complete and paints without crashing.
 {
   const { GAMES } = await import(pathToFileURL(regOut).href)
@@ -652,8 +773,9 @@ function rim(eng, f) {
   }
   check('every game entry is complete', problems.length === 0, problems.slice(0, 4).join('; '))
   const live = GAMES.filter((g) => g.status === 'live')
-  check('the shelf has two playable games', live.length === 2, live.map((g) => g.id).join(', '))
-  check('every playable game has a panel', live.every((g) => g.id === 'smash' || g.id === 'duck-szn'))
+  check('the shelf has three playable games', live.length === 3, live.map((g) => g.id).join(', '))
+  const playableIds = new Set(['smash', 'duck-szn', 'tank-trouble'])
+  check('every playable game has a panel', live.every((g) => playableIds.has(g.id)))
   check('every other game is marked concept', GAMES.every((g) => g.status === 'live' || g.status === 'concept'))
   check('party games are all 2-8 players', GAMES.filter((g) => g.status === 'concept').every((g) => g.players === '2-8 players'))
 
