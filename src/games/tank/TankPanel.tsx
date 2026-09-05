@@ -3,7 +3,7 @@ import { fitScene } from '../../lib/draw'
 import { NetClient, defaultServerUrl } from '../../net/client'
 import { normalizeCode, type PeerInfo, type TankPayload } from '../../net/protocol'
 import { play } from '../duck/audio'
-import { PLAYER_COLORS, TankEngine, type TankInput } from './engine/engine'
+import { PLAYER_COLORS, TankEngine, TEAM_COLORS, TEAM_NAMES, type TankInput } from './engine/engine'
 import { drawAimLine, renderMatch } from './engine/render'
 import { VIEW_H, VIEW_W } from './engine/types'
 
@@ -15,11 +15,18 @@ import { VIEW_H, VIEW_W } from './engine/types'
  * state a few times a second and the host applies it directly - trigger
  * cooldowns and bullet caps are all enforced host-side, same authority split
  * as Smash and Duck szn.
+ *
+ * Two modes share one engine: co-op climbs twenty levels of sentries, pvp
+ * drops everyone into one fixed arena on up to four teams and lets them
+ * settle it. The mode is chosen once, in the lobby, and travels to every
+ * guest on the 'start' message - a guest has to know it before it can even
+ * construct a matching engine.
  */
 
 const net = new NetClient()
 type Screen = 'lobby' | 'play'
 type Role = 'solo' | 'host' | 'guest'
+type Mode = 'coop' | 'pvp'
 
 export function TankPanel() {
   const [screen, setScreen] = useState<Screen>('lobby')
@@ -29,7 +36,9 @@ export function TankPanel() {
   const [code, setCode] = useState('')
   const [joinCode, setJoinCode] = useState('')
   const [name, setName] = useState('Tank')
+  const [mode, setMode] = useState<Mode>('coop')
   const [colorIndex, setColorIndex] = useState(0)
+  const [teamIndex, setTeamIndex] = useState(0)
   const [peers, setPeers] = useState<PeerInfo[]>([])
   const [slot, setSlot] = useState(0)
   const [, setTick] = useState(0)
@@ -42,9 +51,11 @@ export function TankPanel() {
   slotRef.current = slot
   const inputRef = useRef<TankInput>({ moveX: 0, moveY: 0, aimX: VIEW_W / 2, aimY: VIEW_H / 2, fire: false, mine: false })
   const keysRef = useRef({ w: false, a: false, s: false, d: false })
-  /** Colours guests have picked, keyed by slot - the host applies these when
-   *  the match actually starts, so a peer never gets stuck with the default. */
+  /** Colours and teams guests have picked, keyed by slot - the host applies
+   *  these when the match actually starts, so a peer never gets stuck with
+   *  the default. */
   const peerColorsRef = useRef(new Map<number, string>())
+  const peerTeamsRef = useRef(new Map<number, number>())
   const prevPhase = useRef('lobby')
 
   useEffect(() => {
@@ -67,7 +78,14 @@ export function TankPanel() {
         setPeers(players)
         const eng = engineRef.current
         if (eng && roleRef.current === 'host') {
-          for (const p of players) eng.addPlayer(p.slot, p.name, peerColorsRef.current.get(p.slot))
+          for (const p of players) {
+            eng.addPlayer(
+              p.slot,
+              p.name,
+              eng.config.mode === 'pvp' ? TEAM_COLORS[peerTeamsRef.current.get(p.slot) ?? 0] : peerColorsRef.current.get(p.slot),
+              eng.config.mode === 'pvp' ? peerTeamsRef.current.get(p.slot) ?? 0 : 0,
+            )
+          }
           for (const t of [...eng.tanks]) {
             if (t.slot >= 0 && !players.some((p) => p.slot === t.slot)) eng.removePlayer(t.slot)
           }
@@ -75,15 +93,24 @@ export function TankPanel() {
       },
       onPayload: (payload, from) => {
         const msg = payload as TankPayload
-        const eng = engineRef.current
-        if (!msg || !eng) return
+        if (!msg) return
         if (roleRef.current === 'host') {
+          const eng = engineRef.current
+          if (!eng) return
           if (msg.k === 'input') eng.setInput(from, msg.i)
           else if (msg.k === 'color') peerColorsRef.current.set(from, msg.color)
-        } else if (msg.k === 'snap') {
-          eng.applySnapshot(msg.s as ReturnType<TankEngine['snapshot']>)
-        } else if (msg.k === 'start') {
+          else if (msg.k === 'team') peerTeamsRef.current.set(from, msg.team)
+          return
+        }
+        // Guests do not run beginMatch themselves - the 'start' message is the
+        // first they hear of it, and it carries the mode they need to build a
+        // matching engine before any snapshot can be applied to it.
+        if (msg.k === 'start') {
+          const eng = new TankEngine({ players: 0, mode: msg.mode })
+          engineRef.current = eng
           setScreen('play')
+        } else if (msg.k === 'snap') {
+          engineRef.current?.applySnapshot(msg.s as ReturnType<TankEngine['snapshot']>)
         }
       },
     })
@@ -91,25 +118,32 @@ export function TankPanel() {
   }, [])
 
   useEffect(() => {
-    if (role === 'guest') net.send({ k: 'color', color: PLAYER_COLORS[colorIndex] } satisfies TankPayload)
-  }, [role, colorIndex])
+    if (role !== 'guest') return
+    if (mode === 'pvp') net.send({ k: 'team', team: teamIndex } satisfies TankPayload)
+    else net.send({ k: 'color', color: PLAYER_COLORS[colorIndex] } satisfies TankPayload)
+  }, [role, mode, colorIndex, teamIndex])
 
   const beginMatch = useCallback(() => {
-    const eng = new TankEngine({ players: 0 })
+    const eng = new TankEngine({ players: 0, mode })
     if (role === 'solo') {
-      eng.addPlayer(0, 'You', PLAYER_COLORS[colorIndex])
+      eng.addPlayer(0, 'You', mode === 'pvp' ? TEAM_COLORS[teamIndex] : PLAYER_COLORS[colorIndex], teamIndex)
     } else {
       for (const p of peers) {
         if (p.slot === slot) continue
-        eng.addPlayer(p.slot, p.name, peerColorsRef.current.get(p.slot))
+        eng.addPlayer(
+          p.slot,
+          p.name,
+          mode === 'pvp' ? TEAM_COLORS[peerTeamsRef.current.get(p.slot) ?? 0] : peerColorsRef.current.get(p.slot),
+          mode === 'pvp' ? peerTeamsRef.current.get(p.slot) ?? 0 : 0,
+        )
       }
-      eng.addPlayer(slot, name, PLAYER_COLORS[colorIndex])
+      eng.addPlayer(slot, name, mode === 'pvp' ? TEAM_COLORS[teamIndex] : PLAYER_COLORS[colorIndex], teamIndex)
     }
     eng.start()
     engineRef.current = eng
     setScreen('play')
-    if (role === 'host') net.send({ k: 'start' } satisfies TankPayload)
-  }, [role, peers, slot, name, colorIndex])
+    if (role === 'host') net.send({ k: 'start', mode } satisfies TankPayload)
+  }, [role, peers, slot, name, mode, colorIndex, teamIndex])
 
   // ----------------------------------------------------------------- input
 
@@ -239,6 +273,9 @@ export function TankPanel() {
   }, [screen])
 
   const eng = engineRef.current
+  const killTally = eng ? [...eng.players].sort((a, b) => b.kills - a.kills) : []
+
+  // ------------------------------------------------------------------ lobby
 
   if (screen === 'lobby') {
     return (
@@ -256,10 +293,29 @@ export function TankPanel() {
           <div className="panel">
             <div className="panel__title">Into the pit</div>
             <p className="muted" style={{ marginTop: 0 }}>
-              WASD to move, mouse to aim and shoot, right click to drop a mine. Twenty levels of
-              sentry tanks, one life each per level - if everybody falls, the run ends; if anyone
-              is still standing when the maze is clear, you move on.
+              {mode === 'coop'
+                ? 'WASD to move, mouse to aim and shoot, right click to drop a mine. Twenty levels of sentry tanks, one life each per level - if everybody falls, the run ends; if anyone is still standing when the maze is clear, you move on.'
+                : 'Same controls, no sentries - just the party, split into up to four teams, in one arena. Friendly fire is off within a team. Last team with a tank still standing takes it.'}
             </p>
+
+            <label className="fighter__title">Mode</label>
+            <div className="chiprow" style={{ marginBottom: 10 }}>
+              <button
+                type="button"
+                className={`btn btn--sm ${mode === 'coop' ? '' : 'btn--ghost'}`}
+                onClick={() => setMode('coop')}
+              >
+                Co-op vs sentries
+              </button>
+              <button
+                type="button"
+                className={`btn btn--sm ${mode === 'pvp' ? '' : 'btn--ghost'}`}
+                onClick={() => setMode('pvp')}
+              >
+                PvP
+              </button>
+            </div>
+
             <div className="chiprow" style={{ marginTop: 10 }}>
               <button className="btn" onClick={beginMatch}>
                 Play solo
@@ -274,26 +330,56 @@ export function TankPanel() {
             <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
               <label className="fighter__title">Your name</label>
               <input className="input" value={name} maxLength={16} onChange={(e) => setName(e.target.value)} />
-              <label className="fighter__title">Your tank colour</label>
-              <div className="chiprow">
-                {PLAYER_COLORS.map((c, i) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setColorIndex(i)}
-                    title={`Tank colour ${i + 1}`}
-                    style={{
-                      width: 26,
-                      height: 26,
-                      borderRadius: 999,
-                      background: c,
-                      border: i === colorIndex ? '2px solid var(--ink, #222)' : '2px solid transparent',
-                      boxShadow: i === colorIndex ? '0 0 0 2px rgba(255,255,255,0.6) inset' : 'none',
-                      cursor: 'pointer',
-                    }}
-                  />
-                ))}
-              </div>
+
+              {mode === 'coop' ? (
+                <>
+                  <label className="fighter__title">Your tank colour</label>
+                  <div className="chiprow">
+                    {PLAYER_COLORS.map((c, i) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setColorIndex(i)}
+                        title={`Tank colour ${i + 1}`}
+                        style={{
+                          width: 26,
+                          height: 26,
+                          borderRadius: 999,
+                          background: c,
+                          border: i === colorIndex ? '2px solid var(--ink, #222)' : '2px solid transparent',
+                          boxShadow: i === colorIndex ? '0 0 0 2px rgba(255,255,255,0.6) inset' : 'none',
+                          cursor: 'pointer',
+                        }}
+                      />
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <label className="fighter__title">Your team</label>
+                  <div className="chiprow">
+                    {TEAM_COLORS.map((c, i) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setTeamIndex(i)}
+                        title={TEAM_NAMES[i]}
+                        className="chip"
+                        style={{
+                          background: i === teamIndex ? c : 'transparent',
+                          color: i === teamIndex ? '#fff6e2' : c,
+                          border: `2px solid ${c}`,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {TEAM_NAMES[i]}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
               <label className="fighter__title">Join a pit</label>
               <div className="chiprow">
                 <input
@@ -337,12 +423,12 @@ export function TankPanel() {
                 </div>
                 {role === 'host' && (
                   <button className="btn" style={{ marginTop: 12 }} onClick={beginMatch}>
-                    Start the run ({peers.length || 1})
+                    Start the {mode === 'pvp' ? 'match' : 'run'} ({peers.length || 1})
                   </button>
                 )}
                 {role === 'guest' && (
                   <p className="muted" style={{ marginTop: 12 }}>
-                    Waiting for the host to start.
+                    Waiting for the host to start. Mode and teams are the host's call.
                   </p>
                 )}
               </>
@@ -358,9 +444,13 @@ export function TankPanel() {
             <div className="panel__title">Rules of the pit</div>
             <ul className="muted" style={{ marginTop: 0, paddingLeft: 18, display: 'grid', gap: 6 }}>
               <li>Five bouncing shells in the air at once, no more.</li>
-              <li>Mines arm after a beat - yours can still catch you.</li>
-              <li>One hit and a tank is out for the level, no exceptions.</li>
-              <li>Fresh maze, more sentries, faster shots - every level.</li>
+              <li>Mines arm after a beat - yours can still catch you, and they open wood walls.</li>
+              <li>One hit and a tank is out{mode === 'coop' ? ' for the level' : ' for the match'}, no exceptions.</li>
+              {mode === 'coop' ? (
+                <li>Fresh maze, more sentries, faster shots - every level.</li>
+              ) : (
+                <li>No sentries, no friendly fire within a team - just the party.</li>
+              )}
             </ul>
           </div>
         </div>
@@ -368,11 +458,17 @@ export function TankPanel() {
     )
   }
 
+  // ------------------------------------------------------------------- play
+
   return (
     <div>
       <div className="gamehead">
         <h2>Tank Trouble</h2>
-        <span className="chip">Level {eng?.level ?? 1} / 20</span>
+        {eng?.config.mode === 'pvp' ? (
+          <span className="chip">PvP</span>
+        ) : (
+          <span className="chip">Level {eng?.level ?? 1} / 20</span>
+        )}
         <div className="spacer" />
         <button className="btn btn--ghost btn--sm" onClick={() => setScreen('lobby')}>
           Leave the pit
@@ -397,8 +493,11 @@ export function TankPanel() {
           <div style={{ display: 'grid', gap: 6 }}>
             {eng?.players.map((p) => (
               <div className="keyrow" key={p.slot}>
-                <span style={{ color: p.color }}>{p.name}</span>
-                <span>{p.alive ? 'in the fight' : 'out this level'}</span>
+                <span style={{ color: p.color }}>
+                  {p.name}
+                  {eng.config.mode === 'pvp' ? ` · ${TEAM_NAMES[p.team] ?? '?'}` : ''}
+                </span>
+                <span>{p.alive ? 'in the fight' : eng.config.mode === 'pvp' ? 'out this match' : 'out this level'}</span>
               </div>
             ))}
           </div>
@@ -422,6 +521,26 @@ export function TankPanel() {
         </div>
         <div className="panel">
           <div className="panel__title">This run</div>
+          <div style={{ display: 'grid', gap: 6, marginBottom: 10 }}>
+            {killTally.map((p, i) => (
+              <div className="keyrow" key={p.slot}>
+                <span style={{ color: p.color }}>
+                  {i === 0 && p.kills > 0 ? '★ ' : ''}
+                  {p.name}
+                </span>
+                <span>
+                  {p.kills} kill{p.kills === 1 ? '' : 's'}
+                </span>
+              </div>
+            ))}
+          </div>
+          {eng?.config.mode === 'pvp' && eng.phase === 'over' && (
+            <p style={{ marginTop: 0 }}>
+              {eng.winningTeam === null
+                ? "It's a draw."
+                : `${TEAM_NAMES[eng.winningTeam] ?? '?'} wins.`}
+            </p>
+          )}
           {(eng?.phase === 'over' || eng?.phase === 'victory') && (
             <button className="btn" onClick={beginMatch}>
               Run it again

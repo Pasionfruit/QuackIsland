@@ -822,6 +822,70 @@ function rim(eng, f) {
     check('a plain shot destroys a tracking missile', !eng.bullets.some((b) => b.id === 7002))
   }
 
+  // A kill is credited to whoever fired the shot, not the victim.
+  {
+    const eng = new TankEngine({ players: 1 })
+    eng.addPlayer(0, 'P1')
+    eng.start()
+    for (let i = 0; i < 140; i++) eng.step()
+    for (const e of eng.enemies) {
+      e.x = -600
+      e.y = -600
+    }
+    const p = eng.players[0]
+    p.x = eng.maze.cells[0].x
+    p.y = eng.maze.cells[0].y
+    const victim = eng.enemies[0]
+    victim.x = p.x + 20
+    victim.y = p.y
+    eng.bullets.push({ id: 6001, ownerId: p.id, x: p.x + 15, y: p.y, vx: 1, vy: 0, bounces: 0, life: 10, armIn: 0, homing: false })
+    eng.step()
+    check('a kill is credited to the shooter', p.kills === 1, `${p.kills}`)
+
+    // And it survives a level transition - kills are a whole-run tally.
+    for (const e of eng.enemies) e.alive = false
+    let guard = 0
+    while (eng.level === 1 && guard++ < 400) eng.step()
+    check('kills persist across a level change', p.kills === 1, `${p.kills}`)
+  }
+
+  // PvP: no sentries, teams instead of levels, and friendly fire stays off.
+  {
+    const eng = new TankEngine({ players: 4, mode: 'pvp' })
+    eng.addPlayer(0, 'A', undefined, 0)
+    eng.addPlayer(1, 'B', undefined, 0) // same team as A
+    eng.addPlayer(2, 'C', undefined, 1)
+    eng.addPlayer(3, 'D', undefined, 1)
+    eng.start()
+    for (let i = 0; i < 140; i++) eng.step()
+    check('pvp has no sentries', eng.enemies.length === 0, `${eng.enemies.length}`)
+    check('pvp starts playing with no level to speak of', eng.phase === 'playing', eng.phase)
+
+    const [a, b] = eng.players
+    a.x = eng.maze.cells[0].x
+    a.y = eng.maze.cells[0].y
+    b.x = a.x + 15
+    b.y = a.y
+    eng.bullets.push({ id: 6100, ownerId: a.id, x: a.x + 10, y: a.y, vx: 1, vy: 0, bounces: 0, life: 10, armIn: 0, homing: false })
+    eng.step()
+    check('a teammate is not hurt by friendly fire', b.alive, `${b.alive}`)
+
+    const [, , c] = eng.players
+    // Placed right on the bullet's spawn point, not an arbitrary few units
+    // off it, so one step's travel is guaranteed to land inside its radius.
+    c.x = a.x + 10
+    c.y = a.y
+    eng.bullets.push({ id: 6101, ownerId: a.id, x: a.x + 10, y: a.y, vx: 1, vy: 0, bounces: 0, life: 10, armIn: 0, homing: false })
+    eng.step()
+    check('an enemy team tank is hurt by the same shot', !c.alive)
+
+    // Wipe one whole team; the other should be declared the winner.
+    for (const t of eng.players) if (t.team === 1) t.alive = false
+    eng.step()
+    check('eliminating a team ends the match', eng.phase === 'over', eng.phase)
+    check('the surviving team is declared the winner', eng.winningTeam === 0, `${eng.winningTeam}`)
+  }
+
   // Killing every sentry clears the level; losing every tank ends the run.
   {
     const eng = new TankEngine({ players: 1, seed: 4 })

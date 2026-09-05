@@ -18,6 +18,7 @@ import {
   VIEW_H,
   VIEW_W,
   type Bullet,
+  type LevelConfig,
   type Mine,
   type Particle,
   type Phase,
@@ -75,8 +76,27 @@ const ENEMY_COLORS: Record<Exclude<TankKind, 'player'>, string> = {
   sapper: '#6b5a34',
 }
 
+/** PvP has no per-player colour choice - the team you join is your colour. */
+export const TEAM_COLORS = ['#c0392b', '#2f6fa8', '#3f8f4f', '#c9a227']
+export const TEAM_NAMES = ['Red', 'Blue', 'Green', 'Yellow']
+
+/** PvP always plays the same neutral arena, independent of any level. */
+const PVP_SEED = 424242
+const PVP_ARENA: LevelConfig = {
+  level: 1,
+  cols: 7,
+  rows: 5,
+  removeFrac: 0.22,
+  enemyCount: 0,
+  enemySpeed: 0,
+  enemyFireEvery: 999,
+  enemyAccuracy: 0,
+}
+
 export interface TankConfig {
   players: number
+  /** 'coop' fights sentries through twenty levels; 'pvp' is tanks on tanks. */
+  mode: 'coop' | 'pvp'
 }
 
 export class TankEngine {
@@ -93,6 +113,8 @@ export class TankEngine {
   maze: Maze
   /** Indices into `maze.walls` for wood walls a mine has already blown open. */
   destroyedWalls = new Set<number>()
+  /** PvP only: which team took it, once the phase reaches 'over'. Null is a draw. */
+  winningTeam: number | null = null
   version = 0
 
   private inputs = new Map<number, TankInput>()
@@ -105,7 +127,7 @@ export class TankEngine {
   private events: { kind: 'explode' | 'shot' | 'levelClear'; x: number; y: number }[] = []
 
   constructor(config: Partial<TankConfig> = {}) {
-    this.config = { players: 0, ...config }
+    this.config = { players: 0, mode: 'coop', ...config }
     this.maze = buildMaze(seedForLevel(1), levelConfig(1))
     this.liveWalls = this.maze.walls
   }
@@ -118,7 +140,7 @@ export class TankEngine {
 
   // -------------------------------------------------------------- players
 
-  addPlayer(slot: number, name: string, color?: string): Tank {
+  addPlayer(slot: number, name: string, color?: string, team = 0): Tank {
     const found = this.tanks.find((t) => t.slot === slot)
     if (found) return found
     const t: Tank = {
@@ -127,6 +149,8 @@ export class TankEngine {
       name,
       color: color ?? PLAYER_COLORS[((slot % PLAYER_COLORS.length) + PLAYER_COLORS.length) % PLAYER_COLORS.length],
       kind: 'player',
+      team,
+      kills: 0,
       x: VIEW_W / 2,
       y: VIEW_H / 2,
       vx: 0,
@@ -169,10 +193,36 @@ export class TankEngine {
 
   // ---------------------------------------------------------------- rounds
 
-  /** Called once to kick a lobby into level one. */
+  /** Called once to leave the lobby: level one for co-op, the arena for pvp. */
   start(): void {
     if (this.phase !== 'lobby') return
-    this.beginLevel(1)
+    if (this.config.mode === 'pvp') this.beginPvp()
+    else this.beginLevel(1)
+  }
+
+  /** PvP has no levels to progress through - one fixed arena, teams fight. */
+  private beginPvp(): void {
+    this.maze = buildMaze(PVP_SEED, PVP_ARENA)
+    this.destroyedWalls = new Set()
+    this.liveWalls = this.maze.walls
+    this.bullets = []
+    this.mines = []
+    this.particles = []
+    this.winningTeam = null
+
+    const spots = [...this.maze.cells].sort(() => Math.random() - 0.5)
+    this.tanks.forEach((t, i) => {
+      const spot = spots[i % spots.length]
+      t.x = spot.x
+      t.y = spot.y
+      t.vx = 0
+      t.vy = 0
+      t.alive = true
+      t.flash = 0
+    })
+    this.phase = 'intro'
+    this.phaseTimer = INTRO_FRAMES
+    this.version++
   }
 
   /**
@@ -226,6 +276,8 @@ export class TankEngine {
         name: kind[0].toUpperCase() + kind.slice(1),
         color: ENEMY_COLORS[kind],
         kind,
+        team: -1,
+        kills: 0,
         x: spot.x,
         y: spot.y,
         vx: 0,
@@ -284,6 +336,16 @@ export class TankEngine {
     this.updateMines()
     this.updateParticles()
     if (this.shake > 0) this.shake *= 0.85
+
+    if (this.config.mode === 'pvp') {
+      const aliveTeams = new Set(this.players.filter((p) => p.alive).map((p) => p.team))
+      if (aliveTeams.size <= 1 && this.players.length > 1) {
+        this.winningTeam = aliveTeams.size === 1 ? [...aliveTeams][0] : null
+        this.phase = 'over'
+        this.version++
+      }
+      return
+    }
 
     const anyPlayerAlive = this.players.some((t) => t.alive)
     const anyEnemyAlive = this.enemies.some((t) => t.alive)
@@ -553,7 +615,8 @@ export class TankEngine {
         if (!t.alive) continue
         if (b.armIn > 0 && t.id === b.ownerId) continue
         if (Math.hypot(b.x - t.x, b.y - t.y) < t.radius + 2) {
-          this.killTank(t)
+          if (this.friendly(b.ownerId, t)) continue
+          this.killTank(t, b.ownerId)
           b.life = 0
           break
         }
@@ -585,7 +648,9 @@ export class TankEngine {
     this.shake = Math.max(this.shake, 6)
     this.burst(m.x, m.y, '#e8c05f')
     for (const t of this.tanks) {
-      if (t.alive && Math.hypot(t.x - m.x, t.y - m.y) < MINE_BLAST) this.killTank(t)
+      if (t.alive && Math.hypot(t.x - m.x, t.y - m.y) < MINE_BLAST && !this.friendly(m.ownerId, t)) {
+        this.killTank(t, m.ownerId)
+      }
     }
     // Wood splinters; stone does not even chip.
     this.maze.walls.forEach((w, i) => {
@@ -601,10 +666,21 @@ export class TankEngine {
     }
   }
 
-  private killTank(t: Tank): void {
+  /** True when an attacker's shot should not hurt a tank: your own team in pvp. */
+  private friendly(attackerId: number, victim: Tank): boolean {
+    if (this.config.mode !== 'pvp' || attackerId === victim.id) return false
+    const attacker = this.tanks.find((x) => x.id === attackerId)
+    return attacker !== undefined && attacker.team === victim.team
+  }
+
+  private killTank(t: Tank, killerId?: number): void {
     if (!t.alive) return
     t.alive = false
     t.flash = 14
+    if (killerId !== undefined && killerId !== t.id) {
+      const killer = this.tanks.find((x) => x.id === killerId)
+      if (killer) killer.kills++
+    }
     this.burst(t.x, t.y, t.color)
     this.events.push({ kind: 'explode', x: t.x, y: t.y })
     this.shake = Math.max(this.shake, 5)
@@ -644,7 +720,13 @@ export class TankEngine {
 
   snapshot(): TankSnapshot {
     return {
-      m: [this.frame, this.level, PHASE_LIST.indexOf(this.phase), this.phaseTimer],
+      m: [
+        this.frame,
+        this.level,
+        PHASE_LIST.indexOf(this.phase),
+        this.phaseTimer,
+        this.winningTeam ?? -1,
+      ],
       t: this.tanks.map((t) => [
         t.id,
         t.slot,
@@ -654,7 +736,15 @@ export class TankEngine {
         t.alive ? 1 : 0,
         t.flash,
         KIND_LIST.indexOf(t.kind),
-        t.kind === 'player' ? Math.max(0, PLAYER_COLORS.indexOf(t.color)) : 0,
+        // In pvp a player's colour *is* their team colour, so the team index
+        // doubles as the colour index; in co-op it is the lobby swatch pick.
+        t.kind === 'player'
+          ? this.config.mode === 'pvp'
+            ? t.team
+            : Math.max(0, PLAYER_COLORS.indexOf(t.color))
+          : 0,
+        t.kills,
+        t.team,
       ]),
       b: this.bullets.map((b) => [
         b.id,
@@ -671,17 +761,20 @@ export class TankEngine {
   applySnapshot(snap: TankSnapshot): void {
     if (!snap?.m) return
     this.frame = snap.m[0]
-    if (snap.m[1] !== this.level) {
-      this.level = snap.m[1]
-      this.maze = buildMaze(seedForLevel(this.level), levelConfig(this.level))
-    }
+    this.level = snap.m[1]
+    // Always rebuilt rather than only "when the level changes": a guest's own
+    // level can coincidentally match the host's before it has ever synced,
+    // which a change-check would miss (bit us once already on the co-op path).
+    this.maze =
+      this.config.mode === 'pvp' ? buildMaze(PVP_SEED, PVP_ARENA) : buildMaze(seedForLevel(this.level), levelConfig(this.level))
     this.phase = PHASE_LIST[snap.m[2]] ?? this.phase
     this.phaseTimer = snap.m[3]
+    this.winningTeam = snap.m[4] < 0 ? null : snap.m[4]
     this.destroyedWalls = new Set(snap.dw ?? [])
 
     const seenIds = new Set<number>()
     for (const row of snap.t) {
-      const [id, slot, x, y, angle, alive, flash, kindIdx, colorIdx] = row
+      const [id, slot, x, y, angle, alive, flash, kindIdx, colorIdx, kills, team] = row
       seenIds.add(id)
       const kind = KIND_LIST[kindIdx] ?? 'sentry'
       let t = this.tanks.find((q) => q.id === id)
@@ -695,7 +788,14 @@ export class TankEngine {
       t.alive = alive === 1
       t.flash = flash
       t.kind = kind
-      t.color = kind === 'player' ? PLAYER_COLORS[colorIdx] ?? t.color : ENEMY_COLORS[kind]
+      t.kills = kills
+      t.team = team
+      t.color =
+        kind === 'player'
+          ? this.config.mode === 'pvp'
+            ? TEAM_COLORS[colorIdx] ?? t.color
+            : PLAYER_COLORS[colorIdx] ?? t.color
+          : ENEMY_COLORS[kind]
     }
     this.tanks = this.tanks.filter((t) => seenIds.has(t.id) || t.slot >= 0)
 
@@ -724,9 +824,9 @@ export class TankEngine {
 }
 
 export interface TankSnapshot {
-  /** frame, level, phase index, phase timer */
-  m: [number, number, number, number]
-  /** id, slot, x, y, angle, alive, flash, kind index, colour index (players only) */
+  /** frame, level, phase index, phase timer, winning team (-1 for none/draw) */
+  m: [number, number, number, number, number]
+  /** id, slot, x, y, angle, alive, flash, kind index, colour/team index, kills, team */
   t: number[][]
   /** id, ownerId, x, y, homing */
   b: number[][]

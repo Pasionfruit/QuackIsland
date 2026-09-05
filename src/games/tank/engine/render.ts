@@ -5,7 +5,7 @@
 import { grid } from '../../../art/scenes'
 import { clamp, ellipse, facet, fillPoly, rand, rectPts, shade, withAlpha } from '../../../lib/draw'
 import { drawText } from '../../../lib/text'
-import type { TankEngine } from './engine'
+import { TEAM_NAMES, type TankEngine } from './engine'
 import { ARENA, VIEW_H, VIEW_W } from './types'
 
 const FLOOR = '#cdbfa0'
@@ -131,25 +131,33 @@ export function renderMatch(ctx: CanvasRenderingContext2D, eng: TankEngine): voi
 }
 
 function drawHud(ctx: CanvasRenderingContext2D, eng: TankEngine): void {
+  const pvp = eng.config.mode === 'pvp'
   const alive = eng.players.filter((p) => p.alive).length
   const enemiesLeft = eng.enemies.filter((e) => e.alive).length
-  drawText(ctx, `LEVEL ${eng.level}`, 12, 6, '#3b372f', { size: 11, weight: 800 })
+  drawText(ctx, pvp ? 'PVP' : `LEVEL ${eng.level}`, 12, 6, '#3b372f', { size: 11, weight: 800 })
   drawText(ctx, `TANKS ${alive}/${eng.players.length}`, 12, VIEW_H - 16, '#3b372f', {
     size: 9,
     weight: 700,
   })
-  drawText(ctx, `ENEMIES ${enemiesLeft}`, VIEW_W - 12, VIEW_H - 16, '#8a3f3f', {
-    size: 9,
-    align: 'right',
-    weight: 700,
-  })
+  if (!pvp) {
+    drawText(ctx, `ENEMIES ${enemiesLeft}`, VIEW_W - 12, VIEW_H - 16, '#8a3f3f', {
+      size: 9,
+      align: 'right',
+      weight: 700,
+    })
+  }
 
   if (eng.phase === 'intro') {
-    panel(ctx, `LEVEL ${eng.level}`, `${eng.enemies.length} sentries in the maze`, Math.ceil(eng.phaseTimer / 60))
+    if (pvp) panel(ctx, 'PVP', `${eng.players.length} tanks, ${new Set(eng.players.map((p) => p.team)).size} teams`, Math.ceil(eng.phaseTimer / 60))
+    else panel(ctx, `LEVEL ${eng.level}`, `${eng.enemies.length} sentries in the maze`, Math.ceil(eng.phaseTimer / 60))
   } else if (eng.phase === 'levelClear') {
     panel(ctx, 'LEVEL CLEAR', eng.level >= 20 ? 'Final level down.' : 'Regrouping...', null)
   } else if (eng.phase === 'over') {
-    panel(ctx, 'ALL TANKS LOST', `Fell on level ${eng.level}`, null)
+    if (pvp) {
+      panel(ctx, eng.winningTeam === null ? 'DRAW' : `${TEAM_NAMES[eng.winningTeam] ?? '?'} WINS`, '', null)
+    } else {
+      panel(ctx, 'ALL TANKS LOST', `Fell on level ${eng.level}`, null)
+    }
   } else if (eng.phase === 'victory') {
     panel(ctx, 'PIT CLEARED', 'All twenty levels down.', null)
   }

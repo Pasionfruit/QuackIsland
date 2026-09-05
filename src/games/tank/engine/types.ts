@@ -31,6 +31,10 @@ export interface Tank {
   name: string
   color: string
   kind: TankKind
+  /** PvP only: 0-3. Ignored in the co-op mode. */
+  team: number
+  /** Tanks destroyed this run, credited to whoever fired the shot. */
+  kills: number
   x: number
   y: number
   vx: number

@@ -52,8 +52,9 @@ export type DuckPayload =
 export type TankPayload =
   | { k: 'input'; i: { moveX: number; moveY: number; aimX: number; aimY: number; fire: boolean; mine: boolean } }
   | { k: 'snap'; s: unknown }
-  | { k: 'start' }
+  | { k: 'start'; mode: 'coop' | 'pvp' }
   | { k: 'color'; color: string }
+  | { k: 'team'; team: number }
 
 export type SmashPayload =
   | { k: 'pick'; slot: Slot; charId: string }
