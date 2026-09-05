@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fitScene } from '../../lib/draw'
+import { useFullscreen } from '../../lib/fullscreen'
 import { NetClient, defaultServerUrl } from '../../net/client'
 import { normalizeCode, type DuckPayload, type PeerInfo } from '../../net/protocol'
 import { play, isMuted, setMuted } from './audio'
@@ -214,6 +215,7 @@ export function DuckPanel() {
   const eng = engineRef.current
   const board = eng ? [...eng.shooters].sort((a, b) => b.score - a.score) : []
   void tick
+  const fullscreen = useFullscreen<HTMLDivElement>()
 
   // ------------------------------------------------------------------ lobby
 
@@ -362,7 +364,14 @@ export function DuckPanel() {
         </button>
       </div>
 
-      <div className="stage-wrap">
+      <div className="stage-wrap" ref={fullscreen.ref}>
+        <button
+          type="button"
+          className="btn btn--ghost btn--sm stage-wrap__fullscreen"
+          onClick={fullscreen.toggle}
+        >
+          {fullscreen.active ? 'Exit fullscreen' : 'Fullscreen'}
+        </button>
         <canvas
           ref={canvasRef}
           className="stage"

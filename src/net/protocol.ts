@@ -48,6 +48,14 @@ export type DuckPayload =
   | { k: 'start' }
   | { k: 'again' }
 
+/** Hide & Seek rides the same relay: host simulates, guests send input. */
+export type HidePayload =
+  | { k: 'input'; i: { turn: number; move: number } }
+  | { k: 'snap'; s: unknown }
+  | { k: 'start'; mapId: string; runnerSlot: number }
+  | { k: 'pickMap'; mapId: string }
+  | { k: 'pickRunner'; slot: number }
+
 /** Tank Trouble rides the same relay: host simulates, guests send input. */
 export type TankPayload =
   | { k: 'input'; i: { moveX: number; moveY: number; aimX: number; aimY: number; fire: boolean; mine: boolean } }

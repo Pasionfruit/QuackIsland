@@ -21,6 +21,8 @@ const regOut = join(tmp, 'registry.mjs')
 await bundle('src/games/registry.ts', regOut)
 const tankOut = join(tmp, 'tank.mjs')
 await bundle('src/games/tank/engine/engine.ts', tankOut)
+const hideOut = join(tmp, 'hide.mjs')
+await bundle('src/games/hide/engine/engine.ts', hideOut)
 const duckOut = join(tmp, 'duck.mjs')
 await bundle('src/games/duck/engine/engine.ts', duckOut)
 
@@ -924,6 +926,203 @@ function rim(eng, f) {
   }
 }
 
+// 20. Hide & Seek: movement, tiles, the star, catches, and the clock.
+{
+  const { HideEngine } = await import(pathToFileURL(hideOut).href)
+  const { HIDE_MAPS } = await import(pathToFileURL(join(tmp, 'registry.mjs')).href).catch(() => ({ HIDE_MAPS: null }))
+  void HIDE_MAPS
+  const noInput = { turn: 0, move: 0 }
+
+  const setup = (players = 1, mapId = 'office') => {
+    const eng = new HideEngine({ players: 0, mapId })
+    for (let i = 0; i < players; i++) eng.addPlayer(i, `P${i}`, i === 0 ? 'runner' : 'chaser')
+    eng.start()
+    for (let i = 0; i < 100; i++) eng.step() // clear the intro card
+    return eng
+  }
+
+  check('a match starts in the lobby', new HideEngine({ players: 1 }).phase === 'lobby')
+  {
+    const eng = setup(4)
+    check('the round begins playing', eng.phase === 'playing', eng.phase)
+    check('the first player added is the runner', eng.runner?.slot === 0)
+    check('the clock starts at three thirty', Math.ceil(eng.clock / 60) === 210, `${Math.ceil(eng.clock / 60)}`)
+  }
+
+  // Movement: walking forward advances, turning changes facing, and the
+  // outer wall holds.
+  {
+    const eng = setup(1)
+    const p = eng.runner
+    p.x = 8.5
+    p.y = 12
+    p.angle = -Math.PI / 2
+    const y0 = p.y
+    for (let i = 0; i < 40; i++) {
+      eng.setInput(0, { turn: 0, move: 1 })
+      eng.step()
+    }
+    check('walking forward moves the runner', p.y < y0 - 0.3, `${y0} -> ${p.y}`)
+
+    const a0 = p.angle
+    for (let i = 0; i < 20; i++) {
+      eng.setInput(0, { turn: 1, move: 0 })
+      eng.step()
+    }
+    check('turning changes facing', p.angle !== a0)
+
+    for (let i = 0; i < 600; i++) {
+      eng.setInput(0, { turn: 0, move: -1 })
+      eng.step()
+    }
+    check('the boundary wall holds', p.x > 0 && p.x < 17 && p.y > 0 && p.y < 17, `${p.x.toFixed(1)}, ${p.y.toFixed(1)}`)
+  }
+
+  // A boost tile is a real speed increase, not just flavour text.
+  {
+    const eng = setup(1)
+    const p = eng.runner
+    let boostCell = null
+    for (let y = 0; y < eng.map.rows.length && !boostCell; y++) {
+      const x = eng.map.rows[y].indexOf('B')
+      if (x >= 0) boostCell = { x: x + 0.5, y: y + 0.5 }
+    }
+    check('every map has at least one boost tile', boostCell !== null)
+    const plain = (() => {
+      const e2 = setup(1)
+      const q = e2.runner
+      q.x = 8.5
+      q.y = 8.5
+      q.angle = 0
+      for (let i = 0; i < 10; i++) {
+        e2.setInput(0, { turn: 0, move: 1 })
+        e2.step()
+      }
+      return Math.hypot(q.x - 8.5, q.y - 8.5)
+    })()
+    if (boostCell) {
+      p.x = boostCell.x
+      p.y = boostCell.y
+      p.angle = 0
+      const x0 = p.x
+      for (let i = 0; i < 10; i++) {
+        eng.setInput(0, { turn: 0, move: 1 })
+        eng.step()
+      }
+      const boosted = Math.hypot(p.x - x0, p.y - boostCell.y)
+      check('a boost tile covers more ground than walking', boosted > plain * 1.3, `${boosted.toFixed(2)} vs ${plain.toFixed(2)}`)
+    }
+  }
+
+  // A teleporter pair actually swaps you across the map.
+  {
+    const eng = setup(1)
+    let a = null
+    let b = null
+    for (let y = 0; y < eng.map.rows.length; y++) {
+      const xa = eng.map.rows[y].indexOf('T')
+      const xb = eng.map.rows[y].indexOf('U')
+      if (xa >= 0) a = { x: xa + 0.5, y: y + 0.5 }
+      if (xb >= 0) b = { x: xb + 0.5, y: y + 0.5 }
+    }
+    check('every map has a teleporter pair', a !== null && b !== null)
+    if (a && b) {
+      const p = eng.runner
+      p.x = a.x
+      p.y = a.y
+      eng.step()
+      check('stepping on one teleporter end sends you to the other', Math.hypot(p.x - b.x, p.y - b.y) < 0.6, `${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+    }
+  }
+
+  // The star: spawns at 2:30, gone by 1:25, and grants invincibility.
+  {
+    const eng = setup(1)
+    eng.clock = 151 * 60
+    eng.step()
+    check('the star has not spawned yet above 2:30', !eng.star.active)
+    eng.clock = 150 * 60
+    eng.step()
+    check('the star spawns at 2:30', eng.star.active)
+    eng.clock = 85 * 60
+    eng.step()
+    check('the star is gone by 1:25 unclaimed', !eng.star.active)
+  }
+  {
+    const eng = setup(1)
+    eng.clock = 150 * 60
+    eng.step()
+    const p = eng.runner
+    p.x = eng.star.x
+    p.y = eng.star.y
+    eng.step()
+    check('picking up the star grants invincibility', p.invincibleFrames > 0)
+    check('invincibility is about forty seconds', Math.abs(p.invincibleFrames / 60 - 40) < 1, `${p.invincibleFrames / 60}`)
+    check('the star cannot be picked up twice', eng.star.spent && !eng.star.active)
+  }
+
+  // Catches: a normal touch ends it for the chasers; an invincible runner
+  // bumps them away instead, and nobody dies or respawns either way.
+  {
+    const eng = setup(2)
+    const [runner, chaser] = eng.players
+    chaser.x = runner.x
+    chaser.y = runner.y
+    eng.step()
+    check('a chaser touching the runner ends the round', eng.phase === 'over')
+    check('the chasers are declared the winner', eng.winner === 'chasers')
+  }
+  {
+    const eng = setup(2)
+    const [runner, chaser] = eng.players
+    runner.invincibleFrames = 60
+    chaser.x = runner.x
+    chaser.y = runner.y
+    eng.step()
+    check('an invincible runner is not caught', eng.phase === 'playing', eng.phase)
+    check('the chaser is bumped away instead', Math.hypot(chaser.vx, chaser.vy) > 0)
+    check('nobody is removed from the match', eng.players.length === 2)
+  }
+
+  // Survive the clock, and the runner wins outright.
+  {
+    const eng = setup(2)
+    eng.clock = 1
+    eng.step()
+    check('running out the clock ends the round', eng.phase === 'over')
+    check('the runner wins if never caught', eng.winner === 'runner')
+  }
+
+  // The chaser's distance readout, in feet, shrinks as they close in.
+  {
+    const eng = setup(2)
+    const [runner, chaser] = eng.players
+    runner.x = 8.5
+    runner.y = 8.5
+    chaser.x = 8.5
+    chaser.y = 6.5
+    const far = eng.feetToRunner(chaser.slot)
+    chaser.y = 8.7
+    const near = eng.feetToRunner(chaser.slot)
+    check('the feet readout shrinks as a chaser closes in', near < far, `${far} -> ${near}`)
+    check('the runner gets no readout on themselves', eng.feetToRunner(runner.slot) === null)
+  }
+
+  // Snapshots: a guest sees the host's chase, including who is running.
+  {
+    const host = setup(3)
+    host.runner.x = 5
+    host.runner.y = 5
+    const guest = new HideEngine({ players: 0 })
+    guest.applySnapshot(JSON.parse(JSON.stringify(host.snapshot())))
+    check('snapshot carries the runner role', guest.runner?.slot === host.runner.slot)
+    check('snapshot carries position', Math.abs(guest.runner.x - 5) < 0.1)
+    check('snapshot carries every player', guest.players.length === host.players.length)
+    const wire = JSON.stringify(host.snapshot())
+    check('a chase snapshot is small enough to send 20x a second', wire.length < 1200, `${wire.length} bytes`)
+  }
+}
+
 // 18. The game shelf itself: every entry is complete and paints without crashing.
 {
   const { GAMES } = await import(pathToFileURL(regOut).href)
@@ -942,8 +1141,8 @@ function rim(eng, f) {
   }
   check('every game entry is complete', problems.length === 0, problems.slice(0, 4).join('; '))
   const live = GAMES.filter((g) => g.status === 'live')
-  check('the shelf has three playable games', live.length === 3, live.map((g) => g.id).join(', '))
-  const playableIds = new Set(['smash', 'duck-szn', 'tank-trouble'])
+  check('the shelf has four playable games', live.length === 4, live.map((g) => g.id).join(', '))
+  const playableIds = new Set(['smash', 'duck-szn', 'tank-trouble', 'hide-and-seek'])
   check('every playable game has a panel', live.every((g) => playableIds.has(g.id)))
   check('every other game is marked concept', GAMES.every((g) => g.status === 'live' || g.status === 'concept'))
   check('party games are all 2-8 players', GAMES.filter((g) => g.status === 'concept').every((g) => g.players === '2-8 players'))

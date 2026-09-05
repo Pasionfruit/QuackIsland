@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fitScene } from '../../lib/draw'
+import { useFullscreen } from '../../lib/fullscreen'
 import { NetClient, defaultServerUrl } from '../../net/client'
 import { normalizeCode, type PeerInfo, type TankPayload } from '../../net/protocol'
 import { play } from '../duck/audio'
@@ -274,6 +275,7 @@ export function TankPanel() {
 
   const eng = engineRef.current
   const killTally = eng ? [...eng.players].sort((a, b) => b.kills - a.kills) : []
+  const fullscreen = useFullscreen<HTMLDivElement>()
 
   // ------------------------------------------------------------------ lobby
 
@@ -475,7 +477,14 @@ export function TankPanel() {
         </button>
       </div>
 
-      <div className="stage-wrap">
+      <div className="stage-wrap" ref={fullscreen.ref}>
+        <button
+          type="button"
+          className="btn btn--ghost btn--sm stage-wrap__fullscreen"
+          onClick={fullscreen.toggle}
+        >
+          {fullscreen.active ? 'Exit fullscreen' : 'Fullscreen'}
+        </button>
         <canvas
           ref={canvasRef}
           className="stage"

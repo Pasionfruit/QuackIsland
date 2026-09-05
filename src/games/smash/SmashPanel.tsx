@@ -4,6 +4,7 @@ import { pine } from '../../art/props'
 import { SceneCanvas } from '../../components/SceneCanvas'
 import { CONTROL_HINTS, Keyboard, packInput, unpackInput } from '../../lib/input'
 import { fitScene, rect } from '../../lib/draw'
+import { useFullscreen } from '../../lib/fullscreen'
 import { NetClient, defaultServerUrl } from '../../net/client'
 import { normalizeCode, type PeerInfo, type SmashPayload } from '../../net/protocol'
 import { PLAYABLE, ROSTER, charById, drawChar, playableId } from './engine/characters'
@@ -345,10 +346,18 @@ function Arena({ config, net, registerHandler, onChangeFighters, onLeave }: Aren
 
   const winDef = winner !== null ? charById(config.chars[winner]) : null
   const youAre = role === 'guest' ? 1 : 0
+  const fullscreen = useFullscreen<HTMLDivElement>()
 
   return (
     <div>
-      <div className="stage-wrap">
+      <div className="stage-wrap" ref={fullscreen.ref}>
+        <button
+          type="button"
+          className="btn btn--ghost btn--sm stage-wrap__fullscreen"
+          onClick={fullscreen.toggle}
+        >
+          {fullscreen.active ? 'Exit fullscreen' : 'Fullscreen'}
+        </button>
         <canvas ref={canvasRef} style={{ width: '100%', aspectRatio: VIEW_W + ' / ' + VIEW_H }} />
 
         {paused && winner === null && (

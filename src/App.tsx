@@ -4,11 +4,12 @@ import { Dashboard } from './pages/Dashboard'
 import { SmashPanel } from './games/smash/SmashPanel'
 import { DuckPanel } from './games/duck/DuckPanel'
 import { TankPanel } from './games/tank/TankPanel'
+import { HidePanel } from './games/hide/HidePanel'
 import { gameById } from './games/registry'
 import { TemplatePanel } from './games/TemplatePanel'
 
 /** Games with a real panel; everything else gets the concept template. */
-const PLAYABLE_GAMES = new Set(['smash', 'duck-szn', 'tank-trouble'])
+const PLAYABLE_GAMES = new Set(['smash', 'duck-szn', 'tank-trouble', 'hide-and-seek'])
 
 export type Route = { name: 'dashboard' } | { name: 'game'; id: string }
 
@@ -56,6 +57,8 @@ export default function App() {
       {route.name === 'game' && game?.id === 'duck-szn' && <DuckPanel />}
 
       {route.name === 'game' && game?.id === 'tank-trouble' && <TankPanel />}
+
+      {route.name === 'game' && game?.id === 'hide-and-seek' && <HidePanel />}
 
       {route.name === 'game' && game && !PLAYABLE_GAMES.has(game.id) && (
         <TemplatePanel game={game} onBack={() => go({ name: 'dashboard' })} />

@@ -6,14 +6,13 @@ import {
   DUCK,
   MRPASIONFRUIT,
   NINJAPENGUIN,
-  BLACK_CAT,
   SEAGULL,
   SHIBA_DOG,
   TENINCHTOENAIL,
 } from '../art/cast'
 import { drawCritter } from '../art/critter'
 import { PAL } from '../art/palette'
-import { bush, campfire, cloud, lantern, log, pine, rock, tent } from '../art/props'
+import { bush, campfire, cloud, lantern, log, pine, rock } from '../art/props'
 import {
   DAY,
   DUSK,
@@ -338,38 +337,88 @@ const FLAGS: GameEntry = {
 const HIDE: GameEntry = {
   id: 'hide-and-seek',
   title: 'Hide & Seek',
-  tagline: 'Count to twenty. No peeking. Definitely peeking.',
-  genre: 'Social hiding',
-  players: PARTY,
-  status: 'concept',
+  tagline: 'One runner, everyone else chasing, first person the whole way.',
+  genre: 'First-person chase',
+  players: '3-8 players',
+  status: 'live',
   blurb:
-    'One seeker counts while everyone scatters into the trees. Props, bushes and the tent are all fair game.',
+    "Mario Chase, basically. One runner sees the whole map and everyone on it; every chaser only sees what is in front of them and a bar for how close they are. Survive 3:30 or get touched trying.",
   plan: [
-    'Hiders can disguise themselves as scenery and hold still.',
-    'The seeker gets warmer-colder audio as they close in.',
-    'Found hiders join the seeking team for the rest of the round.',
+    'Five themed maps - office, cave, warehouse, city, theme park - each four distinct sections around one crossroads.',
+    'A star spawns at 2:30 on the clock and is gone by 1:25: forty seconds of bumping chasers instead of running from them.',
+    'Every map has a boost pad and a shortcut, themed as a slide, a conveyor, a subway - something to lean on.',
+    'WASD only: A/D turn, W/S walk. No mouse, no aiming, just the chase.',
   ],
   art: (ctx, frame) => {
-    sky(ctx, W, 48, DAY)
-    treeline(ctx, W, 52, 10)
-    ground(ctx, W, H, 50)
-    // Big foreground tree the seeker is counting against.
-    rect(ctx, 24, 44, 9, 40, PAL.trunk)
-    pine(ctx, 28, 50, 46)
-    drawAvatar(ctx, DIVA, 42, 82, { facing: -1, height: 29, pose: 'brace', phase: frame })
-    bush(ctx, 96, 84, 26)
-    // A hider peeking out of the bush.
-    drawAvatar(ctx, CONTRLZEE, 104, 84, { facing: -1, height: 22, pose: 'idle', phase: frame + 40 })
-    bush(ctx, 100, 86, 30)
-    tent(ctx, 138, 84, 30)
-    drawCritter(ctx, BLACK_CAT, 128, 84, { facing: -1, height: 12, pose: 'idle', phase: frame })
-    // Counting numbers floating up.
-    ctx.globalAlpha = 0.6
-    for (let i = 0; i < 3; i++) {
-      const t = ((frame * 0.02 + i * 0.33) % 1)
-      ellipse(ctx, 44 + Math.sin((frame + i * 20) * 0.05) * 3, 56 - t * 18, 1.8, 1.8, '#fbf7ee')
+    // A little raycaster-style hallway, standing in for the real thing.
+    const cx = W / 2
+    const vpY = H * 0.42
+    const near = 4
+    ctx.fillStyle = '#dcd3c2'
+    ctx.fillRect(0, 0, W, vpY)
+    ctx.fillStyle = '#c7bca8'
+    ctx.fillRect(0, vpY, W, H - vpY)
+    facet(
+      ctx,
+      [
+        { x: 0, y: 0 },
+        { x: cx - 22, y: vpY - 14 },
+        { x: cx - 22, y: vpY + 14 },
+        { x: 0, y: H },
+      ],
+      '#c9a24a',
+      { dark: 0.24, light: 0.1, round: 0 },
+    )
+    facet(
+      ctx,
+      [
+        { x: W, y: 0 },
+        { x: cx + 22, y: vpY - 14 },
+        { x: cx + 22, y: vpY + 14 },
+        { x: W, y: H },
+      ],
+      '#4f5a66',
+      { dark: 0.24, light: 0.1, round: 0 },
+    )
+    facet(
+      ctx,
+      [
+        { x: cx - near, y: vpY - near * 1.4 },
+        { x: cx + near, y: vpY - near * 1.4 },
+        { x: cx + near, y: vpY + near * 1.4 },
+        { x: cx - near, y: vpY + near * 1.4 },
+      ],
+      '#8fa0ad',
+      { dark: 0.26, light: 0.16, round: 0.2 },
+    )
+    // The runner, dead ahead and closer than the chasers behind.
+    ellipse(ctx, cx, vpY + 20, 6, 8, '#e0794f')
+    ellipse(ctx, cx, vpY + 10, 3.2, 3.2, '#e0794f')
+    // Two chasers, farther off and smaller.
+    for (const dx of [-16, 14]) {
+      ellipse(ctx, cx + dx, vpY + 6, 2.6, 3.4, '#4f8fbf')
+      ellipse(ctx, cx + dx, vpY + 1, 1.4, 1.4, '#4f8fbf')
     }
-    ctx.globalAlpha = 1
+    // The star, bobbing.
+    const bob = Math.sin(frame * 0.12) * 2
+    ctx.save()
+    ctx.translate(cx + 30, vpY - 4 + bob)
+    ctx.fillStyle = '#ffe066'
+    ctx.strokeStyle = '#a87c1f'
+    ctx.lineWidth = 0.6
+    ctx.beginPath()
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2 - Math.PI / 2
+      const r = i % 2 === 0 ? 4 : 1.7
+      const px = Math.cos(a) * r
+      const py = Math.sin(a) * r
+      if (i === 0) ctx.moveTo(px, py)
+      else ctx.lineTo(px, py)
+    }
+    ctx.closePath()
+    ctx.fill()
+    ctx.stroke()
+    ctx.restore()
   },
 }
 
