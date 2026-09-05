@@ -65,10 +65,10 @@ export function TemplatePanel({ game, onBack }: { game: GameEntry; onBack: () =>
             </div>
           </div>
           <p className="muted" style={{ marginBottom: 0, marginTop: 12 }}>
-            Every Polyland game shares one control rig, so this one already has its inputs
+            Every Animal Instinct game shares one control rig, so this one already has its inputs
             decided: {CONTROL_HINTS[0].rows.map(([, key]) => key).join(', ')} for player one,
             the arrow cluster for player two, and the same host-and-join room codes as
-            Polyland Smash.
+            Knockout!.
           </p>
         </div>
       </div>

@@ -66,7 +66,7 @@ const PARTY = '2-8 players'
 
 const SMASH: GameEntry = {
   id: 'smash',
-  title: 'Polyland Smash',
+  title: 'Knockout!',
   tagline: 'A friendly scrap on a floating bluff, with no railings.',
   genre: 'Arena fighter',
   players: '1-2 local, 2 online',

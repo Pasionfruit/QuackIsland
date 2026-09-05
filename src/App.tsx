@@ -70,12 +70,12 @@ export default function App() {
       {route.name === 'game' && !game && (
         <div className="panel">
           <div className="panel__title">404</div>
-          <p className="muted">No such game in Polyland.</p>
+          <p className="muted">No such game in Animal Instinct.</p>
         </div>
       )}
 
       <footer className="footer">
-        <span>Polyland // a little camp of games</span>
+        <span>Animal Instinct // a little camp of games</span>
         <span>Two on one keyboard, or host a room for friends</span>
       </footer>
     </div>

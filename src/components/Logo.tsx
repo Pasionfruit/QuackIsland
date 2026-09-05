@@ -3,7 +3,7 @@ import { campfire, pine } from '../art/props'
 import { rect } from '../lib/draw'
 import { SceneCanvas } from './SceneCanvas'
 
-/** The Polyland mark: a small fire between two pines. */
+/** The Animal Instinct mark: a small fire between two pines. */
 export function LogoMark({ scale = 1 }: { scale?: number }) {
   return (
     <SceneCanvas
@@ -32,7 +32,7 @@ export function Logo({ onClick }: { onClick?: () => void }) {
       <LogoMark scale={1.4} />
       <span>
         <span className="logo-word">
-          POLY<em>LAND</em>
+          ANIMAL <em>INSTINCT</em>
         </span>
         <span className="logo-sub" style={{ display: 'block' }}>
           a little camp of games

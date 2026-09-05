@@ -106,15 +106,15 @@ export function Dashboard({ onOpen }: { onOpen: (id: string) => void }) {
     <div>
       <section className="hero">
         <div className="panel hero__copy">
-          <div className="panel__title">Welcome to Polyland</div>
+          <div className="panel__title">Welcome to Animal Instinct</div>
           <h2>
             One camp.
             <br />
             Many games.
           </h2>
           <p>
-            Polyland is a little world of low-poly animals with jobs and opinions. Every game
-            here shares the same cast, the same palette and the same two-players-one-keyboard
+            Animal Instinct is a little world of low-poly animals with jobs and opinions. Every
+            game here shares the same cast, the same palette and the same two-players-one-keyboard
             rule - and anything on the shelf can be hosted for friends to join.
           </p>
           <div className="chiprow">
@@ -124,7 +124,7 @@ export function Dashboard({ onOpen }: { onOpen: (id: string) => void }) {
             <span className="chip">Runs in the browser</span>
           </div>
           <button className="btn btn--primary" onClick={() => onOpen('smash')}>
-            Play Polyland Smash
+            Play Knockout!
           </button>
         </div>
         <div className="panel">

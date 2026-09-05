@@ -644,7 +644,7 @@ function ModeScreen({
       <div className="panel">
         <div className="panel__title">How online works</div>
         <p className="muted" style={{ margin: 0 }}>
-          Polyland ships its own little relay server. Run <kbd>npm run server</kbd> on the host
+          Animal Instinct ships its own little relay server. Run <kbd>npm run server</kbd> on the host
           machine, then everyone opens the host&apos;s address in a browser. The host&apos;s
           browser runs the match and sends the state out sixty times a second, so both of you see
           exactly the same fight.
@@ -816,7 +816,7 @@ export function SmashPanel() {
   return (
     <div>
       <div className="gamehead">
-        <h2>POLYLAND SMASH</h2>
+        <h2>KNOCKOUT!</h2>
         <span className="chip chip--live">
           <span className="dot" /> Playable
         </span>
