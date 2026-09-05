@@ -8,7 +8,11 @@ The first game is **Polyland Smash** - an arena fighter played looking down on
 a floating disc. Percent-based knockback, stocks, and no railings: hit someone
 hard enough and they go over the rim. Six fighters who play very differently.
 
-Eighteen more games are on the shelf as concept panels: art, pitch and planned
+The second is **Duck szn** - a fixed-perspective shooting gallery in the shape
+of Wii Play's range: five stages, up to eight people with a mouse each, and one
+combo multiplier that everybody shares.
+
+Seventeen more games are on the shelf as concept panels: art, pitch and planned
 mechanics, no implementation yet. They all live in
 [src/games/registry.ts](src/games/registry.ts) and share one panel template.
 
@@ -74,6 +78,9 @@ there is no auth and no TLS, so do not expose it to the open internet as-is.
 | Netplay client and wire format | [src/net/](src/net/) |
 | Relay server | [server/index.mjs](server/index.mjs) |
 | Smash panel (lobby, select, arena) | [src/games/smash/SmashPanel.tsx](src/games/smash/SmashPanel.tsx) |
+| Duck szn panel (lobby, range) | [src/games/duck/DuckPanel.tsx](src/games/duck/DuckPanel.tsx) |
+| Duck szn stages and scoring | [src/games/duck/engine/engine.ts](src/games/duck/engine/engine.ts) |
+| Synthesised sound effects | [src/games/duck/audio.ts](src/games/duck/audio.ts) |
 | Fighter simulation | [src/games/smash/engine/engine.ts](src/games/smash/engine/engine.ts) |
 | Characters and frame data | [src/games/smash/engine/characters.ts](src/games/smash/engine/characters.ts) |
 | Arena geometry | [src/games/smash/engine/stage.ts](src/games/smash/engine/stage.ts) |
@@ -241,6 +248,41 @@ pines and rocks and nothing else. Because the floor is an ellipse seen at an
 angle, every distance is measured in normalised arena space where the rim sits
 at radius 1, which keeps the ring-out check independent of the shape. Geometry
 is in [stage.ts](src/games/smash/engine/stage.ts).
+
+## Duck szn
+
+A shooting gallery seen from one fixed camera. Point with the mouse, click to
+fire. Five stages run back to back, and the multiplier belongs to the room
+rather than to any one player: every hit anybody lands raises it, and any miss
+by anybody puts it back to zero. With eight people on the range that turns
+into a real decision about whether to take a shot at all.
+
+| Stage | What is out there |
+| --- | --- |
+| 1. Balloons | Float up from the reeds at mixed speeds. One point each |
+| 2. Range Targets | Pop up and drop away again. Plain is 1, gold is 3, and the painted faces cost you points *and* the combo |
+| 3. Clay Pigeons | Launched from the bottom corners, shrinking as they sail off. Hit them near the glass for up to six times the points |
+| 4. Tin Cans | Tossed up under gravity. Every hit punts one back into the air, dents it, and pays more than the last; the fifth bursts it. Let one land and it is simply gone |
+| 5. Abduction | Saucers come down for the campers. Shoot one that is carrying somebody and you drop them safely for a large rescue bonus - let it climb off the top of the screen and they are gone |
+
+From stage two on, the dog barks at random and a duck crosses the sky. That one
+is a flat ten points, multiplier or no multiplier.
+
+**Depth is one number.** A clay pigeon carries a `z` from 1 at the glass down to
+the horizon, and it scales the drawn size and the hit radius together - so the
+picture and the hit test can never disagree about how hard something is to hit.
+
+**Eight lanes.** The host runs the gallery and broadcasts snapshots; everyone
+else sends where they are pointing and when they pulled the trigger, and the
+host decides what was hit. Spawns and the shared combo stay authoritative in
+one place, which is what stops eight clients disagreeing about whose miss broke
+the run. Wire format is in [protocol.ts](src/net/protocol.ts); the relay already
+allowed eight to a room.
+
+**The noises are synthesised**, not shipped - the project has no audio assets,
+and a gallery needs feedback on every trigger pull. Oscillators and a noise
+buffer in [audio.ts](src/games/duck/audio.ts), built lazily because browsers
+will not start an AudioContext until the page has been clicked.
 
 ## Adding a game
 

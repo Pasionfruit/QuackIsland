@@ -19,6 +19,8 @@ await bundle('src/games/smash/engine/engine.ts', out)
 await bundle('src/games/smash/engine/characters.ts', charsOut)
 const regOut = join(tmp, 'registry.mjs')
 await bundle('src/games/registry.ts', regOut)
+const duckOut = join(tmp, 'duck.mjs')
+await bundle('src/games/duck/engine/engine.ts', duckOut)
 
 const { SmashEngine } = await import(pathToFileURL(out).href)
 
@@ -444,6 +446,194 @@ function rim(eng, f) {
   )
 }
 
+// 17. Duck szn: the gallery's rules, stage by stage.
+{
+  const { DuckEngine, STAGES } = await import(pathToFileURL(duckOut).href)
+
+  /** A round parked on one stage, already past the round card. */
+  const gallery = (stage, players = 1) => {
+    const eng = new DuckEngine({ stages: [stage], players })
+    while (eng.phase === 'ready') eng.step()
+    return eng
+  }
+  /** Drops a target of the given kind in front of the shooter. */
+  const clear = (eng) => {
+    eng.targets.length = 0
+  }
+  const place = (eng, kind, over = {}) => {
+    eng.targets.push({
+      id: 9000 + eng.targets.length,
+      kind,
+      x: 240, y: 120, vx: 0, vy: 0, z: 1, vz: 0, r: 14,
+      life: 0, hits: 0, color: '#fff', age: 10, dying: 0,
+      linked: null, alt: 60, captured: false, dead: false,
+      ...over,
+    })
+    return eng.targets[eng.targets.length - 1]
+  }
+
+  check('a round starts on stage one, playing', (() => {
+    const eng = gallery('balloons')
+    return eng.phase === 'playing' && eng.stage.id === 'balloons'
+  })())
+
+  // Combo and multiplier.
+  {
+    const eng = gallery('balloons')
+    for (let i = 0; i < 4; i++) {
+      clear(eng)
+      place(eng, 'balloon')
+      eng.shoot(0, 240, 120)
+    }
+    check('consecutive hits build the combo', eng.combo === 4, `${eng.combo}`)
+    check('the multiplier follows the combo', eng.multiplier === 2, `x${eng.multiplier}`)
+    const scored = eng.score
+    clear(eng)
+    eng.shoot(0, 10, 10)
+    check('a miss resets the combo', eng.combo === 0, `${eng.combo}`)
+    check('a miss scores nothing', eng.score === scored, `${eng.score} vs ${scored}`)
+  }
+
+  // Stage 2 target values, and the penalty target.
+  {
+    const eng = gallery('targets')
+    clear(eng)
+    place(eng, 'bull')
+    const plain = eng.shoot(0, 240, 120)
+    const before = eng.score
+    clear(eng)
+    place(eng, 'gold')
+    const gold = eng.shoot(0, 240, 120)
+    check('gold targets are worth more than plain ones', gold > plain, `${gold} vs ${plain}`)
+    void before
+
+    clear(eng)
+    place(eng, 'mii')
+    const combo = eng.combo
+    const penalty = eng.shoot(0, 240, 120)
+    check('a painted face costs points', penalty < 0, `${penalty}`)
+    check('a painted face breaks the combo', eng.combo === 0, `was ${combo}`)
+  }
+
+  // The dog and its duck.
+  {
+    const eng = gallery('balloons')
+    let barks = 0
+    for (let i = 0; i < 60 * 60; i++) {
+      eng.step()
+      if (eng.barked) barks++
+    }
+    check('the dog stays quiet on stage one', barks === 0, `${barks} barks`)
+
+    const eng2 = gallery('targets')
+    let barked = false
+    for (let i = 0; i < 60 * 60 && !barked; i++) {
+      eng2.step()
+      if (eng2.barked) barked = true
+    }
+    check('the dog barks from stage two on', barked)
+    check('a bark puts a duck on the wing', eng2.targets.some((t) => t.kind === 'duck'))
+
+    // The duck pays flat, whatever the combo is worth.
+    const eng3 = gallery('targets')
+    for (let i = 0; i < 20; i++) {
+      clear(eng3)
+      place(eng3, 'bull')
+      eng3.shoot(0, 240, 120)
+    }
+    check('a long run maxes the multiplier', eng3.multiplier >= 5, `x${eng3.multiplier}`)
+    clear(eng3)
+    place(eng3, 'duck')
+    const duck = eng3.shoot(0, 240, 120)
+    check('the duck bonus is a flat ten', duck === 10, `${duck}`)
+  }
+
+  // Clays pay for range.
+  {
+    const near = gallery('clays')
+    clear(near)
+    place(near, 'clay', { z: 1 })
+    const close = near.shoot(0, 240, 120)
+    const far = gallery('clays')
+    clear(far)
+    place(far, 'clay', { z: 0.25 })
+    const distant = far.shoot(0, 240, 120)
+    check('a close clay is worth more than a distant one', close > distant, `${close} vs ${distant}`)
+  }
+
+  // Cans: juggle, escalate, burst, and die on the ground.
+  {
+    const eng = gallery('cans')
+    clear(eng)
+    const can = place(eng, 'can', { y: 120, vy: 3 })
+    const first = eng.shoot(0, 240, 120)
+    check('hitting a can knocks it back up', can.vy < 0, `${can.vy}`)
+    const second = eng.shoot(0, can.x, can.y)
+    check('each dent is worth more than the last', second > first, `${first} -> ${second}`)
+    eng.shoot(0, can.x, can.y)
+    eng.shoot(0, can.x, can.y)
+    const burst = eng.shoot(0, can.x, can.y)
+    check('the fifth hit bursts the can', burst > second && can.dying > 0, `${burst}`)
+
+    const eng2 = gallery('cans')
+    clear(eng2)
+    const dropper = place(eng2, 'can', { y: 230, vy: 6 })
+    const scoreBefore = eng2.score
+    for (let i = 0; i < 10; i++) eng2.step()
+    check('a can that lands is simply gone', dropper.dead || !eng2.targets.includes(dropper))
+    check('a landed can costs nothing', eng2.score === scoreBefore)
+  }
+
+  // The abduction.
+  {
+    const eng = gallery('ufos')
+    eng.targets.length = 0
+    const walker = place(eng, 'walker', { x: 200, y: 236 })
+    const ufo = place(eng, 'ufo', { x: 200, y: 150, alt: 60 })
+    let grabbed = false
+    for (let i = 0; i < 600 && !grabbed; i++) {
+      eng.step()
+      if (walker.captured) grabbed = true
+    }
+    check('a saucer abducts a camper it reaches', grabbed)
+    check('a captured camper cannot be shot', eng.shoot(0, walker.x, walker.y) === 0)
+
+    const rescue = eng.shoot(0, ufo.x, ufo.y)
+    check('shooting a loaded saucer pays a rescue bonus', rescue > 25, `${rescue}`)
+    check('the camper is put back down', !walker.captured && !walker.dead)
+  }
+
+  // Every stage in order, then the range closes.
+  {
+    const eng = new DuckEngine({ players: 2 })
+    check('a full round has five stages', eng.config.stages.length === 5)
+    let guard = 0
+    while (eng.phase !== 'over' && guard++ < 60 * 60 * 6) eng.step()
+    check('the round reaches the end', eng.phase === 'over', `${eng.phase} after ${guard}`)
+    check('it played every stage', eng.stageIndex === 4, `${eng.stageIndex}`)
+  }
+
+  // Snapshots: a guest sees the host's gallery.
+  {
+    const host = gallery('balloons')
+    for (let i = 0; i < 240; i++) host.step()
+    clear(host)
+    place(host, 'balloon')
+    host.shoot(0, 240, 120)
+    const guest = new DuckEngine({ players: 1 })
+    guest.applySnapshot(JSON.parse(JSON.stringify(host.snapshot())))
+    check('snapshot carries the score', guest.score === host.score, `${guest.score} vs ${host.score}`)
+    check('snapshot carries the combo', guest.combo === host.combo)
+    check('snapshot carries the targets', guest.targets.length === host.targets.length,
+      `${guest.targets.length} vs ${host.targets.length}`)
+    const wire = JSON.stringify(host.snapshot())
+    check('a gallery snapshot is small enough to send', wire.length < 3000, `${wire.length} bytes`)
+  }
+
+  check('every stage is described for the round card',
+    STAGES.every((st) => st.name && st.brief && st.duration > 0))
+}
+
 // 18. The game shelf itself: every entry is complete and paints without crashing.
 {
   const { GAMES } = await import(pathToFileURL(regOut).href)
@@ -461,7 +651,9 @@ function rim(eng, f) {
     if (g.blurb && g.blurb.length > 200) problems.push(`${g.id} blurb is too long`)
   }
   check('every game entry is complete', problems.length === 0, problems.slice(0, 4).join('; '))
-  check('the shelf has one playable game', GAMES.filter((g) => g.status === 'live').length === 1)
+  const live = GAMES.filter((g) => g.status === 'live')
+  check('the shelf has two playable games', live.length === 2, live.map((g) => g.id).join(', '))
+  check('every playable game has a panel', live.every((g) => g.id === 'smash' || g.id === 'duck-szn'))
   check('every other game is marked concept', GAMES.every((g) => g.status === 'live' || g.status === 'concept'))
   check('party games are all 2-8 players', GAMES.filter((g) => g.status === 'concept').every((g) => g.players === '2-8 players'))
 

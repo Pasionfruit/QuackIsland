@@ -128,15 +128,16 @@ const DUCK_SZN: GameEntry = {
   id: 'duck-szn',
   title: 'Duck szn',
   tagline: 'Dawn on the marsh, and the ducks are up.',
-  genre: 'Co-op shooting gallery',
-  players: PARTY,
-  status: 'concept',
+  genre: 'Shooting gallery',
+  players: '1-8 players',
+  status: 'live',
   blurb:
-    'Ducks come over the reeds in waves. Everyone shoots at the same sky, and the dog judges you for every miss.',
+    'Five stages of a fixed-perspective range - balloons, targets, clays, cans and a UFO invasion - with one combo multiplier everybody shares.',
   plan: [
-    'Waves of ducks with escalating patterns and speeds.',
-    'Shared score, personal accuracy, one shared reload timer.',
-    'The dog appears to collect hits and to laugh at misses.',
+    'Five stages: balloons, pop-up targets, clay pigeons, juggled cans, and an abduction.',
+    'One shared combo: every hit raises the multiplier, any miss resets it for the whole range.',
+    'Up to eight lanes over the relay, one mouse each.',
+    'If the dog barks, a duck is crossing - ten points flat.',
   ],
   art: (ctx, frame) => {
     sky(ctx, W, 62, ['#f3c9a0', '#f0d9b0', '#dfe0c6', '#bcd6d2'])

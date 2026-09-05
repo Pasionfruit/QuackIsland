@@ -36,6 +36,18 @@ export interface PeerInfo {
 // ------------------------------------------------------------- game payloads
 
 /** Smash-specific payloads, carried inside `relay`. */
+/**
+ * Duck szn rides the same relay. The host runs the gallery and broadcasts
+ * snapshots; everyone else sends where their reticle is and when they pulled
+ * the trigger, and the host decides what was hit.
+ */
+export type DuckPayload =
+  | { k: 'aim'; x: number; y: number }
+  | { k: 'shoot'; x: number; y: number }
+  | { k: 'snap'; s: unknown }
+  | { k: 'start' }
+  | { k: 'again' }
+
 export type SmashPayload =
   | { k: 'pick'; slot: Slot; charId: string }
   | { k: 'rules'; stocks: number }
