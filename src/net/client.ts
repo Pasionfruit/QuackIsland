@@ -9,10 +9,28 @@ export interface NetEvents {
   onPayload?: (payload: unknown, from: Slot) => void
 }
 
-/** Where the relay lives by default: the machine that served this page. */
+/**
+ * Where the relay lives by default.
+ *
+ * In dev, `npm run dev:all` runs Vite and the relay as two separate
+ * processes on two different ports, so this points at the relay's own port
+ * on whatever host served the page - that is what lets a friend on the LAN
+ * join a game running on your machine while you are editing it.
+ *
+ * A production build is different: `server/index.mjs` serves the built site
+ * *and* the relay from the same process on the same port (see that file for
+ * why - a free host only gives you the one), so the site and the socket
+ * share an origin. Same host, same port, just a different scheme - which
+ * also happens to be what a browser requires anyway, since a page served
+ * over `https:` refuses to open a plain `ws:` socket as mixed content.
+ */
 export function defaultServerUrl(): string {
-  const host = typeof window === 'undefined' ? 'localhost' : window.location.hostname || 'localhost'
-  return `ws://${host}:${DEFAULT_PORT}`
+  if (typeof window === 'undefined') return `ws://localhost:${DEFAULT_PORT}`
+  if (import.meta.env.DEV) {
+    return `ws://${window.location.hostname || 'localhost'}:${DEFAULT_PORT}`
+  }
+  const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws'
+  return `${scheme}://${window.location.host}`
 }
 
 /**

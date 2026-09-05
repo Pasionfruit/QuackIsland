@@ -42,10 +42,12 @@ No setup, no menu to find - it is the house rule for every Polyland game.
 
 `Esc` pauses, `R` rematches from the results screen, `F1` shows hitboxes.
 
-**Online.** Run `npm run dev:all` - it prints your LAN address. Whoever is
-hosting opens the game, clicks **Host game**, and reads out the four-letter
-code. Everyone else opens the same address, enters the code, and picks a
-fighter. Online players each use the *left-hand* keys on their own keyboard.
+**Online.** On the same Wi-Fi, `npm run dev:all` prints a LAN address for
+everyone to open. Over the open internet, deploy it (see below) and hand out
+the one public URL instead. Either way it works the same: whoever is hosting
+opens the game, clicks **Host game**, and reads out the four-letter code.
+Everyone else opens the address, enters the code, and picks a fighter. Online
+players each use the *left-hand* keys on their own keyboard.
 
 How it works: the host's browser runs the match and broadcasts the state sixty
 times a second; guests send only their key state back. The server in
@@ -58,8 +60,41 @@ guest keys ──▶ relay ──▶ host browser (the simulation)
      guest screen ◀── relay ◀── snapshot, 60x a second
 ```
 
-The relay listens on `8787`. It is plain `ws://` on a trusted local network -
-there is no auth and no TLS, so do not expose it to the open internet as-is.
+In dev, the relay listens on `8787` as plain `ws://`, separate from Vite's
+port. A deployed instance serves the built site and the relay together from
+one port (`npm start`), over `wss://` once the host gives you TLS. There is
+still no auth on a room - anyone with the four-letter code can join it, which
+is the point, but it does mean codes are the only thing standing between a
+room and a stranger.
+
+## Deploying it for real
+
+`npm start` (after `npm run build`) runs [server/index.mjs](server/index.mjs)
+as a single Node process that serves the built site *and* the WebSocket relay
+on whatever port the host gives it via `$PORT` - which is the shape every free
+Node host expects. [Render](https://render.com)'s free web-service tier is a
+good fit: it keeps a process running (not just serverless functions, which
+can't hold the relay's open sockets) and speaks WebSocket out of the box.
+
+1. Push this repo to GitHub.
+2. On Render: **New > Web Service**, point it at the repo.
+3. Build command: `npm install && npm run build`
+4. Start command: `npm start`
+5. Leave the port alone - Render sets `$PORT` itself and `server/index.mjs`
+   already reads it (`process.env.PORT`).
+
+Render gives you a `https://your-app.onrender.com` URL; the client picks up
+`wss://` automatically from the page's own origin (see `defaultServerUrl()` in
+[src/net/client.ts](src/net/client.ts)), so there is nothing to configure by
+hand. The same recipe works on any host that runs a persistent Node process
+and lets you set a start command (Railway, Fly.io, a VPS, etc.) - Vercel and
+Netlify will not work here since their free tiers are serverless and cannot
+hold a long-lived WebSocket connection.
+
+The free tier sleeps after inactivity, so the first person to open the link
+after a quiet spell waits 30-60 seconds for it to wake up - normal, not a
+bug. Once it is deployed, testing with real friends (or two browsers on your
+own machine) is just opening that one URL twice.
 
 ## What is here
 
