@@ -228,14 +228,15 @@ const SKETCH: GameEntry = {
   title: 'Sketch',
   tagline: 'Draw it badly. Watch them guess worse.',
   genre: 'Draw and guess',
-  players: PARTY,
-  status: 'concept',
+  players: '2-8 players',
+  status: 'live',
   blurb:
-    'One of you draws, everyone else shouts guesses. The word is always harder than it looked when you picked it.',
+    'Three ways to hand a crayon around: Scribble (rotating artist, hangman), Phone (drawings and guesses passed down the table) and Collaborative Art (one shared canvas, no scoring).',
   plan: [
-    'Rotating artist, live shared canvas, typed guessing.',
-    'Word packs: camp things, animals, and deliberately unfair ones.',
-    'Points for guessing fast and for being guessed at all.',
+    'Scribble: a word only the drawer knows, hangman revealing a letter every six seconds, points for guessing fast.',
+    'Phone: everyone writes a prompt, then the chain rotates - draw it, guess it, draw the guess - until it has passed through the whole table.',
+    'Collaborative Art: casual by default, with a turn timer and colour chaos on offer if that is too tame.',
+    'Custom words welcome, strokes travel peer to peer so the canvas never lags behind the host.',
   ],
   art: (ctx, frame) => {
     room(ctx, W, H, 62, '#d8c8ae', '#b08e62')

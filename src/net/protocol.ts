@@ -48,6 +48,24 @@ export type DuckPayload =
   | { k: 'start' }
   | { k: 'again' }
 
+/**
+ * Sketch rides the same relay, but strokes do not go through the host at all
+ * - the relay already broadcasts to everyone else in the room, so whoever is
+ * drawing sends a stroke straight to every viewer in one hop. Only the game
+ * state (whose turn, the timer, the word, scores) stays host-authoritative,
+ * the same as every other game here.
+ */
+export type SketchPayload =
+  | { k: 'stroke'; id: number; color: string; width: number; pts: [number, number][]; done: boolean }
+  | { k: 'clear' }
+  | { k: 'guess'; text: string }
+  | { k: 'addWord'; word: string }
+  | { k: 'start'; mode: 'phone' | 'scribble' | 'collab'; config: unknown }
+  | { k: 'snap'; s: unknown }
+  | { k: 'submit'; text: string; strokes?: unknown }
+  | { k: 'pickWord'; word: string }
+  | { k: 'save' }
+
 /** Hide & Seek rides the same relay: host simulates, guests send input. */
 export type HidePayload =
   | { k: 'input'; i: { turn: number; move: number } }

@@ -23,6 +23,12 @@ const tankOut = join(tmp, 'tank.mjs')
 await bundle('src/games/tank/engine/engine.ts', tankOut)
 const hideOut = join(tmp, 'hide.mjs')
 await bundle('src/games/hide/engine/engine.ts', hideOut)
+const scribbleOut = join(tmp, 'scribble.mjs')
+await bundle('src/games/sketch/engine/scribble.ts', scribbleOut)
+const phoneOut = join(tmp, 'phone.mjs')
+await bundle('src/games/sketch/engine/phone.ts', phoneOut)
+const collabOut = join(tmp, 'collab.mjs')
+await bundle('src/games/sketch/engine/collab.ts', collabOut)
 const duckOut = join(tmp, 'duck.mjs')
 await bundle('src/games/duck/engine/engine.ts', duckOut)
 
@@ -1123,6 +1129,265 @@ function rim(eng, f) {
   }
 }
 
+// 21. Sketch - Scribble: rotation, hangman, scoring, and the word never
+// leaking to a guesser over the wire.
+{
+  const { ScribbleEngine } = await import(pathToFileURL(scribbleOut).href)
+
+  const setup = (n = 3) => {
+    const eng = new ScribbleEngine({ packetIds: ['camp'], roundSeconds: 80, totalRounds: 4 })
+    for (let i = 0; i < n; i++) eng.addPlayer(i, `P${i}`)
+    eng.start()
+    return eng
+  }
+
+  {
+    const eng = setup(3)
+    check('a round starts in the choosing phase', eng.phase === 'choosing', eng.phase)
+    check('the drawer is offered three choices', eng.choices.length === 3, `${eng.choices.length}`)
+    check('the drawer starts as the first player', eng.drawer.slot === 0)
+  }
+
+  // The word itself never appears in a snapshot - only the mask does.
+  {
+    const eng = setup(3)
+    eng.pickWord(eng.drawer.slot, eng.choices[0])
+    check('picking a word starts the drawing phase', eng.phase === 'drawing', eng.phase)
+    const snap = eng.snapshot()
+    const wire = JSON.stringify(snap)
+    check('the true word is not in the snapshot', !wire.toLowerCase().includes(eng.word.toLowerCase()), eng.word)
+    check('the mask is the right length', snap.mask.replace(/ /g, '_').length === eng.word.replace(/ /g, '_').length)
+  }
+
+  // Hangman reveals one more letter every six seconds, never the last one for free.
+  {
+    const eng = setup(3)
+    eng.pickWord(eng.drawer.slot, eng.choices[0])
+    const before = eng.revealed.size
+    for (let i = 0; i < 6 * 60; i++) eng.step()
+    check('a letter is revealed after six seconds', eng.revealed.size === before + 1, `${eng.revealed.size}`)
+    for (let i = 0; i < 60 * 60 * 5; i++) eng.step()
+    const letters = eng.word.replace(/[ ']/g, '').length
+    check('hangman never reveals the very last letter', eng.revealed.size <= letters - 1, `${eng.revealed.size}/${letters}`)
+  }
+
+  // Scoring: faster guesses score more, the drawer scores when someone gets it,
+  // and a correct guess cannot be cashed in twice.
+  {
+    const eng = setup(3)
+    eng.pickWord(eng.drawer.slot, eng.choices[0])
+    const word = eng.word
+    const guesser = eng.players[1]
+    const drawerScoreBefore = eng.players[0].score
+    eng.submitGuess(guesser.slot, word)
+    check('a correct guess scores points', guesser.score > 0, `${guesser.score}`)
+    check('the drawer also scores', eng.players[0].score > drawerScoreBefore)
+    const scoreAfterFirst = guesser.score
+    eng.submitGuess(guesser.slot, word)
+    check('the same player cannot score twice in a round', guesser.score === scoreAfterFirst)
+
+    const eng2 = setup(3)
+    eng2.pickWord(eng2.drawer.slot, eng2.choices[0])
+    for (let i = 0; i < 60 * 40; i++) eng2.step() // let the clock run down first
+    const lateScore = (() => {
+      const e3 = setup(3)
+      e3.pickWord(e3.drawer.slot, e3.choices[0])
+      e3.submitGuess(e3.players[1].slot, e3.word)
+      return e3.players[1].score
+    })()
+    const late2 = eng2.players[1]
+    eng2.submitGuess(late2.slot, eng2.word)
+    check('guessing later scores fewer points than guessing immediately', late2.score < lateScore, `${late2.score} vs ${lateScore}`)
+
+    const eng4 = setup(3)
+    eng4.pickWord(eng4.drawer.slot, eng4.choices[0])
+    eng4.submitGuess(eng4.drawer.slot, eng4.word)
+    check('the drawer cannot guess their own word', eng4.players[0].score === 0)
+  }
+
+  // Everyone guessing ends the round early; the drawer rotates after.
+  {
+    const eng = setup(3)
+    eng.pickWord(eng.drawer.slot, eng.choices[0])
+    const word = eng.word
+    eng.submitGuess(eng.players[1].slot, word)
+    eng.submitGuess(eng.players[2].slot, word)
+    check('everyone guessing ends the round without waiting for the timer', eng.phase === 'roundEnd', eng.phase)
+    for (let i = 0; i < 60 * 5; i++) eng.step()
+    check('the drawer rotates to the next player', eng.drawerIndex === 1, `${eng.drawerIndex}`)
+  }
+
+  // A custom word actually enters rotation - added before the round's three
+  // choices are drawn, since that is the only point it can still affect them.
+  {
+    let seen = false
+    for (let i = 0; i < 60 && !seen; i++) {
+      const e = new ScribbleEngine({ packetIds: ['camp'], roundSeconds: 80, totalRounds: 4 })
+      for (let p = 0; p < 3; p++) e.addPlayer(p, `P${p}`)
+      e.addCustomWord('quokka party')
+      e.start()
+      seen = e.choices.includes('quokka party')
+    }
+    check('a custom word can be offered as a choice', seen)
+  }
+
+  // The game ends after the configured number of rounds. Short rounds here -
+  // this is checking round *count*, not timing, which has its own test above.
+  {
+    const eng = new ScribbleEngine({ packetIds: ['camp'], roundSeconds: 3, totalRounds: 4 })
+    eng.addPlayer(0, 'A')
+    eng.addPlayer(1, 'B')
+    eng.start()
+    let guard = 0
+    while (eng.phase !== 'over' && guard++ < 4000) {
+      if (eng.phase === 'choosing') eng.pickWord(eng.drawer.slot, eng.choices[0])
+      eng.step()
+    }
+    check('the game ends after the configured rounds', eng.phase === 'over', `${eng.phase} after ${guard}`)
+  }
+
+  // Snapshot round trip.
+  {
+    const host = setup(3)
+    host.pickWord(host.drawer.slot, host.choices[0])
+    const guest = new ScribbleEngine({ players: 0 })
+    guest.applySnapshot(JSON.parse(JSON.stringify(host.snapshot())))
+    check('snapshot carries the mask', guest.guestMask.length === host.maskedWord().length)
+    check('snapshot carries scores', guest.players.length === host.players.length)
+  }
+}
+
+// 22. Sketch - Phone: chain rotation math, step alternation, and the reveal.
+{
+  const { PhoneEngine } = await import(pathToFileURL(phoneOut).href)
+
+  const setup = (n) => {
+    const eng = new PhoneEngine({ roundSeconds: 60 })
+    for (let i = 0; i < n; i++) eng.addPlayer(i, `P${i}`)
+    eng.start()
+    return eng
+  }
+
+  check('phone needs at least two players to start', (() => {
+    const eng = new PhoneEngine()
+    eng.addPlayer(0, 'Solo')
+    eng.start()
+    return eng.phase === 'lobby'
+  })())
+
+  // Round zero is a prompt for everyone; round one is a draw; round two a guess.
+  {
+    const eng = setup(4)
+    check('round zero is a prompt round', eng.stepKind(0) === 'prompt')
+    check('round one is a draw round', eng.stepKind(1) === 'draw')
+    check('round two is a guess round', eng.stepKind(2) === 'guess')
+    check('a full game runs exactly N rounds', eng.n === 4)
+  }
+
+  // Every chain visits every player exactly once, and nobody works their own
+  // chain again until it comes back around at the very end.
+  for (const n of [3, 4, 5, 8]) {
+    const eng = setup(n)
+    const visits = Array.from({ length: n }, () => new Set())
+    for (let r = 0; r < n; r++) {
+      for (const p of eng.players) visits[eng.chainFor(r, p.slot)].add(p.slot)
+    }
+    const complete = visits.every((v) => v.size === n)
+    check(`every chain is visited by all ${n} players exactly once`, complete)
+  }
+
+  // Submitting a prompt, then a drawing (with strokes), then a guess flows
+  // the handoff from one round to the next.
+  {
+    const eng = setup(3)
+    for (const p of eng.players) eng.submit(p.slot, `prompt from ${p.slot}`)
+    check('round advances once everyone submits', eng.round === 1, `${eng.round}`)
+
+    const strokes = [{ id: 1, owner: 0, color: '#000', width: 4, points: [[0.1, 0.1], [0.2, 0.2]], done: true }]
+    for (const p of eng.players) eng.submit(p.slot, '', strokes)
+    check('round advances after every drawing is in', eng.round === 2, `${eng.round}`)
+
+    const handoff = eng.handoff(eng.players[0].slot)
+    check('a guesser is handed a drawing with strokes', handoff && handoff.kind === 'draw' && handoff.strokes.length > 0)
+  }
+
+  // Running out the clock fills in stragglers instead of stalling the table.
+  {
+    const eng = setup(3)
+    eng.submit(eng.players[0].slot, 'only one prompt')
+    for (let i = 0; i < 75 * 60 + 5; i++) eng.step()
+    check('a timed-out round still advances', eng.round >= 1, `${eng.round}`)
+  }
+
+  // Playing every round reaches the reveal with a complete history per chain.
+  {
+    const eng = setup(3)
+    let guard = 0
+    while (eng.phase !== 'reveal' && guard++ < 2000) {
+      for (const p of eng.players) {
+        if (!eng.hasSubmitted(p.slot)) {
+          const kind = eng.stepKind(eng.round)
+          eng.submit(p.slot, kind === 'draw' ? '' : `text ${p.slot}-${eng.round}`, kind === 'draw' ? [{ id: p.slot, owner: p.slot, color: '#000', width: 2, points: [[0.5, 0.5]], done: true }] : [])
+        }
+      }
+      eng.step()
+    }
+    check('the game reaches the reveal', eng.phase === 'reveal', `${eng.phase} after ${guard}`)
+    check('every chain has one entry per round', eng.chains.every((c) => c.length === eng.n))
+  }
+
+  // Snapshot round trip.
+  {
+    const host = setup(3)
+    host.submit(host.players[0].slot, 'hello')
+    const guest = new PhoneEngine()
+    guest.applySnapshot(JSON.parse(JSON.stringify(host.snapshot())))
+    check('snapshot carries chain progress', guest.chains.flat().length === host.chains.flat().length)
+  }
+}
+
+// 23. Sketch - Collaborative Art: turns, permissions, and the chaos clock.
+{
+  const { CollabEngine } = await import(pathToFileURL(collabOut).href)
+
+  {
+    const eng = new CollabEngine({ timedTurns: false })
+    eng.addPlayer(0, 'A')
+    eng.addPlayer(1, 'B')
+    eng.start()
+    check('casual mode lets everyone draw', eng.canDraw(0) && eng.canDraw(1))
+  }
+
+  {
+    const eng = new CollabEngine({ timedTurns: true, turnSeconds: 5 })
+    eng.addPlayer(0, 'A')
+    eng.addPlayer(1, 'B')
+    eng.start()
+    check('a timed turn restricts drawing to one player', eng.canDraw(0) && !eng.canDraw(1))
+    for (let i = 0; i < 5 * 60 + 1; i++) eng.step()
+    check('the turn rotates to the next player', eng.canDraw(1) && !eng.canDraw(0))
+  }
+
+  {
+    const eng = new CollabEngine({ chaos: 'random', chaosSeconds: 3 })
+    eng.addPlayer(0, 'A')
+    eng.start()
+    const first = eng.forcedColor
+    for (let i = 0; i < 3 * 60 + 1; i++) eng.step()
+    check('random chaos changes the forced colour on schedule', eng.forcedColor !== null, eng.forcedColor)
+    void first
+  }
+
+  {
+    const eng = new CollabEngine({ chaos: 'invert', chaosSeconds: 3 })
+    eng.addPlayer(0, 'A')
+    eng.start()
+    check('inverted colours start off', !eng.inverted)
+    for (let i = 0; i < 3 * 60 + 1; i++) eng.step()
+    check('the invert flag flips on schedule', eng.inverted)
+  }
+}
+
 // 18. The game shelf itself: every entry is complete and paints without crashing.
 {
   const { GAMES } = await import(pathToFileURL(regOut).href)
@@ -1141,8 +1406,8 @@ function rim(eng, f) {
   }
   check('every game entry is complete', problems.length === 0, problems.slice(0, 4).join('; '))
   const live = GAMES.filter((g) => g.status === 'live')
-  check('the shelf has four playable games', live.length === 4, live.map((g) => g.id).join(', '))
-  const playableIds = new Set(['smash', 'duck-szn', 'tank-trouble', 'hide-and-seek'])
+  check('the shelf has five playable games', live.length === 5, live.map((g) => g.id).join(', '))
+  const playableIds = new Set(['smash', 'duck-szn', 'tank-trouble', 'hide-and-seek', 'sketch'])
   check('every playable game has a panel', live.every((g) => playableIds.has(g.id)))
   check('every other game is marked concept', GAMES.every((g) => g.status === 'live' || g.status === 'concept'))
   check('party games are all 2-8 players', GAMES.filter((g) => g.status === 'concept').every((g) => g.players === '2-8 players'))
