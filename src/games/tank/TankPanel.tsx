@@ -3,8 +3,8 @@ import { fitScene } from '../../lib/draw'
 import { NetClient, defaultServerUrl } from '../../net/client'
 import { normalizeCode, type PeerInfo, type TankPayload } from '../../net/protocol'
 import { play } from '../duck/audio'
-import { TankEngine, type TankInput } from './engine/engine'
-import { renderMatch } from './engine/render'
+import { PLAYER_COLORS, TankEngine, type TankInput } from './engine/engine'
+import { drawAimLine, renderMatch } from './engine/render'
 import { VIEW_H, VIEW_W } from './engine/types'
 
 /**
@@ -29,6 +29,7 @@ export function TankPanel() {
   const [code, setCode] = useState('')
   const [joinCode, setJoinCode] = useState('')
   const [name, setName] = useState('Tank')
+  const [colorIndex, setColorIndex] = useState(0)
   const [peers, setPeers] = useState<PeerInfo[]>([])
   const [slot, setSlot] = useState(0)
   const [, setTick] = useState(0)
@@ -41,6 +42,9 @@ export function TankPanel() {
   slotRef.current = slot
   const inputRef = useRef<TankInput>({ moveX: 0, moveY: 0, aimX: VIEW_W / 2, aimY: VIEW_H / 2, fire: false, mine: false })
   const keysRef = useRef({ w: false, a: false, s: false, d: false })
+  /** Colours guests have picked, keyed by slot - the host applies these when
+   *  the match actually starts, so a peer never gets stuck with the default. */
+  const peerColorsRef = useRef(new Map<number, string>())
   const prevPhase = useRef('lobby')
 
   useEffect(() => {
@@ -63,7 +67,7 @@ export function TankPanel() {
         setPeers(players)
         const eng = engineRef.current
         if (eng && roleRef.current === 'host') {
-          for (const p of players) eng.addPlayer(p.slot, p.name)
+          for (const p of players) eng.addPlayer(p.slot, p.name, peerColorsRef.current.get(p.slot))
           for (const t of [...eng.tanks]) {
             if (t.slot >= 0 && !players.some((p) => p.slot === t.slot)) eng.removePlayer(t.slot)
           }
@@ -75,6 +79,7 @@ export function TankPanel() {
         if (!msg || !eng) return
         if (roleRef.current === 'host') {
           if (msg.k === 'input') eng.setInput(from, msg.i)
+          else if (msg.k === 'color') peerColorsRef.current.set(from, msg.color)
         } else if (msg.k === 'snap') {
           eng.applySnapshot(msg.s as ReturnType<TankEngine['snapshot']>)
         } else if (msg.k === 'start') {
@@ -85,19 +90,26 @@ export function TankPanel() {
     return () => net.close()
   }, [])
 
+  useEffect(() => {
+    if (role === 'guest') net.send({ k: 'color', color: PLAYER_COLORS[colorIndex] } satisfies TankPayload)
+  }, [role, colorIndex])
+
   const beginMatch = useCallback(() => {
     const eng = new TankEngine({ players: 0 })
     if (role === 'solo') {
-      eng.addPlayer(0, 'You')
+      eng.addPlayer(0, 'You', PLAYER_COLORS[colorIndex])
     } else {
-      for (const p of peers) eng.addPlayer(p.slot, p.name)
-      eng.addPlayer(slot, name)
+      for (const p of peers) {
+        if (p.slot === slot) continue
+        eng.addPlayer(p.slot, p.name, peerColorsRef.current.get(p.slot))
+      }
+      eng.addPlayer(slot, name, PLAYER_COLORS[colorIndex])
     }
     eng.start()
     engineRef.current = eng
     setScreen('play')
     if (role === 'host') net.send({ k: 'start' } satisfies TankPayload)
-  }, [role, peers, slot, name])
+  }, [role, peers, slot, name, colorIndex])
 
   // ----------------------------------------------------------------- input
 
@@ -214,6 +226,10 @@ export function TankPanel() {
         setTick((t) => t + 1)
       }
       renderMatch(ctx, eng)
+      const me = eng.tanks.find((t) => t.slot === slotRef.current)
+      if (me && me.alive) {
+        drawAimLine(ctx, me.x, me.y, inputRef.current.aimX, inputRef.current.aimY, me.color)
+      }
     }
     raf = requestAnimationFrame(frame)
     return () => {
@@ -258,6 +274,26 @@ export function TankPanel() {
             <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
               <label className="fighter__title">Your name</label>
               <input className="input" value={name} maxLength={16} onChange={(e) => setName(e.target.value)} />
+              <label className="fighter__title">Your tank colour</label>
+              <div className="chiprow">
+                {PLAYER_COLORS.map((c, i) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setColorIndex(i)}
+                    title={`Tank colour ${i + 1}`}
+                    style={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: 999,
+                      background: c,
+                      border: i === colorIndex ? '2px solid var(--ink, #222)' : '2px solid transparent',
+                      boxShadow: i === colorIndex ? '0 0 0 2px rgba(255,255,255,0.6) inset' : 'none',
+                      cursor: 'pointer',
+                    }}
+                  />
+                ))}
+              </div>
               <label className="fighter__title">Join a pit</label>
               <div className="chiprow">
                 <input

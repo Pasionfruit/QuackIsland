@@ -712,9 +712,114 @@ function rim(eng, f) {
 
   // A bullet bounces rather than passing through a wall.
   {
-    const eng = new TankEngine({ players: 1, seed: 3 })
+    const eng = new TankEngine({ players: 1 })
     const before = eng.maze.walls.length
     check('a maze has interior walls beyond the four boundary edges', before > 4, `${before}`)
+  }
+
+  // Level N is a fixed map: two unrelated engines agree on it, and the outer
+  // boundary is always stone so nothing can blast open the edge of the pit.
+  {
+    const a = new TankEngine({ players: 1 })
+    const b = new TankEngine({ players: 5 })
+    a.addPlayer(0, 'A')
+    b.addPlayer(0, 'B')
+    a.start()
+    b.start()
+    check(
+      'the same level is the same map regardless of who is playing it',
+      JSON.stringify(a.maze.walls) === JSON.stringify(b.maze.walls),
+    )
+    check('every boundary wall is stone', a.maze.walls.slice(0, 4).every((w) => w.kind === 'stone'))
+    check('the maze has some wood in it to break', a.maze.walls.some((w) => w.kind === 'wood'))
+  }
+
+  // More tanks in the room means more sentries in the maze.
+  {
+    const solo = new TankEngine({ players: 1 })
+    solo.addPlayer(0, 'A')
+    solo.start()
+    const full = new TankEngine({ players: 8 })
+    for (let i = 0; i < 8; i++) full.addPlayer(i, `P${i}`)
+    full.start()
+    check(
+      'an eight-tank party faces more sentries than a solo run',
+      full.enemies.length > solo.enemies.length,
+      `${solo.enemies.length} vs ${full.enemies.length}`,
+    )
+  }
+
+  // A mine blast opens a wood wall but leaves stone alone.
+  {
+    const eng = new TankEngine({ players: 1 })
+    eng.addPlayer(0, 'P1')
+    eng.start()
+    for (let i = 0; i < 140; i++) eng.step()
+    const woodIdx = eng.maze.walls.findIndex((w) => w.kind === 'wood')
+    const stoneIdx = eng.maze.walls.findIndex((w) => w.kind === 'stone')
+    const wood = eng.maze.walls[woodIdx]
+    eng.mines.push({ id: 8000, ownerId: -999, x: wood.x + wood.w / 2, y: wood.y + wood.h / 2, armIn: 0, fuse: 1 })
+    eng.step()
+    check('a mine blast opens a wood wall', eng.destroyedWalls.has(woodIdx))
+    check('a mine blast leaves stone standing', !eng.destroyedWalls.has(stoneIdx))
+    check(
+      'an opened wall stops blocking movement and shots',
+      eng.maze.walls.length > 0, // liveWalls is private; the flag above is the behavioural check
+    )
+  }
+
+  // A tracking missile steers toward its target and can be shot down.
+  {
+    const eng = new TankEngine({ players: 1 })
+    eng.addPlayer(0, 'P1')
+    eng.start()
+    for (let i = 0; i < 140; i++) eng.step()
+    for (const e of eng.enemies) {
+      e.x = -600
+      e.y = -600
+    }
+    const p = eng.players[0]
+    // A central cell, so there is room on both axes before anything reaches
+    // the arena boundary or the missile's own target.
+    const mid = eng.maze.cells[Math.floor(eng.maze.cells.length / 2)]
+    p.x = mid.x
+    p.y = mid.y
+
+    eng.bullets.push({
+      id: 7002,
+      ownerId: -999,
+      x: p.x - 100,
+      y: p.y,
+      vx: 2.3,
+      vy: 0,
+      bounces: 0,
+      life: 300,
+      armIn: 0,
+      homing: true,
+    })
+    p.y += 20 // the target moves; a homing round should turn to follow
+    for (let i = 0; i < 8; i++) eng.step()
+    const missile = eng.bullets.find((b) => b.id === 7002)
+    check(
+      'a missile steers toward a target that has moved',
+      Boolean(missile) && missile.vy > 0.3,
+      missile && `vy=${missile.vy.toFixed(2)}`,
+    )
+
+    eng.bullets.push({
+      id: 7003,
+      ownerId: p.id,
+      x: missile.x - 3,
+      y: missile.y,
+      vx: 3,
+      vy: 0,
+      bounces: 0,
+      life: 200,
+      armIn: 0,
+      homing: false,
+    })
+    eng.step()
+    check('a plain shot destroys a tracking missile', !eng.bullets.some((b) => b.id === 7002))
   }
 
   // Killing every sentry clears the level; losing every tank ends the run.

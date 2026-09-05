@@ -53,6 +53,7 @@ export type TankPayload =
   | { k: 'input'; i: { moveX: number; moveY: number; aimX: number; aimY: number; fire: boolean; mine: boolean } }
   | { k: 'snap'; s: unknown }
   | { k: 'start' }
+  | { k: 'color'; color: string }
 
 export type SmashPayload =
   | { k: 'pick'; slot: Slot; charId: string }

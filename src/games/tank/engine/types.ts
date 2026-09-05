@@ -12,24 +12,38 @@ export interface Wall {
   y: number
   w: number
   h: number
+  /** Wood gives way to a mine blast; stone never does. */
+  kind: 'stone' | 'wood'
 }
+
+/**
+ * What an enemy tank is built to do. Player tanks are always 'player' - the
+ * lobby colour is a cosmetic choice, not a class - but every AI tank picks one
+ * of these, and each reads as a distinct colour so you can tell at a glance
+ * what is about to happen to you.
+ */
+export type TankKind = 'player' | 'sentry' | 'gunner' | 'chaser' | 'sapper'
 
 export interface Tank {
   id: number
-  /** Player slot for a human tank, -1 for an AI enemy. */
+  /** Player slot for a human tank, -1-or-below for an AI enemy. */
   slot: number
   name: string
   color: string
+  kind: TankKind
   x: number
   y: number
   vx: number
   vy: number
   /** Turret angle in radians; independent of movement direction. */
   angle: number
+  /** Where a human tank's reticle currently is, for the dotted aim line. */
+  aimX: number
+  aimY: number
   alive: boolean
   radius: number
   speed: number
-  /** AI-only: current wander target and fire timing. */
+  /** AI-only: current wander target and fire/mine timing. */
   wanderX: number
   wanderY: number
   fireCooldown: number
@@ -49,6 +63,9 @@ export interface Bullet {
   life: number
   /** Own-fire is ignored for a few frames so you do not spawn-kill yourself. */
   armIn: number
+  /** A tracking missile: steers toward the nearest player, does not bounce,
+   *  and dies if a plain shot from anyone else touches it. */
+  homing: boolean
 }
 
 export interface Mine {

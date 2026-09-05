@@ -9,7 +9,8 @@ import type { TankEngine } from './engine'
 import { ARENA, VIEW_H, VIEW_W } from './types'
 
 const FLOOR = '#cdbfa0'
-const WALL = '#7d7264'
+const STONE = '#7d7264'
+const WOOD = '#a9835a'
 
 function drawTank(
   ctx: CanvasRenderingContext2D,
@@ -32,6 +33,27 @@ function drawTank(
   if (label) drawText(ctx, label, x, y - r - 11, color, { size: 7, align: 'center', weight: 700 })
 }
 
+/** A dotted line from a tank to wherever it is currently aiming. */
+export function drawAimLine(
+  ctx: CanvasRenderingContext2D,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  color: string,
+): void {
+  ctx.save()
+  ctx.strokeStyle = withAlpha(color, 0.55)
+  ctx.lineWidth = 1
+  ctx.setLineDash([3, 4])
+  ctx.beginPath()
+  ctx.moveTo(x0, y0)
+  ctx.lineTo(x1, y1)
+  ctx.stroke()
+  ctx.setLineDash([])
+  ctx.restore()
+}
+
 export function renderMatch(ctx: CanvasRenderingContext2D, eng: TankEngine): void {
   const sx = eng.shake > 0.4 ? rand(-eng.shake, eng.shake) : 0
   const sy = eng.shake > 0.4 ? rand(-eng.shake, eng.shake) : 0
@@ -43,9 +65,35 @@ export function renderMatch(ctx: CanvasRenderingContext2D, eng: TankEngine): voi
   grid(ctx, VIEW_W, VIEW_H, 12, 'rgba(120, 104, 78, 0.22)')
   fillPoly(ctx, rectPts(ARENA.x, ARENA.y, ARENA.w, ARENA.h), 'rgba(0,0,0,0.06)')
 
-  for (const w of eng.maze.walls) {
-    facet(ctx, rectPts(w.x, w.y, w.w, w.h), WALL, { dark: 0.28, light: 0.2, round: 0.15 })
-  }
+  eng.maze.walls.forEach((w, i) => {
+    if (eng.destroyedWalls.has(i)) return
+    const wood = w.kind === 'wood'
+    facet(ctx, rectPts(w.x, w.y, w.w, w.h), wood ? WOOD : STONE, {
+      dark: wood ? 0.32 : 0.28,
+      light: wood ? 0.22 : 0.2,
+      round: 0.15,
+    })
+    if (wood && w.w > w.h) {
+      // A couple of plank seams, so wood reads as breakable at a glance.
+      ctx.strokeStyle = 'rgba(60, 42, 24, 0.35)'
+      ctx.lineWidth = 0.8
+      for (const fx of [0.33, 0.66]) {
+        ctx.beginPath()
+        ctx.moveTo(w.x + w.w * fx, w.y + 1)
+        ctx.lineTo(w.x + w.w * fx, w.y + w.h - 1)
+        ctx.stroke()
+      }
+    } else if (wood) {
+      ctx.strokeStyle = 'rgba(60, 42, 24, 0.35)'
+      ctx.lineWidth = 0.8
+      for (const fy of [0.33, 0.66]) {
+        ctx.beginPath()
+        ctx.moveTo(w.x + 1, w.y + w.h * fy)
+        ctx.lineTo(w.x + w.w - 1, w.y + w.h * fy)
+        ctx.stroke()
+      }
+    }
+  })
 
   for (const m of eng.mines) {
     const armed = m.armIn <= 0
@@ -55,8 +103,17 @@ export function renderMatch(ctx: CanvasRenderingContext2D, eng: TankEngine): voi
   }
 
   for (const b of eng.bullets) {
-    ellipse(ctx, b.x, b.y, 2.6, 2.6, '#2b2622')
-    ellipse(ctx, b.x, b.y, 1.2, 1.2, '#f6f2e8')
+    if (b.homing) {
+      // A little flame behind it, so a tracking round reads as a missile
+      // rather than just another shot.
+      const a = Math.atan2(b.vy, b.vx)
+      ellipse(ctx, b.x - Math.cos(a) * 4, b.y - Math.sin(a) * 4, 2, 1.3, 'rgba(232,192,95,0.85)')
+      ellipse(ctx, b.x, b.y, 2.6, 1.6, '#3f7a6e')
+      ellipse(ctx, b.x + Math.cos(a) * 2, b.y + Math.sin(a) * 2, 1, 1, '#f6f2e8')
+    } else {
+      ellipse(ctx, b.x, b.y, 2.6, 2.6, '#2b2622')
+      ellipse(ctx, b.x, b.y, 1.2, 1.2, '#f6f2e8')
+    }
   }
 
   const sorted = [...eng.tanks].sort((a, b) => a.y - b.y)

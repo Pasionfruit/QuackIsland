@@ -26,6 +26,11 @@ function lerp(a: number, b: number, t: number): number {
 }
 
 /** Grid size, enemy count, and enemy stats for a level, 1-20. */
+/** Level N is always this map, in every match, forever - only who is in it changes. */
+export function seedForLevel(level: number): number {
+  return (level * 97 + 733) >>> 0
+}
+
 export function levelConfig(level: number): LevelConfig {
   const t = (Math.max(1, Math.min(MAX_LEVEL, level)) - 1) / (MAX_LEVEL - 1)
   return {
@@ -48,6 +53,8 @@ export interface Maze {
   /** Open cell centres, for spawning tanks clear of walls. */
   cells: { x: number; y: number }[]
 }
+
+/** The one seed a given level ever uses - see `seedForLevel` below. */
 
 /**
  * A randomized-DFS perfect maze over `cols` x `rows` cells, then a fraction of
@@ -108,21 +115,27 @@ export function buildMaze(seed: number, cfg: LevelConfig): Maze {
   }
 
   const THICK = 4
+  // The outer wall is always stone: nothing should be able to blast open the
+  // edge of the pit. Interior walls are a mix, drawn from the same seeded
+  // stream so the split is reproducible - wood gets scarcer as the level
+  // number climbs, which is one more way the maze tightens up over the run.
+  const woodChance = lerp(0.62, 0.22, (cfg.level - 1) / (MAX_LEVEL - 1))
   const walls: Wall[] = [
-    { x: ARENA.x, y: ARENA.y, w: ARENA.w, h: THICK },
-    { x: ARENA.x, y: ARENA.y + ARENA.h - THICK, w: ARENA.w, h: THICK },
-    { x: ARENA.x, y: ARENA.y, w: THICK, h: ARENA.h },
-    { x: ARENA.x + ARENA.w - THICK, y: ARENA.y, w: THICK, h: ARENA.h },
+    { x: ARENA.x, y: ARENA.y, w: ARENA.w, h: THICK, kind: 'stone' },
+    { x: ARENA.x, y: ARENA.y + ARENA.h - THICK, w: ARENA.w, h: THICK, kind: 'stone' },
+    { x: ARENA.x, y: ARENA.y, w: THICK, h: ARENA.h, kind: 'stone' },
+    { x: ARENA.x + ARENA.w - THICK, y: ARENA.y, w: THICK, h: ARENA.h, kind: 'stone' },
   ]
+  const pickKind = (): 'stone' | 'wood' => (rng() < woodChance ? 'wood' : 'stone')
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
       const px = ARENA.x + x * cellW
       const py = ARENA.y + y * cellH
       if (x < cols - 1 && right[y][x]) {
-        walls.push({ x: px + cellW - THICK / 2, y: py, w: THICK, h: cellH })
+        walls.push({ x: px + cellW - THICK / 2, y: py, w: THICK, h: cellH, kind: pickKind() })
       }
       if (y < rows - 1 && bottom[y][x]) {
-        walls.push({ x: px, y: py + cellH - THICK / 2, w: cellW, h: THICK })
+        walls.push({ x: px, y: py + cellH - THICK / 2, w: cellW, h: THICK, kind: pickKind() })
       }
     }
   }
