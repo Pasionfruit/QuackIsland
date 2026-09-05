@@ -46,7 +46,7 @@ const check = (name, ok, detail = '') => {
   }
 }
 
-const idle = { left: false, right: false, up: false, down: false, attack: false, special: false }
+const idle = { left: false, right: false, up: false, down: false, attack: false, special: false, shield: false }
 const held = (over) => ({ ...idle, ...over })
 
 /** Runs `n` ticks holding `a` for player 1 and `b` for player 2. */
@@ -67,25 +67,17 @@ function newMatch(opts = {}) {
 console.log('\nPolyland Smash - engine smoke test\n')
 
 
-/** How far out a fighter is, as a fraction of the way to the rim. */
-function rim(eng, f) {
-  const a = eng.arena
-  const dx = (f.x - a.cx) / a.rx
-  const dy = (f.y - a.cy) / a.ry
-  return Math.sqrt(dx * dx + dy * dy)
-}
-
-// 1. Fighters start on the floor, at rest, and stay there.
+// 1. Fighters start grounded, at rest, and facing each other.
 {
   const eng = newMatch()
   const [a, b] = eng.fighters
   check('match reaches the fight phase', eng.phase === 'fight', eng.phase)
-  check('both fighters are on the floor', rim(eng, a) < 1 && rim(eng, b) < 1)
+  check('both fighters start grounded', a.grounded && b.grounded)
   check('nobody drifts while idle', Math.abs(a.vx) < 0.01 && Math.abs(a.vy) < 0.01)
   check('fighters start facing each other', a.facing === 'right' && b.facing === 'left')
 }
 
-// 2. Movement is free in two axes, and facing follows the stick.
+// 2. Movement is horizontal only, and facing follows the stick.
 {
   const eng = newMatch()
   const [a] = eng.fighters
@@ -93,20 +85,29 @@ function rim(eng, f) {
   run(eng, 24, held({ right: true }))
   check('holding right moves right', a.x > x0 + 4, `${x0} -> ${a.x}`)
   check('facing follows input', a.facing === 'right', a.facing)
+}
 
+// 2b. A tap of up jumps rather than walking up onto nothing, and a second
+// jump is available in the air - the double jump every platform fighter has.
+{
+  const eng = newMatch()
+  const [a] = eng.fighters
   const y0 = a.y
-  run(eng, 24, held({ up: true }))
-  check('holding up moves up the floor', a.y < y0 - 4, `${y0} -> ${a.y}`)
-  check('facing turns to up', a.facing === 'up', a.facing)
+  const facingBefore = a.facing
+  const jumps0 = a.jumps
+  run(eng, 1, held({ up: true }))
+  run(eng, 8, held({}))
+  check('a tap of up leaves the ground', !a.grounded)
+  check('jumping rises off the platform', a.y < y0 - 2, `${y0} -> ${a.y}`)
+  check('jumping does not change facing', a.facing === facingBefore, a.facing)
+  check('one jump is spent', a.jumps === jumps0 - 1, `${a.jumps}`)
 
-  // A diagonal must not outrun an axis.
-  const e2 = newMatch()
-  run(e2, 40, held({ right: true }))
-  const straight = Math.hypot(e2.fighters[0].vx, e2.fighters[0].vy)
-  const e3 = newMatch()
-  run(e3, 40, held({ right: true, down: true }))
-  const diagonal = Math.hypot(e3.fighters[0].vx, e3.fighters[0].vy)
-  check('diagonals are not faster', diagonal <= straight + 0.02, `${diagonal} vs ${straight}`)
+  run(eng, 1, held({ up: true })) // second jump, still in the air
+  check('a second jump is available in the air', a.jumps === jumps0 - 2, `${a.jumps}`)
+
+  run(eng, 1, held({}))
+  run(eng, 1, held({ up: true })) // no jumps left until landing again
+  check('no jump left once the double jump is spent', a.jumps === 0, `${a.jumps}`)
 }
 
 // 3. All eight moves exist and each is reachable by its own input.
@@ -202,18 +203,17 @@ function rim(eng, f) {
   check('the frog stops soonest', ROSTER.every((c) => c.slide >= frog.slide))
 }
 
-// 7. Going over the rim costs a stock and respawns you clean.
+// 7. Crossing a blast zone edge is an instant KO, and respawn is clean.
 {
   const eng = newMatch()
   const [a] = eng.fighters
   const stocks = a.stocks
-  a.x = eng.arena.cx + eng.arena.rx + 20
+  a.x = eng.arena.blast.left - 5
+  a.y = 100
   run(eng, 2)
-  check('leaving the floor starts a fall', a.state === 'falling', a.state)
-  run(eng, 40)
-  check('the fall costs a stock', a.stocks === stocks - 1, `${a.stocks}`)
+  check('crossing the blast zone costs a stock', a.stocks === stocks - 1, `${a.stocks}`)
   run(eng, 140)
-  check('respawn puts you back on the floor', rim(eng, a) < 1, `${rim(eng, a).toFixed(2)}`)
+  check('respawn puts you back on solid ground', a.grounded)
   check('respawn clears damage', a.percent === 0)
   check('respawn grants invulnerability', a.invuln > 0)
 }
@@ -222,7 +222,8 @@ function rim(eng, f) {
 {
   const eng = newMatch({ stocks: 1 })
   const [a] = eng.fighters
-  a.x = eng.arena.cx + eng.arena.rx + 20
+  a.x = eng.arena.blast.left - 5
+  a.y = 100
   run(eng, 60)
   check('losing the last stock ends it', eng.phase === 'ko' || eng.phase === 'over')
   run(eng, 90)
@@ -244,6 +245,59 @@ function rim(eng, f) {
   }
   check('a slam catches someone behind you', hits({ attack: true, down: true }, -14))
   check('a jab does not', !hits({ attack: true }, -14))
+}
+
+// 9b. Shielding blocks damage outright; a hit within the parry window is a
+// parry (no stun for the shielder, extra recovery for the attacker); a hit
+// after that window is a plain block (no damage, but some stun); a dodge -
+// spot or rolling - is simply invulnerable regardless of timing.
+{
+  const setup = () => {
+    const eng = newMatch()
+    const [a, b] = eng.fighters
+    a.facing = 'right'
+    b.x = a.x + 14
+    b.y = a.y
+    return { eng, a, b }
+  }
+
+  // Parry: shield goes up the same frame the swing starts, so it is still
+  // fresh when the hitbox turns on.
+  {
+    const { eng, a, b } = setup()
+    run(eng, 1, held({ attack: true }), held({ shield: true }))
+    const mv = a.move
+    run(eng, mv.startup + 1, idle, held({ shield: true }))
+    check('a parried hit deals no damage', b.percent === 0, `${b.percent}`)
+    check('a parry leaves the shielder without hitstun', b.hitstun === 0)
+    check('a parry punishes the attacker with extra hitlag', a.hitlag > b.hitlag, `${a.hitlag} vs ${b.hitlag}`)
+  }
+
+  // Block: shield has been up well before the swing even starts.
+  {
+    const { eng, a, b } = setup()
+    run(eng, 15, idle, held({ shield: true }))
+    run(eng, 1, held({ attack: true }), held({ shield: true }))
+    const mv = a.move
+    run(eng, mv.startup + 1, idle, held({ shield: true }))
+    check('a blocked hit deals no damage', b.percent === 0, `${b.percent}`)
+    check('a plain block still has some stun', b.hitlag > 0, `${b.hitlag}`)
+  }
+
+  // Dodge: invulnerable regardless of timing, and a roll actually moves.
+  {
+    const { eng, a, b } = setup()
+    run(eng, 1, idle, held({ shield: true })) // raise shield
+    run(eng, 1, idle, held({ shield: true, left: true })) // cancel into a roll
+    check('a dodge is invulnerable', b.invuln > 0)
+    check('rolling is its own state', b.state === 'dodge')
+    const x0 = b.x
+    run(eng, 1, held({ attack: true }), idle) // a swings while b is still rolling
+    const mv = a.move
+    run(eng, mv.startup + 1, idle, idle)
+    check('a dodge avoids a hit thrown mid-roll', b.percent === 0, `${b.percent}`)
+    check('the roll actually displaces the dodger', b.x !== x0, `${x0} -> ${b.x}`)
+  }
 }
 
 // 10. Fighters cannot stand inside each other.

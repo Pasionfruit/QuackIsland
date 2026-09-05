@@ -1,19 +1,21 @@
 /**
- * Polyland Smash: a two-fighter arena brawl seen from above.
+ * Polyland Smash: a two-fighter platform brawl, seen from the side.
  *
- * There is no gravity here and nothing to jump onto. Fighters slide around a
- * floating disc, and a hit sends the other player skating toward the rim -
- * the higher their percent, the further they go. Go over the edge and you
- * lose a stock. Everything else follows from that: "recovery" is scrambling
- * back before the fall finishes, "weight" is how little you slide, and the
- * whole fight is a contest over who is standing nearer the middle.
+ * Gravity pulls everyone down onto the nearest platform underneath them; a
+ * hit launches the other player, and the higher their percent, the further
+ * they fly. Cross a blast zone edge - off either side, off the top, or down
+ * through the gap under the stage - and you lose a stock. A tap of up is a
+ * jump (a second one is available in the air); a tap of down on one of the
+ * two floating platforms drops you through it. "Weight" is how little a hit
+ * launches you, "recovery" is using your jumps and specials to get back to
+ * a platform before the blast zone catches you.
  *
  * The engine is DOM-free so it can be driven headlessly by `npm run smoke`
  * and by the balance harness.
  */
 import { clamp, rand } from '../../../lib/draw'
 import { charById } from './characters'
-import { LAKESIDE_BLUFF, clampToFloor, rimDistance, type Arena } from './stage'
+import { clampToFloor, LAKESIDE_BLUFF, mainPlatform, outOfBounds, type Arena, type Platform } from './stage'
 import type { CharDef, Facing, FighterState, MoveDef, MoveId, Phase, RawInput } from './types'
 import { emptyInput } from './types'
 import {
@@ -72,13 +74,19 @@ export interface Fighter {
   hitlag: number
   invuln: number
   respawnTimer: number
-  /** Counts up while going over the edge; a KO lands at the end of it. */
-  fallTimer: number
   animTimer: number
   squash: number
   spin: number
   lastHitFrame: number
   comboCount: number
+  /** Standing on a platform this frame. */
+  grounded: boolean
+  /** Jumps left before landing again - a fresh double jump refills this. */
+  jumps: number
+  /** Counts down while falling through a platform on purpose, ignoring it for collision. */
+  dropThrough: number
+  /** Frames spent shielding this stretch - a hit landing before the parry window closes is parried instead of blocked. */
+  shieldFrames: number
 }
 
 export interface MatchConfig {
@@ -102,8 +110,23 @@ const INTRO_FRAMES = 170
 const KO_FREEZE = 44
 const RESPAWN_FRAMES = 52
 const RESPAWN_INVULN = 110
-/** Frames of scrambling before a fighter over the rim is gone for good. */
-const FALL_FRAMES = 34
+
+// ------------------------------------------------------------------ physics
+const GRAVITY = 0.32
+const FAST_FALL_GRAVITY = 0.62
+const MAX_FALL_SPEED = 6.4
+const JUMP_VELOCITY = -7.6
+const MAX_JUMPS = 2 // a ground jump plus one in the air
+const AIR_CONTROL = 0.55 // fraction of ground acceleration available mid-air
+const DROP_THROUGH_FRAMES = 12
+
+// -------------------------------------------------------------- shield/dodge
+/** A hit landing this many frames into a fresh shield is parried, not just blocked. */
+const PARRY_WINDOW = 6
+const SPOT_DODGE_FRAMES = 24
+const ROLL_FRAMES = 28
+const ROLL_SPEED_MULT = 1.3
+const AIR_DODGE_FRAMES = 26
 
 /** Unit vector for each facing, in floor space. */
 const DIR: Record<Facing, { x: number; y: number }> = {
@@ -133,8 +156,8 @@ export class SmashEngine {
   private inputs: [RawInput, RawInput] = [emptyInput(), emptyInput()]
   private prevInputs: [RawInput, RawInput] = [emptyInput(), emptyInput()]
   private cpu = [
-    { cooldown: 0, decision: 0, driftX: 0, driftY: 0 },
-    { cooldown: 0, decision: 0, driftX: 0, driftY: 0 },
+    { cooldown: 0, decision: 0 },
+    { cooldown: 0, decision: 0 },
   ]
 
   constructor(config: Partial<MatchConfig> = {}) {
@@ -169,12 +192,15 @@ export class SmashEngine {
       hitlag: 0,
       invuln: RESPAWN_INVULN,
       respawnTimer: 0,
-      fallTimer: 0,
       animTimer: 0,
       squash: 0,
       spin: 0,
       lastHitFrame: -999,
       comboCount: 0,
+      grounded: true,
+      jumps: MAX_JUMPS,
+      dropThrough: 0,
+      shieldFrames: 0,
     }
   }
 
@@ -230,7 +256,9 @@ export class SmashEngine {
       this.resolveHits(this.fighters[0], this.fighters[1])
       this.resolveHits(this.fighters[1], this.fighters[0])
       this.separate()
-      for (const f of this.fighters) this.checkRim(f)
+      for (const f of this.fighters) {
+        if (f.state !== 'dead' && outOfBounds(this.arena, f.x, f.y)) this.ko(f)
+      }
     }
 
     this.stepParticles()
@@ -253,6 +281,9 @@ export class SmashEngine {
     f.animTimer++
     if (f.squash !== 0) f.squash *= 0.86
     if (f.invuln > 0) f.invuln--
+    if (f.dropThrough > 0) f.dropThrough--
+    f.px = f.x
+    f.py = f.y
 
     if (f.state === 'dead') {
       f.respawnTimer--
@@ -260,30 +291,51 @@ export class SmashEngine {
       return
     }
 
-    if (f.state === 'falling') {
-      // Still sliding outward, but the floor is gone: a short scramble window
-      // where a fighter can be seen dropping before the stock is taken.
-      f.fallTimer++
-      f.x += f.vx
-      f.y += f.vy
-      f.vx *= 0.94
-      f.vy *= 0.94
-      f.spin += 0.06
-      if (f.fallTimer >= FALL_FRAMES) this.ko(f)
-      return
-    }
-
     if (f.hitstun > 0) {
       f.hitstun--
+      if (!f.grounded) {
+        f.vy += input.down ? FAST_FALL_GRAVITY : GRAVITY
+        if (f.vy > MAX_FALL_SPEED) f.vy = MAX_FALL_SPEED
+      }
       f.x += f.vx
       f.y += f.vy
       f.vx *= f.def.slide
-      f.vy *= f.def.slide
       f.spin *= 0.9
+      this.applyPlatformCollision(f)
       if (f.hitstun <= 0) {
-        f.state = 'idle'
+        f.state = f.grounded ? 'idle' : 'falling'
         f.spin = 0
       }
+      return
+    }
+
+    if (f.state === 'shield') {
+      f.shieldFrames++
+      f.vx *= 0.7
+      f.x += f.vx
+      if (!live || !input.shield) {
+        f.state = f.grounded ? 'idle' : 'falling'
+        f.shieldFrames = 0
+        return
+      }
+      // Shielding is grounded-only, but a direction or down while holding it
+      // cancels into a dodge - a roll away, or a spot dodge in place.
+      if (this.pressed(f.index, 'left')) return this.startDodge(f, -1)
+      if (this.pressed(f.index, 'right')) return this.startDodge(f, 1)
+      if (this.pressed(f.index, 'down')) return this.startDodge(f, 0)
+      return
+    }
+
+    if (f.state === 'dodge') {
+      f.x += f.vx
+      f.vx *= 0.88
+      if (!f.grounded) {
+        f.vy += GRAVITY
+        if (f.vy > MAX_FALL_SPEED) f.vy = MAX_FALL_SPEED
+        f.y += f.vy
+      }
+      this.applyPlatformCollision(f)
+      if (f.invuln <= 0) f.state = f.grounded ? 'idle' : 'falling'
       return
     }
 
@@ -295,40 +347,113 @@ export class SmashEngine {
     if (!live) return
 
     // ------------------------------------------------------------- movement
-    const dx = (input.right ? 1 : 0) - (input.left ? 1 : 0)
-    const dy = (input.down ? 1 : 0) - (input.up ? 1 : 0)
     const def = f.def
+    const dx = (input.right ? 1 : 0) - (input.left ? 1 : 0)
 
-    if (dx !== 0 || dy !== 0) {
-      // Normalise so diagonals are not faster than the axes.
-      const len = Math.hypot(dx, dy)
-      const ax = (dx / len) * def.accel
-      const ay = (dy / len) * def.accel
-      f.vx += ax
-      f.vy += ay
-      const sp = Math.hypot(f.vx, f.vy)
-      if (sp > def.speed) {
-        f.vx = (f.vx / sp) * def.speed
-        f.vy = (f.vy / sp) * def.speed
+    // A fresh shield press: grounded raises a shield, airborne is an air
+    // dodge - a burst of invulnerability, since there is no shield in the air.
+    if (this.pressed(f.index, 'shield')) {
+      if (f.grounded) {
+        f.state = 'shield'
+        f.shieldFrames = 0
+        f.vx = 0
+        return
       }
-      f.facing = facingFor(dx, dy, f.facing)
-      f.state = 'walk'
-    } else {
+      this.startDodge(f, dx as -1 | 0 | 1, true)
+      return
+    }
+
+    if (dx !== 0) {
+      const accel = def.accel * (f.grounded ? 1 : AIR_CONTROL)
+      f.vx += dx * accel
+      if (f.vx > def.speed) f.vx = def.speed
+      if (f.vx < -def.speed) f.vx = -def.speed
+      f.facing = dx > 0 ? 'right' : 'left'
+    } else if (f.grounded) {
       f.vx *= def.friction
-      f.vy *= def.friction
       if (Math.abs(f.vx) < 0.02) f.vx = 0
-      if (Math.abs(f.vy) < 0.02) f.vy = 0
-      f.state = 'idle'
+    }
+
+    // A tap of up jumps rather than moving - there is nothing to walk "up" to
+    // on flat ground, and it is the same key players already reach for.
+    if (this.pressed(f.index, 'up') && f.jumps > 0) {
+      f.vy = JUMP_VELOCITY
+      f.jumps--
+      f.grounded = false
+    }
+
+    // A tap of down drops you through whichever soft platform you're on.
+    if (f.grounded && this.pressed(f.index, 'down')) {
+      const under = this.platformUnder(f)
+      if (under && !under.solid) {
+        f.dropThrough = DROP_THROUGH_FRAMES
+        f.grounded = false
+      }
+    }
+
+    if (!f.grounded) {
+      f.vy += input.down ? FAST_FALL_GRAVITY : GRAVITY
+      if (f.vy > MAX_FALL_SPEED) f.vy = MAX_FALL_SPEED
     }
 
     f.x += f.vx
     f.y += f.vy
+    this.applyPlatformCollision(f)
+    f.state = f.grounded ? (f.vx !== 0 ? 'walk' : 'idle') : 'falling'
 
     // -------------------------------------------------------------- attacks
     if (this.pressed(f.index, 'attack')) {
       this.startMove(f, moveFor('attack', input))
     } else if (this.pressed(f.index, 'special')) {
       this.startMove(f, moveFor('special', input))
+    }
+  }
+
+  /**
+   * A dodge: invulnerable for its whole duration, cannot act until it ends.
+   * `dir` of 0 is a spot dodge in place; -1/1 is a roll away from the middle.
+   * `aerial` is the air-dodge version, thrown from a fresh shield press with
+   * no ground under the fighter to shield on.
+   */
+  private startDodge(f: Fighter, dir: -1 | 0 | 1, aerial = false): void {
+    f.state = 'dodge'
+    f.shieldFrames = 0
+    f.move = null
+    f.hitTargets.clear()
+    f.invuln = aerial ? AIR_DODGE_FRAMES : dir === 0 ? SPOT_DODGE_FRAMES : ROLL_FRAMES
+    f.vx = dir * f.def.speed * (aerial ? 0.9 : ROLL_SPEED_MULT)
+  }
+
+  /** The platform (if any) a fighter's feet are already resting on. */
+  private platformUnder(f: Fighter): Platform | null {
+    for (const p of this.arena.platforms) {
+      if (f.x + f.def.radius < p.x0 || f.x - f.def.radius > p.x1) continue
+      if (Math.abs(f.y - p.y) < 0.5) return p
+    }
+    return null
+  }
+
+  /**
+   * Lands a fighter on the first platform their feet cross this frame.
+   *
+   * A platform only catches a fighter falling through its surface between
+   * last frame's position and this one - rising through it (jumping up
+   * through a soft platform) or already being below it never counts, so a
+   * fast fall can't be caught by a platform after skipping past it in one tick.
+   */
+  private applyPlatformCollision(f: Fighter): void {
+    f.grounded = false
+    if (f.vy < 0) return
+    for (const p of this.arena.platforms) {
+      if (f.dropThrough > 0 && !p.solid) continue
+      if (f.x + f.def.radius < p.x0 || f.x - f.def.radius > p.x1) continue
+      if (f.py > p.y + 0.1 || f.y < p.y) continue
+      f.y = p.y
+      f.vy = 0
+      f.grounded = true
+      f.jumps = MAX_JUMPS
+      f.dropThrough = 0
+      return
     }
   }
 
@@ -351,21 +476,26 @@ export class SmashEngine {
     const total = mv.startup + mv.active + mv.recovery
 
     if (f.moveFrame === mv.startup + 1 && mv.drive) {
-      const d = DIR[f.facing]
+      const d = moveDirection(f, mv)
       f.vx += d.x * mv.drive
       f.vy += d.y * mv.drive
+    }
+
+    if (!f.grounded) {
+      f.vy += GRAVITY
+      if (f.vy > MAX_FALL_SPEED) f.vy = MAX_FALL_SPEED
     }
 
     // Committed: only a little drift, and the fighter keeps sliding.
     f.x += f.vx
     f.y += f.vy
     f.vx *= 0.9
-    f.vy *= 0.9
+    this.applyPlatformCollision(f)
 
     if (f.moveFrame >= total) {
       f.move = null
       f.moveFrame = 0
-      f.state = 'idle'
+      f.state = f.grounded ? 'idle' : 'falling'
     }
   }
 
@@ -378,7 +508,7 @@ export class SmashEngine {
 
   private resolveHits(attacker: Fighter, victim: Fighter): void {
     if (!this.moveIsActive(attacker)) return
-    if (victim.state === 'dead' || victim.state === 'falling' || victim.invuln > 0) return
+    if (victim.state === 'dead' || victim.invuln > 0) return
     if (attacker.hitTargets.has(victim.index)) return
     const mv = attacker.move!
 
@@ -390,7 +520,7 @@ export class SmashEngine {
       inside = Math.hypot(dxv, dyv) <= mv.hit.reach + victim.def.radius
     } else {
       // Rotate the offset into facing space, where the box is axis aligned.
-      const d = DIR[attacker.facing]
+      const d = moveDirection(attacker, mv)
       const along = dxv * d.x + dyv * d.y
       const across = dxv * -d.y + dyv * d.x
       inside =
@@ -401,7 +531,37 @@ export class SmashEngine {
     if (!inside) return
 
     attacker.hitTargets.add(victim.index)
-    this.applyHit(attacker, victim, mv)
+    if (victim.state === 'shield') this.applyBlock(attacker, victim, mv)
+    else this.applyHit(attacker, victim, mv)
+  }
+
+  /**
+   * A hit that lands on a raised shield: parried if the shield only just went
+   * up, blocked otherwise. Either way the victim takes no damage and no
+   * knockback - shielding is a hard counter to a mistimed swing, the way it
+   * is meant to be - but a plain block still locks the victim in place for a
+   * beat, where a parry does not, so a parry is strictly the better outcome
+   * for correctly reading the hit rather than just holding shield on cooldown.
+   */
+  private applyBlock(attacker: Fighter, victim: Fighter, mv: MoveDef): void {
+    const parried = victim.shieldFrames <= PARRY_WINDOW
+    const lag = Math.round(3 + mv.damage * 0.5)
+    attacker.hitlag = lag + (parried ? 10 : 0)
+    this.shake = Math.max(this.shake, parried ? 4 : 2)
+    this.texts.push({
+      x: victim.x,
+      y: victim.y - 18,
+      vy: -0.55,
+      life: parried ? 40 : 30,
+      text: parried ? 'PARRY!' : 'BLOCK',
+      color: parried ? '#ffe066' : '#cfd8e0',
+      scale: parried ? 1 : 0.85,
+    })
+    if (!parried) {
+      victim.hitlag = lag
+      victim.vx += (victim.x < attacker.x ? -1 : 1) * mv.damage * 0.12
+    }
+    this.version++
   }
 
   private applyHit(attacker: Fighter, victim: Fighter, mv: MoveDef): void {
@@ -415,7 +575,7 @@ export class SmashEngine {
       lx = (victim.x - attacker.x) / d
       ly = (victim.y - attacker.y) / d
     } else {
-      const d = DIR[attacker.facing]
+      const d = moveDirection(attacker, mv)
       lx = d.x
       ly = d.y
     }
@@ -471,7 +631,6 @@ export class SmashEngine {
   private separate(): void {
     const [a, b] = this.fighters
     if (a.state === 'dead' || b.state === 'dead') return
-    if (a.state === 'falling' || b.state === 'falling') return
     const dx = b.x - a.x
     const dy = b.y - a.y
     const d = Math.hypot(dx, dy)
@@ -484,18 +643,6 @@ export class SmashEngine {
     a.y -= ny * push
     b.x += nx * push
     b.y += ny * push
-  }
-
-  private checkRim(f: Fighter): void {
-    if (f.state === 'dead' || f.state === 'falling') return
-    if (rimDistance(this.arena, f.x, f.y) <= 1) return
-    // Over the edge: the fall plays out before the stock is taken, so there is
-    // something to watch and a moment to realise what happened.
-    f.state = 'falling'
-    f.fallTimer = 0
-    f.move = null
-    f.hitstun = 0
-    this.shake = Math.max(this.shake, 6)
   }
 
   private ko(f: Fighter): void {
@@ -537,7 +684,9 @@ export class SmashEngine {
     f.percent = 0
     f.state = 'idle'
     f.invuln = RESPAWN_INVULN
-    f.fallTimer = 0
+    f.grounded = true
+    f.jumps = MAX_JUMPS
+    f.dropThrough = 0
     f.spin = 0
     f.facing = f.index === 0 ? 'right' : 'left'
     this.version++
@@ -638,7 +787,7 @@ export class SmashEngine {
           f.hitlag,
           f.invuln,
           f.respawnTimer,
-          f.fallTimer,
+          f.jumps,
           round2(f.spin),
           round2(f.squash),
           f.animTimer,
@@ -672,7 +821,7 @@ export class SmashEngine {
       f.hitlag = d[11]
       f.invuln = d[12]
       f.respawnTimer = d[13]
-      f.fallTimer = d[14]
+      f.jumps = d[14]
       f.spin = d[15]
       f.squash = d[16]
       f.animTimer = d[17]
@@ -687,24 +836,29 @@ export class SmashEngine {
     const me = this.fighters[meIndex]
     const foe = this.fighters[meIndex === 0 ? 1 : 0]
     const cpu = this.cpu[meIndex]
-    if (this.phase !== 'fight' || me.state === 'dead' || me.state === 'falling') return out
+    if (this.phase !== 'fight' || me.state === 'dead') return out
     if (me.hitstun > 0 || me.move) return out
+
+    // Already shielding: hold it briefly, then let go rather than sitting
+    // behind it forever, which is easy to punish with a grab (or a wait-out).
+    if (me.state === 'shield') {
+      out.shield = me.shieldFrames < 18
+      return out
+    }
 
     const level = this.config.cpuLevel
     if (cpu.cooldown > 0) cpu.cooldown--
-    if (this.frame % 20 === 0) {
-      cpu.decision = Math.random()
-      cpu.driftX = rand(-1, 1)
-      cpu.driftY = rand(-1, 1)
-    }
+    if (this.frame % 20 === 0) cpu.decision = Math.random()
 
-    // Getting away from the rim beats anything else.
-    const danger = rimDistance(this.arena, me.x, me.y)
-    if (danger > 0.72) {
-      if (me.x > this.arena.cx) out.left = true
-      else out.right = true
-      if (me.y > this.arena.cy) out.up = true
-      else out.down = true
+    const ground = mainPlatform(this.arena)
+    const edgeMargin = 40
+
+    // Off the stage and falling beats anything else: get back over solid
+    // ground and spend a jump climbing back up onto it.
+    if (!me.grounded && me.y > ground.y - 10 && (me.x < ground.x0 || me.x > ground.x1)) {
+      if (me.x < ground.x0) out.right = true
+      else out.left = true
+      if (me.jumps > 0) out.up = true
       return out
     }
 
@@ -712,19 +866,34 @@ export class SmashEngine {
     const dy = foe.y - me.y
     const dist = Math.hypot(dx, dy)
     const reach = me.def.moves.attack.hit.reach + me.def.radius + 4
+    const nearEdge = me.grounded && (me.x < ground.x0 + edgeMargin || me.x > ground.x1 - edgeMargin)
 
-    // Close the gap, but not so far that we walk through them.
-    if (dist > reach) {
-      if (dx > 3) out.right = true
-      else if (dx < -3) out.left = true
-      if (dy > 3) out.down = true
-      else if (dy < -3) out.up = true
-      if (level === 1 && cpu.decision < 0.3) {
-        out.left = out.right = out.up = out.down = false
+    // A foe already swinging at close range is worth blocking sometimes,
+    // more often on a harder CPU.
+    if (me.grounded && foe.state === 'attack' && foe.move && dist < reach * 1.2 && level >= 2 && cpu.cooldown <= 0) {
+      if (cpu.decision < (level >= 3 ? 0.5 : 0.22)) {
+        cpu.cooldown = 30
+        out.shield = true
+        return out
       }
-    } else if (dist < reach * 0.45) {
-      if (dx > 0) out.left = true
-      else out.right = true
+    }
+
+    // Standing right at the edge of the ground beats chasing a hit.
+    if (nearEdge) {
+      if (me.x < ground.x0 + edgeMargin) out.right = true
+      else out.left = true
+    } else {
+      // Close the gap, but not so far that we walk through them.
+      if (dist > reach) {
+        if (dx > 3) out.right = true
+        else if (dx < -3) out.left = true
+        if (level === 1 && cpu.decision < 0.3) out.left = out.right = false
+      } else if (dist < reach * 0.45) {
+        if (dx > 0) out.left = true
+        else out.right = true
+      }
+      // A foe well above is worth a jump to chase.
+      if (dy < -22 && me.jumps > 0 && cpu.cooldown <= 0) out.up = true
     }
 
     const base = level === 1 ? 40 : level === 2 ? 25 : 14
@@ -734,11 +903,11 @@ export class SmashEngine {
       cpu.cooldown = base + Math.floor(Math.random() * base * 0.7)
       const r = Math.random()
       // Face the target before swinging, so the hitbox points the right way.
-      if (Math.abs(dx) > Math.abs(dy)) {
-        if (dx > 0) out.right = true
-        else out.left = true
-      } else if (dy > 0) out.down = true
-      else out.up = true
+      if (Math.abs(dy) > 16 && Math.abs(dy) > Math.abs(dx)) {
+        if (dy > 0) out.down = true
+        else out.up = true
+      } else if (dx > 0) out.right = true
+      else out.left = true
 
       if (r < 0.3 || level === 1) {
         // Neutral poke: let go of the direction so it comes out unaimed.
@@ -761,11 +930,16 @@ export class SmashEngine {
 
 // ------------------------------------------------------------------- helpers
 
-/** Which way to point, preferring the larger input and keeping the old one. */
-function facingFor(dx: number, dy: number, current: Facing): Facing {
-  if (dx === 0 && dy === 0) return current
-  if (Math.abs(dx) >= Math.abs(dy)) return dx > 0 ? 'right' : 'left'
-  return dy > 0 ? 'down' : 'up'
+/**
+ * Which way a move actually fires. A side attack and a neutral poke go the
+ * way the fighter is facing, but up and down attacks hit straight up or
+ * straight down regardless of which way that is - an up-air aimed at your
+ * own facing would be a strange, useless move in a side view.
+ */
+function moveDirection(f: Fighter, mv: MoveDef): { x: number; y: number } {
+  if (mv.id.endsWith('Up')) return DIR.up
+  if (mv.id.endsWith('Down')) return DIR.down
+  return DIR[f.facing]
 }
 
 /**

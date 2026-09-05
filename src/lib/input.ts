@@ -13,10 +13,11 @@ export interface GameInput {
   down: boolean
   attack: boolean
   special: boolean
+  shield: boolean
 }
 
 export function emptyInput(): GameInput {
-  return { left: false, right: false, up: false, down: false, attack: false, special: false }
+  return { left: false, right: false, up: false, down: false, attack: false, special: false, shield: false }
 }
 
 export type PlayerIndex = 0 | 1
@@ -29,6 +30,7 @@ export const BINDINGS: Record<PlayerIndex, Record<keyof GameInput, string[]>> = 
     down: ['KeyS'],
     attack: ['KeyF'],
     special: ['KeyG'],
+    shield: ['KeyR'],
   },
   1: {
     left: ['ArrowLeft'],
@@ -37,6 +39,7 @@ export const BINDINGS: Record<PlayerIndex, Record<keyof GameInput, string[]>> = 
     down: ['ArrowDown'],
     attack: ['Period', 'Numpad1'],
     special: ['Slash', 'Numpad2'],
+    shield: ['Comma', 'Numpad0'],
   },
 }
 
@@ -48,6 +51,7 @@ const SWALLOW = new Set([
   'Space',
   'Slash',
   'Period',
+  'Comma',
   'Tab',
 ])
 
@@ -93,7 +97,8 @@ export function packInput(i: GameInput): number {
     (i.up ? 4 : 0) |
     (i.down ? 8 : 0) |
     (i.attack ? 16 : 0) |
-    (i.special ? 32 : 0)
+    (i.special ? 32 : 0) |
+    (i.shield ? 64 : 0)
   )
 }
 
@@ -105,6 +110,7 @@ export function unpackInput(b: number): GameInput {
     down: (b & 8) !== 0,
     attack: (b & 16) !== 0,
     special: (b & 32) !== 0,
+    shield: (b & 64) !== 0,
   }
 }
 
@@ -127,4 +133,22 @@ export const CONTROL_HINTS: { player: string; rows: [string, string][] }[] = [
       ['Aimed move', 'Direction + . or /'],
     ],
   },
+]
+
+/**
+ * Smash-only rows (jump, shield, dodge) - these are not part of the generic
+ * control rig every Polyland game shares, so they live here rather than in
+ * CONTROL_HINTS, which TemplatePanel.tsx quotes as that shared baseline.
+ */
+export const SMASH_CONTROL_HINTS: [string, string][][] = [
+  [
+    ['Jump', 'W (tap - a second jump works mid-air)'],
+    ['Shield / block', 'R'],
+    ['Dodge / roll', 'Direction + R'],
+  ],
+  [
+    ['Jump', 'Up arrow (tap - a second jump works mid-air)'],
+    ['Shield / block', ','],
+    ['Dodge / roll', 'Direction + ,'],
+  ],
 ]

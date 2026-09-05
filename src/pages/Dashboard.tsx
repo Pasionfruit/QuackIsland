@@ -3,6 +3,7 @@ import { campfire, pine } from '../art/props'
 import { SceneCanvas } from '../components/SceneCanvas'
 import { ART_H, ART_W, GAMES, type GameEntry } from '../games/registry'
 import { ROSTER, drawChar } from '../games/smash/engine/characters'
+import { portraitFor } from '../games/smash/portraits'
 import type { CharDef } from '../games/smash/engine/types'
 import { rect } from '../lib/draw'
 
@@ -63,26 +64,37 @@ function StatBar({ label, value }: { label: string; value: number }) {
 }
 
 function FighterCard({ def }: { def: CharDef }) {
+  const portrait = portraitFor(def.id)
   return (
     <div className={`fighter ${def.locked ? 'fighter--locked' : ''}`}>
-      <SceneCanvas
-        width={48}
-        height={48}
-        draw={(ctx, frame) => {
-          rect(ctx, 0, 0, 48, 48, '#cfdfd8')
-          rect(ctx, 0, 30, 48, 18, PAL.grass)
-          rect(ctx, 0, 30, 48, 2, PAL.grassLit)
-          pine(ctx, 7, 32, 16)
-          pine(ctx, 41, 32, 13)
-          const bob = Math.sin(frame * 0.06) * 1
-          drawChar(ctx, def, 24, 42 + bob, {
-            facing: 1,
-            scale: 36 / def.height,
-            phase: frame,
-            shadow: true,
-          })
-        }}
-      />
+      {portrait ? (
+        <img
+          src={portrait}
+          alt={def.name}
+          width={48}
+          height={48}
+          style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6, display: 'block' }}
+        />
+      ) : (
+        <SceneCanvas
+          width={48}
+          height={48}
+          draw={(ctx, frame) => {
+            rect(ctx, 0, 0, 48, 48, '#cfdfd8')
+            rect(ctx, 0, 30, 48, 18, PAL.grass)
+            rect(ctx, 0, 30, 48, 2, PAL.grassLit)
+            pine(ctx, 7, 32, 16)
+            pine(ctx, 41, 32, 13)
+            const bob = Math.sin(frame * 0.06) * 1
+            drawChar(ctx, def, 24, 42 + bob, {
+              facing: 1,
+              scale: 36 / def.height,
+              phase: frame,
+              shadow: true,
+            })
+          }}
+        />
+      )}
       <div style={{ flex: 1 }}>
         <div className="fighter__name" style={{ color: def.theme.dark }}>
           {def.name}

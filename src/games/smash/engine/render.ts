@@ -1,30 +1,21 @@
 /**
  * Draws a Smash match.
  *
- * The arena is a disc seen from above and slightly in front, so everything is
- * drawn back to front by its y position: a fighter standing lower on screen is
- * nearer the camera and covers one standing behind them. The floor itself is
- * baked once into an offscreen canvas, since nothing on it moves.
+ * The stage is three platforms seen from the side, so there is no depth
+ * sorting to do the way an overhead view would need - fighters and effects
+ * just draw in a fixed order, with only particles interleaved by height so a
+ * spark can pass behind or in front of whoever is standing near it. The
+ * platforms themselves are baked once into an offscreen canvas, since
+ * nothing about them moves.
  */
 import { PAL } from '../../../art/palette'
 import { bush, pine, rock } from '../../../art/props'
-import {
-  clamp,
-  ellipse,
-  fillPoly,
-  makeScene,
-  noise,
-  rand,
-  sceneScale,
-  shade,
-  withAlpha,
-  type Pt,
-} from '../../../lib/draw'
+import { clamp, ellipse, makeScene, rand, sceneScale, shade, withAlpha } from '../../../lib/draw'
 import { drawText } from '../../../lib/text'
 import { drawChar } from './characters'
 import type { Fighter, SmashEngine } from './engine'
 import { SmashEngine as Engine } from './engine'
-import { rimDistance, VIEW_H, VIEW_W, type Arena } from './stage'
+import { VIEW_H, VIEW_W, type Arena, type Platform } from './stage'
 import { drawSprite, spriteSet, type SpriteState } from '../sprites'
 import type { Facing } from './types'
 
@@ -32,11 +23,29 @@ import type { Facing } from './types'
 
 let floorCache: { canvas: HTMLCanvasElement; scale: number; arena: string } | null = null
 
-/** The disc, its slab and the scenery around the rim: none of it moves. */
-function buildFloor(a: Arena, ss: number): HTMLCanvasElement {
+/** One platform, drawn as a flat-shaded slab with a grassy top. */
+function drawPlatform(ctx: CanvasRenderingContext2D, p: Platform, thickness: number): void {
+  const w = p.x1 - p.x0
+  ctx.fillStyle = PAL.dirt
+  ctx.fillRect(p.x0, p.y, w, thickness)
+  ctx.fillStyle = withAlpha(PAL.dirtShade, 0.4)
+  ctx.fillRect(p.x0, p.y + thickness - 3, w, 3)
+  ctx.fillStyle = PAL.grass
+  ctx.fillRect(p.x0, p.y - 3, w, 5)
+  ctx.fillStyle = PAL.grassLit
+  ctx.fillRect(p.x0, p.y - 3, w, 2)
+  // Rounded caps so a platform reads as a solid block, not a bare rectangle.
+  ctx.beginPath()
+  ctx.arc(p.x0, p.y + thickness / 2, thickness / 2, 0, Math.PI * 2)
+  ctx.arc(p.x1, p.y + thickness / 2, thickness / 2, 0, Math.PI * 2)
+  ctx.fillStyle = PAL.dirt
+  ctx.fill()
+}
+
+/** The sky, the three platforms, and scenery tucked around them: none of it moves. */
+function buildStage(a: Arena, ss: number): HTMLCanvasElement {
   const { canvas, ctx } = makeScene(VIEW_W, VIEW_H, ss)
 
-  // The void the arena floats in.
   const sky = ctx.createLinearGradient(0, 0, 0, VIEW_H)
   sky.addColorStop(0, '#8fb0c2')
   sky.addColorStop(0.55, '#b6cbd0')
@@ -44,56 +53,35 @@ function buildFloor(a: Arena, ss: number): HTMLCanvasElement {
   ctx.fillStyle = sky
   ctx.fillRect(0, 0, VIEW_W, VIEW_H)
 
-  // A soft shadow the disc casts into the haze below it.
-  ellipse(ctx, a.cx, a.cy + a.ry * 0.62, a.rx * 1.02, a.ry * 0.42, 'rgba(58, 72, 78, 0.22)')
-
-  // The slab: the floor's silhouette pushed down and darkened.
-  const slab: Pt[] = []
-  for (let i = 0; i <= 40; i++) {
-    const t = (i / 40) * Math.PI
-    slab.push({ x: a.cx + Math.cos(t) * a.rx, y: a.cy + Math.sin(t) * a.ry })
-  }
-  for (let i = 40; i >= 0; i--) {
-    const t = (i / 40) * Math.PI
-    slab.push({ x: a.cx + Math.cos(t) * a.rx, y: a.cy + Math.sin(t) * a.ry + a.depth })
-  }
-  fillPoly(ctx, slab, PAL.dirt)
-  // Rock strata, so the underside is not a flat band.
-  for (let i = 0; i < 26; i++) {
-    const t = noise(i * 3.1)
-    const x = a.cx + (t * 2 - 1) * a.rx * 0.92
-    const y = a.cy + Math.sin(Math.acos(clamp((x - a.cx) / a.rx, -1, 1))) * a.ry + a.depth * (0.3 + noise(i * 7.7) * 0.5)
-    ellipse(ctx, x, y, a.rx * 0.04, a.depth * 0.12, withAlpha(PAL.dirtShade, 0.35))
-  }
-
-  // The grass surface.
-  ellipse(ctx, a.cx, a.cy, a.rx, a.ry, PAL.grass)
-  ellipse(ctx, a.cx, a.cy - a.ry * 0.08, a.rx * 0.9, a.ry * 0.82, PAL.grassLit)
-  // A worn ring near the rim, which is also the visual warning track.
-  ctx.strokeStyle = withAlpha(PAL.grassShade, 0.55)
-  ctx.lineWidth = 2
+  // Distant hills, so the floating platforms read as being up in the air.
+  ctx.fillStyle = withAlpha('#7f9c9c', 0.5)
   ctx.beginPath()
-  ctx.ellipse(a.cx, a.cy, a.rx * 0.82, a.ry * 0.82, 0, 0, Math.PI * 2)
-  ctx.stroke()
+  ctx.moveTo(0, VIEW_H)
+  for (let x = 0; x <= VIEW_W; x += 20) ctx.lineTo(x, 150 - Math.sin(x * 0.02) * 14)
+  ctx.lineTo(VIEW_W, VIEW_H)
+  ctx.closePath()
+  ctx.fill()
 
-  // Scenery, kept outside the play ring so it never hides a fighter.
-  const props: { x: number; y: number; kind: number; s: number }[] = []
-  for (let i = 0; i < 16; i++) {
-    const ang = (i / 16) * Math.PI * 2 + noise(i * 5.3) * 0.3
-    const r = 1.0 + noise(i * 2.7) * 0.05
-    props.push({
-      x: a.cx + Math.cos(ang) * a.rx * r,
-      y: a.cy + Math.sin(ang) * a.ry * r,
-      kind: Math.floor(noise(i * 9.1) * 3),
-      s: 0.7 + noise(i * 4.4) * 0.6,
-    })
+  const [ground, ...floaters] = a.platforms
+
+  // The ground goes all the way to the blast zone floor, so there is no gap
+  // under it for the sky to show through.
+  drawPlatform(ctx, { ...ground, y: ground.y }, a.blast.bottom - ground.y + 20)
+
+  for (const p of floaters) {
+    // A soft shadow on the ground below each floating platform.
+    const midX = (p.x0 + p.x1) / 2
+    ellipse(ctx, midX, ground.y + 4, (p.x1 - p.x0) * 0.4, 4, 'rgba(58, 72, 78, 0.16)')
+    drawPlatform(ctx, p, 14)
   }
-  props.sort((p, q) => p.y - q.y)
-  for (const p of props) {
-    if (p.kind === 0) pine(ctx, p.x, p.y, 16 * p.s)
-    else if (p.kind === 1) bush(ctx, p.x, p.y, 12 * p.s)
-    else rock(ctx, p.x, p.y, 11 * p.s)
-  }
+
+  // Scenery along the ground, kept off to the sides so nothing hides a fighter.
+  pine(ctx, ground.x0 + 18, ground.y, 26)
+  pine(ctx, ground.x0 + 40, ground.y, 18)
+  bush(ctx, ground.x0 + 62, ground.y, 12)
+  pine(ctx, ground.x1 - 18, ground.y, 24)
+  bush(ctx, ground.x1 - 42, ground.y, 13)
+  rock(ctx, ground.x1 - 60, ground.y, 11)
 
   return canvas
 }
@@ -101,29 +89,16 @@ function buildFloor(a: Arena, ss: number): HTMLCanvasElement {
 function floorFor(ctx: CanvasRenderingContext2D, a: Arena): HTMLCanvasElement {
   const ss = Math.max(1, Math.min(4, Math.round(sceneScale(ctx))))
   if (!floorCache || floorCache.scale !== ss || floorCache.arena !== a.id) {
-    floorCache = { canvas: buildFloor(a, ss), scale: ss, arena: a.id }
+    floorCache = { canvas: buildStage(a, ss), scale: ss, arena: a.id }
   }
   return floorCache.canvas
 }
 
 // ---------------------------------------------------------------- fighters
 
-/** Sprite frame for a fighter's current state. */
+/** Sprite frame for a fighter's current state - only ever left/right facing now. */
 function spriteStateFor(f: Fighter): SpriteState {
-  const dirName: Record<Facing, string> = {
-    up: 'Up',
-    down: 'Down',
-    left: 'Left',
-    right: 'Right',
-  }
-  const plain: Record<Facing, SpriteState> = {
-    up: 'back',
-    down: 'front',
-    left: 'left',
-    right: 'right',
-  }
   if (f.state === 'hitstun') return 'takeHit'
-  if (f.state === 'falling') return 'recoverUp'
   if (f.state === 'attack' && f.move) {
     const kind = f.move.id.startsWith('special') ? 'special' : 'attack'
     switch (f.move.id) {
@@ -135,19 +110,13 @@ function spriteStateFor(f: Fighter): SpriteState {
         return `${kind}Down` as SpriteState
       case 'attackSide':
       case 'specialSide':
-        return `${kind}${dirName[f.facing]}` as SpriteState
+        return `${kind}${f.facing === 'left' ? 'Left' : 'Right'}` as SpriteState
       default:
         return `${kind}Neutral` as SpriteState
     }
   }
-  return plain[f.facing]
-}
-
-/** The procedural rig's view for a facing, used when a fighter has no sheet. */
-function viewFor(f: Facing): { view: 'side' | 'front' | 'back'; facing: 1 | -1 } {
-  if (f === 'left') return { view: 'side', facing: -1 }
-  if (f === 'right') return { view: 'side', facing: 1 }
-  return { view: f === 'up' ? 'back' : 'front', facing: 1 }
+  if (f.state === 'falling') return 'recoverUp'
+  return f.facing === 'left' ? 'left' : 'right'
 }
 
 function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, frame: number): void {
@@ -155,14 +124,9 @@ function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, frame: number): 
   const blinking = f.invuln > 0 && Math.floor(frame / 4) % 2 === 0
   const jitter = f.hitlag > 0 ? rand(-1.4, 1.4) : 0
   const bob = f.state === 'idle' ? Math.sin(f.animTimer * 0.07) * 0.5 : 0
+  const alpha = blinking ? 0.35 : 1
 
-  // Going over the edge: shrink away and fade as the fall plays out.
-  const fall = f.state === 'falling' ? f.fallTimer / 34 : 0
-  const scale = 1 - fall * 0.65
-  const alpha = (blinking ? 0.35 : 1) * (1 - fall * 0.85)
-  const drop = fall * 26
-
-  if (f.state !== 'falling') {
+  if (f.grounded) {
     ellipse(ctx, f.x, f.y + 1, f.def.radius * 1.15, f.def.radius * 0.45, 'rgba(58, 60, 48, 0.26)')
   }
 
@@ -170,8 +134,8 @@ function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, frame: number): 
   const set = spriteSet(f.def.id)
   const drawn =
     set !== null &&
-    drawSprite(ctx, set, spriteStateFor(f), f.x + jitter, f.y + bob + drop, {
-      height: f.def.height * scale,
+    drawSprite(ctx, set, spriteStateFor(f), f.x + jitter, f.y + bob, {
+      height: f.def.height,
       squash: f.squash,
       spin: f.spin,
       tint,
@@ -179,32 +143,46 @@ function drawFighter(ctx: CanvasRenderingContext2D, f: Fighter, frame: number): 
     })
 
   if (!drawn) {
-    const v = viewFor(f.facing)
-    drawChar(ctx, f.def, f.x + jitter, f.y + bob + drop, {
-      facing: v.facing,
-      view: v.view,
+    drawChar(ctx, f.def, f.x + jitter, f.y + bob, {
+      facing: f.facing === 'left' ? -1 : 1,
+      view: 'side',
       pose: proceduralPose(f),
       phase: f.animTimer,
       squash: f.squash,
       spin: f.spin,
-      scale,
       tint,
       alpha,
     })
   }
 
   if (f.state === 'attack') drawMoveFx(ctx, f)
+
+  if (f.state === 'shield') {
+    // Shrinks the longer it has been up, the same way a real shield does -
+    // and doubles as the parry tell: a big, bright bubble on the frame it
+    // first goes up is the window a well-timed hit gets parried instead of
+    // just blocked.
+    const fresh = f.shieldFrames <= 6
+    const r = f.def.radius * (fresh ? 1.5 : Math.max(1.05, 1.4 - f.shieldFrames * 0.01))
+    ctx.beginPath()
+    ctx.ellipse(f.x, f.y - f.def.height * 0.42, r, r * 0.92, 0, 0, Math.PI * 2)
+    ctx.fillStyle = fresh ? 'rgba(255, 230, 102, 0.38)' : 'rgba(150, 205, 230, 0.3)'
+    ctx.fill()
+    ctx.strokeStyle = fresh ? 'rgba(255, 230, 102, 0.85)' : 'rgba(150, 205, 230, 0.7)'
+    ctx.lineWidth = 1.4
+    ctx.stroke()
+  }
 }
 
 /** Nearest pose the procedural rig has for a fighter's state. */
-function proceduralPose(f: Fighter): 'idle' | 'walk' | 'brace' | 'hurt' | 'swingFwd' | 'swingUp' | 'swingDown' {
+function proceduralPose(f: Fighter): 'idle' | 'walk' | 'jump' | 'fall' | 'brace' | 'hurt' | 'swingFwd' | 'swingUp' | 'swingDown' {
   switch (f.state) {
     case 'walk':
       return 'walk'
     case 'hitstun':
       return 'hurt'
     case 'falling':
-      return 'hurt'
+      return f.vy < 0 ? 'jump' : 'fall'
     case 'attack': {
       const mv = f.move
       if (!mv) return 'idle'
@@ -231,7 +209,9 @@ function drawMoveFx(ctx: CanvasRenderingContext2D, f: Fighter): void {
   const t = f.moveFrame - mv.startup
   if (t <= 0 || t > mv.active + 2) return
   const fade = clamp(1 - t / (mv.active + 2), 0, 1)
-  const d = DIRV[f.facing]
+  const isUp = mv.id.endsWith('Up')
+  const isDown = mv.id.endsWith('Down')
+  const d = isUp ? DIRV.up : isDown ? DIRV.down : DIRV[f.facing]
   const cx = f.x + d.x * mv.hit.reach * 0.8
   const cy = f.y - f.def.height * 0.4 + d.y * mv.hit.reach * 0.5
 
@@ -345,7 +325,8 @@ export function renderMatch(
   ctx.translate(Math.round(sx), Math.round(sy))
   ctx.drawImage(floorFor(ctx, a), 0, 0, VIEW_W, VIEW_H)
 
-  // Everything on the floor, back to front.
+  // Fighters draw in a fixed order; particles interleave by height so a
+  // spark can pass behind or in front of whoever is standing near it.
   const actors: { y: number; draw: () => void }[] = []
   for (const f of eng.fighters) {
     if (f.state === 'dead') continue
@@ -378,7 +359,7 @@ export function renderMatch(
       ctx.beginPath()
       ctx.arc(f.x, f.y, f.def.radius, 0, Math.PI * 2)
       ctx.stroke()
-      drawText(ctx, `${rimDistance(a, f.x, f.y).toFixed(2)}`, f.x, f.y + 10, '#c0392b', {
+      drawText(ctx, f.grounded ? `${f.jumps}j` : `air ${f.jumps}j`, f.x, f.y + 10, '#c0392b', {
         size: 7,
         align: 'center',
       })

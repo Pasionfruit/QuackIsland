@@ -88,6 +88,6 @@ export interface CharDef {
 export type RawInput = GameInput
 export { emptyInput }
 
-export type FighterState = 'idle' | 'walk' | 'attack' | 'hitstun' | 'falling' | 'dead'
+export type FighterState = 'idle' | 'walk' | 'attack' | 'hitstun' | 'falling' | 'dead' | 'shield' | 'dodge'
 
 export type Phase = 'intro' | 'fight' | 'ko' | 'over'

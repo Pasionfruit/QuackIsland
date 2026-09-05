@@ -4,9 +4,10 @@ A little world of games, played in a desktop browser with a keyboard. One cast o
 low-poly animals with jobs and opinions, one palette, and a shelf of games that
 all share them.
 
-The first game is **Polyland Smash** - an arena fighter played looking down on
-a floating disc. Percent-based knockback, stocks, and no railings: hit someone
-hard enough and they go over the rim. Nine fighters who play very differently.
+The first game is **Polyland Smash** - a platform fighter on the classic
+three-platform stage, seen from the side. Percent-based knockback, stocks,
+jumping, shielding and dodging: hit someone hard enough and they fly off the
+stage. Nine fighters who play very differently.
 
 The second is **Duck szn** - a fixed-perspective shooting gallery in the shape
 of Wii Play's range: five stages, up to eight people with a mouse each, and one
@@ -41,6 +42,9 @@ No setup, no menu to find - it is the house rule for every Polyland game.
 | Aimed move | direction + `F` / `G` | direction + `.` / `/` |
 
 `Esc` pauses, `R` rematches from the results screen, `F1` shows hitboxes.
+Polyland Smash adds a jump (a tap of `W` / the up arrow), a shield (`R` for
+player 1, `,` for player 2) and dodges cancelled out of it - see
+[Polyland Smash](#polyland-smash) below.
 
 **Online.** On the same Wi-Fi, `npm run dev:all` prints a LAN address for
 everyone to open. Over the open internet, deploy it (see below) and hand out
@@ -173,19 +177,35 @@ tanks, ghosts - so a new game's card art is usually fifteen lines.
 ## Polyland Smash
 
 Damage builds a percentage; knockback scales with it, so a fresh fighter barely
-budges and one at 130% skates halfway across the floor. Go over the rim and you
-lose a stock. Last fighter standing wins.
+budges and one at 130% flies off the stage. Cross any of the four blast zone
+edges - off either side, off the top, or down through the gap under the stage -
+and you lose a stock. Last fighter standing wins.
 
 Each fighter has **eight moves**: a quick poke, a committed lunge, a launcher
 and a ground slam, in an attack flavour and a special flavour. Pressing a
 direction with the button picks which one - the slam and the shockwave hit all
-round you, everything else fires along the way you are pointed.
+round the fighter, an up move always hits straight up and a down move straight
+down regardless of which way you are facing, and everything else fires along
+the way you are pointed. Every move works the same in the air as on the ground -
+there is no separate set of aerials.
 
-There is no gravity and nothing to jump onto. You slide around the floor, and a
-hit sends the other player skating toward the rim - the higher their percent,
-the further they go. Everything else follows from that: **weight** is how little
-you slide, **deceleration** is how fast that slide bleeds off, and the whole
-fight is a contest over who is standing nearer the middle.
+The stage is the classic three-platform layout: one solid ground and two
+smaller floating platforms above it, symmetric left and right. Gravity pulls
+everyone down onto whichever platform is under them. A tap of up is a jump -
+there is nothing to walk "up" to on flat ground, so the same key doubles as
+the jump button - and a second jump is available before you land again. A tap
+of down on one of the two floating platforms drops you through it.
+
+A tap of shield raises it - block a hit and you take no damage, but you are
+locked in place for a beat afterward. Land the block in the first few frames
+of raising the shield instead and it is a **parry**: no damage, no lock, and
+the attacker is the one left exposed. While shielding, a direction cancels
+into a roll and down cancels into a spot dodge, both fully invulnerable for
+their duration; pressing shield with nothing under you is an air dodge instead,
+since there is no shield in the air. **Weight** is how little a hit launches
+you and **deceleration** is how fast that launch bleeds off - the fight is a
+contest over who controls the middle platform and who is stuck recovering from
+the edges.
 
 Nine fighters, no two alike:
 
@@ -218,12 +238,15 @@ numbers.
 
 ### Tuning the roster
 
-**Weight is close to decisive.** In a ring-out game it sets how far a hit moves
-you toward the edge, so the weight spread has to be far tighter than it would be
-in a platform fighter - and a fighter who is genuinely light needs paying back
-somewhere else. Diva keeps the lightest weight on the roster because she also
-has the fastest deceleration: she gets launched dramatically and then skids to a
-stop, where the same hit would carry someone else over the rim.
+**Weight is close to decisive.** It sets how far a hit launches you toward a
+blast zone, so the spread across the roster has to stay tight - a fighter who
+is genuinely light needs paying back somewhere else. Diva keeps the lightest
+weight of the original six because she also has the fastest deceleration: she
+gets launched dramatically and then skids to a stop, where the same hit would
+carry someone else off the stage. Cheetah goes further still - lighter than
+diva, and faster too - which is exactly the kind of combination this roster
+otherwise avoids on purpose; she earns it back with the least power on the
+whole roster.
 
 Two other things dominate, both learned the hard way on the platform version and
 still true here:
@@ -317,10 +340,9 @@ across the nine fighters - see [Character art](#character-art) above for the
 `npm run balance` tool itself and why the band widened once three more
 fighters joined the original six.
 
-**Arena: Lakeside Bluff** - one grassy disc floating in the haze, ringed with
-pines and rocks and nothing else. Because the floor is an ellipse seen at an
-angle, every distance is measured in normalised arena space where the rim sits
-at radius 1, which keeps the ring-out check independent of the shape. Geometry
+**Arena: Lakeside Bluff** - a wide grassy ground with two smaller platforms
+floating above it, symmetric left and right, pines and rocks tucked along the
+ground's edges. Geometry - the three platforms and the four blast zone edges -
 is in [stage.ts](src/games/smash/engine/stage.ts).
 
 ## Duck szn

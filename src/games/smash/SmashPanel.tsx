@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PAL } from '../../art/palette'
 import { pine } from '../../art/props'
 import { SceneCanvas } from '../../components/SceneCanvas'
-import { CONTROL_HINTS, Keyboard, packInput, unpackInput } from '../../lib/input'
+import { CONTROL_HINTS, Keyboard, packInput, SMASH_CONTROL_HINTS, unpackInput } from '../../lib/input'
 import { fitScene, rect } from '../../lib/draw'
 import { useFullscreen } from '../../lib/fullscreen'
 import { NetClient, defaultServerUrl } from '../../net/client'
@@ -454,7 +454,7 @@ function Arena({ config, net, registerHandler, onChangeFighters, onLeave }: Aren
                   You are {youAre === 0 ? 'Player 1' : 'Player 2'} - use the left-hand keys
                 </div>
                 <div className="keys">
-                  {CONTROL_HINTS[0].rows.map(([action, key]) => (
+                  {[...CONTROL_HINTS[0].rows, ...SMASH_CONTROL_HINTS[youAre]].map(([action, key]) => (
                     <div className="keyrow" key={action}>
                       <span>{action}</span>
                       <kbd>{key}</kbd>
@@ -472,7 +472,7 @@ function Arena({ config, net, registerHandler, onChangeFighters, onLeave }: Aren
                     {i === 1 && config.cpu ? 'Player 2 (CPU is playing)' : group.player}
                   </div>
                   <div className="keys">
-                    {group.rows.map(([action, key]) => (
+                    {[...group.rows, ...SMASH_CONTROL_HINTS[i]].map(([action, key]) => (
                       <div className="keyrow" key={action}>
                         <span>{action}</span>
                         <kbd>{key}</kbd>

@@ -119,14 +119,14 @@ export type FighterSnap = [
   hitlag: number,
   invuln: number,
   respawnTimer: number,
-  fallTimer: number,
+  jumps: number,
   spin: number,
   squash: number,
   anim: number,
 ]
 
 export const PHASES = ['intro', 'fight', 'ko', 'over'] as const
-export const STATES = ['idle', 'walk', 'attack', 'hitstun', 'falling', 'dead'] as const
+export const STATES = ['idle', 'walk', 'attack', 'hitstun', 'falling', 'dead', 'shield', 'dodge'] as const
 export const FACINGS = ['up', 'down', 'left', 'right'] as const
 export const MOVES = [
   'attack',
