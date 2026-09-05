@@ -6,7 +6,7 @@ all share them.
 
 The first game is **Polyland Smash** - a platform fighter in the shape of Smash
 Ultimate / Brawlhalla: percent-based knockback, stocks, blast zones,
-drop-through platforms, and five fighters who play very differently.
+drop-through platforms, and six fighters who play very differently.
 
 Eighteen more games are on the shelf as concept panels: art, pitch and planned
 mechanics, no implementation yet. They all live in
@@ -88,18 +88,25 @@ shadows. [src/Game_art.png](src/Game_art.png) is the earlier reference for the
 world around them.
 
 Everything is a **flat-shaded polygon**. There are no sprites, no textures and
-no gradients on characters - each shape is filled in a base tone, then split
-into a lit facet and a shadow facet along a fixed light direction. That split
-is what `facet()` in [src/lib/draw.ts](src/lib/draw.ts) does, and it is the
-whole style in one function.
+no gradients on characters - each shape is meshed into a little low-poly shell
+and every triangle is filled with one tone, picked by treating the shape as a
+dome lit from a fixed direction and snapping the result to a tone step. Corners
+are cut before any of that, because nothing in the reference art has a razor
+edge. That is what `facet()` in [src/lib/draw.ts](src/lib/draw.ts) does, and it
+is the whole style in one function.
 
-Three rules keep it looking right:
+Four rules keep it looking right:
 
 - **Draw in world units, render at device resolution.** Scenes are authored in
   a 480x270 coordinate space, but the canvas backing store is sized to its real
   displayed size in device pixels by `fitScene()`. If the two do not match, the
   browser resamples the canvas and the flat shading turns to mush - that is the
   single biggest thing to get wrong here.
+- **Let the facets earn their keep.** `facet()` picks how many triangles to
+  spend from how big the shape lands on screen, so a head gets a moulded shell
+  and a shirt button gets two tones. Dark colours get their contrast from the
+  lit side rather than the shadow side, since a near-black hoodie has nowhere
+  left to go in shadow.
 - **Shade in world space, not local space.** Characters are authored facing
   right and then flipped, but the shading happens after placement, so the light
   stays in the same corner of the screen no matter which way somebody faces or
@@ -131,20 +138,44 @@ Each has five moves - neutral, side, up and down attacks, plus a special that
 doubles as the recovery. The special throws you upward and leaves you helpless
 until you land, so spending it early off-stage is how you die.
 
-Five fighters, no two alike:
+Six fighters, no two alike:
 
 | Fighter | Who they are | How they play |
 | --- | --- | --- |
-| **ContrlZee** | Raccoon programmer | Sets up two moves early, then runs it. Slow, heavy hits |
+| **ContrlZee** | Raccoon programmer | Best neutral on the roster, weakest hits. Wins the spacing, not the exchange |
 | **NinjaPenguin** | Penguin ninja | Belly-slides in, flurries you down, gone before the dust settles |
-| **teninchtoenail** | Lion salesman | Slowest on the roster; the briefcase closes every conversation |
-| **diva** | Frog fashionista | Floaty, three jumps, longest reach, unkillable off-stage |
+| **teninchtoenail** | Lion salesman | Heaviest and slowest; the briefcase closes every conversation |
+| **diva** | Frog fashionista | Three jumps, longest reach, hardest to edgeguard - and the first to die |
 | **MrPasionfruit** | Athletic black cat | Fastest thing here. Tiny hits, endless combos |
+| **NightShift** | Leopard night guard | Locked. One committed pounce, biggest single hit, nothing to fall back on |
+
+`locked: true` on a `CharDef` keeps a fighter on the select screen but out of
+play; `playableId()` is the guard that stops a locked id reaching a match from
+a stale pick or a remote peer. Flip the flag to let NightShift in.
 
 Frame data lives in
 [characters.ts](src/games/smash/engine/characters.ts) and is meant to be tuned.
 `npm run smoke` re-checks that the mechanics still hold after you change
 numbers.
+
+### Tuning the roster
+
+Two things dominate this engine, and neither is damage:
+
+- **Startup frames on the committed poke.** The CPU used to swing on a fixed
+  14-frame cooldown, so whichever fighter's hitbox appeared first won every
+  exchange - one frame of startup was worth about fifty points of win rate, and
+  it flattened every other difference between the cast. The cooldown is
+  jittered now, and the roster sits in an 8-10 frame band.
+- **The active window.** Four active frames connect about 22% of the time
+  against a moving target, five about 53%. It is a cliff, not a slope, so every
+  main poke gets the same window and the differences live in startup, end lag,
+  damage and reach.
+
+Balance was measured, not eyeballed: a CPU-vs-CPU round robin over every
+ordered pair, which reads 45-55% win rate across the six. The same harness with
+six identical fighters lands inside 2.5 points, so a spread wider than that is
+real signal rather than noise.
 
 **Map: Lakeside Camp** - one grassy bluff with a walled underside, three
 drop-through plank platforms, a tent and a fire. Geometry is in

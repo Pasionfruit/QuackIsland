@@ -900,7 +900,12 @@ export class SmashEngine {
 
     const canSwing = this.cpu.cooldown <= 0 && adx < reach + (level >= 3 ? 10 : 4) && Math.abs(dy) < 30
     if (canSwing) {
-      this.cpu.cooldown = level === 1 ? 42 : level === 2 ? 26 : 14
+      // Jittered, because a fixed cooldown makes both fighters swing on the
+      // same beat and the one with fewer startup frames wins every single
+      // exchange - which turned one frame of startup into a 50-point swing in
+      // win rate and flattened every other difference between the cast.
+      const base = level === 1 ? 42 : level === 2 ? 26 : 14
+      this.cpu.cooldown = base + Math.floor(Math.random() * base * 0.7)
       const r = Math.random()
       if (dy < -16) {
         out.up = true

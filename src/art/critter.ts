@@ -5,7 +5,18 @@
  * forward, -y up, sized in fractions of the character's height), shaded in
  * world space so the light never moves.
  */
-import { ellipse, facet, fillPoly, limb, shade, softShadow, type FacetOpts, type Pt } from '../lib/draw'
+import {
+  domePoly,
+  ellipse,
+  facet,
+  fillPoly,
+  limb,
+  shade,
+  softPoly,
+  softShadow,
+  type FacetOpts,
+  type Pt,
+} from '../lib/draw'
 import type { AvatarOpts, Pose } from './avatar'
 
 export type CritterKind = 'cat' | 'dog' | 'bird'
@@ -29,7 +40,19 @@ export interface CritterDef {
 
 interface Brush {
   facet: (pts: Pt[], color: string, opts?: FacetOpts) => void
+  /** Unshaded, for markings and patches. Corners still get softened. */
   flat: (pts: Pt[], color: string) => void
+  /** A faceted lump: bodies, heads, muzzles, paws. */
+  dome: (
+    cx: number,
+    cy: number,
+    rx: number,
+    ry: number,
+    color: string,
+    seed?: number,
+    opts?: FacetOpts,
+  ) => void
+  /** A true ellipse. Eyes and highlights only. */
   blob: (cx: number, cy: number, rx: number, ry: number, color: string) => void
 }
 
@@ -70,7 +93,12 @@ export function drawCritter(
       if (o.tint) fillPoly(ctx, place(pts), o.tint)
       else facet(ctx, place(pts), color, opts)
     },
-    flat: (pts, color) => fillPoly(ctx, place(pts), o.tint ?? color),
+    flat: (pts, color) => softPoly(ctx, place(pts), o.tint ?? color, 0.16),
+    dome: (cx, cy, rx, ry, color, seed = 0, opts) => {
+      const pts = place(domePoly(cx, cy, rx, ry, 9, seed))
+      if (o.tint) fillPoly(ctx, pts, o.tint)
+      else facet(ctx, pts, color, { dark: 0.16, light: 0.11, round: 0, seed, ...opts })
+    },
     blob: (cx, cy, rx, ry, color) => {
       const c = placeOne(cx, cy)
       ellipse(ctx, c.x, c.y, rx * sx, ry * sy, o.tint ?? color)
@@ -196,7 +224,7 @@ function drawQuadruped(brush: Brush, def: CritterDef, h: number, pose: Pose, pha
       dark: 0.2,
     })
     const paw = { x: hip.x + Math.cos(ang) * legLen * 0.92, y: hip.y + Math.sin(ang) * legLen * 0.92 }
-    brush.blob(paw.x + h * 0.02, paw.y, h * 0.09, h * 0.055, def.feet ?? shade(def.body, 0.12))
+    brush.dome(paw.x + h * 0.02, paw.y, h * 0.09, h * 0.055, def.feet ?? shade(def.body, 0.12), 8.4)
   }
   drawLeg(-bodyLen * 0.3, backSwing, -0.2)
   drawLeg(bodyLen * 0.26, frontSwing, -0.2)
@@ -242,7 +270,7 @@ function drawQuadruped(brush: Brush, def: CritterDef, h: number, pose: Pose, pha
     const ang = Math.PI / 2 - s
     brush.facet(limb(sh.x, sh.y, ang, legLen * 1.02, h * 0.115, 0.85), def.body, { dark: 0.18 })
     const paw = { x: sh.x + Math.cos(ang) * legLen, y: sh.y + Math.sin(ang) * legLen }
-    brush.blob(paw.x + h * 0.02, paw.y, h * 0.09, h * 0.055, def.feet ?? shade(def.body, 0.12))
+    brush.dome(paw.x + h * 0.02, paw.y, h * 0.09, h * 0.055, def.feet ?? shade(def.body, 0.12), 8.4)
   }
   drawFrontLeg(-bodyLen * 0.22, backSwing * 0.8)
   drawFrontLeg(bodyLen * 0.34, frontSwing)
@@ -304,7 +332,7 @@ function drawQuadruped(brush: Brush, def: CritterDef, h: number, pose: Pose, pha
   // Muzzle.
   const muzzleX = hx + headR * (dog ? 0.86 : 0.62)
   const muzzleY = hy + headR * 0.36
-  brush.blob(muzzleX, muzzleY, headR * (dog ? 0.52 : 0.4), headR * (dog ? 0.4 : 0.3), def.belly)
+  brush.dome(muzzleX, muzzleY, headR * (dog ? 0.52 : 0.4), headR * (dog ? 0.4 : 0.3), def.belly, 1.9)
   brush.blob(muzzleX + headR * 0.18, muzzleY - headR * 0.18, headR * 0.14, headR * 0.11, def.nose)
 
   if (def.collar) {
@@ -460,11 +488,11 @@ function drawBird(brush: Brush, def: CritterDef, h: number, pose: Pose, phase: n
   )
 
   // Body.
-  brush.blob(0, bodyCy, bodyRx, bodyRy, def.body)
-  brush.blob(-bodyRx * 0.1, bodyCy + bodyRy * 0.28, bodyRx * 0.78, bodyRy * 0.6, def.belly)
+  brush.dome(0, bodyCy, bodyRx, bodyRy, def.body, 0.4, { dark: 0.2, light: 0.13 })
+  brush.dome(-bodyRx * 0.1, bodyCy + bodyRy * 0.28, bodyRx * 0.78, bodyRy * 0.6, def.belly, 2.2)
 
   // Head and beak.
-  brush.blob(headX, headY, headR, headR * 1.02, def.body)
+  brush.dome(headX, headY, headR, headR * 1.02, def.body, 3.6, { dark: 0.2, light: 0.13 })
   brush.facet(
     [
       { x: headX + headR * 0.5, y: headY - headR * 0.12 },

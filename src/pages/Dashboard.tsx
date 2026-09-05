@@ -64,7 +64,7 @@ function StatBar({ label, value }: { label: string; value: number }) {
 
 function FighterCard({ def }: { def: CharDef }) {
   return (
-    <div className="fighter">
+    <div className={`fighter ${def.locked ? 'fighter--locked' : ''}`}>
       <SceneCanvas
         width={48}
         height={48}
@@ -86,8 +86,9 @@ function FighterCard({ def }: { def: CharDef }) {
       <div style={{ flex: 1 }}>
         <div className="fighter__name" style={{ color: def.theme.dark }}>
           {def.name}
+          {def.locked && <span className="fighter__lock">LOCKED</span>}
         </div>
-        <div className="fighter__title">{def.title}</div>
+        <div className="fighter__title">{def.locked ? def.unlockHint ?? def.title : def.title}</div>
         <div className="bars">
           <StatBar label="PWR" value={def.stats.power} />
           <StatBar label="SPD" value={def.stats.speed} />

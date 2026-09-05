@@ -379,7 +379,7 @@ console.log('\nPolyland Smash - engine smoke test\n')
 
 // 15. Roster integrity: every fighter is complete and sanely tuned.
 {
-  const { ROSTER } = await import(pathToFileURL(charsOut).href)
+  const { ROSTER, charById, playableId } = await import(pathToFileURL(charsOut).href)
   const ids = new Set()
   let bad = 0
   const problems = []
@@ -405,14 +405,17 @@ console.log('\nPolyland Smash - engine smoke test\n')
   }
   bad = problems.length
   check('every fighter is complete and in range', bad === 0, problems.slice(0, 4).join('; '))
-  check('the roster has five fighters', ROSTER.length === 5, `${ROSTER.length}`)
+  check('the roster has six fighters', ROSTER.length === 6, `${ROSTER.length}`)
+  check('exactly one fighter is locked', ROSTER.filter((c) => c.locked).length === 1)
+  check('every locked fighter says how to unlock', ROSTER.every((c) => !c.locked || c.unlockHint))
+  check('playableId refuses a locked fighter', !charById(playableId('nightshift')).locked)
   const species = new Set(ROSTER.map((c) => c.avatar.species))
   check('every fighter is a different species', species.size === ROSTER.length, [...species].join(', '))
 }
 
 // 16. Every fighter can actually fight: land a hit and get home from off-stage.
 {
-  const { ROSTER } = await import(pathToFileURL(charsOut).href)
+  const { ROSTER, charById, playableId } = await import(pathToFileURL(charsOut).href)
   const cantHit = []
   const cantRecover = []
 
@@ -453,7 +456,7 @@ console.log('\nPolyland Smash - engine smoke test\n')
 
 // 17. No fighter is wildly out of line on raw killing power.
 {
-  const { ROSTER } = await import(pathToFileURL(charsOut).href)
+  const { ROSTER, charById, playableId } = await import(pathToFileURL(charsOut).href)
   const kb = []
   for (const c of ROSTER) {
     const eng = newMatch({ chars: [c.id, 'contrlzee'] })

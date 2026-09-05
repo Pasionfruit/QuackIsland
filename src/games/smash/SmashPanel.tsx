@@ -6,7 +6,7 @@ import { CONTROL_HINTS, Keyboard, packInput, unpackInput } from '../../lib/input
 import { fitScene, rect } from '../../lib/draw'
 import { NetClient, defaultServerUrl } from '../../net/client'
 import { normalizeCode, type PeerInfo, type SmashPayload } from '../../net/protocol'
-import { ROSTER, charById, drawChar } from './engine/characters'
+import { PLAYABLE, ROSTER, charById, drawChar, playableId } from './engine/characters'
 import { SmashEngine, TICK, type MatchConfig } from './engine/engine'
 import { renderMatch } from './engine/render'
 import { LAKESIDE_CAMP, VIEW_H, VIEW_W } from './engine/stage'
@@ -154,14 +154,17 @@ function Slot({
           <button
             key={c.id}
             type="button"
-            className={['pick', c.id === picked ? 'pick--on' : ''].join(' ')}
-            style={c.id === picked ? { color: c.theme.dark } : undefined}
-            onClick={() => onPick?.(c.id)}
-            disabled={locked}
-            title={c.name + ' - ' + c.title}
+            className={['pick', c.id === picked ? 'pick--on' : '', c.locked ? 'pick--locked' : ''].join(
+              ' ',
+            )}
+            style={c.id === picked && !c.locked ? { color: c.theme.dark } : undefined}
+            onClick={() => !c.locked && onPick?.(c.id)}
+            disabled={locked || c.locked}
+            title={c.locked ? `${c.name} - ${c.unlockHint ?? 'Locked'}` : `${c.name} - ${c.title}`}
           >
-            <Portrait def={c} size={52} animate={c.id === picked} scenery={false} />
+            <Portrait def={c} size={52} animate={c.id === picked && !c.locked} scenery={false} />
             <span className="pick__name">{c.name}</span>
+            {c.locked && <span className="pick__lock">LOCKED</span>}
           </button>
         ))}
       </div>
@@ -636,8 +639,8 @@ export function SmashPanel() {
   const [mode, setMode] = useState<Mode>('local')
   const [role, setRole] = useState<Role | null>(null)
 
-  const [p1, setP1] = useState(ROSTER[0].id)
-  const [p2, setP2] = useState(ROSTER[1].id)
+  const [p1, setP1] = useState(PLAYABLE[0].id)
+  const [p2, setP2] = useState(PLAYABLE[1].id)
   const [cpu, setCpu] = useState(true)
   const [cpuLevel, setCpuLevel] = useState<1 | 2 | 3>(2)
   const [stocks, setStocks] = useState(3)
@@ -711,10 +714,15 @@ export function SmashPanel() {
             setStocks(msg.stocks)
             break
           case 'start':
-            setP1(msg.chars[0])
-            setP2(msg.chars[1])
+            setP1(playableId(msg.chars[0]))
+            setP2(playableId(msg.chars[1]))
             setStocks(msg.stocks)
-            setConfig({ chars: msg.chars, stocks: msg.stocks, cpu: false, cpuLevel: 2 })
+            setConfig({
+              chars: [playableId(msg.chars[0]), playableId(msg.chars[1])],
+              stocks: msg.stocks,
+              cpu: false,
+              cpuLevel: 2,
+            })
             setScreen('play')
             break
           case 'toLobby':
@@ -739,7 +747,8 @@ export function SmashPanel() {
   }
 
   const start = () => {
-    const chars: [string, string] = [p1, p2]
+    // A locked fighter can arrive from an older saved pick or a remote peer.
+    const chars: [string, string] = [playableId(p1), playableId(p2)]
     if (role === 'host') {
       net.send({ k: 'start', chars, stocks } satisfies SmashPayload)
       setConfig({ chars, stocks, cpu: false, cpuLevel })

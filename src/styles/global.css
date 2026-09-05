@@ -545,6 +545,9 @@ canvas {
 .fighter__name {
   font-size: 15px;
   font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .fighter__title {
@@ -676,7 +679,7 @@ canvas {
 
 .picks {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 8px;
 }
 
@@ -719,6 +722,27 @@ canvas {
   background: #fffdf4;
   color: var(--ink);
   box-shadow: 0 0 0 2px rgba(201, 147, 47, 0.28);
+}
+
+.pick--locked {
+  opacity: 0.45;
+  filter: grayscale(0.8);
+}
+
+.pick__lock,
+.fighter__lock {
+  font-family: var(--font);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: var(--dimmer);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 1px 4px;
+}
+
+.fighter--locked canvas {
+  opacity: 0.5;
+  filter: grayscale(0.8);
 }
 
 .pick__name {

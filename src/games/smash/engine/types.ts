@@ -73,6 +73,10 @@ export interface CharDef {
   moves: Record<MoveId, MoveDef>
   /** 1-5 bars for the select screen. */
   stats: { power: number; speed: number; weight: number }
+  /** Shown on the select screen but not pickable yet. */
+  locked?: boolean
+  /** What the select screen says about how to unlock them. */
+  unlockHint?: string
 }
 
 /** The shared two-player keyboard input, re-exported for the engine. */

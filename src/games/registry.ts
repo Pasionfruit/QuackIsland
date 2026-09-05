@@ -73,9 +73,9 @@ const SMASH: GameEntry = {
   players: '1-2 local, 2 online',
   status: 'live',
   blurb:
-    'Percent-based knockback, stocks and blast zones, with five animals who all fight completely differently.',
+    'Percent-based knockback, stocks and blast zones, with six animals who all fight completely differently.',
   plan: [
-    'Five fighters: a raccoon, a penguin, a lion, a frog and a cat.',
+    'Six fighters: a raccoon, a penguin, a lion, a frog, a cat, and a leopard still on shift.',
     'Lakeside Camp, with drop-through plank platforms.',
     'Local versus, CPU opponents, and host-and-join online.',
   ],

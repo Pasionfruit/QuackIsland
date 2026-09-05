@@ -12,18 +12,20 @@
  * shape, a pair of ears and a tail, not by a separate drawing routine.
  */
 import {
+  domePoly,
   ellipse,
   facet,
   fillPoly,
   limb,
   rectPts,
   shade,
+  softPoly,
   softShadow,
   type FacetOpts,
   type Pt,
 } from '../lib/draw'
 
-export type Species = 'raccoon' | 'penguin' | 'lion' | 'frog' | 'cat'
+export type Species = 'raccoon' | 'penguin' | 'lion' | 'frog' | 'cat' | 'leopard'
 export type TailStyle = 'ringed' | 'long' | 'tufted' | 'stub' | 'none'
 export type HatStyle = 'none' | 'hood' | 'headband' | 'beanie' | 'visor' | 'cap' | 'bow'
 export type Accessory =
@@ -50,6 +52,8 @@ export interface AvatarDef {
   /** Beak and feet, for birds. */
   beak?: string
   earInner?: string
+  /** Rosettes, for the spotted cats. */
+  spots?: string
   tail: TailStyle
 
   // Clothing and kit.
@@ -104,6 +108,9 @@ export interface AvatarOpts {
   shadow?: boolean
 }
 
+/** Corner cut for flat markings, gentler than the one forms get. */
+const MARK_ROUND = 0.16
+
 // Proportions, as fractions of total height. These animals are mostly head.
 const LEG_H = 0.19
 const TORSO_H = 0.34
@@ -116,7 +123,19 @@ const ARM_L = 0.23
 
 interface Brush {
   facet: (pts: Pt[], color: string, opts?: FacetOpts) => void
+  /** Unshaded, for markings and prints. Corners still get softened. */
   flat: (pts: Pt[], color: string) => void
+  /** A faceted lump: muzzles, cheeks, paws - anything with a form to it. */
+  dome: (
+    cx: number,
+    cy: number,
+    rx: number,
+    ry: number,
+    color: string,
+    seed?: number,
+    opts?: FacetOpts,
+  ) => void
+  /** A true ellipse. Eyes and highlights only; everything else has facets. */
   blob: (cx: number, cy: number, rx: number, ry: number, color: string) => void
 }
 
@@ -165,7 +184,14 @@ export function drawAvatar(
       if (o.tint) fillPoly(ctx, place(pts), o.tint)
       else facet(ctx, place(pts), color, opts)
     },
-    flat: (pts, color) => fillPoly(ctx, place(pts), o.tint ?? color),
+    // Markings get a lighter corner cut than forms do: a chest print or a
+    // bandit mask should soften, not dissolve.
+    flat: (pts, color) => softPoly(ctx, place(pts), o.tint ?? color, MARK_ROUND),
+    dome: (cx, cy, rx, ry, color, seed = 0, opts) => {
+      const pts = place(domePoly(cx, cy, rx, ry, 9, seed))
+      if (o.tint) fillPoly(ctx, pts, o.tint)
+      else facet(ctx, pts, color, { dark: 0.16, light: 0.11, round: 0, seed, ...opts })
+    },
     blob: (cx, cy, rx, ry, color) => {
       const c = placeOne(cx, cy)
       ellipse(ctx, c.x, c.y, rx * sx, ry * sy, o.tint ?? color)
@@ -388,7 +414,7 @@ export function drawAvatar(
     )
   }
   if (def.topAccent) {
-    brush.flat(
+    brush.facet(
       [
         { x: -tw * 0.7 + lean * 1.1, y: shoulderY },
         { x: tw * 0.7 + lean * 1.1, y: shoulderY },
@@ -396,6 +422,7 @@ export function drawAvatar(
         { x: -tw * 0.5 + lean, y: shoulderY + torsoH * 0.22 },
       ],
       def.topAccent,
+      { dark: 0.14, light: 0.08, relief: 0.5, seed: 2.4 },
     )
   }
   drawPrint(brush, def, lean, shoulderY, torsoH, tw)
@@ -422,6 +449,7 @@ export function drawAvatar(
     light: 0.13,
     split: 0.12,
   })
+  drawSpots(brush, def, rig)
   drawFace(brush, def, rig, eyes, lean)
   drawEarsFront(brush, def, rig)
   drawHat(brush, def, rig)
@@ -511,7 +539,7 @@ function drawArm(
   )
   const px = a.shoulderX + Math.cos(a.angle) * a.len
   const py = a.shoulderY + Math.sin(a.angle) * a.len
-  brush.blob(px, py, a.w * 0.55, a.w * 0.55, a.back ? shade(def.fur, -0.18) : def.fur)
+  brush.dome(px, py, a.w * 0.55, a.w * 0.55, a.back ? shade(def.fur, -0.18) : def.fur, 4.2)
 }
 
 // --------------------------------------------------------------------- heads
@@ -574,12 +602,12 @@ function drawEarsBehind(brush: Brush, def: AvatarDef, r: Rig): void {
     }
     brush.facet(mane, def.markings ?? shade(def.fur, -0.28), { dark: 0.24, light: 0.14 })
     for (const side of [-1, 1]) {
-      brush.blob(hx + side * hw * 0.72, cy - hh * 0.78, hw * 0.2, hh * 0.22, def.fur)
+      brush.dome(hx + side * hw * 0.72, cy - hh * 0.78, hw * 0.2, hh * 0.22, def.fur, 7 + side)
     }
     return
   }
-  if (def.species === 'raccoon' || def.species === 'cat') {
-    const pointy = def.species === 'cat'
+  if (def.species === 'raccoon' || def.species === 'cat' || def.species === 'leopard') {
+    const pointy = def.species !== 'raccoon'
     for (const side of [-1, 1]) {
       const ex = hx + side * hw * 0.6 + (side > 0 ? hw * 0.06 : 0)
       const tip = pointy ? hh * 1.5 : hh * 1.32
@@ -605,11 +633,36 @@ function drawEarsBehind(brush: Brush, def: AvatarDef, r: Rig): void {
   }
 }
 
+/**
+ * Rosettes across the top and sides of the skull. Fixed positions rather than
+ * random ones, so a leopard has the same markings every frame.
+ */
+const ROSETTES: { x: number; y: number; r: number }[] = [
+  { x: -0.62, y: -0.52, r: 0.15 },
+  { x: -0.2, y: -0.78, r: 0.13 },
+  { x: 0.3, y: -0.72, r: 0.14 },
+  { x: 0.72, y: -0.4, r: 0.12 },
+  { x: -0.78, y: -0.06, r: 0.12 },
+  { x: 0.82, y: 0.12, r: 0.11 },
+  { x: -0.5, y: 0.3, r: 0.1 },
+]
+
+function drawSpots(brush: Brush, def: AvatarDef, r: Rig): void {
+  if (!def.spots) return
+  const { hx, headCy: cy, hw, hh } = r
+  ROSETTES.forEach((s, i) => {
+    brush.dome(hx + hw * s.x, cy + hh * s.y, hw * s.r, hh * s.r * 1.1, def.spots!, 12 + i, {
+      dark: 0.14,
+      light: 0.08,
+    })
+  })
+}
+
 function drawEarsFront(brush: Brush, def: AvatarDef, r: Rig): void {
   // Only the frog needs something on the side of the head: an eardrum.
   if (def.species !== 'frog') return
   const { hx, headCy: cy, hw, hh } = r
-  brush.blob(hx + hw * 0.68, cy + hh * 0.16, hw * 0.2, hh * 0.2, shade(def.fur, -0.16))
+  brush.dome(hx + hw * 0.68, cy + hh * 0.16, hw * 0.2, hh * 0.2, shade(def.fur, -0.16), 2.6)
 }
 
 function drawFace(
@@ -631,7 +684,7 @@ function drawFace(
   switch (def.species) {
     case 'raccoon': {
       // Cream forehead and muzzle, with the bandit mask between them.
-      brush.flat(
+      brush.facet(
         [
           { x: hx - hw * 0.86, y: cy - hh * 0.42 },
           { x: hx - hw * 0.3, y: cy - hh * 0.94 },
@@ -639,6 +692,7 @@ function drawFace(
           { x: hx + hw * 0.7, y: cy - hh * 0.38 },
         ],
         def.belly,
+        { dark: 0.12, light: 0.07, relief: 0.6, seed: 1.1 },
       )
       brush.facet(
         [
@@ -650,7 +704,7 @@ function drawFace(
         def.markings ?? '#3a3733',
         { flat: true },
       )
-      brush.blob(hx + hw * 0.26, cy + hh * 0.56, hw * 0.52, hh * 0.36, def.belly)
+      brush.dome(hx + hw * 0.26, cy + hh * 0.56, hw * 0.52, hh * 0.36, def.belly, 1.4)
       brush.blob(hx + hw * 0.42, cy + hh * 0.36, hw * 0.16, hh * 0.13, def.nose)
       break
     }
@@ -682,7 +736,7 @@ function drawFace(
       break
     }
     case 'lion': {
-      brush.blob(hx + hw * 0.24, cy + hh * 0.54, hw * 0.56, hh * 0.36, def.belly)
+      brush.dome(hx + hw * 0.24, cy + hh * 0.54, hw * 0.56, hh * 0.36, def.belly, 3.1)
       brush.blob(hx + hw * 0.4, cy + hh * 0.32, hw * 0.17, hh * 0.13, def.nose)
       for (let i = 0; i < 2; i++) {
         brush.blob(
@@ -724,12 +778,12 @@ function drawFace(
       eyeW = hw * 0.56
       eyeH = hh * 0.6
       for (const side of [-1, 1]) {
-        brush.blob(eyeCx + side * eyeSpread, eyeY, eyeW * 0.62, eyeH * 0.62, def.fur)
+        brush.dome(eyeCx + side * eyeSpread, eyeY, eyeW * 0.62, eyeH * 0.62, def.fur, 5 + side)
       }
       break
     }
     default: {
-      brush.blob(hx + hw * 0.28, cy + hh * 0.52, hw * 0.44, hh * 0.3, def.belly)
+      brush.dome(hx + hw * 0.28, cy + hh * 0.52, hw * 0.44, hh * 0.3, def.belly, 6.3)
       brush.blob(hx + hw * 0.42, cy + hh * 0.34, hw * 0.14, hh * 0.11, def.nose)
       break
     }
@@ -890,7 +944,7 @@ function drawTail(
         const cx = baseX - Math.cos(a) * len * t * 0.9
         const cy = baseY + Math.sin(a) * len * t * 0.9 - t * h * 0.06
         const rr = h * (0.115 - t * 0.022)
-        brush.blob(cx, cy, rr, rr * 0.94, i % 2 === 0 ? shade(def.fur, -0.34) : shade(def.fur, 0.1))
+        brush.dome(cx, cy, rr, rr * 0.94, i % 2 === 0 ? shade(def.fur, -0.34) : shade(def.fur, 0.1), i * 1.7)
       }
       break
     }

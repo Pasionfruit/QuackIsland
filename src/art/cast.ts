@@ -113,12 +113,36 @@ export const MRPASIONFRUIT: AvatarDef = {
   accessoryAccent: '#7a4f8c',
 }
 
+/** NightShift - leopard, night-shift security, has not blinked since Tuesday. */
+export const NIGHTSHIFT: AvatarDef = {
+  species: 'leopard',
+  fur: '#d8b25c',
+  belly: '#f2e3c0',
+  markings: '#3a2f22',
+  spots: '#4a3a26',
+  nose: '#6b4a3a',
+  earInner: '#a8845a',
+  tail: 'long',
+  top: '#2f3a44',
+  topAccent: '#c8a24a',
+  sleeves: 'short',
+  legs: '#2a333c',
+  feet: '#1f262c',
+  hat: 'visor',
+  hatColor: '#2f3a44',
+  hatAccent: '#c8a24a',
+  accessory: 'mug',
+  accessoryColor: '#3f4a54',
+  accessoryAccent: '#c8a24a',
+}
+
 export const CAST: AvatarDef[] = [
   CONTRLZEE,
   NINJAPENGUIN,
   TENINCHTOENAIL,
   DIVA,
   MRPASIONFRUIT,
+  NIGHTSHIFT,
 ]
 
 // ------------------------------------------------------------------ critters

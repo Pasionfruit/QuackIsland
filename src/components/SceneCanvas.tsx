@@ -39,6 +39,7 @@ export function SceneCanvas({
     let ctx = fitScene(canvas, width, height)
     let frame = 0
     let raf = 0
+    let onScreen = true
 
     const paint = () => {
       ctx.clearRect(0, 0, width, height)
@@ -49,18 +50,46 @@ export function SceneCanvas({
       frame++
       if (animate) raf = requestAnimationFrame(tick)
     }
+    // A page of these is a page of faceted animals being remeshed every frame,
+    // so anything scrolled out of view - or a backgrounded tab - stops.
+    const running = () => onScreen && !document.hidden
+    const sync = () => {
+      if (!animate) return
+      if (running()) {
+        if (!raf) raf = requestAnimationFrame(tick)
+      } else if (raf) {
+        cancelAnimationFrame(raf)
+        raf = 0
+      }
+    }
 
     // Refit whenever the element changes size, or the canvas gets resampled.
-    const observer = new ResizeObserver(() => {
+    const resize = new ResizeObserver(() => {
       ctx = fitScene(canvas, width, height)
       if (!animate) paint()
     })
-    observer.observe(canvas)
+    resize.observe(canvas)
 
-    tick()
+    const visible = new IntersectionObserver(
+      ([entry]) => {
+        onScreen = entry.isIntersecting
+        sync()
+      },
+      { rootMargin: '120px' },
+    )
+    visible.observe(canvas)
+    document.addEventListener('visibilitychange', sync)
+
+    // Paint once up front so the canvas is never blank while the
+    // IntersectionObserver gets around to reporting where it is.
+    paint()
+    sync()
+
     return () => {
       cancelAnimationFrame(raf)
-      observer.disconnect()
+      document.removeEventListener('visibilitychange', sync)
+      visible.disconnect()
+      resize.disconnect()
     }
   }, [width, height, animate])
 
