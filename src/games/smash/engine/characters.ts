@@ -1,11 +1,14 @@
 import { drawAvatar, type AvatarDef, type AvatarOpts } from '../../../art/avatar'
 import {
+  CHEETAH,
   CONTRLZEE,
   DIVA,
+  HONEYBEE,
   MRPASIONFRUIT,
   NIGHTSHIFT,
   NINJAPENGUIN,
   TENINCHTOENAIL,
+  TUXEDOCAT,
 } from '../../../art/cast'
 import type { CharDef, MoveArt, MoveDef, MoveId } from './types'
 
@@ -363,18 +366,18 @@ const CAT: CharDef = {
   ),
 }
 
-/** NightShift - leopard, night watch, one committed pounce. */
+/** NightShift - leopard, gym rat, has not skipped a session since Tuesday. */
 const LEOPARD: CharDef = {
   id: 'nightshift',
   name: 'NightShift',
-  title: 'The Night Watch',
+  title: 'The Gymrat',
   blurb:
-    'Locked in since Tuesday and not blinking now. Waits at the edge of your range for one opening, takes it, and is standing behind you before the sound arrives.',
+    'Trains through winter because summer bodies are made in the cold. Waits at the edge of your range for one opening, takes it, and is already resetting for the next set.',
   avatar: NIGHTSHIFT,
   height: 33,
   theme: { primary: '#d8b25c', dark: '#8a6a2c', soft: '#f2e3c0' },
   locked: true,
-  unlockHint: 'Still on shift. Coming in a later build.',
+  unlockHint: 'Still finishing her set. Coming in a later build.',
   ...BASE,
   weight: 0.97,
   speed: 1.7,
@@ -389,19 +392,146 @@ const LEOPARD: CharDef = {
       specialSide: { damage: 13, drive: 3.6 },
     },
     {
-      attack: 'Claw Check',
-      attackSide: 'Pounce',
-      attackUp: 'Alley Vault',
-      attackDown: 'Pin Down',
-      special: 'Sixth Sense',
-      specialSide: 'Blindside',
-      specialUp: 'Fire Escape',
-      specialDown: 'Lights Out',
+      attack: 'Jab Cross',
+      attackSide: 'Kettlebell Swing',
+      attackUp: 'Clean and Jerk',
+      attackDown: 'Deadlift',
+      special: 'Cold Plunge',
+      specialSide: 'Sprint Interval',
+      specialUp: 'Box Jump',
+      specialDown: 'Max Effort',
     },
   ),
 }
 
-export const ROSTER: CharDef[] = [ZEE, PENGUIN, LION, FROG, CAT, LEOPARD]
+/** Wandering Honeybee - backpacker, has been "just one more stop" for six years. */
+const HONEYBEE_DEF: CharDef = {
+  id: 'honeybee',
+  name: 'Wandering Honeybee',
+  title: 'The Backpacker',
+  blurb:
+    'Everything she owns fits in one satchel, including the walking stick. Never in a hurry, never quite where you last saw her either.',
+  avatar: HONEYBEE,
+  height: 30,
+  theme: { primary: '#e8a33c', dark: '#a8672f', soft: '#f2e3c0' },
+  ...BASE,
+  weight: 0.93,
+  speed: 1.7,
+  accel: 0.4,
+  friction: 0.78,
+  slide: 0.91,
+  radius: 8.7,
+  stats: { power: 3, speed: 3, weight: 2 },
+  moves: kit(
+    {
+      attack: { startup: 3, damage: 5, recovery: 8 },
+      attackSide: { damage: 12, drive: 2.8, recovery: 15 },
+      attackUp: { damage: 10, hit: { reach: 21, depth: 22, width: 24 } },
+      specialDown: {
+        damage: 10,
+        baseKb: 36,
+        recovery: 18,
+        hit: { reach: 24, depth: 0, width: 0 },
+        radial: true,
+        killsMomentum: true,
+      },
+    },
+    {
+      attack: 'Walking Stick Poke',
+      attackSide: 'Wing Buzz',
+      attackUp: 'Updraft',
+      attackDown: 'Pollen Drop',
+      special: 'Honey Drop',
+      specialSide: 'Tailwind',
+      specialUp: 'Rising Hum',
+      specialDown: 'Hive Shield',
+    },
+  ),
+}
+
+/** Frolicking Cheetah - has never once walked when she could run. */
+const CHEETAH_DEF: CharDef = {
+  id: 'cheetah',
+  name: 'Frolicking Cheetah',
+  title: 'The Sprinter',
+  blurb:
+    'Fastest thing on the disc by a wide margin, and lightest too - land a hit and she is halfway to the rim before she even notices.',
+  avatar: CHEETAH,
+  height: 31,
+  theme: { primary: '#e0a63c', dark: '#3a2f22', soft: '#f2e3c0' },
+  ...BASE,
+  weight: 0.88,
+  speed: 1.9,
+  accel: 0.4,
+  friction: 0.76,
+  slide: 0.86,
+  radius: 8.4,
+  stats: { power: 1, speed: 5, weight: 1 },
+  moves: kit(
+    {
+      attack: { startup: 3, recovery: 7, damage: 4 },
+      attackSide: { startup: 8, damage: 9, recovery: 15 },
+      specialSide: { damage: 10, startup: 10, recovery: 19 },
+    },
+    {
+      attack: 'Playful Swipe',
+      attackSide: 'Full Tilt',
+      attackUp: 'Leaping Pounce',
+      attackDown: 'Pounce Slam',
+      special: 'Bloom Burst',
+      specialSide: 'Wind Sprint',
+      specialUp: 'Leaf Whirl',
+      specialDown: "Nature's Fury",
+    },
+  ),
+}
+
+/** Yearning Tuxedo Cat - a romantic soul who loves to yearn. */
+const TUXEDOCAT_DEF: CharDef = {
+  id: 'tuxedocat',
+  name: 'Tuxedo Cat',
+  title: 'The Romantic',
+  blurb:
+    'Brought a rose to a fight. Slow to close the distance, but everything lands hard once she does, and she is in no rush to leave.',
+  avatar: TUXEDOCAT,
+  height: 33,
+  theme: { primary: '#2b2622', dark: '#1a1714', soft: '#f2ece0' },
+  ...BASE,
+  weight: 1.02,
+  speed: 1.52,
+  accel: 0.34,
+  friction: 0.8,
+  slide: 0.92,
+  radius: 9.2,
+  stats: { power: 4, speed: 2, weight: 4 },
+  moves: kit(
+    {
+      attack: { damage: 5, hit: { reach: 17, depth: 17, width: 19 } },
+      attackSide: { startup: 8, damage: 13, recovery: 16, drive: 2.8, hit: { reach: 24, depth: 22, width: 20 } },
+      specialSide: { damage: 14, startup: 10, recovery: 19, drive: 3.0, hit: { reach: 30, depth: 24, width: 18 } },
+      specialDown: {
+        damage: 12,
+        baseKb: 46,
+        recovery: 22,
+        hit: { reach: 30, depth: 0, width: 0 },
+        radial: true,
+        killsMomentum: true,
+      },
+    },
+    {
+      attack: 'Rose Offering',
+      attackSide: 'Heart Trail',
+      attackUp: 'Heartburst',
+      attackDown: 'Heartbreak Slam',
+      special: 'Moonlit Gaze',
+      specialSide: 'Love Letter Dash',
+      specialUp: 'Lovesick Swirl',
+      specialDown: 'Heart Aura',
+    },
+  ),
+}
+
+export const ROSTER: CharDef[] = [ZEE, PENGUIN, LION, FROG, CAT, LEOPARD, HONEYBEE_DEF, CHEETAH_DEF, TUXEDOCAT_DEF]
 
 /** The fighters anyone can actually pick right now. */
 export const PLAYABLE: CharDef[] = ROSTER.filter((c) => !c.locked)

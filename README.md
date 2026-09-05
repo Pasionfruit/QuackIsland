@@ -6,7 +6,7 @@ all share them.
 
 The first game is **Polyland Smash** - an arena fighter played looking down on
 a floating disc. Percent-based knockback, stocks, and no railings: hit someone
-hard enough and they go over the rim. Six fighters who play very differently.
+hard enough and they go over the rim. Nine fighters who play very differently.
 
 The second is **Duck szn** - a fixed-perspective shooting gallery in the shape
 of Wii Play's range: five stages, up to eight people with a mouse each, and one
@@ -187,20 +187,29 @@ the further they go. Everything else follows from that: **weight** is how little
 you slide, **deceleration** is how fast that slide bleeds off, and the whole
 fight is a contest over who is standing nearer the middle.
 
-Six fighters, no two alike:
+Nine fighters, no two alike:
 
 | Fighter | Who they are | How they play |
 | --- | --- | --- |
 | **ContrlZee** | Raccoon programmer | Reads the floor early and is already standing where you were going |
 | **NinjaPenguin** | Penguin ninja | Slides in on the diagonal, flurries you toward the rim, and is gone |
 | **teninchtoenail** | Lion salesman | Heaviest thing out there; slow to cross the floor, murder to shift off it |
-| **diva** | Frog fashionista | Lightest on the roster and the longest reach - she skids to a stop where others sail off |
-| **MrPasionfruit** | Athletic black cat | Fastest thing here. Tiny hits, endless pressure |
-| **NightShift** | Leopard night guard | Locked. One committed pounce, biggest single hit, nothing to fall back on |
+| **diva** | Frog fashionista | Long reach and a fast skid to a stop where others sail off |
+| **MrPasionfruit** | Athletic black cat | Tiny hits, endless pressure |
+| **Wandering Honeybee** | Backpacker | Middle of the road on every stat - the roster's baseline |
+| **Frolicking Cheetah** | Sprinter | Fastest and lightest on the roster; a hit sends her flying just as fast |
+| **Tuxedo Cat** | Romantic | Heaviest and slowest of the new arrivals, but her reach and damage make you come to her |
+| **NightShift** | Leopard gym rat | Locked. One committed pounce, biggest single hit, nothing to fall back on |
 
 `locked: true` on a `CharDef` keeps a fighter on the select screen but out of
 play; `playableId()` is the guard that stops a locked id reaching a match from a
 stale pick or a remote peer. Flip the flag to let NightShift in.
+
+Seven of the nine draw from real sprite sheets rather than the procedural rig
+(see [Character art](#character-art) below); ContrlZee and MrPasionfruit are
+still procedural - MrPasionfruit's reference sheet is dark-on-dark enough that
+automated background removal cannot separate the two, not that the art was
+never made. See the note there before assuming it just hasn't been done yet.
 
 Frame data lives in
 [characters.ts](src/games/smash/engine/characters.ts) and is meant to be tuned.
@@ -226,10 +235,12 @@ still true here:
 - **The active window.** Four active frames connect about 22% of the time
   against a moving target, five about 53%. It is a cliff, not a slope.
 
-Balance is measured, not eyeballed: a CPU-vs-CPU round robin over every ordered
-pair, which currently reads 42-58% win rate across the six. The same harness
-with six identical fighters lands inside 2.5 points, so a spread wider than that
-is real signal rather than noise.
+Balance is measured, not eyeballed: `npm run balance` plays a CPU-vs-CPU round
+robin over every ordered pair (see [scripts/balance.mjs](scripts/balance.mjs)),
+which currently reads roughly 40-58% win rate across the nine - a wider band
+than the original six-fighter cast alone, since folding three new fighters in
+naturally perturbs everyone else's overall record even where individual
+matchups stay reasonable.
 
 ### Character art
 
@@ -259,6 +270,33 @@ introduced.
 A character with no sheet yet falls back to the procedural rig in
 [avatar.ts](src/art/avatar.ts), so the cast can be converted one at a time.
 
+A reference sheet that tiles several characters' full movesets into one image
+- a grid of panels, each laid out like the template above but compressed under
+its own title - goes through `scripts/slice-sprite-panels.mjs` instead, given a
+small JSON config naming each panel's pixel rectangle and output id (see
+`scripts/sprite-configs/*.json` for real examples). It shares its cropping core
+with `slice-sprites.mjs` via `scripts/lib/sprite-cut.mjs`.
+
+**A hard limit worth knowing about:** background removal works by colour
+distance, which assumes a character's own colours are different enough from
+the background to tell apart. A character whose clothing or fur is nearly the
+same near-black as the sheet's own vignette - MrPasionfruit's reference sheet,
+in this cast - has no edge for that to find: the flood leaks straight through
+with nothing to stop it, eroding holes clean through solid fabric rather than
+leaving anything fixable with a tolerance tweak. `cut()`'s `protectMargin`
+option papers over a *mild* case of this (trust the ink-tightened box's own
+geometry for the interior, only let the colour key touch a rim around it -
+see NightShift, whose sheet has the same problem to a lesser degree and ends
+up a little boxier in a few dynamic poses for it) but does not rescue a sheet
+where even the box-finding itself collapses. Regenerating the art against a
+lighter background is the real fix.
+
+Portraits - the still, painted card each fighter shows on the select screen -
+are a separate, simpler thing: just a rectangular crop with its background
+left in (see `src/games/smash/portraits.ts` and the `portraits/` folder),
+since a portrait is never composited over the arena floor the way an in-match
+sprite is.
+
 ### Tuning the roster
 
 Two things dominate this engine, and neither is damage:
@@ -273,10 +311,11 @@ Two things dominate this engine, and neither is damage:
   main poke gets the same window and the differences live in startup, end lag,
   damage and reach.
 
-Balance was measured, not eyeballed: a CPU-vs-CPU round robin over every
-ordered pair, which reads 45-55% win rate across the six. The same harness with
-six identical fighters lands inside 2.5 points, so a spread wider than that is
-real signal rather than noise.
+Balance was measured, not eyeballed: `npm run balance` plays a CPU-vs-CPU round
+robin over every ordered pair, which currently reads roughly 40-58% win rate
+across the nine fighters - see [Character art](#character-art) above for the
+`npm run balance` tool itself and why the band widened once three more
+fighters joined the original six.
 
 **Arena: Lakeside Bluff** - one grassy disc floating in the haze, ringed with
 pines and rocks and nothing else. Because the floor is an ellipse seen at an

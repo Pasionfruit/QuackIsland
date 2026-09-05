@@ -136,6 +136,64 @@ export const NIGHTSHIFT: AvatarDef = {
   accessoryAccent: '#c8a24a',
 }
 
+/**
+ * Wandering Honeybee, Frolicking Cheetah and Yearning Tuxedo Cat all ship
+ * with full sprite sheets (see server/../sprites/), so this procedural rig
+ * only ever draws them if a sprite fails to load - there is no bee body plan
+ * in the rig, so honeybee borrows the roundest existing silhouette instead.
+ */
+
+/** Wandering Honeybee - explorer, hums while she works. */
+export const HONEYBEE: AvatarDef = {
+  species: 'penguin',
+  fur: '#e8a33c',
+  belly: '#2b2622',
+  nose: '#8a5a3a',
+  beak: '#8a5a3a',
+  tail: 'stub',
+  legs: '#2b2622',
+  feet: '#8a5a3a',
+  hat: 'cap',
+  hatColor: '#8a6a45',
+  hatAccent: '#e8dfc4',
+  accessory: 'staff',
+  accessoryColor: '#7d5a3a',
+  pack: '#7d5a3a',
+  satchel: '#8d6b45',
+}
+
+/** Frolicking Cheetah - has never once walked when she could run. */
+export const CHEETAH: AvatarDef = {
+  species: 'leopard',
+  fur: '#e0a63c',
+  belly: '#f2e3c0',
+  markings: '#3a2f22',
+  spots: '#4a3a26',
+  nose: '#6b4a3a',
+  earInner: '#a8845a',
+  tail: 'long',
+  hat: 'none',
+  accessory: 'none',
+}
+
+/** Yearning Tuxedo Cat - a romantic soul who loves to yearn. */
+export const TUXEDOCAT: AvatarDef = {
+  species: 'cat',
+  fur: '#2b2622',
+  belly: '#f2ece0',
+  nose: '#c98d92',
+  earInner: '#e8c4c8',
+  tail: 'long',
+  top: '#1a1714',
+  topAccent: '#f2ece0',
+  sleeves: 'long',
+  legs: '#1a1714',
+  feet: '#f2ece0',
+  hat: 'none',
+  accessory: 'none',
+  print: 'none',
+}
+
 export const CAST: AvatarDef[] = [
   CONTRLZEE,
   NINJAPENGUIN,
@@ -143,6 +201,9 @@ export const CAST: AvatarDef[] = [
   DIVA,
   MRPASIONFRUIT,
   NIGHTSHIFT,
+  HONEYBEE,
+  CHEETAH,
+  TUXEDOCAT,
 ]
 
 // ------------------------------------------------------------------ critters

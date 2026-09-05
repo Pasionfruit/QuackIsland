@@ -12,6 +12,7 @@
     "start": "node server/index.mjs",
     "preview": "vite preview",
     "smoke": "node scripts/smoke.mjs",
+    "balance": "node scripts/balance.mjs",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {

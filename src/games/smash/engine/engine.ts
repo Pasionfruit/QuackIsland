@@ -86,6 +86,8 @@ export interface MatchConfig {
   stocks: number
   cpu: boolean
   cpuLevel: 1 | 2 | 3
+  /** Both fighters CPU-controlled rather than just slot 1 - offline balance testing only, never wired to a real match. */
+  cpu2?: boolean
 }
 
 export const DEFAULT_CONFIG: MatchConfig = {
@@ -130,7 +132,10 @@ export class SmashEngine {
 
   private inputs: [RawInput, RawInput] = [emptyInput(), emptyInput()]
   private prevInputs: [RawInput, RawInput] = [emptyInput(), emptyInput()]
-  private cpu = { cooldown: 0, decision: 0, driftX: 0, driftY: 0 }
+  private cpu = [
+    { cooldown: 0, decision: 0, driftX: 0, driftY: 0 },
+    { cooldown: 0, decision: 0, driftX: 0, driftY: 0 },
+  ]
 
   constructor(config: Partial<MatchConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config }
@@ -198,7 +203,8 @@ export class SmashEngine {
 
   step(): void {
     this.frame++
-    if (this.config.cpu) this.inputs[1] = this.cpuThink()
+    if (this.config.cpu) this.inputs[1] = this.cpuThink(1)
+    if (this.config.cpu2) this.inputs[0] = this.cpuThink(0)
 
     if (this.phase === 'intro') {
       this.phaseTimer--
@@ -676,19 +682,20 @@ export class SmashEngine {
 
   // -------------------------------------------------------------------- cpu
 
-  private cpuThink(): RawInput {
+  private cpuThink(meIndex: 0 | 1): RawInput {
     const out = emptyInput()
-    const me = this.fighters[1]
-    const foe = this.fighters[0]
+    const me = this.fighters[meIndex]
+    const foe = this.fighters[meIndex === 0 ? 1 : 0]
+    const cpu = this.cpu[meIndex]
     if (this.phase !== 'fight' || me.state === 'dead' || me.state === 'falling') return out
     if (me.hitstun > 0 || me.move) return out
 
     const level = this.config.cpuLevel
-    if (this.cpu.cooldown > 0) this.cpu.cooldown--
+    if (cpu.cooldown > 0) cpu.cooldown--
     if (this.frame % 20 === 0) {
-      this.cpu.decision = Math.random()
-      this.cpu.driftX = rand(-1, 1)
-      this.cpu.driftY = rand(-1, 1)
+      cpu.decision = Math.random()
+      cpu.driftX = rand(-1, 1)
+      cpu.driftY = rand(-1, 1)
     }
 
     // Getting away from the rim beats anything else.
@@ -712,7 +719,7 @@ export class SmashEngine {
       else if (dx < -3) out.left = true
       if (dy > 3) out.down = true
       else if (dy < -3) out.up = true
-      if (level === 1 && this.cpu.decision < 0.3) {
+      if (level === 1 && cpu.decision < 0.3) {
         out.left = out.right = out.up = out.down = false
       }
     } else if (dist < reach * 0.45) {
@@ -721,10 +728,10 @@ export class SmashEngine {
     }
 
     const base = level === 1 ? 40 : level === 2 ? 25 : 14
-    if (this.cpu.cooldown <= 0 && dist < reach + (level >= 3 ? 10 : 4)) {
+    if (cpu.cooldown <= 0 && dist < reach + (level >= 3 ? 10 : 4)) {
       // Jittered, because a fixed cooldown makes both fighters swing on the
       // same beat and whoever has fewer startup frames wins every exchange.
-      this.cpu.cooldown = base + Math.floor(Math.random() * base * 0.7)
+      cpu.cooldown = base + Math.floor(Math.random() * base * 0.7)
       const r = Math.random()
       // Face the target before swinging, so the hitbox points the right way.
       if (Math.abs(dx) > Math.abs(dy)) {

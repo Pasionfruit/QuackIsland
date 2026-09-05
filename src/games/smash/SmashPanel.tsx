@@ -8,6 +8,7 @@ import { useFullscreen } from '../../lib/fullscreen'
 import { NetClient, defaultServerUrl } from '../../net/client'
 import { normalizeCode, type PeerInfo, type SmashPayload } from '../../net/protocol'
 import { PLAYABLE, ROSTER, charById, drawChar, playableId } from './engine/characters'
+import { portraitFor } from './portraits'
 import { loadSprites } from './sprites'
 import { SmashEngine, TICK, type MatchConfig } from './engine/engine'
 import { renderMatch } from './engine/render'
@@ -38,6 +39,12 @@ type Role = 'host' | 'guest'
 
 // ---------------------------------------------------------------- portraits
 
+/**
+ * A fighter's card in the select screen and the "chosen" panel. Every roster
+ * member now has a painted portrait (see portraits.ts); the procedural
+ * scene - the same rig the arena falls back to when a fighter has no sprite
+ * sheet - is the fallback for a fighter that doesn't.
+ */
 function Portrait({
   def,
   size = 64,
@@ -49,6 +56,18 @@ function Portrait({
   animate?: boolean
   scenery?: boolean
 }) {
+  const portrait = portraitFor(def.id)
+  if (portrait) {
+    return (
+      <img
+        src={portrait}
+        alt={def.name}
+        width={size}
+        height={size}
+        style={{ width: size, height: size, objectFit: 'cover', borderRadius: size >= 72 ? 10 : 6, display: 'block' }}
+      />
+    )
+  }
   return (
     <SceneCanvas
       width={size}
