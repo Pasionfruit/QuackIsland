@@ -47,16 +47,27 @@ export const PALETTE = [
 export const BRUSH_SIZES = [2, 4, 8, 16]
 
 /** Renders every stroke onto a canvas sized `w` x `h` CSS pixels. */
-export function renderStrokes(ctx: CanvasRenderingContext2D, strokes: Stroke[], w: number, h: number): void {
+/**
+ * `w`/`h` are CSS pixels - the space strokes are drawn in. `dpr` is only
+ * needed by the paint bucket, which reads and writes the backing store
+ * directly and so has to work in device pixels instead.
+ */
+export function renderStrokes(
+  ctx: CanvasRenderingContext2D,
+  strokes: Stroke[],
+  w: number,
+  h: number,
+  dpr = 1,
+): void {
   ctx.clearRect(0, 0, w, h)
   ctx.fillStyle = '#fbf8f0'
   ctx.fillRect(0, 0, w, h)
-  for (const s of strokes) drawStroke(ctx, s, w, h)
+  for (const s of strokes) drawStroke(ctx, s, w, h, dpr)
 }
 
-export function drawStroke(ctx: CanvasRenderingContext2D, s: Stroke, w: number, h: number): void {
+export function drawStroke(ctx: CanvasRenderingContext2D, s: Stroke, w: number, h: number, dpr = 1): void {
   if (s.kind === 'fill') {
-    drawFill(ctx, s, w, h)
+    drawFill(ctx, s, w, h, dpr)
     return
   }
   if (s.points.length === 0) return
@@ -105,18 +116,23 @@ function hexToRgba(hex: string): [number, number, number, number] {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255, 255]
 }
 
-function drawFill(ctx: CanvasRenderingContext2D, s: Stroke, w: number, h: number): void {
+function drawFill(ctx: CanvasRenderingContext2D, s: Stroke, w: number, h: number, dpr = 1): void {
+  // getImageData/putImageData ignore the context transform and work on the
+  // backing store, so everything here is in device pixels while the rest of
+  // the file is in CSS pixels.
+  const pw = Math.max(1, Math.round(w * dpr))
+  const ph = Math.max(1, Math.round(h * dpr))
   const cached = fillCache.get(s)
-  if (cached && cached.w === w && cached.h === h) {
-    ctx.putImageData(new ImageData(new Uint8ClampedArray(cached.data), w, h), 0, 0)
+  if (cached && cached.w === pw && cached.h === ph) {
+    ctx.putImageData(new ImageData(new Uint8ClampedArray(cached.data), pw, ph), 0, 0)
     return
   }
-  const img = ctx.getImageData(0, 0, w, h)
-  const x = Math.round(s.points[0][0] * w)
-  const y = Math.round(s.points[0][1] * h)
-  floodFillBuffer(img.data, w, h, x, y, hexToRgba(s.color))
+  const img = ctx.getImageData(0, 0, pw, ph)
+  const x = Math.round(s.points[0][0] * pw)
+  const y = Math.round(s.points[0][1] * ph)
+  floodFillBuffer(img.data, pw, ph, x, y, hexToRgba(s.color))
   ctx.putImageData(img, 0, 0)
-  fillCache.set(s, { w, h, data: img.data.slice() })
+  fillCache.set(s, { w: pw, h: ph, data: img.data.slice() })
 }
 
 /**

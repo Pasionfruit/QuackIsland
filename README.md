@@ -46,6 +46,18 @@ Polyland Smash adds a jump (a tap of `W` / the up arrow), a shield (`R` for
 player 1, `,` for player 2) and dodges cancelled out of it - see
 [Polyland Smash](#polyland-smash) below.
 
+**`Esc` pauses every real-time game, and it pauses it for everybody.** A
+timeout is a room-wide thing, not a personal one: whoever presses it stops the
+match for the whole room, and the card names them so nobody is left wondering
+why the screen stopped. That falls out of the hosting model nearly for free -
+only the host simulates, so a host that stops stepping has already frozen the
+world for every guest - and the rest is one `{ k: 'pause' }` payload that every
+game understands alongside its own, handled in
+[lib/pause.ts](src/lib/pause.ts). Clocks stop with everything else: nobody
+loses build time, drawing time or a stage timer to a pause somebody else
+called. Case Closed is the one game without it, because a turn-based board
+game has no clock to stop - an Esc menu there would be a pause in name only.
+
 Every one of these is rebindable. Smash, Hide & Seek and Tank Trouble each
 have a **Controls** panel in-game: click an action, press the key you want it
 on. A rebind is saved to `localStorage` under a `game.action` key (see
@@ -124,6 +136,8 @@ own machine) is just opening that one URL twice.
 | Scenery pieces (tents, pines, fire, pets) | [src/art/props.ts](src/art/props.ts) |
 | Palette | [src/art/palette.ts](src/art/palette.ts) |
 | Two-player keyboard, shared by all games | [src/lib/input.ts](src/lib/input.ts) |
+| Room-wide pause, shared by all games | [src/lib/pause.ts](src/lib/pause.ts) |
+| Shared HUD vocabulary (banners, plates, tags) | [src/lib/hud.ts](src/lib/hud.ts) |
 | Netplay client and wire format | [src/net/](src/net/) |
 | Relay server | [server/index.mjs](server/index.mjs) |
 | Smash panel (lobby, select, arena) | [src/games/smash/SmashPanel.tsx](src/games/smash/SmashPanel.tsx) |
@@ -190,6 +204,18 @@ game gets the whole cast for free.
 Backdrops and set dressing live in [scenes.ts](src/art/scenes.ts) and
 [props.ts](src/art/props.ts) - skies, water, treelines, rooms, tents, fires,
 tanks, ghosts - so a new game's card art is usually fifteen lines.
+
+**Chrome is not world art.** Anything drawn *over* a game rather than *in* it -
+a banner, a countdown, a name over a character, a timer plate - goes through
+[lib/hud.ts](src/lib/hud.ts) instead of the palette. Each game had grown its
+own scrim alpha, its own cream, its own countdown size and its own name-tag
+weight, so moving between them felt like moving between projects; there is now
+one vocabulary for all of it. Two rules matter more than the rest: HUD text
+always carries a shadow, because canvas text sits over sky, water, walls and
+whatever a player just built and contrast can never be assumed; and a backdrop
+that shakes is painted past the edge of the view (or not shaken at all), since
+one that stops at the edge slides off it and leaves a strip of the previous
+frame showing.
 
 ## Polyland Smash
 

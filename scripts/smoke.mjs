@@ -593,6 +593,17 @@ console.log('\nPolyland Smash - engine smoke test\n')
     eng.shoot(0, 10, 10)
     check('a miss resets the combo', eng.combo === 0, `${eng.combo}`)
     check('a miss scores nothing', eng.score === scored, `${eng.score} vs ${scored}`)
+    check('a broken combo is stamped with the frame it broke on', eng.comboBrokeFrame === eng.frame, `${eng.comboBrokeFrame}`)
+  }
+
+  // "COMBO LOST" used to show from the opening frame of every stage, before
+  // anyone had taken a shot - the HUD reads this to only say it after a break.
+  {
+    const eng = gallery('balloons')
+    check('a fresh round has never broken a combo', eng.comboBrokeFrame < 0, `${eng.comboBrokeFrame}`)
+    clear(eng)
+    eng.shoot(0, 10, 10)
+    check('missing with no combo going still does not count as a break', eng.comboBrokeFrame < 0, `${eng.comboBrokeFrame}`)
   }
 
   // Stage 2 target values, and the penalty target.

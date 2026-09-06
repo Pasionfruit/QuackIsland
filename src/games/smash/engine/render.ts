@@ -11,6 +11,7 @@
 import { PAL } from '../../../art/palette'
 import { bush, pine, rock } from '../../../art/props'
 import { clamp, ellipse, makeScene, rand, sceneScale, shade, withAlpha } from '../../../lib/draw'
+import { banner, HUD } from '../../../lib/hud'
 import { drawText } from '../../../lib/text'
 import { drawChar } from './characters'
 import type { Fighter, SmashEngine } from './engine'
@@ -59,23 +60,32 @@ function drawPlatform(ctx: CanvasRenderingContext2D, p: Platform, thickness: num
   ctx.fill()
 }
 
+/**
+ * How far the baked stage extends past the view on every side. A KO shakes
+ * the whole scene, and a backdrop that stopped at the view edge would leave a
+ * strip of the previous frame showing along it - so it is painted oversized
+ * and drawn at its natural size, rather than stretched to cover.
+ */
+const BLEED = 16
+
 /** The sky, the three platforms, and scenery tucked around them: none of it moves. */
 function buildStage(a: Arena, ss: number): HTMLCanvasElement {
-  const { canvas, ctx } = makeScene(VIEW_W, VIEW_H, ss)
+  const { canvas, ctx } = makeScene(VIEW_W + BLEED * 2, VIEW_H + BLEED * 2, ss)
+  ctx.translate(BLEED, BLEED)
 
   const sky = ctx.createLinearGradient(0, 0, 0, VIEW_H)
   sky.addColorStop(0, '#8fb0c2')
   sky.addColorStop(0.55, '#b6cbd0')
   sky.addColorStop(1, '#8ea59f')
   ctx.fillStyle = sky
-  ctx.fillRect(0, 0, VIEW_W, VIEW_H)
+  ctx.fillRect(-BLEED, -BLEED, VIEW_W + BLEED * 2, VIEW_H + BLEED * 2)
 
   // Distant hills, so the floating platforms read as being up in the air.
   ctx.fillStyle = withAlpha('#7f9c9c', 0.5)
   ctx.beginPath()
-  ctx.moveTo(0, VIEW_H)
-  for (let x = 0; x <= VIEW_W; x += 20) ctx.lineTo(x, 150 - Math.sin(x * 0.02) * 14)
-  ctx.lineTo(VIEW_W, VIEW_H)
+  ctx.moveTo(-BLEED, VIEW_H + BLEED)
+  for (let x = -BLEED; x <= VIEW_W + BLEED; x += 20) ctx.lineTo(x, 150 - Math.sin(x * 0.02) * 14)
+  ctx.lineTo(VIEW_W + BLEED, VIEW_H + BLEED)
   ctx.closePath()
   ctx.fill()
 
@@ -104,7 +114,12 @@ function buildStage(a: Arena, ss: number): HTMLCanvasElement {
 }
 
 function floorFor(ctx: CanvasRenderingContext2D, a: Arena): HTMLCanvasElement {
-  const ss = Math.max(1, Math.min(4, Math.round(sceneScale(ctx))))
+  // Baked at the exact on-screen scale, not a rounded one: the backdrop is the
+  // largest thing on screen, and rounding meant it was resampled on the way in
+  // - the one thing the art style cannot survive. Quantised to 1/4 of a step so
+  // a dragged window resize does not rebuild it every frame.
+  const exact = Math.max(1, Math.min(4, sceneScale(ctx)))
+  const ss = Math.round(exact * 4) / 4
   if (!floorCache || floorCache.scale !== ss || floorCache.arena !== a.id) {
     floorCache = { canvas: buildStage(a, ss), scale: ss, arena: a.id }
   }
@@ -300,14 +315,27 @@ function drawPlate(
   x: number,
   y: number,
   maxStocks: number,
+  /** Somebody is fighting for their life behind this plate. */
+  occluding: boolean,
 ): void {
   const w = 128
   const h = 40
   const color = Engine.playerColor(f.index)
+
+  // The plates sit over the lower corners of the stage, which is exactly where
+  // a fighter is when they are scrambling back from a blast zone. Fade out of
+  // their way rather than hiding the tensest moment in the match.
+  ctx.save()
+  ctx.globalAlpha = occluding ? 0.4 : 1
+
   ctx.fillStyle = 'rgba(246, 242, 232, 0.92)'
-  ctx.fillRect(x, y, w, h)
+  ctx.beginPath()
+  ctx.roundRect(x, y, w, h, 6)
+  ctx.fill()
   ctx.fillStyle = color
-  ctx.fillRect(x, y, w, 3)
+  ctx.beginPath()
+  ctx.roundRect(x, y, w, 3, [6, 6, 0, 0])
+  ctx.fill()
 
   drawText(ctx, f.def.name, x + 7, y + 8, '#3b372f', { size: 9 })
   const pct = Math.round(f.percent)
@@ -324,6 +352,19 @@ function drawPlate(
     ctx.arc(x + 8 + i * 9, y + h - 9, 3, 0, Math.PI * 2)
     ctx.fill()
   }
+  ctx.restore()
+}
+
+/** Is any live fighter inside this plate's rectangle right now. */
+function plateOccluded(eng: SmashEngine, x: number, y: number, w: number, h: number): boolean {
+  return eng.fighters.some(
+    (f) =>
+      f.state !== 'dead' &&
+      f.x + f.def.radius > x &&
+      f.x - f.def.radius < x + w &&
+      f.y > y - f.def.height &&
+      f.y - f.def.height < y + h,
+  )
 }
 
 // ----------------------------------------------------------------- render
@@ -340,7 +381,7 @@ export function renderMatch(
 
   ctx.save()
   ctx.translate(Math.round(sx), Math.round(sy))
-  ctx.drawImage(floorFor(ctx, a), 0, 0, VIEW_W, VIEW_H)
+  ctx.drawImage(floorFor(ctx, a), -BLEED, -BLEED, VIEW_W + BLEED * 2, VIEW_H + BLEED * 2)
 
   // Fighters draw in a fixed order; particles interleave by height so a
   // spark can pass behind or in front of whoever is standing near it.
@@ -361,12 +402,18 @@ export function renderMatch(
   actors.sort((p, q) => p.y - q.y)
   for (const it of actors) it.draw()
 
+  // Damage numbers fade out over their last third rather than blinking off.
   for (const t of eng.texts) {
+    const fade = clamp(t.life / Math.max(1, t.maxLife * 0.35), 0, 1)
+    ctx.save()
+    ctx.globalAlpha = fade
     drawText(ctx, t.text, t.x, t.y, t.color, {
       size: 11 * t.scale,
       align: 'center',
       weight: 800,
+      shadow: 'rgba(24, 20, 16, 0.55)',
     })
+    ctx.restore()
   }
 
   if (opts.debug) {
@@ -385,29 +432,32 @@ export function renderMatch(
 
   ctx.restore()
 
-  drawPlate(ctx, eng.fighters[0], 14, VIEW_H - 52, eng.config.stocks)
-  drawPlate(ctx, eng.fighters[1], VIEW_W - 142, VIEW_H - 52, eng.config.stocks)
+  drawPlate(ctx, eng.fighters[0], 14, VIEW_H - 52, eng.config.stocks, plateOccluded(eng, 14, VIEW_H - 52, 128, 40))
+  drawPlate(
+    ctx,
+    eng.fighters[1],
+    VIEW_W - 142,
+    VIEW_H - 52,
+    eng.config.stocks,
+    plateOccluded(eng, VIEW_W - 142, VIEW_H - 52, 128, 40),
+  )
 
   if (eng.phase === 'intro') {
     const secs = Math.ceil(eng.phaseTimer / 60)
-    drawText(ctx, secs > 0 ? `${secs}` : 'GO!', VIEW_W / 2, 54, '#f6f2e8', {
-      size: 34,
-      align: 'center',
-      weight: 800,
+    banner(ctx, VIEW_W, VIEW_H, {
+      kicker: `${eng.fighters[0].def.name}  vs  ${eng.fighters[1].def.name}`.toUpperCase(),
+      title: secs > 0 ? `${secs}` : 'GO!',
+      centerY: 74,
+      scrim: false,
+      titleColor: secs > 0 ? HUD.ink : HUD.warn,
     })
-    drawText(
-      ctx,
-      `${eng.fighters[0].def.name}  vs  ${eng.fighters[1].def.name}`,
-      VIEW_W / 2,
-      96,
-      '#f6f2e8',
-      { size: 13, align: 'center', weight: 700 },
-    )
   } else if (eng.bannerTimer > 0 && eng.banner) {
-    drawText(ctx, eng.banner, VIEW_W / 2, 44, '#fff6e2', {
-      size: 24,
-      align: 'center',
-      weight: 800,
+    // Fades over its last half-second instead of blinking out.
+    banner(ctx, VIEW_W, VIEW_H, {
+      title: eng.banner,
+      centerY: 58,
+      scrim: false,
+      alpha: clamp(eng.bannerTimer / 30, 0, 1),
     })
   }
 

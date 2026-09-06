@@ -9,9 +9,10 @@
  * billboards: flat sprites that face the camera and are only as tall as their
  * distance says they should be.
  */
-import { clamp, ellipse } from '../../../lib/draw'
+import { clamp, ellipse, shade } from '../../../lib/draw'
+import { hudText } from '../../../lib/hud'
 import { drawText } from '../../../lib/text'
-import type { HideEngine } from './engine'
+import { STAR_SPAWN_AT, type HideEngine } from './engine'
 import { FEET_PER_CELL, VIEW_H, VIEW_W, type HidePlayer } from './types'
 import { MAP_SIZE } from './maps'
 
@@ -83,12 +84,24 @@ function sectionAt(eng: HideEngine, x: number, y: number) {
   )
 }
 
+/**
+ * Wall shading, memoised per colour and depth step.
+ *
+ * This used to multiply the RGB toward pure black, which sent distant walls
+ * cold and grey - the one screen in the project that did not share the warm
+ * palette. `shade()` darkens toward the same warm brown everything else does.
+ */
+const shadeCache = new Map<string, string>()
+
 function shadeHex(hex: string, factor: number): string {
-  const n = parseInt(hex.slice(1), 16)
-  const r = Math.round(((n >> 16) & 255) * factor)
-  const g = Math.round(((n >> 8) & 255) * factor)
-  const b = Math.round((n & 255) * factor)
-  return `rgb(${r},${g},${b})`
+  const step = Math.round(factor * 24) / 24
+  const key = `${hex}:${step}`
+  let out = shadeCache.get(key)
+  if (out === undefined) {
+    out = shade(hex, step - 1)
+    shadeCache.set(key, out)
+  }
+  return out
 }
 
 const depthBuf = new Float64Array(COLS)
@@ -282,16 +295,20 @@ export function drawHud(ctx: CanvasRenderingContext2D, eng: HideEngine, viewer: 
       align: 'center',
       weight: 800,
     })
-  } else if (!eng.star.spent) {
-    const secsToSpawn = Math.max(0, Math.ceil(eng.clock / 60) - 150)
-    if (!eng.star.active && secsToSpawn > 0 && secsToSpawn <= 180) {
-      // Only worth mentioning once it is not ages away.
-    } else if (eng.star.active) {
-      drawText(ctx, 'A STAR HAS APPEARED', VIEW_W / 2, 24, '#ffe066', {
+  } else if (eng.star.active && !eng.star.spent) {
+    // An announcement, not permanent furniture: it used to sit there for the
+    // whole minute the star was up. Fades out after a couple of seconds.
+    const sinceSpawn = STAR_SPAWN_AT * 60 - eng.clock
+    if (sinceSpawn < 150) {
+      ctx.save()
+      ctx.globalAlpha = clamp(1 - sinceSpawn / 150, 0, 1) * (Math.sin(sinceSpawn * 0.25) * 0.15 + 0.85)
+      hudText(ctx, 'A STAR HAS APPEARED', VIEW_W / 2, 24, {
         size: 9,
         align: 'center',
         weight: 800,
+        color: '#ffe066',
       })
+      ctx.restore()
     }
   }
 

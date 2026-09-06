@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { PauseOverlay } from '../../components/PauseOverlay'
+import { codeFor } from '../../lib/controls'
+import { isPauseMessage, usePause, type PauseMessage } from '../../lib/pause'
 import { fitScene } from '../../lib/draw'
 import { useFullscreen } from '../../lib/fullscreen'
 import { NetClient, defaultServerUrl } from '../../net/client'
@@ -54,6 +57,13 @@ export function DuckPanel() {
   slotRef.current = slot
   const aimRef = useRef({ x: VIEW_W / 2, y: VIEW_H / 2 })
 
+  const pause = usePause({
+    active: screen === 'play',
+    keys: [codeFor('duck.__pause', 'Escape')],
+    onToggle: (on) => net.send({ k: 'pause', on, who: net.displayName } satisfies PauseMessage),
+  })
+  const { applyRemote: applyRemotePause } = pause
+
   // ----------------------------------------------------------------- netcode
 
   useEffect(() => {
@@ -83,6 +93,7 @@ export function DuckPanel() {
         }
       },
       onPayload: (payload, from) => {
+        if (isPauseMessage(payload)) return applyRemotePause(payload)
         const msg = payload as DuckPayload
         const eng = engineRef.current
         if (!msg || !eng) return
@@ -100,7 +111,7 @@ export function DuckPanel() {
       },
     })
     return () => net.close()
-  }, [])
+  }, [applyRemotePause])
 
   // -------------------------------------------------------------- the round
 
@@ -146,6 +157,8 @@ export function DuckPanel() {
       const eng = engineRef.current
       if (!eng) return
 
+      // A paused gallery stops dead - no spawns, no clock, no drifting ducks.
+      if (pause.ref.current) acc = 0
       while (acc >= TICK) {
         acc -= TICK
         if (roleRef.current === 'guest') {
@@ -200,6 +213,7 @@ export function DuckPanel() {
 
   const onShoot = (e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault()
+    if (pause.ref.current) return
     const at = toView(e)
     aimRef.current = at
     const eng = engineRef.current
@@ -380,6 +394,13 @@ export function DuckPanel() {
           onMouseDown={onShoot}
           onContextMenu={(e) => e.preventDefault()}
         />
+        {pause.paused && (
+          <PauseOverlay calledBy={pause.calledBy} onResume={pause.resume}>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setScreen('lobby')}>
+              Leave the range
+            </button>
+          </PauseOverlay>
+        )}
       </div>
 
       <div className="infogrid">

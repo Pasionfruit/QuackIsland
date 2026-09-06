@@ -122,6 +122,8 @@ export class DuckEngine {
   splashes: Splash[] = []
   /** Hits since the last miss, shared by everyone in the room. */
   combo = 0
+  /** Frame the combo was last broken, so the HUD can say so briefly rather than forever. */
+  comboBrokeFrame = -999
   bestCombo = 0
   score = 0
   stageIndex = 0
@@ -551,6 +553,7 @@ export class DuckEngine {
 
     const hit = this.pick(x, y)
     if (!hit) {
+      if (this.combo > 0) this.comboBrokeFrame = this.frame
       this.combo = 0
       this.events.push({ slot, x, y, points: 0, kind: 'miss' })
       this.version++
@@ -584,6 +587,7 @@ export class DuckEngine {
       case 'mii': {
         // The one target that punishes you: it costs points and the combo.
         points = BASE_POINTS.mii
+        if (this.combo > 0) this.comboBrokeFrame = this.frame
         this.combo = 0
         color = '#d9534f'
         t.dying = 12

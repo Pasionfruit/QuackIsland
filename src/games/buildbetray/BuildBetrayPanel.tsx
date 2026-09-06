@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { ControlsSettings } from '../../components/ControlsSettings'
+import { PauseOverlay } from '../../components/PauseOverlay'
 import { codeFor } from '../../lib/controls'
+import { isPauseMessage, usePause, type PauseMessage } from '../../lib/pause'
 import { fitScene } from '../../lib/draw'
 import { useFullscreen } from '../../lib/fullscreen'
 import { NetClient, defaultServerUrl } from '../../net/client'
@@ -77,6 +79,13 @@ export function BuildBetrayPanel() {
   const prevPhase = useRef<Phase>('intro')
   const fullscreen = useFullscreen<HTMLDivElement>()
 
+  const pause = usePause({
+    active: screen === 'play',
+    keys: [codeFor('buildbetray.__pause', 'Escape')],
+    onToggle: (on) => net.send({ k: 'pause', on, who: net.displayName } satisfies PauseMessage),
+  })
+  const { applyRemote: applyRemotePause } = pause
+
   function currentConfig(): MatchConfig {
     const base = defaultConfig(mode)
     if (mode === 'quick') return { ...base, totalRounds }
@@ -106,6 +115,7 @@ export function BuildBetrayPanel() {
       },
       onPeers: (players) => setPeers(players),
       onPayload: (payload, from) => {
+        if (isPauseMessage(payload)) return applyRemotePause(payload)
         const msg = payload as BuildBetrayPayload
         if (!msg) return
         if (roleRef.current === 'host') {
@@ -151,7 +161,7 @@ export function BuildBetrayPanel() {
       },
     })
     return () => net.close()
-  }, [])
+  }, [applyRemotePause])
 
   function beginMatch(): void {
     const config = currentConfig()
@@ -262,13 +272,17 @@ export function BuildBetrayPanel() {
       if (!eng) return
 
       const k = keysRef.current
-      const input = { left: k.left, right: k.right, jump: k.jump }
+      const frozen = pause.ref.current
+      const input = frozen ? { left: false, right: false, jump: false } : { left: k.left, right: k.right, jump: k.jump }
 
-      if (roleRef.current === 'guest') {
-        eng.frame++
-      } else {
-        eng.setInput(slotRef.current, input)
-        eng.step()
+      // A paused course stops the build clock, the run clock and the runners.
+      if (!frozen) {
+        if (roleRef.current === 'guest') {
+          eng.frame++
+        } else {
+          eng.setInput(slotRef.current, input)
+          eng.step()
+        }
       }
 
       sinceSend++
@@ -352,7 +366,7 @@ export function BuildBetrayPanel() {
 
   function onCanvasClick(): void {
     const hov = hoverRef.current
-    if (!hov || !eng || eng.phase !== 'build') return
+    if (pause.ref.current || !hov || !eng || eng.phase !== 'build') return
     const pieceId = selectedRef.current
     if (pieceId) {
       attemptPlace(pieceId, hov.gx, hov.gy, dirRef.current)
@@ -539,6 +553,13 @@ export function BuildBetrayPanel() {
           onMouseMove={onCanvasMove}
           onClick={onCanvasClick}
         />
+        {pause.paused && (
+          <PauseOverlay calledBy={pause.calledBy} onResume={pause.resume}>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setScreen('lobby')}>
+              Leave the match
+            </button>
+          </PauseOverlay>
+        )}
       </div>
 
       {phase === 'build' && (
@@ -603,6 +624,10 @@ export function BuildBetrayPanel() {
                   { key: 'buildbetray.right', label: 'Move right', fallback: 'KeyD' },
                   { key: 'buildbetray.jump', label: 'Jump (double jump in the air)', fallback: 'KeyW' },
                 ],
+              },
+              {
+                title: 'Match',
+                rows: [{ key: 'buildbetray.__pause', label: 'Pause / resume', fallback: 'Escape' }],
               },
             ]}
           />

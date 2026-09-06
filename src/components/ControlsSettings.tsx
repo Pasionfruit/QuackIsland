@@ -36,6 +36,9 @@ export function ControlsSettings({
     if (!listening) return
     const onKey = (e: KeyboardEvent) => {
       e.preventDefault()
+      // Swallow it outright: the key being bound is very often one the game
+      // itself is listening for, and rebinding "jump" should not also jump.
+      e.stopImmediatePropagation()
       if (e.code !== 'Escape') rebind(listening, e.code)
       setListening(null)
       setTick((t) => t + 1)

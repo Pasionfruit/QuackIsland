@@ -49,6 +49,8 @@ export interface FloatText {
   y: number
   vy: number
   life: number
+  /** What `life` started at, so the renderer has something to fade against. */
+  maxLife: number
   text: string
   color: string
   scale: number
@@ -553,6 +555,7 @@ export class SmashEngine {
       y: victim.y - 18,
       vy: -0.55,
       life: parried ? 40 : 30,
+      maxLife: parried ? 40 : 30,
       text: parried ? 'PARRY!' : 'BLOCK',
       color: parried ? '#ffe066' : '#cfd8e0',
       scale: parried ? 1 : 0.85,
@@ -609,6 +612,7 @@ export class SmashEngine {
       y: victim.y - 18,
       vy: -0.55,
       life: 44,
+      maxLife: 44,
       text: `${mv.damage}`,
       color: SmashEngine.playerColor(attacker.index),
       scale: 1,
@@ -619,6 +623,7 @@ export class SmashEngine {
         y: victim.y - 30,
         vy: -0.4,
         life: 40,
+        maxLife: 40,
         text: `${victim.comboCount} HIT`,
         color: '#ffe066',
         scale: 1,

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ControlsSettings } from '../../components/ControlsSettings'
+import { PauseOverlay } from '../../components/PauseOverlay'
 import { codeFor } from '../../lib/controls'
+import { isPauseMessage, usePause, type PauseMessage } from '../../lib/pause'
 import { fitScene } from '../../lib/draw'
 import { useFullscreen } from '../../lib/fullscreen'
 import { NetClient, defaultServerUrl } from '../../net/client'
@@ -52,6 +54,13 @@ export function HidePanel() {
   const prevPhase = useRef('lobby')
   const fullscreen = useFullscreen<HTMLDivElement>()
 
+  const pause = usePause({
+    active: screen === 'play',
+    keys: [codeFor('hide.__pause', 'Escape')],
+    onToggle: (on) => net.send({ k: 'pause', on, who: net.displayName } satisfies PauseMessage),
+  })
+  const { applyRemote: applyRemotePause } = pause
+
   useEffect(() => {
     net.on({
       onStatus: (s, d) => {
@@ -79,6 +88,7 @@ export function HidePanel() {
         }
       },
       onPayload: (payload, from) => {
+        if (isPauseMessage(payload)) return applyRemotePause(payload)
         const msg = payload as HidePayload
         if (!msg) return
         if (roleRef.current === 'host') {
@@ -101,7 +111,7 @@ export function HidePanel() {
       },
     })
     return () => net.close()
-  }, [])
+  }, [applyRemotePause])
 
   const beginMatch = useCallback(() => {
     const eng = new HideEngine({ players: 0, mapId })
@@ -185,9 +195,12 @@ export function HidePanel() {
       if (!eng) return
 
       const k = keysRef.current
-      inputRef.current.turn = (k.d ? 1 : 0) - (k.a ? 1 : 0)
-      inputRef.current.move = (k.w ? 1 : 0) - (k.s ? 1 : 0)
+      const held = pause.ref.current ? { w: false, a: false, s: false, d: false } : k
+      inputRef.current.turn = (held.d ? 1 : 0) - (held.a ? 1 : 0)
+      inputRef.current.move = (held.w ? 1 : 0) - (held.s ? 1 : 0)
 
+      // A paused chase stops the clock as well as the runner.
+      if (pause.ref.current) acc = 0
       while (acc >= TICK) {
         acc -= TICK
         if (roleRef.current === 'guest') {
@@ -398,6 +411,13 @@ export function HidePanel() {
           className="stage"
           style={{ width: '100%', height: 'auto', aspectRatio: `${VIEW_W} / ${VIEW_H}` }}
         />
+        {pause.paused && (
+          <PauseOverlay calledBy={pause.calledBy} onResume={pause.resume}>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setScreen('lobby')}>
+              Leave the chase
+            </button>
+          </PauseOverlay>
+        )}
       </div>
 
       <div className="infogrid">
@@ -413,6 +433,10 @@ export function HidePanel() {
                 { key: 'hide.turnLeft', label: 'Turn left', fallback: 'KeyA' },
                 { key: 'hide.turnRight', label: 'Turn right', fallback: 'KeyD' },
               ],
+            },
+            {
+              title: 'Match',
+              rows: [{ key: 'hide.__pause', label: 'Pause / resume', fallback: 'Escape' }],
             },
           ]}
         />

@@ -8,7 +8,7 @@ import { drawAvatar } from '../../art/avatar'
 import { CAST } from '../../art/cast'
 import { PAL } from '../../art/palette'
 import { ellipse, facet, fillPoly, rect, shade, withAlpha, type Pt } from '../../lib/draw'
-import { drawText } from '../../lib/text'
+import { banner, hudTimer, nameTag } from '../../lib/hud'
 import type { RunnerState } from './engine/engine'
 import { VIEW_H, VIEW_W } from './engine/engine'
 import { fixedSolids, goalRect, solidAt, trapArmed, type Level, type PlacedPiece } from './engine/level'
@@ -17,9 +17,10 @@ import { CELL_H, CELL_W, pieceById, type PieceDef } from './engine/pieces'
 // ------------------------------------------------------------------- ground
 
 function drawSlab(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, faded = false): void {
-  const a = faded ? 0.55 : 1
   ctx.save()
-  ctx.globalAlpha = a
+  // Multiplies the caller's alpha rather than replacing it, so a one-way
+  // platform drawn at 0.72 stays see-through instead of coming out solid.
+  if (faded) ctx.globalAlpha *= 0.55
   rect(ctx, x, y, w, h, PAL.dirt)
   rect(ctx, x, y, w, 3, PAL.grass)
   rect(ctx, x, y, w, 1.4, PAL.grassLit)
@@ -73,9 +74,23 @@ function drawPiece(ctx: CanvasRenderingContext2D, p: PlacedPiece, def: PieceDef,
   switch (def.behavior) {
     case 'static':
     case 'oneway':
-      if (def.behavior === 'oneway') ctx.globalAlpha = 0.72
-      drawSlab(ctx, x, y, w, h)
-      ctx.globalAlpha = 1
+      if (def.behavior === 'oneway') {
+        // See-through, plus a dashed underline: you can come up through this.
+        ctx.save()
+        ctx.globalAlpha = 0.72
+        drawSlab(ctx, x, y, w, h)
+        ctx.restore()
+        ctx.strokeStyle = withAlpha(PAL.cream, 0.5)
+        ctx.lineWidth = 1
+        ctx.setLineDash([3, 3])
+        ctx.beginPath()
+        ctx.moveTo(x + 1, y + h + 1.5)
+        ctx.lineTo(x + w - 1, y + h + 1.5)
+        ctx.stroke()
+        ctx.setLineDash([])
+      } else {
+        drawSlab(ctx, x, y, w, h)
+      }
       return
     case 'breakable': {
       if (!stillSolid) return
@@ -123,7 +138,6 @@ function drawPiece(ctx: CanvasRenderingContext2D, p: PlacedPiece, def: PieceDef,
       const range = (def.params?.range ?? 3) * CELL_W
       const off = Math.sin(frame * speed * 0.03) * range * p.dir
       drawSlab(ctx, x + off, y, w, h)
-      ctx.fillStyle = withAlpha('#3b372f', 0.35)
       ellipse(ctx, x + off + w * 0.22, y + h + 1, 2.2, 1.2, withAlpha('#3b372f', 0.3))
       ellipse(ctx, x + off + w * 0.78, y + h + 1, 2.2, 1.2, withAlpha('#3b372f', 0.3))
       return
@@ -339,17 +353,7 @@ export function drawRunner(ctx: CanvasRenderingContext2D, r: RunnerState, frame:
     alpha: blinking ? 0.4 : 1,
   })
 
-  const tagY = r.y - 34
-  ctx.save()
-  ctx.globalAlpha = 0.85
-  drawText(ctx, r.finished ? `${r.name} ✓` : r.name, r.x, tagY, r.color, {
-    size: isSelf ? 8.5 : 7.5,
-    align: 'center',
-    weight: 800,
-    shadow: 'rgba(30,26,20,0.6)',
-    shadowOffset: 1,
-  })
-  ctx.restore()
+  nameTag(ctx, r.finished ? `${r.name} ✓` : r.name, r.x, r.y - 34, r.color, { self: isSelf })
   if (isSelf) {
     ctx.strokeStyle = withAlpha(r.color, 0.8)
     ctx.lineWidth = 1
@@ -362,17 +366,9 @@ export function drawRunner(ctx: CanvasRenderingContext2D, r: RunnerState, frame:
 // --------------------------------------------------------------------- hud
 
 export function drawTimer(ctx: CanvasRenderingContext2D, label: string, seconds: number, urgent: boolean): void {
-  drawText(ctx, label, VIEW_W / 2, 8, '#fff6e2', { size: 10, align: 'center', weight: 700 })
-  drawText(ctx, `${Math.max(0, Math.ceil(seconds))}`, VIEW_W / 2, 18, urgent ? '#ffb04a' : '#fff6e2', {
-    size: 20,
-    align: 'center',
-    weight: 800,
-  })
+  hudTimer(ctx, label, seconds, VIEW_W / 2, 6, urgent)
 }
 
 export function drawBanner(ctx: CanvasRenderingContext2D, text: string, sub?: string): void {
-  ctx.fillStyle = 'rgba(30, 26, 20, 0.4)'
-  ctx.fillRect(0, 0, VIEW_W, VIEW_H)
-  drawText(ctx, text, VIEW_W / 2, VIEW_H / 2 - 16, '#fff6e2', { size: 26, align: 'center', weight: 800 })
-  if (sub) drawText(ctx, sub, VIEW_W / 2, VIEW_H / 2 + 12, '#f2ece0', { size: 12, align: 'center', weight: 600 })
+  banner(ctx, VIEW_W, VIEW_H, { title: text, sub })
 }

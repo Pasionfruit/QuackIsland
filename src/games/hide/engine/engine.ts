@@ -20,7 +20,7 @@ import {
 } from './types'
 
 export const ROUND_SECONDS = 210 // 3:30
-const STAR_SPAWN_AT = 150 // remaining seconds: 2:30
+export const STAR_SPAWN_AT = 150 // remaining seconds: 2:30
 const STAR_DESPAWN_AT = 85 // remaining seconds: 1:25
 const INVINCIBLE_FRAMES = 40 * 60
 

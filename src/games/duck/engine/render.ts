@@ -28,7 +28,15 @@ import { GROUND, HORIZON, VIEW_H, VIEW_W, type StageId, type Target } from './ty
 
 // ----------------------------------------------------------------- backdrop
 
-let backCache: { canvas: HTMLCanvasElement; scale: number; stage: StageId } | null = null
+/**
+ * One entry per stage rather than one entry total. A single slot meant every
+ * stage change threw the previous backdrop away and rebuilt the new one
+ * synchronously mid-frame - a full-resolution facet pass, and a visible hitch
+ * on exactly the STAGE CLEAR beat where the player is watching the screen.
+ * Five small canvases is a cheap price for losing that.
+ */
+const backCache = new Map<string, HTMLCanvasElement>()
+let backCacheScale = 0
 
 function buildBackdrop(stage: StageId, ss: number): HTMLCanvasElement {
   const { canvas, ctx } = makeScene(VIEW_W, VIEW_H, ss)
@@ -70,7 +78,15 @@ function buildBackdrop(stage: StageId, ss: number): HTMLCanvasElement {
   }
   if (stage === 'targets') tent(ctx, 415, GROUND + 2, 26)
 
-  // A dark apron along the bottom, so the HUD has something to sit on.
+  return canvas
+}
+
+/**
+ * The dark apron the HUD sits on. Drawn with the HUD rather than baked into
+ * the backdrop, because the backdrop shakes on every hit and the HUD does not
+ * - so the text used to slide off its own backing strip.
+ */
+function drawApron(ctx: CanvasRenderingContext2D): void {
   const apron: Pt[] = [
     { x: 0, y: VIEW_H },
     { x: 0, y: VIEW_H - 22 },
@@ -78,16 +94,22 @@ function buildBackdrop(stage: StageId, ss: number): HTMLCanvasElement {
     { x: VIEW_W, y: VIEW_H },
   ]
   fillPoly(ctx, apron, shade(PAL.dirt, -0.45))
-
-  return canvas
 }
 
 function backdropFor(ctx: CanvasRenderingContext2D, stage: StageId): HTMLCanvasElement {
-  const ss = Math.max(1, Math.min(4, Math.round(sceneScale(ctx))))
-  if (!backCache || backCache.scale !== ss || backCache.stage !== stage) {
-    backCache = { canvas: buildBackdrop(stage, ss), scale: ss, stage }
+  // Exact scale, quantised: rounding meant the largest thing on screen was
+  // resampled on its way in, which is what the flat shading cannot survive.
+  const ss = Math.round(Math.max(1, Math.min(4, sceneScale(ctx))) * 4) / 4
+  if (ss !== backCacheScale) {
+    backCache.clear()
+    backCacheScale = ss
   }
-  return backCache.canvas
+  let canvas = backCache.get(stage)
+  if (!canvas) {
+    canvas = buildBackdrop(stage, ss)
+    backCache.set(stage, canvas)
+  }
+  return canvas
 }
 
 // ------------------------------------------------------------------ targets
@@ -293,9 +315,13 @@ export function renderRound(ctx: CanvasRenderingContext2D, eng: DuckEngine): voi
   const sx = shake > 0.4 ? rand(-shake, shake) : 0
   const sy = shake > 0.4 ? rand(-shake, shake) : 0
 
+  // The backdrop is drawn before the shake and so always covers the view; only
+  // the targets and effects kick. Shaking it too would slide it off the edge
+  // and leave a strip of the previous frame showing along the side.
+  ctx.drawImage(backdropFor(ctx, eng.stage.id), 0, 0, VIEW_W, VIEW_H)
+
   ctx.save()
   ctx.translate(Math.round(sx), Math.round(sy))
-  ctx.drawImage(backdropFor(ctx, eng.stage.id), 0, 0, VIEW_W, VIEW_H)
 
   // Far things first: depth is what sells the fixed perspective.
   const sorted = [...eng.targets].sort((a, b) => a.z - b.z || a.y - b.y)
@@ -322,6 +348,7 @@ export function renderRound(ctx: CanvasRenderingContext2D, eng: DuckEngine): voi
 
 function drawHud(ctx: CanvasRenderingContext2D, eng: DuckEngine): void {
   const barY = VIEW_H - 20
+  drawApron(ctx)
 
   drawText(ctx, `${eng.score}`, 12, barY - 2, '#f6f2e8', { size: 17, weight: 800 })
   drawText(ctx, 'SCORE', 12, barY + 12, '#b9b0a0', { size: 7, weight: 700 })
@@ -339,12 +366,18 @@ function drawHud(ctx: CanvasRenderingContext2D, eng: DuckEngine): void {
       align: 'center',
       weight: 700,
     })
-  } else {
-    drawText(ctx, 'COMBO LOST', VIEW_W / 2, barY + 4, '#8d8578', {
+  } else if (eng.frame - eng.comboBrokeFrame < 70) {
+    // Only just after a break - it used to sit there from the opening frame of
+    // every stage, announcing the loss of a combo nobody had started yet.
+    const fade = clamp(1 - (eng.frame - eng.comboBrokeFrame) / 70, 0, 1)
+    ctx.save()
+    ctx.globalAlpha = fade
+    drawText(ctx, 'COMBO LOST', VIEW_W / 2, barY + 4, '#e8703a', {
       size: 8,
       align: 'center',
       weight: 700,
     })
+    ctx.restore()
   }
 
   const secs = Math.max(0, Math.ceil(eng.stageTimer / 60))

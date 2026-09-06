@@ -56,6 +56,11 @@ export class NetClient {
     return this.ws?.readyState === WebSocket.OPEN
   }
 
+  /** The name the server has for this client, for payloads that name a player. */
+  get displayName(): string {
+    return this.peers.find((p) => p.slot === this.slot)?.name ?? 'Somebody'
+  }
+
   on(events: NetEvents): void {
     this.events = { ...this.events, ...events }
   }

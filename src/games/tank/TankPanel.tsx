@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ControlsSettings } from '../../components/ControlsSettings'
+import { PauseOverlay } from '../../components/PauseOverlay'
 import { codeFor } from '../../lib/controls'
+import { isPauseMessage, usePause, type PauseMessage } from '../../lib/pause'
 import { fitScene } from '../../lib/draw'
 import { useFullscreen } from '../../lib/fullscreen'
 import { NetClient, defaultServerUrl } from '../../net/client'
@@ -61,6 +63,13 @@ export function TankPanel() {
   const peerTeamsRef = useRef(new Map<number, number>())
   const prevPhase = useRef('lobby')
 
+  const pause = usePause({
+    active: screen === 'play',
+    keys: [codeFor('tank.__pause', 'Escape')],
+    onToggle: (on) => net.send({ k: 'pause', on, who: net.displayName } satisfies PauseMessage),
+  })
+  const { applyRemote: applyRemotePause } = pause
+
   useEffect(() => {
     net.on({
       onStatus: (s, d) => {
@@ -95,6 +104,7 @@ export function TankPanel() {
         }
       },
       onPayload: (payload, from) => {
+        if (isPauseMessage(payload)) return applyRemotePause(payload)
         const msg = payload as TankPayload
         if (!msg) return
         if (roleRef.current === 'host') {
@@ -118,7 +128,7 @@ export function TankPanel() {
       },
     })
     return () => net.close()
-  }, [])
+  }, [applyRemotePause])
 
   useEffect(() => {
     if (role !== 'guest') return
@@ -231,9 +241,12 @@ export function TankPanel() {
       if (!eng) return
 
       const k = keysRef.current
-      inputRef.current.moveX = (k.d ? 1 : 0) - (k.a ? 1 : 0)
-      inputRef.current.moveY = (k.s ? 1 : 0) - (k.w ? 1 : 0)
+      const held = pause.ref.current ? { w: false, a: false, s: false, d: false } : k
+      inputRef.current.moveX = (held.d ? 1 : 0) - (held.a ? 1 : 0)
+      inputRef.current.moveY = (held.s ? 1 : 0) - (held.w ? 1 : 0)
 
+      // A paused match stops driving, shooting and counting down.
+      if (pause.ref.current) acc = 0
       while (acc >= TICK) {
         acc -= TICK
         if (roleRef.current === 'guest') {
@@ -502,6 +515,13 @@ export function TankPanel() {
           onMouseUp={onUp}
           onContextMenu={(e) => e.preventDefault()}
         />
+        {pause.paused && (
+          <PauseOverlay calledBy={pause.calledBy} onResume={pause.resume}>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setScreen('lobby')}>
+              Leave the match
+            </button>
+          </PauseOverlay>
+        )}
       </div>
 
       <div className="infogrid">
@@ -531,6 +551,10 @@ export function TankPanel() {
                 { key: 'tank.down', label: 'Move down', fallback: 'KeyS' },
                 { key: 'tank.right', label: 'Move right', fallback: 'KeyD' },
               ],
+            },
+            {
+              title: 'Match',
+              rows: [{ key: 'tank.__pause', label: 'Pause / resume', fallback: 'Escape' }],
             },
           ]}
         />

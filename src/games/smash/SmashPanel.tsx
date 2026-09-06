@@ -3,7 +3,9 @@ import { PAL } from '../../art/palette'
 import { pine } from '../../art/props'
 import { SceneCanvas } from '../../components/SceneCanvas'
 import { ControlsSettings, type RemapGroup } from '../../components/ControlsSettings'
+import { PauseOverlay } from '../../components/PauseOverlay'
 import { codeFor } from '../../lib/controls'
+import { isPauseMessage, usePause, type PauseMessage } from '../../lib/pause'
 import { DEFAULT_BINDINGS, Keyboard, packInput, smashBindingKey, unpackInput, type GameInput } from '../../lib/input'
 import { fitScene, rect } from '../../lib/draw'
 import { useFullscreen } from '../../lib/fullscreen'
@@ -243,8 +245,8 @@ function Slot({
 interface ArenaProps {
   config: MatchConfig
   net?: { client: NetClient; role: Role }
-  /** Lets the panel hand match-time payloads (inputs, snapshots) down here. */
-  registerHandler: (fn: ((msg: SmashPayload) => void) | null) => void
+  /** Lets the panel hand match-time payloads (inputs, snapshots, pauses) down here. */
+  registerHandler: (fn: ((msg: SmashPayload | PauseMessage) => void) | null) => void
   onChangeFighters: () => void
   onLeave: () => void
 }
@@ -252,33 +254,42 @@ interface ArenaProps {
 function Arena({ config, net, registerHandler, onChangeFighters, onLeave }: ArenaProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const engineRef = useRef<SmashEngine | null>(null)
-  const [paused, setPaused] = useState(false)
   const [winner, setWinner] = useState<number | null>(null)
   const [debug, setDebug] = useState(false)
 
   const role = net?.role
-  const pausedRef = useRef(false)
   const winnerRef = useRef<number | null>(null)
   const debugRef = useRef(false)
-  pausedRef.current = paused
   winnerRef.current = winner
   debugRef.current = debug
+
+  const pause = usePause({
+    disabled: winner !== null,
+    keys: [codeFor('smash.__pause', 'Escape'), 'KeyP'],
+    onToggle: (on) => net?.client.send({ k: 'pause', on, who: net.client.displayName } satisfies PauseMessage),
+  })
 
   // Guest side: the newest snapshot waiting to be drawn.
   const pendingSnap = useRef<SmashPayload | null>(null)
   // Host side: the guest's most recent input.
   const remoteInput = useRef(0)
 
+  // Destructured because these are stable across renders while `pause` itself
+  // is not - putting the whole object in a dep array would rebuild the arena.
+  const { clear: clearPause, applyRemote: applyRemotePause } = pause
+
   const rematch = useCallback(() => {
     engineRef.current?.reset()
     setWinner(null)
-    setPaused(false)
+    clearPause()
     if (role === 'host') net?.client.send({ k: 'rematch' } satisfies SmashPayload)
-  }, [net, role])
+  }, [net, role, clearPause])
 
   useEffect(() => {
     registerHandler((msg) => {
-      if (msg.k === 'input' && role === 'host') {
+      if (isPauseMessage(msg)) {
+        applyRemotePause(msg)
+      } else if (msg.k === 'input' && role === 'host') {
         remoteInput.current = msg.bits
       } else if (msg.k === 'snap' && role === 'guest') {
         pendingSnap.current = msg
@@ -288,7 +299,7 @@ function Arena({ config, net, registerHandler, onChangeFighters, onLeave }: Aren
       }
     })
     return () => registerHandler(null)
-  }, [registerHandler, role])
+  }, [registerHandler, role, applyRemotePause])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -307,9 +318,8 @@ function Arena({ config, net, registerHandler, onChangeFighters, onLeave }: Aren
 
     const kb = new Keyboard()
     const detach = kb.attach((code) => {
-      if (code === codeFor('smash.__pause', 'Escape') || code === 'KeyP') {
-        if (winnerRef.current === null) setPaused((p) => !p)
-      } else if (code === codeFor('smash.__hitboxes', 'F1')) {
+      // Pause itself lives in usePause, so every game answers Esc the same way.
+      if (code === codeFor('smash.__hitboxes', 'F1')) {
         setDebug((d) => !d)
       } else if (code === 'KeyR' && winnerRef.current !== null && role !== 'guest') {
         rematch()
@@ -329,8 +339,9 @@ function Arena({ config, net, registerHandler, onChangeFighters, onLeave }: Aren
       if (dt > 0.2) dt = 0.2
 
       if (role === 'guest') {
-        // Send our input up, draw whatever the host last told us.
-        const bits = packInput(kb.read(0))
+        // Send our input up, draw whatever the host last told us. A paused
+        // guest goes quiet rather than driving a fighter nobody can see move.
+        const bits = pause.ref.current ? 0 : packInput(kb.read(0))
         sinceSend++
         if (bits !== lastSentBits || sinceSend > 12) {
           lastSentBits = bits
@@ -347,7 +358,7 @@ function Arena({ config, net, registerHandler, onChangeFighters, onLeave }: Aren
           }
         }
       } else {
-        const frozen = pausedRef.current || winnerRef.current !== null
+        const frozen = pause.ref.current || winnerRef.current !== null
         if (frozen) {
           acc = 0
         } else {
@@ -402,30 +413,23 @@ function Arena({ config, net, registerHandler, onChangeFighters, onLeave }: Aren
         </button>
         <canvas ref={canvasRef} style={{ width: '100%', aspectRatio: VIEW_W + ' / ' + VIEW_H }} />
 
-        {paused && winner === null && (
-          <div className="overlay">
-            <h3>PAUSED</h3>
-            <p>{role === 'guest' ? 'The match is still running for the host.' : 'Esc or P to resume'}</p>
-            <div className="overlay__row">
-              <button className="btn btn--primary btn--sm" onClick={() => setPaused(false)}>
-                Resume
+        {pause.paused && winner === null && (
+          <PauseOverlay calledBy={pause.calledBy} onResume={pause.resume} hint="Esc or P to resume">
+            {role !== 'guest' && (
+              <button type="button" className="btn btn--sm" onClick={rematch}>
+                Restart match
               </button>
-              {role !== 'guest' && (
-                <button className="btn btn--sm" onClick={rematch}>
-                  Restart match
-                </button>
-              )}
-              {role ? (
-                <button className="btn btn--ghost btn--sm" onClick={onLeave}>
-                  Leave room
-                </button>
-              ) : (
-                <button className="btn btn--ghost btn--sm" onClick={onChangeFighters}>
-                  Change character
-                </button>
-              )}
-            </div>
-          </div>
+            )}
+            {role ? (
+              <button type="button" className="btn btn--ghost btn--sm" onClick={onLeave}>
+                Leave room
+              </button>
+            ) : (
+              <button type="button" className="btn btn--ghost btn--sm" onClick={onChangeFighters}>
+                Change character
+              </button>
+            )}
+          </PauseOverlay>
         )}
 
         {winner !== null && winDef && (
@@ -477,7 +481,7 @@ function Arena({ config, net, registerHandler, onChangeFighters, onLeave }: Aren
                   {
                     title: 'Anytime',
                     rows: [
-                      { key: 'smash.__pause', label: 'Pause', fallback: 'Escape' },
+                      { key: 'smash.__pause', label: 'Pause / resume', fallback: 'Escape' },
                       { key: 'smash.__hitboxes', label: 'Hitbox view', fallback: 'F1' },
                     ],
                   },

@@ -2,15 +2,44 @@
  * Draws a Tank Trouble match: a tiled pit, faceted walls, and tanks with a
  * turret that points wherever the driver is aiming.
  */
+import { PAL } from '../../../art/palette'
 import { grid } from '../../../art/scenes'
-import { clamp, ellipse, facet, fillPoly, rand, rectPts, shade, withAlpha } from '../../../lib/draw'
-import { drawText } from '../../../lib/text'
+import { clamp, ellipse, facet, fillPoly, rand, rectPts, shade, softShadow, withAlpha } from '../../../lib/draw'
+import { banner, HUD, hudText, nameTag } from '../../../lib/hud'
 import { TEAM_NAMES, type TankEngine } from './engine'
 import { ARENA, VIEW_H, VIEW_W } from './types'
 
 const FLOOR = '#cdbfa0'
-const STONE = '#7d7264'
-const WOOD = '#a9835a'
+const STONE = PAL.rockShade
+const WOOD = PAL.wood
+
+/** How long a muzzle flash lingers after a bullet first appears. */
+const MUZZLE_FRAMES = 4
+
+/**
+ * Frame each bullet id was first drawn. Bullets arrive in snapshots without
+ * any age of their own, so first sighting is the only "just fired" signal a
+ * guest has - and it is the same signal on the host.
+ */
+const bulletSeen = new Map<number, number>()
+
+function bulletAge(id: number, frame: number): number {
+  const first = bulletSeen.get(id)
+  if (first === undefined) {
+    bulletSeen.set(id, frame)
+    return 0
+  }
+  return frame - first
+}
+
+/** Drops ids for bullets that are gone, so the map cannot grow forever. */
+function pruneBulletSeen(live: Iterable<{ id: number }>): void {
+  const ids = new Set<number>()
+  for (const b of live) ids.add(b.id)
+  for (const id of bulletSeen.keys()) {
+    if (!ids.has(id)) bulletSeen.delete(id)
+  }
+}
 
 function drawTank(
   ctx: CanvasRenderingContext2D,
@@ -23,6 +52,9 @@ function drawTank(
 ): void {
   const r = 8.5
   const body = shade(color, flash > 0 ? 0.6 : 0)
+  // A contact shadow, like every other actor in the project gets - without one
+  // the tanks read as decals printed on the floor rather than sitting on it.
+  softShadow(ctx, x, y + r * 0.55, r * 1.15, r * 0.5, 0.22)
   facet(ctx, rectPts(x - r, y - r * 0.8, r * 2, r * 1.6), body, { dark: 0.26, light: 0.16, round: 0.3 })
   ctx.save()
   ctx.translate(x, y)
@@ -30,7 +62,7 @@ function drawTank(
   facet(ctx, rectPts(-2, -2.4, r * 1.6, 4.8), shade(color, -0.15), { dark: 0.2, light: 0.14, round: 0.2 })
   ctx.restore()
   ellipse(ctx, x, y, r * 0.55, r * 0.55, shade(color, -0.1))
-  if (label) drawText(ctx, label, x, y - r - 11, color, { size: 7, align: 'center', weight: 700 })
+  if (label) nameTag(ctx, label, x, y - r - 11, color)
 }
 
 /** A dotted line from a tank to wherever it is currently aiming. */
@@ -58,10 +90,13 @@ export function renderMatch(ctx: CanvasRenderingContext2D, eng: TankEngine): voi
   const sx = eng.shake > 0.4 ? rand(-eng.shake, eng.shake) : 0
   const sy = eng.shake > 0.4 ? rand(-eng.shake, eng.shake) : 0
 
-  ctx.save()
-  ctx.translate(Math.round(sx), Math.round(sy))
+  // Floor first and unshaken, so a shell going off never slides the arena off
+  // its own edge and leaves last frame's pixels showing along the side.
   ctx.fillStyle = FLOOR
   ctx.fillRect(0, 0, VIEW_W, VIEW_H)
+
+  ctx.save()
+  ctx.translate(Math.round(sx), Math.round(sy))
   grid(ctx, VIEW_W, VIEW_H, 12, 'rgba(120, 104, 78, 0.22)')
   fillPoly(ctx, rectPts(ARENA.x, ARENA.y, ARENA.w, ARENA.h), 'rgba(0,0,0,0.06)')
 
@@ -122,10 +157,23 @@ export function renderMatch(ctx: CanvasRenderingContext2D, eng: TankEngine): voi
     drawTank(ctx, t.x, t.y, t.angle, t.color, t.flash, t.slot >= 0 ? t.name : '')
   }
 
+  // Muzzle flash. The engine already shakes the screen on a shot but nothing
+  // happened at the barrel it came out of. Age is tracked from bullet ids
+  // rather than tank state, so it works the same on a guest - which only ever
+  // sees bullets arrive in a snapshot - as it does on the host.
+  for (const b of eng.bullets) {
+    const age = bulletAge(b.id, eng.frame)
+    if (age > MUZZLE_FRAMES) continue
+    const heat = 1 - age / MUZZLE_FRAMES
+    ellipse(ctx, b.x, b.y, 4 * heat, 3.2 * heat, withAlpha('#ffe08a', 0.9 * heat))
+    ellipse(ctx, b.x, b.y, 2 * heat, 1.6 * heat, withAlpha('#fff6e2', heat))
+  }
+
   for (const p of eng.particles) {
     ellipse(ctx, p.x, p.y, p.size, p.size, withAlpha(p.color, clamp(p.life / p.maxLife, 0, 1)))
   }
   ctx.restore()
+  pruneBulletSeen(eng.bullets)
 
   drawHud(ctx, eng)
 }
@@ -134,16 +182,13 @@ function drawHud(ctx: CanvasRenderingContext2D, eng: TankEngine): void {
   const pvp = eng.config.mode === 'pvp'
   const alive = eng.players.filter((p) => p.alive).length
   const enemiesLeft = eng.enemies.filter((e) => e.alive).length
-  drawText(ctx, pvp ? 'PVP' : `LEVEL ${eng.level}`, 12, 6, '#3b372f', { size: 11, weight: 800 })
-  drawText(ctx, `TANKS ${alive}/${eng.players.length}`, 12, VIEW_H - 16, '#3b372f', {
-    size: 9,
-    weight: 700,
-  })
+  hudText(ctx, pvp ? 'PVP' : `LEVEL ${eng.level}`, 12, 6, { size: 11, weight: 800 })
+  hudText(ctx, `TANKS ${alive}/${eng.players.length}`, 12, VIEW_H - 16, { size: 9 })
   if (!pvp) {
-    drawText(ctx, `ENEMIES ${enemiesLeft}`, VIEW_W - 12, VIEW_H - 16, '#8a3f3f', {
+    hudText(ctx, `ENEMIES ${enemiesLeft}`, VIEW_W - 12, VIEW_H - 16, {
       size: 9,
       align: 'right',
-      weight: 700,
+      color: HUD.bad,
     })
   }
 
@@ -164,11 +209,13 @@ function drawHud(ctx: CanvasRenderingContext2D, eng: TankEngine): void {
 }
 
 function panel(ctx: CanvasRenderingContext2D, title: string, sub: string, count: number | null): void {
-  ctx.fillStyle = 'rgba(28, 26, 22, 0.6)'
-  ctx.fillRect(0, 0, VIEW_W, VIEW_H)
-  drawText(ctx, title, VIEW_W / 2, 96, '#f6f2e8', { size: 24, align: 'center', weight: 800 })
-  drawText(ctx, sub, VIEW_W / 2, 128, '#cfc6b4', { size: 11, align: 'center' })
+  banner(ctx, VIEW_W, VIEW_H, { title, sub: sub || undefined, centerY: VIEW_H / 2 - 12 })
   if (count !== null) {
-    drawText(ctx, `${count}`, VIEW_W / 2, 148, '#e8c05f', { size: 26, align: 'center', weight: 800 })
+    hudText(ctx, `${count}`, VIEW_W / 2, VIEW_H / 2 + 34, {
+      size: 26,
+      align: 'center',
+      weight: 800,
+      color: HUD.warn,
+    })
   }
 }

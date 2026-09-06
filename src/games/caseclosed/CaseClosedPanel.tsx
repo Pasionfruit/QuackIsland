@@ -716,6 +716,19 @@ function BoardView({ eng, reachable, onMove }: { eng: CaseClosedEngine; reachabl
   return <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>{cells}</div>
 }
 
+/**
+ * Remembers where each suspect was last rendered, so a token that has just
+ * arrived somewhere can hop rather than teleport. Module-level because the
+ * board rebuilds its cells from scratch on every snapshot.
+ */
+const lastSeenAt = new Map<string, string>()
+
+function justMoved(p: CCPlayer): boolean {
+  const before = lastSeenAt.get(p.suspect)
+  lastSeenAt.set(p.suspect, p.position)
+  return before !== undefined && before !== p.position
+}
+
 function Tokens({ players, small }: { players: CCPlayer[]; small?: boolean }) {
   if (players.length === 0) return null
   return (
@@ -725,14 +738,24 @@ function Tokens({ players, small }: { players: CCPlayer[]; small?: boolean }) {
         const def = charById(p.suspect)
         const size = small ? 18 : 22
         return portrait ? (
-          <img
+          // The portrait is a rectangular crop with its own background still in
+          // it, so a plain circular crop showed a ring of that background inside
+          // the token. Scaled up and pulled to the top of the frame, the face
+          // fills the circle and the backdrop stays outside it.
+          <span
             key={p.slot}
-            src={portrait}
-            alt={def.name}
-            width={size}
-            height={size}
-            style={{ width: size, height: size, objectFit: 'cover', borderRadius: '50%', border: `1.5px solid ${def.theme.dark}` }}
-          />
+            className={justMoved(p) ? 'token token--moved' : 'token'}
+            title={def.name}
+            style={{
+              width: size,
+              height: size,
+              borderRadius: '50%',
+              border: `1.5px solid ${def.theme.dark}`,
+              background: def.theme.primary,
+            }}
+          >
+            <img src={portrait} alt={def.name} style={{ width: size * 1.5, height: size * 1.5, marginTop: -size * 0.18 }} />
+          </span>
         ) : (
           <span key={p.slot} className="dot" style={{ width: size, height: size, borderRadius: '50%', background: def.theme.primary }} />
         )

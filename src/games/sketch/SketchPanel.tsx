@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { PauseOverlay } from '../../components/PauseOverlay'
+import { codeFor } from '../../lib/controls'
+import { isPauseMessage, usePause, type PauseMessage } from '../../lib/pause'
 import { useFullscreen } from '../../lib/fullscreen'
 import { NetClient, defaultServerUrl } from '../../net/client'
 import { normalizeCode, type PeerInfo, type SketchPayload } from '../../net/protocol'
@@ -41,9 +44,27 @@ function StrokeThumb({ strokes, w = 220, h = 150 }: { strokes: Stroke[]; w?: num
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    renderStrokes(ctx, strokes, w, h)
+    renderStrokes(ctx, strokes, w, h, dpr)
   }, [strokes, w, h])
   return <canvas ref={ref} style={{ width: w, height: h, borderRadius: 8, border: '1px solid var(--line)' }} />
+}
+
+/**
+ * Seconds left in the round. All three engines have always ticked a timer and
+ * none of them ever showed it, so people drew and guessed with no idea how
+ * long they had - the single most useful number in the game was invisible.
+ */
+function RoundClock({ eng }: { eng: AnyEngine | null }) {
+  if (!eng || eng.phase === 'lobby' || eng.phase === 'over' || eng.phase === 'reveal') return null
+  const secs = Math.max(0, Math.ceil(eng.timer / 60))
+  if (secs <= 0) return null
+  const urgent = secs <= 10
+  return (
+    <span className={urgent ? 'chip chip--gold' : 'chip'} title="Time left in this round">
+      <span className="dot" style={{ background: urgent ? '#e0794f' : 'var(--gold)' }} />
+      {secs}s
+    </span>
+  )
 }
 
 /** The palette, brush sizes, paint bucket and undo - every drawing surface in Sketch shares this toolbar. */
@@ -133,6 +154,13 @@ export function SketchPanel() {
   const roundKeyRef = useRef('')
   const fullscreen = useFullscreen<HTMLDivElement>()
 
+  const pause = usePause({
+    active: screen === 'play',
+    keys: [codeFor('sketch.__pause', 'Escape')],
+    onToggle: (on) => net.send({ k: 'pause', on, who: net.displayName } satisfies PauseMessage),
+  })
+  const { applyRemote: applyRemotePause } = pause
+
   // Small per-mode UI state that does not belong on the engine.
   const [guessText, setGuessText] = useState('')
   const [customWord, setCustomWord] = useState('')
@@ -168,6 +196,7 @@ export function SketchPanel() {
         }
       },
       onPayload: (payload, from) => {
+        if (isPauseMessage(payload)) return applyRemotePause(payload)
         const msg = payload as SketchPayload
         if (!msg) return
         const eng = engineRef.current
@@ -206,7 +235,7 @@ export function SketchPanel() {
       },
     })
     return () => net.close()
-  }, [])
+  }, [applyRemotePause])
 
   const sendStroke = useCallback((chunk: { id: number; color: string; width: number; pts: Pt[]; done: boolean; kind?: 'line' | 'fill' }) => {
     net.send({ k: 'stroke', ...chunk } satisfies SketchPayload)
@@ -268,7 +297,10 @@ export function SketchPanel() {
       acc += dt
 
       const eng = engineRef.current
-      if (eng && roleRef.current !== 'guest') {
+      // A paused round holds the clock where it is - nobody loses drawing time
+      // to a timeout somebody else called.
+      if (pause.ref.current) acc = 0
+      if (eng && roleRef.current !== 'guest' && !pause.ref.current) {
         while (acc >= TICK) {
           acc -= TICK
           eng.step()
@@ -314,11 +346,18 @@ export function SketchPanel() {
         if (ctx) {
           const w = canvas.clientWidth || 480
           const h = canvas.clientHeight || 320
-          if (canvas.width !== w || canvas.height !== h) {
-            canvas.width = w
-            canvas.height = h
+          // One canvas pixel per device pixel. Without this the surface people
+          // actually draw on was soft on every high-DPI screen, while the
+          // little stroke thumbnails beside it were crisp.
+          const dpr = window.devicePixelRatio || 1
+          const pxW = Math.round(w * dpr)
+          const pxH = Math.round(h * dpr)
+          if (canvas.width !== pxW || canvas.height !== pxH) {
+            canvas.width = pxW
+            canvas.height = pxH
           }
-          renderStrokes(ctx, visibleStrokes(), w, h)
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+          renderStrokes(ctx, visibleStrokes(), w, h, dpr)
           if (modeRef.current === 'collab' && (eng as CollabEngine)?.inverted) {
             ctx.save()
             ctx.globalCompositeOperation = 'difference'
@@ -668,15 +707,28 @@ export function SketchPanel() {
   const iAmDrawing = canDrawNow()
 
   return (
-    <div>
+    // Relative so a timeout can cover the whole table - the word, the guesses
+    // and the half-finished drawing all go behind the card, not just the canvas.
+    <div style={{ position: 'relative' }}>
       <div className="gamehead">
         <h2>Sketch</h2>
         <span className="chip">{mode === 'scribble' ? 'Scribble' : mode === 'phone' ? 'Phone' : 'Collaborative Art'}</span>
+        <RoundClock eng={eng} />
         <div className="spacer" />
         <button className="btn btn--ghost btn--sm" onClick={() => setScreen('lobby')}>
           Leave the table
         </button>
       </div>
+
+      {pause.paused && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 20, borderRadius: 'var(--r-lg)', overflow: 'hidden' }}>
+          <PauseOverlay calledBy={pause.calledBy} onResume={pause.resume}>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setScreen('lobby')}>
+              Leave the table
+            </button>
+          </PauseOverlay>
+        </div>
+      )}
 
       {scribble && (
         <div className="infogrid" style={{ gridTemplateColumns: '2fr 1fr' }}>
