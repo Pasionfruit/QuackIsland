@@ -3,8 +3,10 @@
  *
  * Two players on one keyboard is the house standard, so the bindings live here
  * rather than inside any one game. Key *codes* are used, not `key`, so the
- * layout does not matter.
+ * layout does not matter. Bindings are rebindable per player per action - see
+ * lib/controls.ts for the (optional) saved-override layer this reads through.
  */
+import { overrideFor } from './controls'
 
 export interface GameInput {
   left: boolean
@@ -22,7 +24,7 @@ export function emptyInput(): GameInput {
 
 export type PlayerIndex = 0 | 1
 
-export const BINDINGS: Record<PlayerIndex, Record<keyof GameInput, string[]>> = {
+export const DEFAULT_BINDINGS: Record<PlayerIndex, Record<keyof GameInput, string[]>> = {
   0: {
     left: ['KeyA'],
     right: ['KeyD'],
@@ -80,13 +82,29 @@ export class Keyboard {
   }
 
   read(player: PlayerIndex): GameInput {
-    const map = BINDINGS[player]
+    const map = bindingsFor(player)
     const out = emptyInput()
     for (const key of Object.keys(map) as (keyof GameInput)[]) {
       out[key] = map[key].some((code) => this.down.has(code))
     }
     return out
   }
+}
+
+/** The storage key one Smash action is rebound under - see lib/controls.ts. */
+export function smashBindingKey(player: PlayerIndex, action: keyof GameInput): string {
+  return `smash.p${player}.${action}`
+}
+
+/** A player's live bindings: a rebound action's single saved key, or its defaults. */
+export function bindingsFor(player: PlayerIndex): Record<keyof GameInput, string[]> {
+  const defaults = DEFAULT_BINDINGS[player]
+  const out = {} as Record<keyof GameInput, string[]>
+  for (const action of Object.keys(defaults) as (keyof GameInput)[]) {
+    const override = overrideFor(smashBindingKey(player, action))
+    out[action] = override ? [override] : defaults[action]
+  }
+  return out
 }
 
 /** Packs an input into one byte, for sending over the wire. */
@@ -135,20 +153,3 @@ export const CONTROL_HINTS: { player: string; rows: [string, string][] }[] = [
   },
 ]
 
-/**
- * Smash-only rows (jump, shield, dodge) - these are not part of the generic
- * control rig every Polyland game shares, so they live here rather than in
- * CONTROL_HINTS, which TemplatePanel.tsx quotes as that shared baseline.
- */
-export const SMASH_CONTROL_HINTS: [string, string][][] = [
-  [
-    ['Jump', 'W (tap - a second jump works mid-air)'],
-    ['Shield / block', 'R'],
-    ['Dodge / roll', 'Direction + R'],
-  ],
-  [
-    ['Jump', 'Up arrow (tap - a second jump works mid-air)'],
-    ['Shield / block', ','],
-    ['Dodge / roll', 'Direction + ,'],
-  ],
-]

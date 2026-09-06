@@ -31,6 +31,10 @@ const collabOut = join(tmp, 'collab.mjs')
 await bundle('src/games/sketch/engine/collab.ts', collabOut)
 const drawOut = join(tmp, 'draw.mjs')
 await bundle('src/games/sketch/draw.ts', drawOut)
+const caseEngineOut = join(tmp, 'case-engine.mjs')
+await bundle('src/games/caseclosed/engine/engine.ts', caseEngineOut)
+const caseBoardOut = join(tmp, 'case-board.mjs')
+await bundle('src/games/caseclosed/engine/board.ts', caseBoardOut)
 const duckOut = join(tmp, 'duck.mjs')
 await bundle('src/games/duck/engine/engine.ts', duckOut)
 
@@ -470,9 +474,9 @@ console.log('\nPolyland Smash - engine smoke test\n')
   }
   check('every fighter is complete and in range', problems.length === 0, problems.slice(0, 4).join('; '))
   check('the roster has nine fighters', ROSTER.length === 9, `${ROSTER.length}`)
-  check('exactly one fighter is locked', ROSTER.filter((c) => c.locked).length === 1)
+  check('everyone on the roster is playable', ROSTER.every((c) => !c.locked))
   check('every locked fighter says how to unlock', ROSTER.every((c) => !c.locked || c.unlockHint))
-  check('playableId refuses a locked fighter', !charById(playableId('nightshift')).locked)
+  check('playableId never returns a locked fighter', ROSTER.every((c) => !charById(playableId(c.id)).locked))
   // Every playable id is unique, but the procedural rig only has six body
   // plans (no insect, and two of the newer fighters ship full sprite sheets
   // instead) - a species can be shared as long as the fighters wearing it
@@ -1564,6 +1568,130 @@ console.log('\nPolyland Smash - engine smoke test\n')
   }
 }
 
+// 24. Case Closed - the board graph, and the engine's turn/suggestion/accusation flow.
+{
+  const { reachableNodes, hallBetween, SECRET_PASSAGES, SUSPECT_HOME, START_NODE, ROOMS } = await import(
+    pathToFileURL(caseBoardOut).href
+  )
+  const { CaseClosedEngine } = await import(pathToFileURL(caseEngineOut).href)
+
+  // -- board --
+  {
+    const hall = hallBetween('greenhouse', 'diningPavilion')
+    const reach1 = reachableNodes('greenhouse', 1, new Set())
+    check('one step from a room reaches its hallway', reach1.includes(hall), reach1.join(', '))
+    const reach2 = reachableNodes('greenhouse', 2, new Set())
+    check('two steps from a room reaches the next room over', reach2.includes('diningPavilion'), reach2.join(', '))
+    check('a room is reachable with steps to spare', reachableNodes('greenhouse', 5, new Set()).includes('diningPavilion'))
+    const blocked = reachableNodes('greenhouse', 1, new Set([hall]))
+    check('an occupied hallway cannot be entered', !blocked.includes(hall), blocked.join(', '))
+  }
+  check('secret passages connect opposite corners', SECRET_PASSAGES.greenhouse === 'hammockLounge' && SECRET_PASSAGES.hammockLounge === 'greenhouse')
+  check('every room has a start node', ROOMS.every((r) => !!START_NODE[r]))
+
+  // -- engine setup --
+  const setup = (n) => {
+    const eng = new CaseClosedEngine()
+    for (let i = 0; i < n; i++) eng.addPlayer(i, `P${i}`)
+    const suspectOf = {}
+    const suspects = Object.keys(SUSPECT_HOME)
+    eng.players.forEach((p, i) => (suspectOf[p.slot] = suspects[i]))
+    eng.start(suspectOf)
+    return eng
+  }
+
+  {
+    const eng = setup(4)
+    check('the match starts in play with four investigators', eng.phase === 'playing' && eng.players.length === 4)
+    check('everyone starts at their suspect\'s home', eng.players.every((p) => p.position === START_NODE[SUSPECT_HOME[p.suspect]]))
+    check('turn order starts with the first seat', eng.current.slot === 0)
+  }
+
+  {
+    const eng = setup(2)
+    eng.start({ 0: 'contrlzee', 1: 'ninjapenguin' })
+    check('fewer than three investigators refuses to start', eng.phase === 'lobby')
+  }
+
+  // -- movement --
+  {
+    const eng = setup(3)
+    const me = eng.current
+    const before = me.position
+    eng.roll(() => 0.99) // a fixed high roll for a large, deterministic movement range
+    const reach = reachableNodes(before, eng.lastRoll[0] + eng.lastRoll[1], new Set())
+    const dest = reach.find((n) => n !== before) ?? reach[0]
+    eng.move(me.slot, dest)
+    check('a player can move to a reachable node', me.position === dest, `${before} -> ${me.position} (wanted ${dest})`)
+    const other = eng.players.find((p) => p.slot !== me.slot)
+    const otherBefore = other.position
+    eng.move(other.slot, before)
+    check('only the current player can move', other.position === otherBefore)
+  }
+
+  // -- suggestion and disprove flow --
+  {
+    const eng = setup(3)
+    // Force everyone into the same room so a suggestion is possible immediately.
+    for (const p of eng.players) p.position = 'campfireCircle'
+    const suggester = eng.current.slot
+    const others = eng.players.filter((p) => p.slot !== suggester)
+    eng.suggest(suggester, others[0].suspect, 'Canoe Paddle')
+    check('suggesting opens a pending check', !!eng.pending && !eng.pending.resolved)
+    check('the named suspect is moved into the room', eng.players.find((p) => p.suspect === others[0].suspect).position === 'campfireCircle')
+    check('only one suggestion is allowed per turn', (eng.hasSuggested === true))
+
+    const first = eng.awaitingCheckFrom()
+    check('the first check goes to someone other than the suggester', first !== null && first !== suggester)
+    eng.reportCheck(first, false)
+    check('a "no" advances to the next checker', eng.pending.pointer === 1 || eng.pending.resolved)
+    const second = eng.awaitingCheckFrom()
+    if (second !== null) {
+      eng.reportCheck(second, true)
+      check('a "yes" resolves the suggestion', eng.pending.resolved && eng.pending.disprovedBy === second)
+    }
+    check('the resolved suggestion is in the public log', eng.log.some((l) => l.kind === 'suggest'))
+  }
+
+  {
+    const eng = setup(3)
+    for (const p of eng.players) p.position = 'campfireCircle'
+    const suggester = eng.current.slot
+    const others = eng.players.filter((p) => p.slot !== suggester).map((p) => p.slot)
+    eng.suggest(suggester, 'diva', 'Flashlight')
+    for (const slot of others) eng.reportCheck(slot, false)
+    check('nobody able to disprove still resolves the suggestion', eng.pending.resolved && eng.pending.disprovedBy === null)
+  }
+
+  // -- accusation and elimination --
+  {
+    const eng = setup(3)
+    const slot = eng.current.slot
+    eng.eliminate(slot, { suspect: 'diva', weapon: 'Flashlight', room: 'messHall' })
+    check('a wrong accusation eliminates the accuser', eng.players.find((p) => p.slot === slot).eliminated)
+    check('an eliminated player is skipped for the next turn', eng.current.slot !== slot)
+    check('the accusation is logged as incorrect', eng.log.some((l) => l.kind === 'accuse' && l.by === slot && l.correct === false))
+  }
+
+  {
+    const eng = setup(3)
+    const slot = eng.current.slot
+    eng.win(slot, { suspect: 'diva', weapon: 'Flashlight', room: 'messHall' })
+    check('a correct accusation ends the match', eng.phase === 'over' && eng.winner === slot)
+    check('the winning accusation is logged as correct', eng.log.some((l) => l.correct === true))
+  }
+
+  // -- netcode --
+  {
+    const host = setup(3)
+    for (const p of host.players) p.position = 'campfireCircle'
+    host.suggest(host.current.slot, 'diva', 'Flashlight')
+    const guest = new CaseClosedEngine()
+    guest.applySnapshot(JSON.parse(JSON.stringify(host.snapshot())))
+    check('snapshot carries positions and the pending suggestion', guest.players.length === 3 && !!guest.pending)
+  }
+}
+
 // 18. The game shelf itself: every entry is complete and paints without crashing.
 {
   const { GAMES } = await import(pathToFileURL(regOut).href)
@@ -1582,8 +1710,8 @@ console.log('\nPolyland Smash - engine smoke test\n')
   }
   check('every game entry is complete', problems.length === 0, problems.slice(0, 4).join('; '))
   const live = GAMES.filter((g) => g.status === 'live')
-  check('the shelf has five playable games', live.length === 5, live.map((g) => g.id).join(', '))
-  const playableIds = new Set(['smash', 'duck-szn', 'tank-trouble', 'hide-and-seek', 'sketch'])
+  check('the shelf has six playable games', live.length === 6, live.map((g) => g.id).join(', '))
+  const playableIds = new Set(['smash', 'duck-szn', 'tank-trouble', 'hide-and-seek', 'sketch', 'case-closed'])
   check('every playable game has a panel', live.every((g) => playableIds.has(g.id)))
   check('every other game is marked concept', GAMES.every((g) => g.status === 'live' || g.status === 'concept'))
   check('party games are all 2-8 players', GAMES.filter((g) => g.status === 'concept').every((g) => g.players === '2-8 players'))

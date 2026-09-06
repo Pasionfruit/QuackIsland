@@ -82,6 +82,16 @@ function send(ws, msg) {
   if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg))
 }
 
+/** Fisher-Yates - used only for Case Closed's server-side deal. */
+function shuffle(arr) {
+  const out = [...arr]
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[out[i], out[j]] = [out[j], out[i]]
+  }
+  return out
+}
+
 function peerList(room) {
   return [...room.members.entries()]
     .map(([slot, ws]) => ({ slot, name: ws.polyName ?? `Player ${slot + 1}` }))
@@ -184,8 +194,82 @@ wss.on('connection', (ws, req) => {
         if (!room) return
         room.touchedAt = Date.now()
         const out = JSON.stringify({ t: 'relay', from: ws.polySlot, payload: msg.payload })
+        // A `to` list addresses specific slots (Case Closed's private card
+        // reveals, say) instead of the usual broadcast-to-everyone-else -
+        // the only two-tier trust distinction this relay makes.
+        const targets = Array.isArray(msg.to) ? new Set(msg.to) : null
         for (const [slot, peer] of room.members) {
-          if (slot !== ws.polySlot && peer.readyState === peer.OPEN) peer.send(out)
+          if (slot === ws.polySlot) continue
+          if (targets && !targets.has(slot)) continue
+          if (peer.readyState === peer.OPEN) peer.send(out)
+        }
+        break
+      }
+
+      case 'deal': {
+        // Case Closed only: the relay itself shuffles and holds the secret
+        // solution, because the host is also a player - if the host's own
+        // browser did the shuffling, the host would see the solution before
+        // anyone made a single guess. This is the one place this server
+        // stops being a dumb forwarder; everything else about a match still
+        // runs on a host-authoritative broadcast like every other game here.
+        const room = rooms.get(ws.polyRoom)
+        if (!room || ws.polySlot !== 0) return // only the host may deal
+        const suspects = Array.isArray(msg.suspects) ? msg.suspects : []
+        const weapons = Array.isArray(msg.weapons) ? msg.weapons : []
+        const rooms_ = Array.isArray(msg.rooms) ? msg.rooms : []
+        const slots = Array.isArray(msg.slots) ? msg.slots : []
+        if (!suspects.length || !weapons.length || !rooms_.length || slots.length < 2) {
+          return send(ws, { t: 'error', message: 'Bad deal request' })
+        }
+        const solution = {
+          suspect: suspects[Math.floor(Math.random() * suspects.length)],
+          weapon: weapons[Math.floor(Math.random() * weapons.length)],
+          room: rooms_[Math.floor(Math.random() * rooms_.length)],
+        }
+        const deck = shuffle([
+          ...suspects.filter((s) => s !== solution.suspect),
+          ...weapons.filter((w) => w !== solution.weapon),
+          ...rooms_.filter((r) => r !== solution.room),
+        ])
+        const hands = slots.map(() => [])
+        deck.forEach((card, i) => hands[i % slots.length].push(card))
+        room.caseClosed = { solution }
+        slots.forEach((slot, i) => {
+          const peer = room.members.get(slot)
+          if (peer) send(peer, { t: 'relay', from: -1, payload: { k: 'hand', cards: hands[i] } })
+        })
+        log(`room ${room.code} dealt a Case Closed game (${slots.length} players)`)
+        break
+      }
+
+      case 'accuse': {
+        // Also Case Closed only: the accusing player's own client cannot be
+        // trusted to grade its own guess, since it could simply lie about
+        // getting it right - the solution never touches a client until the
+        // case is actually closed.
+        const room = rooms.get(ws.polyRoom)
+        const solution = room?.caseClosed?.solution
+        if (!room || !solution) return
+        const correct =
+          msg.suspect === solution.suspect && msg.weapon === solution.weapon && msg.room === solution.room
+        send(ws, { t: 'relay', from: -1, payload: { k: 'accuseResult', correct, solution: correct ? solution : undefined } })
+        if (correct) {
+          for (const peer of room.members.values()) {
+            send(peer, { t: 'relay', from: -1, payload: { k: 'solved', by: ws.polySlot, solution } })
+          }
+        }
+        break
+      }
+
+      case 'reveal': {
+        // Every remaining suspect has been eliminated with nobody solving it -
+        // the room asks for the answer rather than ending on nothing.
+        const room = rooms.get(ws.polyRoom)
+        const solution = room?.caseClosed?.solution
+        if (!room || !solution) return
+        for (const peer of room.members.values()) {
+          send(peer, { t: 'relay', from: -1, payload: { k: 'solved', by: -1, solution } })
         }
         break
       }

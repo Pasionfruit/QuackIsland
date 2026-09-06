@@ -46,6 +46,16 @@ Polyland Smash adds a jump (a tap of `W` / the up arrow), a shield (`R` for
 player 1, `,` for player 2) and dodges cancelled out of it - see
 [Polyland Smash](#polyland-smash) below.
 
+Every one of these is rebindable. Smash, Hide & Seek and Tank Trouble each
+have a **Controls** panel in-game: click an action, press the key you want it
+on. A rebind is saved to `localStorage` under a `game.action` key (see
+[lib/controls.ts](src/lib/controls.ts)) and read through wherever that game
+already checked `KeyboardEvent.code`, so nothing about a game's own input
+handling had to change beyond that one lookup. `ControlsSettings` in
+[src/components/ControlsSettings.tsx](src/components/ControlsSettings.tsx) is
+the shared remap UI every game's panel renders - a new game just needs to
+list its own actions and defaults, not build its own rebinding screen.
+
 **Online.** On the same Wi-Fi, `npm run dev:all` prints a LAN address for
 everyone to open. Over the open internet, deploy it (see below) and hand out
 the one public URL instead. Either way it works the same: whoever is hosting
@@ -124,6 +134,9 @@ own machine) is just opening that one URL twice.
 | Characters and frame data | [src/games/smash/engine/characters.ts](src/games/smash/engine/characters.ts) |
 | Arena geometry | [src/games/smash/engine/stage.ts](src/games/smash/engine/stage.ts) |
 | Renderer | [src/games/smash/engine/render.ts](src/games/smash/engine/render.ts) |
+| Case Closed panel (lobby, board, notepad) | [src/games/caseclosed/CaseClosedPanel.tsx](src/games/caseclosed/CaseClosedPanel.tsx) |
+| Case Closed board graph and rooms | [src/games/caseclosed/engine/board.ts](src/games/caseclosed/engine/board.ts) |
+| Case Closed match rules | [src/games/caseclosed/engine/engine.ts](src/games/caseclosed/engine/engine.ts) |
 
 ## The art rules
 
@@ -219,11 +232,12 @@ Nine fighters, no two alike:
 | **Wandering Honeybee** | Backpacker | Middle of the road on every stat - the roster's baseline |
 | **Frolicking Cheetah** | Sprinter | Fastest and lightest on the roster; a hit sends her flying just as fast |
 | **Tuxedo Cat** | Romantic | Heaviest and slowest of the new arrivals, but her reach and damage make you come to her |
-| **NightShift** | Leopard gym rat | Locked. One committed pounce, biggest single hit, nothing to fall back on |
+| **NightShift** | Leopard gym rat | One committed pounce, biggest single hit, nothing to fall back on |
 
 `locked: true` on a `CharDef` keeps a fighter on the select screen but out of
-play; `playableId()` is the guard that stops a locked id reaching a match from a
-stale pick or a remote peer. Flip the flag to let NightShift in.
+play, and `playableId()` is the guard that stops a locked id reaching a match
+from a stale pick or a remote peer - useful if a future fighter needs to ship
+before its art or balance is ready. Nobody on the roster is locked right now.
 
 Seven of the nine draw from real sprite sheets rather than the procedural rig
 (see [Character art](#character-art) below); ContrlZee and MrPasionfruit are
@@ -380,6 +394,48 @@ and a gallery needs feedback on every trigger pull. Oscillators and a noise
 buffer in [audio.ts](src/games/duck/audio.ts), built lazily because browsers
 will not start an AudioContext until the page has been clicked.
 
+## Case Closed
+
+Basically Clue, with the camp cast standing in for the mansion guests. Nine
+rooms on a 3x3 grid, connected by hallways and four secret passages between
+opposite corners, for 3-6 investigators.
+
+**The relay is not dumb here, on purpose.** Every other game in this project
+treats the server as a pipe: it never looks at message contents, so a host's
+browser can safely run the whole match. Clue cannot work that way - the host
+is also a player, and if the host's own client shuffled the deck or graded
+accusations, the host could simply read its own memory to cheat. So the
+server itself deals: it holds the solution, shuffles the rest of the deck,
+and mails each seat its hand as a `relay` message targeted at just that one
+socket (`to: [slot]` in [protocol.ts](src/net/protocol.ts), handled in
+[server/index.mjs](server/index.mjs)). It is also the only party that ever
+sees the solution before the match ends, so it is the only party that can
+grade an accusation. Turn order, positions and the public suggestion log stay
+host-authoritative and broadcast as normal - the server's involvement is
+narrowly scoped to the two things a peer cannot be trusted with.
+
+**Movement is a graph, not a pixel grid.** Rooms and hallway cells are nodes
+in an adjacency map; `reachableNodes()` in
+[engine/board.ts](src/games/caseclosed/engine/board.ts) walks it for a given
+die roll, a hallway cell holds at most one token and blocks pass-through when
+occupied, and entering a room always ends the move even with steps to spare,
+matching the real board game.
+
+**Disproving a suggestion needs no round trip through the host.** The
+clockwise order of who checks next is public data, so every client computes
+the same sequence and pointer independently from the synced engine state
+(`suggest()`/`reportCheck()` in
+[engine/engine.ts](src/games/caseclosed/engine/engine.ts)) - whoever the
+pointer names checks their own hand locally and broadcasts only yes or no,
+which is what advances the pointer for everyone else. If the answer is yes,
+the actual card goes straight from the checker to the suggester over a
+targeted relay message that nobody else in the room ever receives.
+
+The notepad each investigator sees is local-only React state, cycling a cell
+between blank, yes and no on click - it is never sent anywhere, on the theory
+that your notes are exactly the one piece of information a browser's
+devtools was never going to expose anyway.
+
 ## Adding a game
 
 1. Add an entry to `GAMES` in [src/games/registry.ts](src/games/registry.ts)
@@ -398,4 +454,6 @@ Node: movement, jumps, hit detection, knockback scaling with percent and weight,
 blast-zone KOs, stocks, recovery and helpless states, platform behaviour, and
 the CPU. It then checks that a snapshot round-trips into a guest's engine, and
 boots the real relay server to prove that hosting, joining, relaying and host
-disconnects all work.
+disconnects all work. It also bundles the Case Closed board and match engine
+and checks reachability, secret passages, turn order, suggestion/disprove
+resolution, wrong and winning accusations, and snapshot round-tripping.

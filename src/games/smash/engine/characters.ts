@@ -376,8 +376,6 @@ const LEOPARD: CharDef = {
   avatar: NIGHTSHIFT,
   height: 33,
   theme: { primary: '#d8b25c', dark: '#8a6a2c', soft: '#f2e3c0' },
-  locked: true,
-  unlockHint: 'Still finishing her set. Coming in a later build.',
   ...BASE,
   weight: 0.97,
   speed: 1.7,

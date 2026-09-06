@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { ControlsSettings } from '../../components/ControlsSettings'
+import { codeFor } from '../../lib/controls'
 import { fitScene } from '../../lib/draw'
 import { useFullscreen } from '../../lib/fullscreen'
 import { NetClient, defaultServerUrl } from '../../net/client'
@@ -150,12 +152,18 @@ export function TankPanel() {
 
   useEffect(() => {
     if (screen !== 'play') return
+    const codes = {
+      w: codeFor('tank.up', 'KeyW'),
+      a: codeFor('tank.left', 'KeyA'),
+      s: codeFor('tank.down', 'KeyS'),
+      d: codeFor('tank.right', 'KeyD'),
+    }
     const onKey = (down: boolean) => (e: KeyboardEvent) => {
       const k = keysRef.current
-      if (e.code === 'KeyW') k.w = down
-      else if (e.code === 'KeyA') k.a = down
-      else if (e.code === 'KeyS') k.s = down
-      else if (e.code === 'KeyD') k.d = down
+      if (e.code === codes.w) k.w = down
+      else if (e.code === codes.a) k.a = down
+      else if (e.code === codes.s) k.s = down
+      else if (e.code === codes.d) k.d = down
       else return
       e.preventDefault()
     }
@@ -511,13 +519,24 @@ export function TankPanel() {
             ))}
           </div>
         </div>
+        <ControlsSettings
+          title="Controls"
+          resetPrefix="tank"
+          groups={[
+            {
+              title: 'Movement',
+              rows: [
+                { key: 'tank.up', label: 'Move up', fallback: 'KeyW' },
+                { key: 'tank.left', label: 'Move left', fallback: 'KeyA' },
+                { key: 'tank.down', label: 'Move down', fallback: 'KeyS' },
+                { key: 'tank.right', label: 'Move right', fallback: 'KeyD' },
+              ],
+            },
+          ]}
+        />
         <div className="panel">
-          <div className="panel__title">Controls</div>
+          <div className="panel__title">Aim &amp; fire</div>
           <div className="keys">
-            <div className="keyrow">
-              <span>Move</span>
-              <kbd>W A S D</kbd>
-            </div>
             <div className="keyrow">
               <span>Aim / fire</span>
               <kbd>Mouse / Left click</kbd>

@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { ControlsSettings } from '../../components/ControlsSettings'
+import { codeFor } from '../../lib/controls'
 import { fitScene } from '../../lib/draw'
 import { useFullscreen } from '../../lib/fullscreen'
 import { NetClient, defaultServerUrl } from '../../net/client'
@@ -129,12 +131,18 @@ export function HidePanel() {
 
   useEffect(() => {
     if (screen !== 'play') return
+    const codes = {
+      w: codeFor('hide.forward', 'KeyW'),
+      a: codeFor('hide.turnLeft', 'KeyA'),
+      s: codeFor('hide.backward', 'KeyS'),
+      d: codeFor('hide.turnRight', 'KeyD'),
+    }
     const onKey = (down: boolean) => (e: KeyboardEvent) => {
       const k = keysRef.current
-      if (e.code === 'KeyW') k.w = down
-      else if (e.code === 'KeyA') k.a = down
-      else if (e.code === 'KeyS') k.s = down
-      else if (e.code === 'KeyD') k.d = down
+      if (e.code === codes.w) k.w = down
+      else if (e.code === codes.a) k.a = down
+      else if (e.code === codes.s) k.s = down
+      else if (e.code === codes.d) k.d = down
       else return
       e.preventDefault()
     }
@@ -393,19 +401,21 @@ export function HidePanel() {
       </div>
 
       <div className="infogrid">
-        <div className="panel">
-          <div className="panel__title">Controls</div>
-          <div className="keys">
-            <div className="keyrow">
-              <span>Walk</span>
-              <kbd>W / S</kbd>
-            </div>
-            <div className="keyrow">
-              <span>Turn</span>
-              <kbd>A / D</kbd>
-            </div>
-          </div>
-        </div>
+        <ControlsSettings
+          title="Controls"
+          resetPrefix="hide"
+          groups={[
+            {
+              title: 'Movement',
+              rows: [
+                { key: 'hide.forward', label: 'Walk forward', fallback: 'KeyW' },
+                { key: 'hide.backward', label: 'Walk backward', fallback: 'KeyS' },
+                { key: 'hide.turnLeft', label: 'Turn left', fallback: 'KeyA' },
+                { key: 'hide.turnRight', label: 'Turn right', fallback: 'KeyD' },
+              ],
+            },
+          ]}
+        />
         <div className="panel">
           <div className="panel__title">In the chase</div>
           <div style={{ display: 'grid', gap: 6 }}>

@@ -1,21 +1,36 @@
 /**
  * Wire protocol for Polyland's host-and-join play.
  *
- * The relay server knows nothing about any game: it hands out room codes and
- * forwards `relay` payloads to everyone else in the room. Games define their
- * own payloads on top, so a new game does not need a new server.
+ * The relay server knows almost nothing about any game: it hands out room
+ * codes and forwards `relay` payloads to everyone else in the room (or, with
+ * a `to` list, to just the named slots - the one primitive every game needs
+ * to keep something private between two specific peers). Games define their
+ * own payloads on top of that, so a new game does not need a new server.
+ *
+ * Case Closed is the one exception: `deal` and `accuse` are handled by the
+ * server itself rather than forwarded, because its host is also a player -
+ * if the host's own browser shuffled the deck or graded an accusation, the
+ * host would see the solution before anyone else got a single guess in.
+ * `SERVER_SLOT` marks a relay reply that came from the server this way,
+ * rather than from another player.
  */
 
 export const DEFAULT_PORT = 8787
 
 export type Slot = number
 
+/** `from` on a relay message when the server answered directly, not a peer. */
+export const SERVER_SLOT: Slot = -1
+
 /** Anything the client can send. */
 export type ClientMessage =
   | { t: 'host'; game: string; name: string; max?: number }
   | { t: 'join'; code: string; name: string }
   | { t: 'leave' }
-  | { t: 'relay'; payload: unknown }
+  | { t: 'relay'; payload: unknown; to?: Slot[] }
+  | { t: 'deal'; suspects: string[]; weapons: string[]; rooms: string[]; slots: Slot[] }
+  | { t: 'accuse'; suspect: string; weapon: string; room: string }
+  | { t: 'reveal' }
   | { t: 'ping' }
 
 /** Anything the server can send. */
@@ -82,6 +97,35 @@ export type TankPayload =
   | { k: 'start'; mode: 'coop' | 'pvp' }
   | { k: 'color'; color: string }
   | { k: 'team'; team: number }
+
+/**
+ * Case Closed. Turn order, positions and the public log are host-authoritative
+ * like every other game; only a card handed to disprove a suggestion rides a
+ * targeted `relay` `to` the suggester alone, never broadcast. The deck and
+ * solution never touch `relay` at all - see the `deal`/`accuse` top-level
+ * ClientMessage cases the server itself answers.
+ */
+export type CaseClosedPayload =
+  | { k: 'start'; suspectOf: Record<Slot, string> }
+  | { k: 'snap'; s: unknown }
+  // Guest -> host actions; the host applies each to its authoritative engine
+  // the same way every other game's guest input works.
+  | { k: 'roll' }
+  | { k: 'move'; to: string }
+  | { k: 'secretPassage'; to: string }
+  | { k: 'suggest'; suspect: string; weapon: string }
+  | { k: 'endTurn' }
+  // The accuser broadcasts this only after the server has privately graded the
+  // guess (see 'accuseResult' below) - the content and the outcome arrive
+  // together so the host never has to trust an ungraded claim.
+  | { k: 'accuseOutcome'; suspect: string; weapon: string; room: string; correct: boolean }
+  /** Every non-suggesting player broadcasts whether they *could* disprove, in clockwise order - never which card. */
+  | { k: 'checkResult'; canDisprove: boolean }
+  /** Sent privately (`to: [suggester]`) by whoever disproves - the only card content that ever crosses the wire. */
+  | { k: 'showCard'; card: string }
+  | { k: 'hand'; cards: string[] }
+  | { k: 'accuseResult'; correct: boolean; solution?: { suspect: string; weapon: string; room: string } }
+  | { k: 'solved'; by: Slot; solution: { suspect: string; weapon: string; room: string } }
 
 export type SmashPayload =
   | { k: 'pick'; slot: Slot; charId: string }

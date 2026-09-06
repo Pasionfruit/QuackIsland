@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PAL } from '../../art/palette'
 import { pine } from '../../art/props'
 import { SceneCanvas } from '../../components/SceneCanvas'
-import { CONTROL_HINTS, Keyboard, packInput, SMASH_CONTROL_HINTS, unpackInput } from '../../lib/input'
+import { ControlsSettings, type RemapGroup } from '../../components/ControlsSettings'
+import { codeFor } from '../../lib/controls'
+import { DEFAULT_BINDINGS, Keyboard, packInput, smashBindingKey, unpackInput, type GameInput } from '../../lib/input'
 import { fitScene, rect } from '../../lib/draw'
 import { useFullscreen } from '../../lib/fullscreen'
 import { NetClient, defaultServerUrl } from '../../net/client'
@@ -24,6 +26,27 @@ const MOVE_INPUT: Record<MoveId, string> = {
   specialSide: '< or > + SPECIAL',
   specialUp: 'UP + SPECIAL',
   specialDown: 'DOWN + SPECIAL',
+}
+
+const ACTION_LABELS: Record<keyof GameInput, string> = {
+  left: 'Move left',
+  right: 'Move right',
+  up: 'Move up / jump',
+  down: 'Move down / drop through',
+  attack: 'Attack',
+  special: 'Special',
+  shield: 'Shield / dodge',
+}
+
+function smashRemapGroup(player: 0 | 1, title: string): RemapGroup {
+  return {
+    title,
+    rows: (Object.keys(DEFAULT_BINDINGS[player]) as (keyof GameInput)[]).map((action) => ({
+      key: smashBindingKey(player, action),
+      label: ACTION_LABELS[action],
+      fallback: DEFAULT_BINDINGS[player][action][0],
+    })),
+  }
 }
 
 const STOCK_CHOICES = [1, 2, 3, 5]
@@ -284,9 +307,9 @@ function Arena({ config, net, registerHandler, onChangeFighters, onLeave }: Aren
 
     const kb = new Keyboard()
     const detach = kb.attach((code) => {
-      if (code === 'Escape' || code === 'KeyP') {
+      if (code === codeFor('smash.__pause', 'Escape') || code === 'KeyP') {
         if (winnerRef.current === null) setPaused((p) => !p)
-      } else if (code === 'F1') {
+      } else if (code === codeFor('smash.__hitboxes', 'F1')) {
         setDebug((d) => !d)
       } else if (code === 'KeyR' && winnerRef.current !== null && role !== 'guest') {
         rematch()
@@ -442,58 +465,25 @@ function Arena({ config, net, registerHandler, onChangeFighters, onLeave }: Aren
       </div>
 
       <div className="infogrid">
-        <div className="panel">
-          <div className="panel__title">Controls</div>
-          <div style={{ display: 'grid', gap: 14 }}>
-            {role ? (
-              <div>
-                <div
-                  className="fighter__title"
-                  style={{ color: SmashEngine.playerColor(youAre), marginBottom: 6 }}
-                >
-                  You are {youAre === 0 ? 'Player 1' : 'Player 2'} - use the left-hand keys
-                </div>
-                <div className="keys">
-                  {[...CONTROL_HINTS[0].rows, ...SMASH_CONTROL_HINTS[youAre]].map(([action, key]) => (
-                    <div className="keyrow" key={action}>
-                      <span>{action}</span>
-                      <kbd>{key}</kbd>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              CONTROL_HINTS.map((group, i) => (
-                <div key={group.player}>
-                  <div
-                    className="fighter__title"
-                    style={{ color: SmashEngine.playerColor(i), marginBottom: 6 }}
-                  >
-                    {i === 1 && config.cpu ? 'Player 2 (CPU is playing)' : group.player}
-                  </div>
-                  <div className="keys">
-                    {[...group.rows, ...SMASH_CONTROL_HINTS[i]].map(([action, key]) => (
-                      <div className="keyrow" key={action}>
-                        <span>{action}</span>
-                        <kbd>{key}</kbd>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))
-            )}
-            <div className="keys">
-              <div className="keyrow">
-                <span>Pause</span>
-                <kbd>ESC</kbd>
-              </div>
-              <div className="keyrow">
-                <span>Hitbox view</span>
-                <kbd>F1</kbd>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ControlsSettings
+          title="Controls"
+          resetPrefix="smash"
+          groups={
+            role
+              ? [smashRemapGroup(youAre, youAre === 0 ? 'Player 1 (you) - left-hand keys' : 'Player 2 (you) - arrow cluster')]
+              : [
+                  smashRemapGroup(0, 'Player 1'),
+                  smashRemapGroup(1, config.cpu ? 'Player 2 (CPU is playing)' : 'Player 2'),
+                  {
+                    title: 'Anytime',
+                    rows: [
+                      { key: 'smash.__pause', label: 'Pause', fallback: 'Escape' },
+                      { key: 'smash.__hitboxes', label: 'Hitbox view', fallback: 'F1' },
+                    ],
+                  },
+                ]
+          }
+        />
 
         {[0, 1].map((i) => {
           const def = charById(config.chars[i])

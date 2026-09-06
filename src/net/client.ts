@@ -136,11 +136,16 @@ export class NetClient {
     this.connect(url, { t: 'join', code, name })
   }
 
-  /** Sends a game payload to everyone else in the room. */
-  send(payload: unknown): void {
+  /** Sends a game payload to everyone else in the room, or just the given slots if `to` is set. */
+  send(payload: unknown, to?: Slot[]): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ t: 'relay', payload }))
+      this.ws.send(JSON.stringify(to ? { t: 'relay', payload, to } : { t: 'relay', payload }))
     }
+  }
+
+  /** An escape hatch for a top-level message the server itself answers (Case Closed's `deal`/`accuse`), not a `relay`. */
+  sendRaw(msg: ClientMessage): void {
+    if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(msg))
   }
 
   close(): void {
