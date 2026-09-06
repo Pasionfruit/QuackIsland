@@ -840,13 +840,13 @@ const BUILD: GameEntry = {
   tagline: 'Place a trap. Then run the course you just ruined.',
   genre: 'Build-a-course platformer',
   players: PARTY,
-  status: 'concept',
+  status: 'live',
   blurb:
-    'Everyone adds one piece to the level, then everyone has to complete it. The trick is making it hard for them and survivable for you.',
+    'Everyone builds onto one shared course at once, then everyone has to cross it. Score for finishing, for finishing first, for surviving clean - and for whichever trap of yours takes someone else out.',
   plan: [
-    'A drafting phase where everyone places one block or trap.',
-    'Scoring that rewards being the only one to reach the end.',
-    'A growing library of parts: platforms, saws, springs, glue.',
+    'A timed build phase: fifteen pieces across platforms, hazards, movement and traps, a handful dealt to each player.',
+    'A run everyone attempts together, then points for finishing, placing, surviving, and betrayal.',
+    'Classic, Quick Play and Chaos modes over as many rounds as it takes to hit the target score.',
   ],
   art: (ctx, frame) => {
     sky(ctx, W, 60, DAY)

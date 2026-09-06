@@ -37,6 +37,12 @@ const caseBoardOut = join(tmp, 'case-board.mjs')
 await bundle('src/games/caseclosed/engine/board.ts', caseBoardOut)
 const duckOut = join(tmp, 'duck.mjs')
 await bundle('src/games/duck/engine/engine.ts', duckOut)
+const bbEngineOut = join(tmp, 'bb-engine.mjs')
+await bundle('src/games/buildbetray/engine/engine.ts', bbEngineOut)
+const bbLevelOut = join(tmp, 'bb-level.mjs')
+await bundle('src/games/buildbetray/engine/level.ts', bbLevelOut)
+const bbPiecesOut = join(tmp, 'bb-pieces.mjs')
+await bundle('src/games/buildbetray/engine/pieces.ts', bbPiecesOut)
 
 const { SmashEngine } = await import(pathToFileURL(out).href)
 
@@ -1712,6 +1718,200 @@ console.log('\nPolyland Smash - engine smoke test\n')
   }
 }
 
+// 25. Build & Betray: the piece pool, the level/placement rules, and the
+// build -> preview -> run -> results -> next-round state machine.
+{
+  const { draftHand, pieceById: bbPieceById } = await import(pathToFileURL(bbPiecesOut).href)
+  const { newLevel, canPlace, place, removeOwn, pieceAt, reachable, goalRect, MAX_HAZARDS_ON_BOARD, hazardCount, BUILD_COLS } = await import(
+    pathToFileURL(bbLevelOut).href
+  )
+  const { BuildBetrayEngine, defaultConfig } = await import(pathToFileURL(bbEngineOut).href)
+
+  // -- pieces --
+  {
+    const hand = draftHand(() => 0.5, 6)
+    check('a drafted hand always includes a small platform', hand.includes('platform-small'))
+    check('a drafted hand has no duplicates', new Set(hand).size === hand.length)
+    check('every drafted id resolves to a real piece', hand.every((id) => !!bbPieceById(id)))
+  }
+
+  // -- level & placement rules --
+  {
+    const level = newLevel()
+    check('an empty course is already reachable', reachable(level))
+
+    const outside = canPlace(level, 'platform-small', BUILD_COLS[1] + 5, 5, 0)
+    check('placement outside the build area is rejected', !outside.ok)
+
+    const onLedge = canPlace(level, 'platform-small', 0, 12, 0)
+    check('placement overlapping the fixed ledge is rejected', !onLedge.ok)
+
+    const floating = canPlace(level, 'spikes', 8, 3, 0)
+    check('a support-needing piece floating in open air is rejected', !floating.ok)
+    const supported = canPlace(level, 'spikes', 8, 10, 0) // row 10 sits right above the default bridge
+    check('the same piece directly above the bridge is allowed', supported.ok)
+
+    const capped = canPlace(level, 'platform-small', 6, 9, 5)
+    check('a piece at its per-player cap is rejected', !capped.ok)
+
+    const p1 = place(level, 'platform-small', 6, 9, 0)
+    check('placing returns the new piece with a uid', typeof p1.uid === 'number')
+    const overlap = canPlace(level, 'platform-small', 6, 9, 0)
+    check('a cell already holding a piece cannot take another', !overlap.ok)
+    check('pieceAt finds what was just placed', pieceAt(level, 6, 9)?.uid === p1.uid)
+    check('another slot cannot remove someone else\'s piece', !removeOwn(level, p1.uid, 1))
+    check('the owner can remove their own piece', removeOwn(level, p1.uid, 0))
+    check('the cell is free again after removal', !pieceAt(level, 6, 9))
+
+    // Anti-grief: no more than MAX_HAZARDS_ON_BOARD hazards on the board at once.
+    place(level, 'spikes', 6, 10, 0)
+    place(level, 'spikes', 7, 10, 0)
+    place(level, 'spikes', 8, 10, 0) // spikes maxPerPlayer is 3
+    place(level, 'saw', 8, 4, 0)
+    place(level, 'saw', 9, 4, 0) // saw maxPerPlayer is 2 - five hazards down
+    check('hazard count tracks what has been placed', hazardCount(level) === 5)
+    const sixth = canPlace(level, 'fire', 9, 10, 0) // supported by the bridge, under the cap
+    check('the hazard cap allows exactly the configured maximum', sixth.ok)
+    place(level, 'fire', 9, 10, 0)
+    const seventh = canPlace(level, 'fire', 10, 10, 0)
+    check('one more hazard past the cap is rejected', !seventh.ok && hazardCount(level) === MAX_HAZARDS_ON_BOARD)
+  }
+
+  // -- engine: state machine --
+  function advanceUntil(eng, phase, maxFrames = 4000) {
+    for (let i = 0; i < maxFrames && eng.phase !== phase; i++) eng.step()
+    return eng.phase === phase
+  }
+
+  {
+    const eng = new BuildBetrayEngine({ ...defaultConfig('classic'), buildSeconds: 1, runSeconds: 2 })
+    eng.addPlayer(0, 'Alix')
+    eng.addPlayer(1, 'Bo')
+    eng.addPlayer(2, 'Cy')
+    eng.startMatch()
+    check('a match starts in the intro phase', eng.phase === 'intro')
+    check('every hand is dealt on the first round', Object.keys(eng.hands).length === 3)
+
+    check('the intro phase gives way to build', advanceUntil(eng, 'build'))
+
+    // Force a known hand so this test does not depend on whichever pieces the
+    // random draft happened to hand out (some need support underneath, some
+    // don't fit at every size - platform-small always does).
+    eng.hands[0] = ['platform-small']
+    const bad = eng.requestPlace(0, 'wall', 8, 5, 1)
+    check('placing a piece outside your hand is rejected', !bad.ok && eng.level.placed.length === 0)
+    const good = eng.requestPlace(0, 'platform-small', 8, 5, 1)
+    check('placing a piece from your hand succeeds', good.ok && eng.level.placed.length === 1)
+
+    const cap = bbPieceById('platform-small').maxPerPlayer
+    for (let i = 0; i < cap + 2; i++) eng.requestPlace(0, 'platform-small', 8, 6 + i, 1)
+    check(
+      "placing beyond a piece's per-player cap stops taking effect",
+      eng.level.placed.filter((p) => p.pieceId === 'platform-small').length === cap,
+    )
+
+    eng.setReady(0, true)
+    eng.setReady(1, true)
+    eng.setReady(2, true)
+    check('everyone readying up ends the build phase early', advanceUntil(eng, 'preview', 5))
+
+    check('preview gives way to the run', advanceUntil(eng, 'run'))
+    const runner0 = eng.runners.find((r) => r.slot === 0)
+    check('runners reset to their spawn point for the run', Math.abs(runner0.x - runner0.spawnX) < 0.01)
+  }
+
+  // -- engine: physics --
+  {
+    const eng = new BuildBetrayEngine({ ...defaultConfig('classic'), buildSeconds: 1, runSeconds: 5 })
+    eng.addPlayer(0, 'Solo')
+    eng.startMatch()
+    advanceUntil(eng, 'run')
+    const r = eng.runners[0]
+    const groundY = r.y
+    check('a runner starts grounded on the spawn ledge', r.grounded)
+
+    eng.setInput(0, { left: false, right: false, jump: true })
+    eng.step()
+    check('jumping leaves the ground with upward velocity', !r.grounded && r.vy < 0)
+
+    eng.setInput(0, { left: false, right: false, jump: false })
+    for (let i = 0; i < 120 && r.y < groundY; i++) eng.step()
+    check('gravity brings a jumping runner back down to the ledge', Math.abs(r.y - groundY) < 1 && r.grounded)
+  }
+
+  // -- engine: hazards, betrayal, contribution and scoring --
+  {
+    const eng = new BuildBetrayEngine({ ...defaultConfig('classic'), targetScore: 8, buildSeconds: 1, runSeconds: 2 })
+    eng.addPlayer(0, 'Builder')
+    eng.addPlayer(1, 'Walker')
+    eng.addPlayer(2, 'Victim')
+    eng.startMatch()
+    advanceUntil(eng, 'build')
+    place(eng.level, 'platform-small', 8, 9, 0)
+    const spike = place(eng.level, 'spikes', 10, 10, 0) // supported by the default bridge at row 11
+    advanceUntil(eng, 'run')
+
+    const [builder, walker, victim] = eng.runners
+    // Walker falls onto the platform Builder placed - a "useful build" contribution.
+    walker.x = 9 * 20
+    walker.y = 9 * 18 - 40
+    walker.py = walker.y
+    walker.vy = 0
+    walker.grounded = false
+    // Victim walks straight into Builder's spike.
+    victim.x = spike.gx * 20 + 10
+    victim.y = spike.gy * 18 + 9
+    victim.vy = 0
+    victim.grounded = true
+    // Builder reaches the goal, unharmed.
+    const goal = goalRect()
+    builder.x = goal.x + goal.w / 2
+    builder.y = goal.y + goal.h - 2
+    builder.vy = 0
+
+    for (let i = 0; i < 20; i++) eng.step()
+    check('landing on a placed platform records who touched it', eng.level.placed.some((p) => p.touchedBy.includes(1)))
+    check('touching an armed hazard kills the runner', victim.alive === false)
+    check('a hazard kill is credited to whoever placed it', victim.deathCauses.includes(0))
+    check('overlapping the goal finishes a runner', builder.finished)
+
+    check('the run ends and scores the round', advanceUntil(eng, 'results'))
+    const scores = Object.fromEntries(eng.lastResult.scores.map((s) => [s.slot, s]))
+    check('a finisher gets base, placement and survival points', scores[0].roundScore === 8, scores[0].roundScore)
+    check('betrayal and contribution both feed the same scoreboard', scores[0].total === 8)
+    check('a player who never built or finished scores nothing this round', scores[1].roundScore === 0 && scores[2].roundScore === 0)
+
+    check('reaching the target score ends the match', advanceUntil(eng, 'matchOver'))
+    check('the highest scorer is declared the winner', eng.winner === 0)
+  }
+
+  // -- engine: quick play ends by round count, not score --
+  {
+    const eng = new BuildBetrayEngine({ ...defaultConfig('quick'), totalRounds: 1, buildSeconds: 1, runSeconds: 1 })
+    eng.addPlayer(0, 'A')
+    eng.addPlayer(1, 'B')
+    eng.startMatch()
+    advanceUntil(eng, 'build')
+    advanceUntil(eng, 'preview')
+    advanceUntil(eng, 'run')
+    check('quick play ends after its configured rounds', advanceUntil(eng, 'matchOver'))
+  }
+
+  // -- netcode: snapshot round-trip --
+  {
+    const host = new BuildBetrayEngine({ ...defaultConfig('classic'), buildSeconds: 1, runSeconds: 1 })
+    host.addPlayer(0, 'Host')
+    host.addPlayer(1, 'Guest')
+    host.startMatch()
+    advanceUntil(host, 'build')
+    place(host.level, 'platform-long', 9, 8, 0)
+    const guest = new BuildBetrayEngine(host.config)
+    guest.applySnapshot(JSON.parse(JSON.stringify(host.snapshot())))
+    check('a snapshot carries the level and both runners', guest.level.placed.length === 1 && guest.runners.length === 2)
+    check('a snapshot round-trips the phase', guest.phase === host.phase)
+  }
+}
+
 // 18. The game shelf itself: every entry is complete and paints without crashing.
 {
   const { GAMES } = await import(pathToFileURL(regOut).href)
@@ -1730,8 +1930,8 @@ console.log('\nPolyland Smash - engine smoke test\n')
   }
   check('every game entry is complete', problems.length === 0, problems.slice(0, 4).join('; '))
   const live = GAMES.filter((g) => g.status === 'live')
-  check('the shelf has six playable games', live.length === 6, live.map((g) => g.id).join(', '))
-  const playableIds = new Set(['smash', 'duck-szn', 'tank-trouble', 'hide-and-seek', 'sketch', 'case-closed'])
+  check('the shelf has seven playable games', live.length === 7, live.map((g) => g.id).join(', '))
+  const playableIds = new Set(['smash', 'duck-szn', 'tank-trouble', 'hide-and-seek', 'sketch', 'case-closed', 'build-and-betray'])
   check('every playable game has a panel', live.every((g) => playableIds.has(g.id)))
   check('every other game is marked concept', GAMES.every((g) => g.status === 'live' || g.status === 'concept'))
   check('party games are all 2-8 players', GAMES.filter((g) => g.status === 'concept').every((g) => g.players === '2-8 players'))

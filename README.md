@@ -137,6 +137,10 @@ own machine) is just opening that one URL twice.
 | Case Closed panel (lobby, board, notepad) | [src/games/caseclosed/CaseClosedPanel.tsx](src/games/caseclosed/CaseClosedPanel.tsx) |
 | Case Closed board graph and rooms | [src/games/caseclosed/engine/board.ts](src/games/caseclosed/engine/board.ts) |
 | Case Closed match rules | [src/games/caseclosed/engine/engine.ts](src/games/caseclosed/engine/engine.ts) |
+| Build & Betray panel (lobby, build, run, results) | [src/games/buildbetray/BuildBetrayPanel.tsx](src/games/buildbetray/BuildBetrayPanel.tsx) |
+| Build & Betray piece pool | [src/games/buildbetray/engine/pieces.ts](src/games/buildbetray/engine/pieces.ts) |
+| Build & Betray course, placement rules and validator | [src/games/buildbetray/engine/level.ts](src/games/buildbetray/engine/level.ts) |
+| Build & Betray round state machine, physics and scoring | [src/games/buildbetray/engine/engine.ts](src/games/buildbetray/engine/engine.ts) |
 
 ## The art rules
 
@@ -436,6 +440,45 @@ between blank, yes and no on click - it is never sent anywhere, on the theory
 that your notes are exactly the one piece of information a browser's
 devtools was never going to expose anyway.
 
+## Build & Betray
+
+Everyone builds onto one shared course at once, then everyone has to cross
+it. Fifteen pieces across platforms, hazards, movement and traps, a small
+hand dealt to each player every round; two to eight players, host-authoritative
+like everything else here even though a good half of the fun is players
+sabotaging each other in real time.
+
+**There is always a boring, safe way across, before anyone builds anything.**
+A plain bridge already spans the gap between the spawn ledge and the goal
+ledge (`BASE_BRIDGE` in [engine/level.ts](src/games/buildbetray/engine/level.ts)),
+so a course can never actually become impossible - the real validator
+(`reachable()`, a loose BFS over jump-reach distance) exists as a safety net
+for the rare case somebody walls off that bridge entirely, not as the thing
+that makes a course interesting. What players build is what makes a round
+worth playing: faster routes, shortcuts only the builder knows are safe, and
+hazards placed just past the landing they know everyone else will take.
+
+**Most of a course's danger is a pure function of the match frame, not stored
+state.** A saw's spin, a moving platform's position, a fire hazard's on/off
+flare - none of it is simulated or ticked; it is computed straight from the
+shared `frame` counter every time it is read (`movingOffset()`/`fireFlared()`
+in [engine/engine.ts](src/games/buildbetray/engine/engine.ts)). Only the
+handful of pieces with real memory - a breakable or fake platform that has
+been stepped on once, a triggered trap winding up to pop - carry any mutable
+state at all, and that is exactly the state that rides in the snapshot.
+
+**The camera never moves.** The whole course fits inside one fixed 480x270
+view, the same "shared bounds" idea Smash's arena uses - with up to eight
+players on screen at once, panning or zooming to follow the action would cost
+more in readability than it would buy in spectacle.
+
+A guest sends movement input and placement/ready/vote requests and renders
+whatever snapshot last arrived - there is no client-side prediction for a
+guest's own character yet, the same trade-off Hide & Seek and Duck szn already
+make at up to eight players. It reads fine for a casual platformer; smoother
+guest movement, more maps, a real Chaos-mode content pass, and actual audio
+are the natural next steps, not blockers for a first playable version.
+
 ## Adding a game
 
 1. Add an entry to `GAMES` in [src/games/registry.ts](src/games/registry.ts)
@@ -456,4 +499,9 @@ the CPU. It then checks that a snapshot round-trips into a guest's engine, and
 boots the real relay server to prove that hosting, joining, relaying and host
 disconnects all work. It also bundles the Case Closed board and match engine
 and checks reachability, secret passages, turn order, suggestion/disprove
-resolution, wrong and winning accusations, and snapshot round-tripping.
+resolution, wrong and winning accusations, and snapshot round-tripping. And it
+bundles Build & Betray's pieces, course and match engine, checking placement
+rules and the anti-grief hazard cap, the build/preview/run/results/next-round
+state machine, gravity/jumping/landing, hazard kills with betrayal credit,
+the goal and its scoring, Classic and Quick Play win conditions, and snapshot
+round-tripping.

@@ -127,6 +127,24 @@ export type CaseClosedPayload =
   | { k: 'accuseResult'; correct: boolean; solution?: { suspect: string; weapon: string; room: string } }
   | { k: 'solved'; by: Slot; solution: { suspect: string; weapon: string; room: string } }
 
+/**
+ * Build & Betray rides the same relay: host simulates the whole match -
+ * building and running alike - and guests send placement/removal/ready/vote
+ * requests during the build and preview phases and raw movement input during
+ * the run, the same guest-sends-input shape as Hide & Seek and Tank Trouble.
+ */
+export type BuildBetrayPayload =
+  | {
+      k: 'start'
+      config: { mode: 'classic' | 'quick' | 'chaos'; targetScore: number; totalRounds: number; buildSeconds: number; runSeconds: number }
+    }
+  | { k: 'snap'; s: unknown }
+  | { k: 'place'; pieceId: string; gx: number; gy: number; dir: 1 | -1 }
+  | { k: 'remove'; uid: number }
+  | { k: 'ready'; on: boolean }
+  | { k: 'vote'; category: 'difficulty' | 'creative' | 'devious'; choice: number }
+  | { k: 'input'; i: { left: boolean; right: boolean; jump: boolean } }
+
 export type SmashPayload =
   | { k: 'pick'; slot: Slot; charId: string }
   | { k: 'rules'; stocks: number }
