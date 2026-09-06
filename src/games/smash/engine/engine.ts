@@ -628,21 +628,27 @@ export class SmashEngine {
   }
 
   /** Two fighters cannot stand in the same place; push them apart gently. */
+  /**
+   * Pushes two overlapping fighters apart horizontally only. Gravity and
+   * platform collision are the only things allowed to move a fighter
+   * vertically - a push along the full line between two fighters could shove
+   * one down past the surface they're standing on (say, someone landing on
+   * top of another player), and the landing check only ever catches a fall
+   * from above, so once that happened they would fall through for good.
+   */
   private separate(): void {
     const [a, b] = this.fighters
     if (a.state === 'dead' || b.state === 'dead') return
-    const dx = b.x - a.x
     const dy = b.y - a.y
-    const d = Math.hypot(dx, dy)
     const min = a.def.radius + b.def.radius
-    if (d >= min || d === 0) return
-    const push = (min - d) / 2
-    const nx = dx / d
-    const ny = dy / d
+    if (Math.abs(dy) >= min) return
+    const reach = Math.sqrt(min * min - dy * dy)
+    const dx = b.x - a.x
+    if (Math.abs(dx) >= reach) return
+    const push = (reach - Math.abs(dx)) / 2
+    const nx = dx === 0 ? (a.index < b.index ? -1 : 1) : dx / Math.abs(dx)
     a.x -= nx * push
-    a.y -= ny * push
     b.x += nx * push
-    b.y += ny * push
   }
 
   private ko(f: Fighter): void {

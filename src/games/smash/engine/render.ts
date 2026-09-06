@@ -26,19 +26,36 @@ let floorCache: { canvas: HTMLCanvasElement; scale: number; arena: string } | nu
 /** One platform, drawn as a flat-shaded slab with a grassy top. */
 function drawPlatform(ctx: CanvasRenderingContext2D, p: Platform, thickness: number): void {
   const w = p.x1 - p.x0
-  ctx.fillStyle = PAL.dirt
-  ctx.fillRect(p.x0, p.y, w, thickness)
-  ctx.fillStyle = withAlpha(PAL.dirtShade, 0.4)
-  ctx.fillRect(p.x0, p.y + thickness - 3, w, 3)
-  ctx.fillStyle = PAL.grass
-  ctx.fillRect(p.x0, p.y - 3, w, 5)
-  ctx.fillStyle = PAL.grassLit
-  ctx.fillRect(p.x0, p.y - 3, w, 2)
-  // Rounded caps so a platform reads as a solid block, not a bare rectangle.
+  // A fixed cap, not tied to the slab's own thickness - the ground's
+  // thickness reaches all the way down to the blast-zone floor so there is
+  // no gap for sky to show through beneath it, and rounding a corner by half
+  // of that turned it into a bulging blob at each end of the stage.
+  const cap = Math.min(7, thickness / 2, w / 2)
+
+  const body = ctx.createLinearGradient(0, p.y, 0, p.y + Math.min(thickness, 30))
+  body.addColorStop(0, PAL.dirt)
+  body.addColorStop(1, shade(PAL.dirt, -0.22))
+  ctx.fillStyle = body
   ctx.beginPath()
-  ctx.arc(p.x0, p.y + thickness / 2, thickness / 2, 0, Math.PI * 2)
-  ctx.arc(p.x1, p.y + thickness / 2, thickness / 2, 0, Math.PI * 2)
-  ctx.fillStyle = PAL.dirt
+  ctx.roundRect(p.x0, p.y, w, thickness, cap)
+  ctx.fill()
+
+  // A shaded seam a little way down, so the turf reads as sitting on top of
+  // the dirt rather than painted onto its face.
+  ctx.fillStyle = withAlpha(PAL.dirtShade, 0.4)
+  ctx.fillRect(p.x0 + cap, p.y + cap * 1.4, w - cap * 2, 3)
+
+  // Grass cap, rounded to match the dirt beneath it - this used to be a
+  // sharp-cornered strip sitting on a rounded block, so the turf's corners
+  // stuck out past the edge they were meant to cap.
+  const turfCap = Math.min(2.2, cap)
+  ctx.fillStyle = PAL.grass
+  ctx.beginPath()
+  ctx.roundRect(p.x0, p.y - 3, w, 5, turfCap)
+  ctx.fill()
+  ctx.fillStyle = PAL.grassLit
+  ctx.beginPath()
+  ctx.roundRect(p.x0, p.y - 3, w, 2, Math.min(1, turfCap))
   ctx.fill()
 }
 

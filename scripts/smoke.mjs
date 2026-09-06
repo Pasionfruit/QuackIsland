@@ -315,6 +315,26 @@ console.log('\nPolyland Smash - engine smoke test\n')
   check('overlapping fighters push apart', gap > a.def.radius, `${gap.toFixed(1)}`)
 }
 
+// 10b. Landing on top of someone else can't shove them through the floor -
+// separation used to push along the full line between two fighters, so being
+// overlapped from directly above pushed the one underneath straight down
+// through their platform, which the landing check could never catch again.
+{
+  const eng = newMatch()
+  const [a, b] = eng.fighters
+  const groundY = a.y
+  a.x = 200
+  b.x = 200
+  b.y = a.y - (a.def.radius + b.def.radius) * 0.6
+  run(eng, 5)
+  check(
+    'a fighter overlapped from directly above stays on their platform',
+    a.y <= groundY + 0.5,
+    `${groundY.toFixed(1)} -> ${a.y.toFixed(1)}`,
+  )
+  check('the two fighters still separate horizontally', Math.abs(b.x - a.x) > 0.5, `${(b.x - a.x).toFixed(1)}`)
+}
+
 // 11. The CPU plays: it damages a passive opponent and stays on the floor.
 {
   const eng = new SmashEngine({ cpu: true, cpuLevel: 3, stocks: 3 })
