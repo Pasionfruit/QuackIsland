@@ -146,15 +146,19 @@ export type BuildBetrayPayload =
   | { k: 'input'; i: { left: boolean; right: boolean; jump: boolean } }
 
 /**
- * Party Parade rides the same relay. The board phase has nothing to configure
- * and nothing that moves yet, so this is the smallest payload here: `start`
- * flips everyone to the board, and both sides build an identical engine from
- * the room's own peer list rather than from anything sent inside it. `snap` is
- * wired up on both ends ready for the die and the movement that follow.
+ * Party Parade rides the same relay: the host owns the die and the walk, and
+ * a guest sends nothing but "I want to roll" and "I want to be that animal".
+ * `start` carries the whole roster - names and chosen animals - so every peer
+ * builds an identical board rather than inferring one from peer order.
  */
 export type PartyParadePayload =
-  | { k: 'start'; config: Record<string, never> }
+  | { k: 'start'; roster: { slot: Slot; name: string; castIndex: number }[] }
   | { k: 'snap'; s: unknown }
+  | { k: 'roll' }
+  /** A guest choosing an animal, in the lobby or mid-match. */
+  | { k: 'pick'; castIndex: number }
+  /** The host echoing every lobby choice back out, so nobody picks a taken animal. */
+  | { k: 'picks'; map: [Slot, number][] }
 
 export type SmashPayload =
   | { k: 'pick'; slot: Slot; charId: string }

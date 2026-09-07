@@ -510,39 +510,46 @@ are the natural next steps, not blockers for a first playable version.
 
 ## Party Parade
 
-A lap of four islands joined by bridges, in the shape of Wii Party's Island
-Race: take turns around the loop, land on a space, and periodically everyone
-drops out of the board into a minigame. Two to eight players, one animal from
-the cast each.
+A 180-space loop across nine islands joined by bridges, in the shape of Wii
+Party's Island Race: take turns round the circuit, land on a space, and
+periodically everyone drops out of the board into a minigame. Two to eight
+players, one animal from the cast each, swappable at any time.
 
-**This is the board and nothing else yet, on purpose.** It is being built in
-phases - the map, then the die, then moving, then what the spaces do to you,
-then the minigames between rounds - and this one is the map. It ships as a
-`prototype` on the dashboard rather than `live`: the card is clickable and
-says so, because a board you can host, join and stand on is worth looking at
-before it can be played.
+**It is being built in phases.** The board and the die are in - you can host,
+join, pick an animal, take turns and walk the loop. What the coloured spaces
+actually do to you, and the minigames between rounds, are still to come, so it
+sits on the dashboard as a `prototype` rather than `live`.
 
-**A player's position is one integer.** The loop is a flat ordered array
-([engine/board.ts](src/games/partyparade/engine/board.ts)) and a pawn's
-position is an index into it, so moving is `nextTileIndex(i, steps)` - modular
-arithmetic, not the graph walk Case Closed needs. A closed loop has no
-branching exits, and keeping the islands and bridges as scenery the renderer
-reads rather than geometry the rules read is what buys that. The islands exist
-to be looked at; the tile array is the game.
+**A player's position is one integer.** The loop is a flat ordered array and a
+pawn's position is an index into it, so moving is `nextTileIndex(i, steps)` -
+modular arithmetic, not the graph walk Case Closed needs, because a closed loop
+has no branching exits. Pawns also carry `totalSteps`, which never wraps: the
+renderer animates against that instead, so a pawn crossing the start line walks
+forward over it rather than scrubbing backwards round the whole board.
 
-**The engine has no clock.** A board game advances when somebody does
-something, so this follows Case Closed's event-driven shape rather than the
-fixed-timestep loop the platformers use - there is no `step()`. The panel
-still runs an animation frame loop, but only to paint the water and the idle
-bobbing. That is also why there is no Esc pause yet: nothing is running to
-freeze. It arrives with the minigames, which are the first part of this game
-with a clock in it.
+**At 180 spaces the board is authored as a shape, not as spaces.** Nine islands
+and the waypoints between them are hand-placed; the spaces themselves are
+sampled at even arc length along a smooth closed curve through that shape
+([engine/board.ts](src/games/partyparade/engine/board.ts)). Typing out 180
+coordinates would be miserable to author and worse to tune, and it would let a
+bridge drift out of line with the path it is supposed to carry. Deriving both
+from one curve means a bridge is simply a run of consecutive spaces that landed
+on open water - it cannot be in the wrong place.
 
-**Both sides build the opening board from the room, not from the wire.** The
-host and every guest construct an identical engine from the same
-server-issued peer list when the match starts, so the first frame needs no
-snapshot to agree on - `snap` is wired up on both ends and deliberately unused
-until the die exists.
+**This is the one game here with a camera.** Every other game fits its whole
+level in a fixed 480x270 frame and says so; a 180-space loop is far too big for
+that, so the camera follows whoever is up and a minimap in the corner keeps the
+shape of the circuit on screen. That is also why the board has no sky: with the
+view roaming a world nine times its size there is no fixed horizon to anchor
+one to.
+
+**The engine has a clock now, but only for animation.** Turns are still
+event-driven and every mutator checks it is actually your turn first, the same
+shape Case Closed uses. What `step()` drives is the die tumbling, the pawn
+hopping space to space, and the beat before the turn passes - the host owns all
+of it and broadcasts snapshots while something is moving. A guest sends nothing
+but "roll" and "I want to be that animal", and carries only the walk animation
+forward locally between snapshots so a hop does not stutter.
 
 ## Adding a game
 
@@ -570,7 +577,9 @@ rules and the anti-grief hazard cap, the build/preview/run/results/next-round
 state machine, gravity/jumping/landing, hazard kills with betrayal credit,
 the goal and its scoring, Classic and Quick Play win conditions, and snapshot
 round-tripping. Finally it bundles Party Parade's board and match
-state, checking the hand-authored map holds together - every tile on a real
-island, every bridge joining two different ones, no island poking above the
-waterline - along with the loop's wraparound arithmetic, the one-animal-each
-roster, and snapshot round-tripping.
+state, checking the generated 180-space loop holds together - even spacing, no
+space stranded off an island, every island visited, and bridges that cover
+exactly the water spaces - then drives a whole turn: rolling only when it is
+your turn, walking the rolled number of spaces, counting a lap across the start
+line, handing over to the next player, one animal each, and snapshot
+round-tripping.

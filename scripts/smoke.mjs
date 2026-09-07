@@ -1990,52 +1990,142 @@ console.log('\nPolyland Smash - engine smoke test\n')
 }
 
 // ------------------------------------------------------------- Party Parade
-// The board is hand-authored data, so these checks are about the map holding
-// together: a tile pointing at an island that does not exist, or a loop that
-// wraps to the wrong space, would otherwise only turn up as something looking
-// slightly wrong on screen.
+// The 180-space loop is generated from an authored shape rather than typed
+// out space by space, so most of these check the generator: even spacing, no
+// space stranded off an island, and bridges that line up with the path. The
+// rest drive a turn end to end - roll, walk, hand over.
 {
-  const { BOARD_TILES, BRIDGES, ISLANDS, START_INDEX, nextTileIndex } = await import(pathToFileURL(ppBoardOut).href)
-  const { PARADE_CAST, PartyParadeEngine } = await import(pathToFileURL(ppEngineOut).href)
+  const { BOARD_TILES, ISLANDS, START_INDEX, TILE_COUNT, WORLD_H, WORLD_W, bridgeSpans, nextTileIndex } =
+    await import(pathToFileURL(ppBoardOut).href)
+  const { LAND_FRAMES, PARADE_CAST, PartyParadeEngine, ROLL_FRAMES, STEP_FRAMES } = await import(
+    pathToFileURL(ppEngineOut).href
+  )
 
-  console.log('\nParty Parade - the board\n')
+  console.log('\nParty Parade - the board and the die\n')
 
-  check('the loop is long enough to be worth walking', BOARD_TILES.length >= 20, `${BOARD_TILES.length}`)
-  check('the loop opens on a start tile', BOARD_TILES[START_INDEX].kind === 'start')
-  check('there is exactly one start tile', BOARD_TILES.filter((t) => t.kind === 'start').length === 1)
+  check('the loop is the full 180 spaces', BOARD_TILES.length === TILE_COUNT, `${BOARD_TILES.length}`)
+  check('the loop opens on a start space', BOARD_TILES[START_INDEX].kind === 'start')
+  check('there is exactly one start space', BOARD_TILES.filter((t) => t.kind === 'start').length === 1)
   check('every kind of space is somewhere on the board', new Set(BOARD_TILES.map((t) => t.kind)).size === 5)
+
+  // Spaces are sampled by arc length, so they should be near enough identical
+  // distances apart - uneven spacing would make the walk visibly lurch.
+  const gaps = BOARD_TILES.map((t, i) => {
+    const b = BOARD_TILES[(i + 1) % BOARD_TILES.length]
+    return Math.hypot(b.x - t.x, b.y - t.y)
+  })
+  const spread = Math.max(...gaps) / Math.min(...gaps)
+  check('the spaces are evenly spread round the loop', spread < 1.1, `max/min ${spread.toFixed(3)}`)
+  check(
+    'the whole loop fits inside the world',
+    BOARD_TILES.every((t) => t.x > 0 && t.x < WORLD_W && t.y > 0 && t.y < WORLD_H),
+  )
 
   const islandIds = new Set(ISLANDS.map((i) => i.id))
   const stray = BOARD_TILES.find((t) => t.islandId !== null && !islandIds.has(t.islandId))
-  check('every tile is on a real island or out on the water', !stray, stray ? String(stray.islandId) : '')
-
-  const badBridge = BRIDGES.find((b) => !islandIds.has(b.from) || !islandIds.has(b.to) || b.from === b.to)
-  check('every bridge joins two different real islands', !badBridge, badBridge ? badBridge.id : '')
+  check('every space is on a real island or out on the water', !stray, stray ? String(stray.islandId) : '')
   check(
-    'every island is reachable by bridge',
-    ISLANDS.every((i) => BRIDGES.some((b) => b.from === i.id || b.to === i.id)),
+    'the loop actually visits every island',
+    new Set(BOARD_TILES.map((t) => t.islandId).filter(Boolean)).size === ISLANDS.length,
   )
-  // An island drawn above the waterline would paint over the sky.
-  check('no island pokes up into the sky', ISLANDS.every((i) => i.cy - i.ry > 34))
+
+  // A bridge is derived from the path, so it can never drift out of line with
+  // it - these check the derivation rather than a hand-placed list.
+  const spans = bridgeSpans()
+  const water = BOARD_TILES.filter((t) => t.islandId === null).length
+  check('there is a bridge for every crossing', spans.length > 0, `${spans.length}`)
+  check(
+    'every bridge is made only of water spaces',
+    spans.every((s) => s.every((i) => BOARD_TILES[i].islandId === null)),
+  )
+  check(
+    'the bridges cover every water space exactly once',
+    spans.reduce((a, s) => a + s.length, 0) === water,
+    `${spans.reduce((a, s) => a + s.length, 0)} vs ${water}`,
+  )
 
   // The one bit of arithmetic every later phase leans on.
   check('the last space wraps round to the first', nextTileIndex(BOARD_TILES.length - 1, 1) === 0)
   check('a roll that laps the board keeps going', nextTileIndex(0, BOARD_TILES.length + 3) === 3)
   check('stepping back off the start wraps too', nextTileIndex(0, -1) === BOARD_TILES.length - 1)
 
+  // --- roster and animals
+
   const eng = new PartyParadeEngine()
   eng.addPlayer(0, 'Host')
   eng.addPlayer(1, 'Guest')
   eng.addPlayer(1, 'Guest again')
   check('one slot cannot join twice', eng.players.length === 2, `${eng.players.length}`)
-  check('everybody starts on the start tile', eng.players.every((p) => p.tileIndex === START_INDEX))
-  check('players are dealt different animals', eng.players[0].castIndex !== eng.players[1].castIndex)
+  check('everybody starts on the start space', eng.players.every((p) => p.tileIndex === START_INDEX))
   check('a full room of eight still gets one animal each', PARADE_CAST.length >= 8, `${PARADE_CAST.length}`)
+
+  {
+    // Everyone asking for the same animal still ends up with different ones.
+    const room = new PartyParadeEngine()
+    for (let i = 0; i < 8; i++) room.addPlayer(i, `P${i}`, 0)
+    check('no two players are the same animal', new Set(room.players.map((p) => p.castIndex)).size === 8)
+    check('swapping onto a taken animal is refused', room.setCast(1, room.players[0].castIndex) === false)
+    const free = PARADE_CAST.length - 1
+    check('swapping onto a free animal works', room.setCast(1, free) === true)
+    check('the swap stuck', room.playerAt(1).castIndex === free)
+  }
+
+  // --- a whole turn, start to finish
+
+  const turn = (e, face) => {
+    e.roll(e.current.slot, () => (face - 0.5) / 6)
+    for (let i = 0; i < ROLL_FRAMES + face * STEP_FRAMES + LAND_FRAMES + 4; i++) e.step()
+  }
+
+  check('the die only rolls for whoever is up', eng.roll(1, () => 0.5) === null)
+  check('rolling gives a face between one and six', eng.roll(0, () => 0.99) === 6)
+  eng.endTurn()
+
+  {
+    const e = new PartyParadeEngine()
+    e.addPlayer(0, 'Host')
+    e.addPlayer(1, 'Guest')
+    const before = e.playerAt(0).totalSteps
+    turn(e, 4)
+    check('a roll of four walks exactly four spaces', e.playerAt(0).totalSteps === before + 4, `${e.playerAt(0).totalSteps}`)
+    check('the walk lands on the matching space', e.playerAt(0).tileIndex === 4)
+    check('the turn passes to the next player', e.current.slot === 1)
+    check('nobody else moved', e.playerAt(1).totalSteps === 0)
+    check('the die is cleared for the next player', e.turnPhase === 'idle' && e.lastRoll === null)
+
+    turn(e, 3)
+    check('the round ticks over once everyone has been', e.round === 2, `${e.round}`)
+
+    // Mid-walk the pawn is partway between two spaces, which is what the
+    // renderer interpolates against.
+    const e2 = new PartyParadeEngine()
+    e2.addPlayer(0, 'Solo')
+    e2.roll(0, () => 0.99)
+    for (let i = 0; i < ROLL_FRAMES + 3 * STEP_FRAMES; i++) e2.step()
+    const live = e2.displaySteps(e2.playerAt(0))
+    check('a pawn mid-walk is between spaces', live > 0 && live < 6, `${live.toFixed(2)}`)
+    check('a walking pawn is reported as walking', e2.isWalking(0) === true)
+  }
+
+  {
+    // Crossing the start line counts a lap and keeps walking forward rather
+    // than scrubbing back round the loop.
+    const e = new PartyParadeEngine()
+    e.addPlayer(0, 'Solo')
+    const p = e.playerAt(0)
+    p.totalSteps = TILE_COUNT - 2
+    p.tileIndex = TILE_COUNT - 2
+    turn(e, 5)
+    check('walking past the start wraps the space', p.tileIndex === 3, `${p.tileIndex}`)
+    check('walking past the start counts a lap', p.laps === 1, `${p.laps}`)
+    check('total spaces walked keeps climbing', p.totalSteps === TILE_COUNT + 3, `${p.totalSteps}`)
+  }
 
   const guest = new PartyParadeEngine()
   guest.applySnapshot(JSON.parse(JSON.stringify(eng.snapshot())))
   check('a snapshot round-trips into a guest', guest.players.length === 2 && guest.phase === 'board')
   check('the round-tripped roster keeps its names', guest.players[1].name === 'Guest')
+  check('the round-tripped turn matches', guest.turnIndex === eng.turnIndex)
 }
 
 console.log(failures === 0 ? '\nAll checks passed.\n' : `\n${failures} check(s) failed.\n`)

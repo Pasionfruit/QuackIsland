@@ -1,24 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
+import { codeFor } from '../../lib/controls'
+import { ControlsSettings } from '../../components/ControlsSettings'
 import { fitScene } from '../../lib/draw'
 import { useFullscreen } from '../../lib/fullscreen'
 import { NetClient, defaultServerUrl } from '../../net/client'
 import { normalizeCode, type PartyParadePayload, type PeerInfo } from '../../net/protocol'
-import { BOARD_TILES, ISLANDS, type TileKind } from './engine/board'
+import { BOARD_TILES, ISLANDS, TILE_COUNT, WORLD_H, WORLD_W, type TileKind } from './engine/board'
 import { PARADE_CAST, PLAYER_COLORS, PartyParadeEngine, VIEW_H, VIEW_W } from './engine/engine'
-import { TILE_COLORS, TILE_LABELS, drawBoard, drawPawns } from './render'
+import { TILE_COLORS, TILE_LABELS, drawBoard, drawChrome, drawPawns, pawnSpot, type Camera } from './render'
 
 /**
- * Party Parade: a lap of the islands, a die, and whatever the tile you land
+ * Party Parade: a lap of the islands, a die, and whatever the space you land
  * on decides to do about it.
  *
- * This is the board itself - the map, the loop, and the cast standing on the
- * start line. The die, moving, what the tiles do, and the minigames between
- * rounds are the phases after this one; the engine and the board data are
- * shaped so those attach rather than replace anything here.
+ * The board and the die are in. What the coloured spaces actually do to you,
+ * and the minigames between rounds, are still to come.
  *
- * The roster comes from the room, not from a config: both the host and every
- * guest build an identical engine from the same server-issued peer list when
- * the match starts, so the opening board needs no snapshot to agree on.
+ * The host owns the die and the walk and broadcasts snapshots; a guest sends
+ * "roll" and renders whatever arrived, carrying only the walk animation
+ * forward locally between snapshots so a hop does not stutter.
  */
 
 const net = new NetClient()
@@ -26,6 +26,40 @@ type Screen = 'lobby' | 'play'
 type Role = 'solo' | 'host' | 'guest'
 
 const KIND_ORDER: TileKind[] = ['start', 'plain', 'good', 'bad', 'hostile']
+
+/** How quickly the camera catches up with whoever is up. */
+const CAM_EASE = 0.08
+
+function CastPicker({
+  value,
+  taken,
+  onPick,
+}: {
+  value: number
+  taken: Set<number>
+  onPick: (i: number) => void
+}) {
+  return (
+    <div className="picks">
+      {PARADE_CAST.map((c, i) => {
+        const locked = taken.has(i) && i !== value
+        return (
+          <button
+            key={c.id}
+            type="button"
+            className={`pick ${i === value ? 'pick--on' : ''} ${locked ? 'pick--locked' : ''}`}
+            disabled={locked}
+            onClick={() => onPick(i)}
+            title={locked ? `${c.name} is taken` : c.blurb}
+          >
+            <span className="pick__name">{c.name}</span>
+            <span className="pick__lock">{locked ? 'taken' : c.blurb}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
 
 export function PartyParadePanel() {
   const [screen, setScreen] = useState<Screen>('lobby')
@@ -37,6 +71,8 @@ export function PartyParadePanel() {
   const [name, setName] = useState('Player')
   const [peers, setPeers] = useState<PeerInfo[]>([])
   const [slot, setSlot] = useState(0)
+  /** Lobby choices, slot -> index into PARADE_CAST. The host is the one that keeps score. */
+  const [picks, setPicks] = useState<Record<number, number>>({ 0: 0 })
   const [, setTick] = useState(0)
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -47,9 +83,29 @@ export function PartyParadePanel() {
   slotRef.current = slot
   const peersRef = useRef<PeerInfo[]>([])
   peersRef.current = peers
+  const picksRef = useRef<Record<number, number>>({ 0: 0 })
+  picksRef.current = picks
   const nameRef = useRef('Player')
   nameRef.current = name
+  const camRef = useRef<Camera>({ x: WORLD_W / 2, y: WORLD_H / 2, zoom: 1 })
   const fullscreen = useFullscreen<HTMLDivElement>()
+
+  function buildEngine(roster: { slot: number; name: string; castIndex: number }[]): PartyParadeEngine {
+    const eng = new PartyParadeEngine()
+    for (const r of roster) eng.addPlayer(r.slot, r.name, r.castIndex)
+    return eng
+  }
+
+  function rosterFromLobby(): { slot: number; name: string; castIndex: number }[] {
+    if (roleRef.current === 'solo') {
+      return [{ slot: 0, name: nameRef.current || 'You', castIndex: picksRef.current[0] ?? 0 }]
+    }
+    return peersRef.current.map((p) => ({
+      slot: p.slot,
+      name: p.name,
+      castIndex: picksRef.current[p.slot] ?? p.slot % PARADE_CAST.length,
+    }))
+  }
 
   useEffect(() => {
     net.on({
@@ -66,21 +122,66 @@ export function PartyParadePanel() {
         setCode(c)
         setSlot(sl)
         setRole(sl === 0 ? 'host' : 'guest')
+        setPicks((prev) => ({ ...prev, [sl]: prev[sl] ?? sl % PARADE_CAST.length }))
       },
-      onPeers: (players) => setPeers(players),
-      onPayload: (payload) => {
+      onPeers: (players) => {
+        setPeers(players)
+        // Give anyone who has not chosen a default animal, so a roster is
+        // never half-empty while people are still arriving.
+        setPicks((prev) => {
+          const next = { ...prev }
+          const used = new Set(Object.values(next))
+          for (const p of players) {
+            if (next[p.slot] !== undefined) continue
+            let want = p.slot % PARADE_CAST.length
+            for (let i = 0; i < PARADE_CAST.length && used.has(want); i++) want = (want + 1) % PARADE_CAST.length
+            next[p.slot] = want
+            used.add(want)
+          }
+          return next
+        })
+      },
+      onPayload: (payload, from) => {
         const msg = payload as PartyParadePayload
         if (!msg) return
+
+        if (roleRef.current === 'host') {
+          const eng = engineRef.current
+          switch (msg.k) {
+            case 'roll':
+              eng?.roll(from)
+              break
+            case 'pick':
+              if (eng) {
+                eng.setCast(from, msg.castIndex)
+              } else {
+                setPicks((prev) => {
+                  const clash = Object.entries(prev).some(
+                    ([s, c]) => Number(s) !== from && c === msg.castIndex,
+                  )
+                  if (clash) return prev
+                  const next = { ...prev, [from]: msg.castIndex }
+                  net.send({ k: 'picks', map: Object.entries(next).map(([s, c]) => [Number(s), c]) } satisfies PartyParadePayload)
+                  return next
+                })
+              }
+              break
+            default:
+              break
+          }
+          return
+        }
+
         if (msg.k === 'start') {
-          // A guest builds its own engine from the same roster the host used.
-          const eng = new PartyParadeEngine()
-          for (const p of peersRef.current) eng.addPlayer(p.slot, p.name)
-          engineRef.current = eng
+          engineRef.current = buildEngine(msg.roster)
           setScreen('play')
           setTick((t) => t + 1)
         } else if (msg.k === 'snap') {
           engineRef.current?.applySnapshot(msg.s as ReturnType<PartyParadeEngine['snapshot']>)
-          setTick((t) => t + 1)
+        } else if (msg.k === 'picks') {
+          const next: Record<number, number> = {}
+          for (const [s, c] of msg.map) next[s] = c
+          setPicks(next)
         }
       },
     })
@@ -88,15 +189,64 @@ export function PartyParadePanel() {
   }, [])
 
   function beginMatch(): void {
-    const eng = new PartyParadeEngine()
-    if (role === 'solo') eng.addPlayer(0, nameRef.current || 'You')
-    else for (const p of peers) eng.addPlayer(p.slot, p.name)
-    engineRef.current = eng
+    const roster = rosterFromLobby()
+    engineRef.current = buildEngine(roster)
+    // Start the camera on the field rather than sliding in from the middle.
+    const first = BOARD_TILES[0]
+    camRef.current = { x: first.x, y: first.y, zoom: 1 }
     setScreen('play')
-    if (role === 'host') net.send({ k: 'start', config: {} } satisfies PartyParadePayload)
+    if (role === 'host') net.send({ k: 'start', roster } satisfies PartyParadePayload)
   }
 
-  // ------------------------------------------------------------------ loop
+  function pickCast(i: number): void {
+    const eng = engineRef.current
+    if (eng && screen === 'play') {
+      if (roleRef.current === 'guest') net.send({ k: 'pick', castIndex: i } satisfies PartyParadePayload)
+      else eng.setCast(slotRef.current, i)
+      setTick((t) => t + 1)
+      return
+    }
+    if (roleRef.current === 'guest') {
+      net.send({ k: 'pick', castIndex: i } satisfies PartyParadePayload)
+      return
+    }
+    setPicks((prev) => {
+      const mine = slotRef.current
+      if (Object.entries(prev).some(([s, c]) => Number(s) !== mine && c === i)) return prev
+      const next = { ...prev, [mine]: i }
+      if (roleRef.current === 'host') {
+        net.send({ k: 'picks', map: Object.entries(next).map(([s, c]) => [Number(s), c]) } satisfies PartyParadePayload)
+      }
+      return next
+    })
+  }
+
+  function rollDie(): void {
+    const eng = engineRef.current
+    if (!eng || eng.turnPhase !== 'idle') return
+    if (eng.current?.slot !== slotRef.current) return
+    if (roleRef.current === 'guest') net.send({ k: 'roll' } satisfies PartyParadePayload)
+    else eng.roll(slotRef.current)
+    setTick((t) => t + 1)
+  }
+
+  // ------------------------------------------------------------------ input
+
+  useEffect(() => {
+    if (screen !== 'play') return
+    const rollKey = codeFor('partyparade.roll', 'Space')
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
+      if (e.code !== rollKey) return
+      e.preventDefault()
+      rollDie()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [screen])
+
+  // ------------------------------------------------------------------- loop
 
   useEffect(() => {
     if (screen !== 'play') return
@@ -110,15 +260,46 @@ export function PartyParadePanel() {
 
     let raf = 0
     let frame = 0
-    // Nothing is simulated here - the engine has no step(). The loop only
-    // paints, so the water moves and the cast keeps breathing.
+    let sinceSend = 0
+    let lastPhase = ''
+
     const tick = () => {
       raf = requestAnimationFrame(tick)
       const eng = engineRef.current
       if (!eng) return
       frame++
-      drawBoard(ctx, frame)
-      drawPawns(ctx, eng.players, frame, slotRef.current)
+
+      if (roleRef.current === 'guest') {
+        eng.stepVisual()
+      } else {
+        eng.step()
+        sinceSend++
+        // Only worth sending while something is actually moving.
+        const busy = eng.turnPhase !== 'idle'
+        if (roleRef.current === 'host' && sinceSend >= (busy ? 3 : 20)) {
+          sinceSend = 0
+          net.send({ k: 'snap', s: eng.snapshot() } satisfies PartyParadePayload)
+        }
+      }
+
+      // The camera rides with whoever is up, so a 180-space board still reads.
+      const focus = eng.current
+      if (focus) {
+        const spot = pawnSpot(eng, focus)
+        const cam = camRef.current
+        cam.x += (spot.x - cam.x) * CAM_EASE
+        cam.y += (spot.y - cam.y) * CAM_EASE
+      }
+
+      drawBoard(ctx, frame, camRef.current)
+      drawPawns(ctx, eng, frame, slotRef.current, camRef.current)
+      drawChrome(ctx, eng, slotRef.current, frame, camRef.current)
+
+      const key = `${eng.turnPhase}:${eng.turnIndex}`
+      if (key !== lastPhase) {
+        lastPhase = key
+        setTick((t) => t + 1)
+      }
     }
     raf = requestAnimationFrame(tick)
     return () => {
@@ -138,6 +319,12 @@ export function PartyParadePanel() {
   // ------------------------------------------------------------------ lobby
 
   if (screen === 'lobby') {
+    const myPick = picks[slot] ?? 0
+    const taken = new Set(
+      Object.entries(picks)
+        .filter(([s]) => Number(s) !== slot)
+        .map(([, c]) => c),
+    )
     return (
       <div>
         <div className="gamehead">
@@ -153,12 +340,12 @@ export function PartyParadePanel() {
           <div className="panel">
             <div className="panel__title">A board, a die, and forty minutes of betrayal.</div>
             <p className="muted" style={{ marginTop: 0 }}>
-              A lap of four islands joined by bridges. Take turns around the loop, land on tiles, then
-              everyone drops into a minigame to decide who gets the good stuff.
+              {TILE_COUNT} spaces in one loop across {ISLANDS.length} islands, joined by bridges. Take turns
+              round the circuit; the camera follows whoever is up.
             </p>
             <p className="muted" style={{ marginTop: 8, fontSize: 12 }}>
-              This build is the board itself - the map is in, the die is not. Rolling, moving, what the
-              tiles do to you and the minigames between rounds are still being built.
+              The board and the die are in. What the coloured spaces do to you, and the minigames between
+              rounds, are still being built.
             </p>
             <div className="chiprow" style={{ marginTop: 12 }}>
               <button className="btn" onClick={beginMatch}>
@@ -201,6 +388,14 @@ export function PartyParadePanel() {
           </div>
 
           <div className="panel">
+            <div className="panel__title">Pick your animal</div>
+            <p className="muted" style={{ marginTop: 0, fontSize: 12 }}>
+              One each - anybody already spoken for is greyed out. You can swap during the match too.
+            </p>
+            <CastPicker value={myPick} taken={taken} onPick={pickCast} />
+          </div>
+
+          <div className="panel">
             <div className="panel__title">The parade</div>
             {code ? (
               <>
@@ -223,7 +418,9 @@ export function PartyParadePanel() {
                         />
                         {p.name}
                       </span>
-                      <span className="muted">{PARADE_CAST[p.slot % PARADE_CAST.length].name}</span>
+                      <span className="muted">
+                        {PARADE_CAST[(picks[p.slot] ?? p.slot % PARADE_CAST.length) % PARADE_CAST.length].name}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -240,38 +437,10 @@ export function PartyParadePanel() {
               </>
             ) : (
               <p className="muted" style={{ marginTop: 0 }}>
-                Host to get a four-letter code, or join one somebody read out to you. Everybody gets one of
-                the animals, dealt in order, so a full room is eight different faces on the board.
+                Host to get a four-letter code, or join one somebody read out to you. Two to eight players,
+                one animal each.
               </p>
             )}
-          </div>
-
-          <div className="panel">
-            <div className="panel__title">The board</div>
-            <p className="muted" style={{ marginTop: 0, fontSize: 12 }}>
-              {BOARD_TILES.length} spaces in one loop across {ISLANDS.length} islands. Pass the start flag
-              and you have done a lap.
-            </p>
-            <div style={{ display: 'grid', gap: 6, marginTop: 10 }}>
-              {kindCounts.map((r) => (
-                <div className="keyrow" key={r.kind}>
-                  <span>
-                    <span
-                      style={{
-                        display: 'inline-block',
-                        width: 12,
-                        height: 9,
-                        borderRadius: 3,
-                        background: TILE_COLORS[r.kind],
-                        marginRight: 8,
-                      }}
-                    />
-                    {TILE_LABELS[r.kind]}
-                  </span>
-                  <span className="muted">{r.n}</span>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </div>
@@ -280,12 +449,19 @@ export function PartyParadePanel() {
 
   // ------------------------------------------------------------------- play
 
+  const me = eng?.playerAt(slot)
+  const myTurn = eng?.current?.slot === slot
+  const canRoll = !!eng && eng.turnPhase === 'idle' && myTurn
+  const takenInMatch = new Set((eng?.players ?? []).filter((p) => p.slot !== slot).map((p) => p.castIndex))
+
   return (
     <div>
       <div className="gamehead">
         <h2>Party Parade</h2>
-        <span className="chip">{BOARD_TILES.length} spaces</span>
-        <span className="chip chip--gold">On the start line</span>
+        <span className="chip">Round {eng?.round ?? 1}</span>
+        <span className="chip chip--gold">
+          {eng?.current ? (myTurn ? 'Your roll' : `${eng.current.name} to roll`) : 'Waiting'}
+        </span>
         <div className="spacer" />
         <button className="btn btn--ghost btn--sm" onClick={() => setScreen('lobby')}>
           Leave the parade
@@ -309,18 +485,39 @@ export function PartyParadePanel() {
 
       <div className="infogrid">
         <div className="panel">
-          <div className="panel__title">On the board</div>
-          <div style={{ display: 'grid', gap: 6 }}>
+          <div className="panel__title">{myTurn ? 'Your turn' : 'The turn'}</div>
+          <div className="chiprow" style={{ marginTop: 0 }}>
+            <button className="btn" disabled={!canRoll} onClick={rollDie}>
+              {canRoll ? 'Roll the die' : eng?.turnPhase === 'idle' ? 'Not your turn' : 'Rolling...'}
+            </button>
+            <span className="muted" style={{ fontSize: 12 }}>
+              Space rolls too.
+            </span>
+          </div>
+          <div style={{ display: 'grid', gap: 6, marginTop: 12 }}>
             {(eng?.players ?? []).map((p) => (
               <div className="keyrow" key={p.slot}>
                 <span style={{ color: p.color }}>
+                  {p.slot === eng?.current?.slot ? '> ' : ''}
                   {p.name}
                   {p.slot === slot ? ' (you)' : ''}
                 </span>
-                <span className="muted">{PARADE_CAST[p.castIndex % PARADE_CAST.length].name}</span>
+                <span className="muted">
+                  space {p.tileIndex + 1}
+                  {p.laps > 0 ? ` - lap ${p.laps + 1}` : ''}
+                </span>
               </div>
             ))}
           </div>
+        </div>
+
+        <div className="panel">
+          <div className="panel__title">Swap your animal</div>
+          <p className="muted" style={{ marginTop: 0, fontSize: 12 }}>
+            Purely cosmetic, so change it whenever you like - just not to one somebody else is already
+            using.
+          </p>
+          <CastPicker value={me?.castIndex ?? 0} taken={takenInMatch} onPick={pickCast} />
         </div>
 
         <div className="panel">
@@ -346,10 +543,15 @@ export function PartyParadePanel() {
             ))}
           </div>
           <p className="muted" style={{ marginTop: 10, fontSize: 12 }}>
-            Everybody is parked on the start flag until the die exists. Landing on a coloured space will do
-            something about it in a later build.
+            Landing on a coloured space will do something about it in a later build.
           </p>
         </div>
+
+        <ControlsSettings
+          title="Controls"
+          resetPrefix="partyparade"
+          groups={[{ title: 'Turn', rows: [{ key: 'partyparade.roll', label: 'Roll the die', fallback: 'Space' }] }]}
+        />
       </div>
     </div>
   )
