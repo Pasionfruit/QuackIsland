@@ -20,7 +20,9 @@ the player. **Wheel** to pull back and see the whole island. **F** or the button
 in the panel snaps back. A plain click, either button, never moves the camera.
 
 The panel on the right runs the day: an hour a full cycle, fifteen minutes each
-in dawn, daylight, dusk and night. Scrub the slider, jump to a named time, or
+in dawn, daylight, dusk and night. The **tide** runs off the same clock — two
+high waters a day, of unequal height — so scrubbing the slider walks the
+waterline several metres up and down the beach. Scrub the slider, jump to a named time, or
 pause it. **Speed it up to 60x or 600x** if you want to watch a whole day
 rather than sit through one. It also toggles modules on and off - turn the
 player off to get the free orbit camera back for inspecting terrain.
@@ -66,7 +68,7 @@ world is reproducible and testable.
 
 | Module | What it owns |
 | --- | --- |
-| `00-core` | The canvas, render loop, lights, frame ordering, seeded RNG, perf HUD |
+| `00-core` | The canvas, render loop, lights, day cycle, tide, frame ordering, seeded RNG, perf HUD |
 | `01-terrain` | The sandy island: height function, chunked LOD mesh, sand shading |
 | `02-player` | Third-person body: walks, runs, jumps, swims, mouse-aimed camera |
 | `03-footprints` | Webbed duck prints in the sand, fading, in one draw call |

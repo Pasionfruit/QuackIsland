@@ -21,7 +21,7 @@ import {
   Quaternion,
   Vector3,
 } from 'three'
-import { PRIORITY, useGameFrame } from '../../00-core'
+import { PRIORITY, getDayTime, tideAt, useGameFrame } from '../../00-core'
 import { SEA_LEVEL, heightAt, sampleAt } from '../../01-terrain'
 import { getPlayerState } from '../../02-player'
 import { duckFootGlsl } from './foot'
@@ -105,7 +105,7 @@ export function createPrintMaterial(): MeshStandardMaterial {
         if (gl_FragColor.a < 0.01) discard;`,
       )
   }
-  material.customProgramCacheKey = () => 'localrot-footprint-v4'
+  material.customProgramCacheKey = () => 'localrot-footprint-v5'
   return material
 }
 
@@ -150,10 +150,12 @@ export function Footprints() {
     if (!m) return
 
     const player = getPlayerState()
-    // Only print on land: there is no water yet, but prints on the seabed
-    // would still be wrong.
+    // Only print on land, and where the waterline is *now* - the tide moves it
+    // several metres up and down the beach, and prints under water would wash
+    // out rather than sit there.
+    const waterline = SEA_LEVEL + tideAt(getDayTime())
     const walker =
-      player && heightAt(player.x, player.z) > SEA_LEVEL
+      player && heightAt(player.x, player.z) > waterline
         ? { x: player.x, z: player.z, facing: player.facing, grounded: player.grounded, speed: player.speed }
         : null
 
@@ -180,7 +182,7 @@ export function Footprints() {
       // A duck's foot is nearly as wide as it is long - it is a paddle. The
       // negative X scale on one side is what mirrors the shape into a left
       // foot and a right foot.
-      dummy.scale.set(0.21 * print.side, 1, 0.24)
+      dummy.scale.set(0.24 * print.side, 1, 0.28)
       dummy.updateMatrix()
       m.setMatrixAt(i, dummy.matrix)
     }

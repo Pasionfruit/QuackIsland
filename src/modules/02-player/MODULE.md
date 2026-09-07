@@ -88,6 +88,12 @@ reason — see **Why the water module does not own swimming** below.
 - **The swell never decides anything.** `surfaceAt` changes how the body sits
   while floating and nothing else. Whether you swim comes from the bed and
   `seaLevel`, so a heaving surface cannot make wading flicker into swimming.
+- **The feet stay down walking downhill.** Going downhill the ground falls
+  away faster than gravity pulls you into it, so without help the body spends
+  the whole descent a few centimetres airborne. `PLAYER.groundSnap` is how far
+  it will reach down to stay on the ground. It applies only when the feet were
+  already down, so it can never cut a jump short, and it is short enough that
+  walking off a ledge is still a fall.
 - **`dt` is clamped**, so a tab left in the background does not come back and
   teleport the player across the island.
 - Jump is edge-detected by the component, so holding space does not hover.
@@ -167,6 +173,8 @@ that the seam is the right way round, and it is in both modules' review lists.
   that is what refocus is for.
 - No slope limit: the island is gentle enough that nothing is unclimbable, but
   a steeper world would want one.
+- `groundSnap` is a fixed distance rather than one scaled to how fast you are
+  going, so a much faster body would start skipping off slopes again.
 - The controller uses a fixed capsule and no ground friction, so stopping is
   instant. Fine for inspection, worth revisiting for game feel.
 
@@ -191,9 +199,17 @@ that the seam is the right way round, and it is in both modules' review lists.
 - **The feet stay on the sand** over every slope, and across chunk and
   level-of-detail borders. This is the same check as the terrain probe, but
   under a body that is actually moving.
+- **Run down the steepest dune you can find, and look behind you.** The feet
+  must stay on the sand the whole way and the prints must keep coming. Bouncing
+  down a slope a few centimetres in the air looks almost right and leaves no
+  prints at all, which is how this was found.
+- **Jump while running downhill.** It should still be a proper jump.
 - **Walk into the sea, slowly.** You should wade through the shallows upright,
   then tip forward and start swimming once it is over your depth — a lie-down,
   not a snap.
+- **Do that again at high tide and at low tide.** Where you start swimming
+  should move up and down the beach with the water, because it is decided from
+  the tide-adjusted level rather than from a fixed one.
 - **Walk back out.** You should stand up again as you reach the shallows, at
   about the same depth you started swimming, and not pop upright early or drag
   on your face up the beach.

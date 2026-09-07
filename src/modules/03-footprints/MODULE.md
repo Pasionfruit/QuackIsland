@@ -40,7 +40,12 @@ player. `facing` is only a fallback; see below.
 - **Running lengthens the stride** rather than taking the same little steps
   faster, capped at `strideMax`. A sprint leaving walk-spaced prints reads as a
   shuffle.
-- **Nothing is left while airborne** — you are not touching the sand.
+- **Nothing is left while airborne** — you are not touching the sand. That
+  makes the prints a live check on the player being properly grounded: when
+  running downhill stopped leaving prints, the bug was in the player's ground
+  handling, not here.
+- **Nothing is left below the waterline**, and the waterline moves with the
+  tide rather than sitting at the datum.
 - **The trail never grows.** It is a fixed ring of `TRAIL.capacity` slots and
   the oldest is overwritten.
 - Each print sits at the ground height where it was left, so a print on a dune
@@ -52,8 +57,11 @@ player. `facing` is only a fallback; see below.
 
 - **No prints from anything but the player.** The `Walker` shape is general, but
   only one is wired up.
-- No prints below sea level — no seabed trail, and nothing while swimming,
+- No prints below the waterline — no seabed trail, and nothing while swimming,
   since the walker is not grounded.
+- **Nothing washes prints away.** A print left below the high-water line stays
+  until it fades on its own, even once the tide has covered it. Prints stop
+  being *left* under water; they are not *removed* by it.
 - **No real depth.** A print is a dark shape sunk into the surface - a solid
   dark middle, the edge feathered off, and nothing else. It is still a decal.
   Genuinely denting the ground would mean the terrain stops being a pure
@@ -163,6 +171,9 @@ and two triangles do that exactly, with no corner clipping a toe.
 - **Get close and look at one.** It should read as a webbed duck's foot: three
   toes with the web scalloped between them, pointing the way you were going.
   Sunk into the sand — no ring, no bright rim, nothing that looks like an eye.
+  The toes are deliberately stubby and the web is the biggest part of it: it
+  should read as a duck at a glance rather than survive close anatomical
+  inspection.
 - **Look at a left and a right print together.** They should mirror.
 - **Walk in circles for a minute.** The oldest prints should fade out rather
   than the trail growing forever, and the draw call count in the perf HUD must
@@ -171,8 +182,12 @@ and two triangles do that exactly, with no corner clipping a toe.
   lie along the way you are moving, not across it, and should straddle the path
   rather than landing in front of and behind you.
 - **Walk a curve.** The prints should turn through it.
-- **Walk into the sea.** Prints should stop at the waterline, and nothing should
-  be left while swimming.
+- **Walk into the sea.** Prints should stop at the waterline, and nothing
+  should be left while swimming.
+- **Walk the beach at high tide and again at low tide.** The line where prints
+  stop should move with the water, not stay put.
+- **Run down a steep dune.** Prints must keep coming the whole way down — this
+  is the easiest place to see the player losing its grip on the ground.
 - Check them at night as well as daylight — they should read as depressions in
   both, not as black holes.
 

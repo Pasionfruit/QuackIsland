@@ -39,8 +39,10 @@ everything else.
 
 ## Invariants you may rely on
 
-- **The surface sits at exactly `SEA_LEVEL`**, which `01-terrain` fixes at
-  zero. The swell moves about it, never away from it.
+- **The surface sits at `SEA_LEVEL + tideAt(now)`.** `01-terrain` fixes the
+  datum at zero and `00-core` owns the tide; this module draws a sheet wherever
+  those two put it, and the swell moves about that. It does not decide where
+  the sea is.
 - **`|swellAt(...)| <= SWELL_MAX`**, everywhere, at every time. It is a sum of
   bounded sines, so this is structural rather than tuned.
 - **`swellNormal` is the true normal of the surface the vertex shader builds** -
@@ -80,8 +82,9 @@ everything else.
   simulation, not a bigger amplitude.
 - **No wind chop on top of the swell.** The grid could not carry it - see below
   - and it would want a scrolling normal map rather than geometry.
-- **No tide.** Sea level is a constant, and half the project resolves heights
-  against it.
+- **No ownership of the tide.** The sheet rides up and down with it, but
+  `tideAt` lives in `00-core`, because the player and the footprints need the
+  same answer and neither should have to depend on the sea being drawn.
 - **No underwater view** — no fog change, no colour grade when the camera goes
   under. The surface is `DoubleSide` so it does not vanish, and that is all.
 - **No sound.**
@@ -129,6 +132,20 @@ wavelength, close to the line. **There is a test pinning this**, because adding
 a short, pretty, cheap-looking wave to the table is exactly the change that
 would quietly wreck the sea and then look like a driver problem.
 
+## Why the tide is a uniform and not a re-bake
+
+The depth baked into the mesh is measured from the **datum**, not from the
+waterline, and it is deliberately *not* clamped at zero — so a vertex over
+ground standing half a metre above mean water carries `-0.5`.
+
+The shader works out the depth that matters as `max(0, aDepth + uTide)`. That
+is exact, it costs one uniform, and it means the shallows, the shoreline fade
+and the swell damping all follow the tide up and down the beach without
+touching 130,000 vertices every frame.
+
+Clamping at bake time would have thrown away exactly the information the tide
+needs: how far *above* the water a piece of ground was.
+
 ## Why depth is baked into the mesh
 
 Shallow water is pale, deep water is dark, and the shoreline fades out instead
@@ -170,8 +187,12 @@ interpolated across the fragment for free.
 - **Look along the sun's reflection.** The glint should travel with the swell.
   This is the thing that says water; if it looks like a flat coloured sheet the
   per-fragment normals are not working.
-- **Fly high.** The shallows around the island should be pale and the deep water
-  dark, with the change following the shape of the coast.
+- **Fly high.** The shallows around the island should be pale and the deep
+  water dark, with the change following the shape of the coast.
+- **Scrub the day slider and watch the beach.** The waterline should walk
+  several metres up and down it, and the pale shallows should move with it
+  rather than staying put while the sheet slides underneath. There are two high
+  waters a day and they are not the same height.
 - **Look at it in all four lighting modes.** Night is the hard one — it should
   stay legible as water, not become a black hole or a grey plastic sheet.
 - **Walk into the sea.** You should wade, then tip forward and swim when it gets

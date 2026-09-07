@@ -12,7 +12,7 @@
 import { useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import { Group, Vector3 } from 'three'
-import { PRIORITY, setCameraMode, useGameFrame } from '../../00-core'
+import { PRIORITY, getDayTime, setCameraMode, tideAt, useGameFrame } from '../../00-core'
 import { SEA_LEVEL, heightAt, worldBounds } from '../../01-terrain'
 import { IDLE_INPUT, PLAYER, createPlayer, stepPlayer, type PlayerInput, type PlayerState } from './controller'
 
@@ -220,9 +220,13 @@ export function Player({ spawnX = 0, spawnZ = 0, surfaceAt }: PlayerProps) {
   // is whatever frame we are in. Built once over a mutable slot rather than
   // closed over per frame, so stepping the player allocates nothing.
   const clock = useRef(0)
+  // Where the still water stands this frame: the datum plus the tide. This is
+  // what decides whether you are out of your depth, so it must not include the
+  // swell - a heaving surface would make wading flicker into swimming.
+  const still = useRef<number>(SEA_LEVEL)
   const surface = useMemo(() => {
     if (!surfaceAt) return undefined
-    return (x: number, z: number) => SEA_LEVEL + surfaceAt(x, z, clock.current)
+    return (x: number, z: number) => still.current + surfaceAt(x, z, clock.current)
   }, [surfaceAt])
 
   useGameFrame((frame, delta) => {
@@ -231,7 +235,12 @@ export function Player({ spawnX = 0, spawnZ = 0, surfaceAt }: PlayerProps) {
     jumpEdge.current = false
 
     clock.current = frame.clock.elapsedTime
-    stepPlayer(state, input, delta, heightAt, { bounds, seaLevel: SEA_LEVEL, surfaceAt: surface })
+    still.current = SEA_LEVEL + tideAt(getDayTime())
+    stepPlayer(state, input, delta, heightAt, {
+      bounds,
+      seaLevel: still.current,
+      surfaceAt: surface,
+    })
 
     if (body.current) {
       // Standing, the origin is at the feet so the middle of the capsule is

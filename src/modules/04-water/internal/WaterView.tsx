@@ -20,7 +20,7 @@ import {
   MeshStandardMaterial,
   PlaneGeometry,
 } from 'three'
-import { PRIORITY, useGameFrame } from '../../00-core'
+import { PRIORITY, getDayTime, tideAt, useGameFrame } from '../../00-core'
 import { SEA_LEVEL, heightAt } from '../../01-terrain'
 import { swellGlsl } from './swell'
 
@@ -60,8 +60,11 @@ function buildWater(): PlaneGeometry {
   const pos = g.getAttribute('position')
   const depth = new Float32Array(pos.count)
   for (let i = 0; i < pos.count; i++) {
-    // Depth of water here: how far the sea bed sits below the surface.
-    depth[i] = Math.max(0, SEA_LEVEL - heightAt(pos.getX(i), pos.getZ(i)))
+    // How far the sea bed sits below the *datum*, which is what does not move.
+    // Deliberately not clamped at zero: the tide has to be able to put ground
+    // that stands above the mean line under water, and a clamped value has
+    // already thrown away how far above it was.
+    depth[i] = SEA_LEVEL - heightAt(pos.getX(i), pos.getZ(i))
   }
   g.setAttribute('aDepth', new BufferAttribute(depth, 1))
   return g
@@ -81,6 +84,7 @@ function createWaterMaterial(): MeshStandardMaterial {
 
   material.onBeforeCompile = (shader: CompiledShader) => {
     shader.uniforms.uTime = { value: 0 }
+    shader.uniforms.uTide = { value: 0 }
     shader.uniforms.uShallow = { value: SHALLOW }
     shader.uniforms.uDeep = { value: DEEP }
     shader.uniforms.uDeepAt = { value: DEEP_AT }
@@ -90,6 +94,7 @@ function createWaterMaterial(): MeshStandardMaterial {
         '#include <common>',
         `#include <common>
         uniform float uTime;
+        uniform float uTide;
         attribute float aDepth;
         varying float vDepth;
         varying vec2 vSurface;
@@ -98,14 +103,16 @@ function createWaterMaterial(): MeshStandardMaterial {
       .replace(
         '#include <begin_vertex>',
         `#include <begin_vertex>
-        vDepth = aDepth;
+        // Depth under the water as it stands now, which is the bed's depth
+        // below the datum plus however far the tide has raised the datum.
+        vDepth = max(0.0, aDepth + uTide);
         // The rest position, which is what parameterises the wave. The vertex
         // itself is about to be moved sideways as well as up.
         vSurface = position.xz;
         // Flatten the swell out as the water shallows, so it does not heave
         // through the beach at the water's edge. Deeper than the old sea:
         // these waves are most of a metre tall.
-        float shore = smoothstep(0.0, 6.0, aDepth);
+        float shore = smoothstep(0.0, 6.0, vDepth);
         transformed += swellDisplace(position.xz, uTime) * shore;`,
       )
 
@@ -158,10 +165,18 @@ export function Water() {
   }, [geometry, material])
 
   useGameFrame((state) => {
+    const tide = tideAt(getDayTime())
     const shader = material.userData.shader as CompiledShader | undefined
-    if (shader) shader.uniforms.uTime.value = state.clock.elapsedTime
+    if (shader) {
+      shader.uniforms.uTime.value = state.clock.elapsedTime
+      // The shader needs the tide too, to know where the shallows are now.
+      shader.uniforms.uTide.value = tide
+    }
+    // The whole sheet rides up and down with the tide. The swell is displaced
+    // about wherever it has got to.
+    if (mesh.current) mesh.current.position.y = SEA_LEVEL + tide
   }, PRIORITY.world)
 
-  // Sits at exactly sea level, which the terrain module fixes at zero.
+  // Starts at the datum; the frame above moves it to wherever the tide is.
   return <mesh ref={mesh} geometry={geometry} material={material} position={[0, SEA_LEVEL, 0]} renderOrder={1} />
 }

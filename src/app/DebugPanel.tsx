@@ -11,7 +11,10 @@ import {
   SECTION_SECONDS,
   TIMES_OF_DAY,
   TIME_LABELS,
+  TIDE_MAX,
   getDayTime,
+  tideAt,
+  tideRising,
   getTimeScale,
   isCycleRunning,
   nameAt,
@@ -78,6 +81,7 @@ export function DebugPanel() {
   const scale = getTimeScale()
   const running = isCycleRunning()
   const now = nameAt(t)
+  const tide = tideAt(t)
 
   return (
     <div style={panel}>
@@ -104,6 +108,28 @@ export function DebugPanel() {
         ))}
       </div>
       <div style={{ opacity: 0.6, marginTop: 4 }}>{clockLabel(t, scale)}</div>
+
+      {/* The tide runs off the same clock, so scrubbing the slider above walks
+          it through a whole cycle. Two high waters a day, of unequal height. */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, opacity: 0.6 }}>
+        <span>
+          tide {tide >= 0 ? '+' : ''}
+          {tide.toFixed(2)} m {tideRising(t) ? 'rising' : 'falling'}
+        </span>
+        <span>{tide > TIDE_MAX * 0.8 ? 'high' : tide < -TIDE_MAX * 0.8 ? 'low' : ''}</span>
+      </div>
+      <div style={{ height: 3, background: '#2a2a28', marginTop: 3, position: 'relative' }}>
+        <div
+          style={{
+            position: 'absolute',
+            left: `${((tide + TIDE_MAX) / (TIDE_MAX * 2)) * 100}%`,
+            top: -2,
+            width: 3,
+            height: 7,
+            background: '#6fb6c8',
+          }}
+        />
+      </div>
 
       <div style={{ display: 'flex', gap: 8, marginTop: 6, alignItems: 'center' }}>
         <button

@@ -1,5 +1,6 @@
 import { PerspectiveCamera, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
+import { heightAt, slopeAt } from '../../01-terrain'
 import { IDLE_INPUT, PLAYER, createPlayer, stepPlayer, type PlayerInput } from '../internal/controller'
 
 type Ground = (x: number, z: number) => number
@@ -430,5 +431,101 @@ describe('swimming', () => {
       seen.add(p.swimming)
     }
     expect(seen.size).toBe(1)
+  })
+})
+
+describe('staying on the ground', () => {
+  // A constant slope falling away towards +x at the given angle, starting high
+  // enough that a long run down it never reaches the water - otherwise the
+  // body starts swimming and this stops being a test about ground at all.
+  const ramp = (degrees: number): Ground => (x) => 140 - x * Math.tan((degrees * Math.PI) / 180)
+
+  it('keeps its feet down running downhill', () => {
+    // The bug this fixes: walking downhill, the ground falls away faster than
+    // gravity pulls you into it. On the island's steepest ground a run drops
+    // the ground about 30 cm in a frame while gravity moves you 4 mm, so the
+    // body spends the whole descent a few centimetres off the sand. It looks
+    // fine - and it left no footprints, because it was never grounded.
+    const slope = ramp(46)
+    const p = createPlayer(0, 0, slope)
+    let airborne = 0
+    for (let i = 0; i < 240; i++) {
+      // cameraYaw of PI/2 sends forward along +x, which is downhill here.
+      stepPlayer(p, press({ forward: true, run: true, cameraYaw: Math.PI / 2 }), 1 / 60, slope)
+      if (!p.grounded) airborne++
+      expect(p.y).toBeCloseTo(slope(p.x, p.z), 6)
+    }
+    expect(airborne).toBe(0)
+  })
+
+  it('keeps its feet down on the real island, everywhere steep', () => {
+    // The synthetic ramp is smooth; the island is not. This runs off every
+    // steep spot on it in eight directions.
+    const spots: Array<[number, number]> = []
+    for (let x = -280; x <= 280; x += 14) {
+      for (let z = -280; z <= 280; z += 14) {
+        if (heightAt(x, z) > 1 && slopeAt(x, z) > 0.5) spots.push([x, z])
+      }
+    }
+    expect(spots.length).toBeGreaterThan(10)
+
+    let airborne = 0
+    for (const [sx, sz] of spots) {
+      for (let d = 0; d < 8; d++) {
+        const p = createPlayer(sx, sz, heightAt)
+        const cameraYaw = (d / 8) * Math.PI * 2
+        for (let i = 0; i < 30; i++) {
+          stepPlayer(p, press({ forward: true, run: true, cameraYaw }), 1 / 60, heightAt, { seaLevel: 0 })
+          // Swimming is allowed to be off the ground; dry land is not.
+          if (heightAt(p.x, p.z) > 0.2 && !p.swimming && !p.grounded) airborne++
+        }
+      }
+    }
+    expect(airborne).toBe(0)
+  })
+
+  it('still leaves the ground when it jumps', () => {
+    // The reach-down must not swallow a jump, including a jump taken while
+    // running downhill, where the ground is falling away underneath.
+    const slope = ramp(46)
+    const p = createPlayer(0, 0, slope)
+    run(p, press({ forward: true, run: true, cameraYaw: Math.PI / 2 }), 30, slope)
+    expect(p.grounded).toBe(true)
+
+    stepPlayer(p, press({ forward: true, run: true, jump: true, cameraYaw: Math.PI / 2 }), 1 / 60, slope)
+    expect(p.grounded).toBe(false)
+    let highest = 0
+    for (let i = 0; i < 40; i++) {
+      stepPlayer(p, press({ forward: true, run: true, cameraYaw: Math.PI / 2 }), 1 / 60, slope)
+      highest = Math.max(highest, p.y - slope(p.x, p.z))
+    }
+    // A real hop clear of the ground, not a stifled one.
+    expect(highest).toBeGreaterThan(1)
+  })
+
+  it('does not reach down a cliff it has walked off', () => {
+    // The reach is short on purpose: stepping off a ledge should be a fall,
+    // not a lift down.
+    const cliff: Ground = (x) => (x < 5 ? 10 : 0)
+    const p = createPlayer(0, 0, cliff)
+    for (let i = 0; i < 40; i++) {
+      stepPlayer(p, press({ forward: true, cameraYaw: Math.PI / 2 }), 1 / 60, cliff)
+    }
+    expect(p.x).toBeGreaterThan(5)
+    // It fell rather than being placed at the bottom.
+    expect(p.grounded).toBe(false)
+    expect(p.y).toBeGreaterThan(0)
+    expect(p.vy).toBeLessThan(0)
+  })
+
+  it('does not hover over a dip narrower than its reach', () => {
+    // Landing on the far side is correct; skating over the hole is not. The
+    // snap only ever puts the feet on the ground under them.
+    const dip: Ground = (x) => (x > 2 && x < 2.3 ? -0.3 : 0)
+    const p = createPlayer(0, 0, dip)
+    for (let i = 0; i < 60; i++) {
+      stepPlayer(p, press({ forward: true, cameraYaw: Math.PI / 2 }), 1 / 60, dip)
+      expect(p.y).toBeCloseTo(dip(p.x, p.z), 6)
+    }
   })
 })

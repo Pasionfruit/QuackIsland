@@ -39,7 +39,7 @@ export interface Toe {
  */
 export const DUCK_FOOT = {
   heelX: 0,
-  heelY: -0.62,
+  heelY: -0.5,
   /** The heel lands harder than the web, so it gets its own pad. */
   heelPad: 0.15,
   /**
@@ -52,18 +52,21 @@ export const DUCK_FOOT = {
    * reach forwards, which reads as a paw rather than a foot. This clips the
    * blob and leaves the heel tapered.
    */
-  heelCut: -0.8,
+  heelCut: -0.6,
+  // Short and thick on purpose. Toes long enough to be anatomical make the
+  // print read as a bird's foot with some skin between the toes; stubby ones
+  // let the web dominate, which is what reads as a duck at a glance.
   toes: [
-    { tipX: 0.02, tipY: 0.8, radius: 0.11 },
-    { tipX: 0.7, tipY: 0.34, radius: 0.1 },
-    { tipX: -0.64, tipY: 0.29, radius: 0.1 },
+    { tipX: 0.02, tipY: 0.52, radius: 0.16 },
+    { tipX: 0.66, tipY: 0.2, radius: 0.15 },
+    { tipX: -0.61, tipY: 0.16, radius: 0.15 },
   ] as readonly Toe[],
   /**
    * How much webbing. This is the smoothing width of the minimum that joins
    * the toes: too little and they are three separate sticks, too much and the
    * foot fills in into a paddle with no toes visible.
    */
-  web: 0.52,
+  web: 0.4,
 } as const
 
 /** Distance to a thick line from a to b. One toe. */

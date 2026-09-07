@@ -26,6 +26,11 @@ function toesAt(r: number): number {
   return runs
 }
 
+/** How far the longest toe reaches from the heel. */
+const REACH = Math.max(
+  ...DUCK_FOOT.toes.map((t) => Math.hypot(t.tipX - DUCK_FOOT.heelX, t.tipY - DUCK_FOOT.heelY)),
+)
+
 /** A point `s` of the way from the heel out to the gap between two toe tips. */
 function webPoint(s: number): [number, number] {
   const [a, b] = [DUCK_FOOT.toes[0], DUCK_FOOT.toes[1]]
@@ -58,13 +63,24 @@ describe('the shape of the foot', () => {
   it('has three toes, and they stay separate out at the tips', () => {
     // Merging into one paddle is the failure mode if the webbing is turned up
     // too far; three sticks with no web between them is the other direction.
-    expect(toesAt(1)).toBe(3)
-    expect(toesAt(1.2)).toBe(3)
+    // Measured as a fraction of how far the toes reach, so shortening them -
+    // which is a thing that happens - does not put the ring past the foot.
+    expect(toesAt(REACH * 0.7)).toBe(3)
+    expect(toesAt(REACH * 0.85)).toBe(3)
+    expect(toesAt(REACH)).toBe(3)
     for (const t of DUCK_FOOT.toes) expect(inside(t.tipX, t.tipY)).toBe(true)
   })
 
   it('is one solid pad close to the heel, before the toes divide', () => {
-    expect(toesAt(0.5)).toBe(1)
+    expect(toesAt(REACH * 0.5)).toBe(1)
+  })
+
+  it('is mostly web rather than mostly toe', () => {
+    // The toes are deliberately stubby: long anatomical ones read as a bird's
+    // foot with skin between them, and it is the web dominating that reads as
+    // a duck at a glance. The web should still be joining them at the point
+    // where they have only just separated.
+    expect(toesAt(REACH * 0.62)).toBeLessThan(3)
   })
 
   it('is webbed between the toes', () => {

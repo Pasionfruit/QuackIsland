@@ -74,15 +74,48 @@ Same reasoning: one camera. The built-in debug orbit stands down when a module
 calls `setCameraMode('player')`, and resumes when it is set back to `'orbit'`.
 A module that takes the camera must hand it back on unmount.
 
+## The tide
+
+`tideAt(dayTime)` gives the offset of the still-water line from the datum, in
+metres, off the same clock as the day cycle. `SEA_LEVEL` stays exactly zero in
+`01-terrain` and stays the datum; this is the thing that moves.
+
+It lives here rather than in the water module because three modules need it and
+none of them should depend on each other: the player decides whether it is out
+of its depth, the footprints decide whether they are under water, and the sea
+decides where to draw itself. All three already depend on this module. The
+alternative is threading the same number through three sets of props.
+
+Two constituents, because one is visibly a sine and nobody's tide is a sine:
+
+- **Semidiurnal**, twice a day — the main swing, and what a tide mostly is.
+- **Diurnal**, once a day — small, and its only job is to make the day's two
+  high tides unequal. Real coasts do this, and it is most of what stops the
+  tide reading as a mechanical pump.
+
+Both are locked to the day cycle rather than to wall-clock time, so scrubbing
+the day slider walks the tide through a full cycle. That is deliberate: a tide
+you cannot reach by scrubbing is a tide nobody will ever check. The panel shows
+the level, whether it is making or falling, and a marker in its range.
+
+`dayTime` is a **turn**, 0 to 1 — the same units as everything else on this
+clock, not seconds.
+
 ## Deliberate non-goals
 
-- No scene content of any kind. No terrain, sky, water, props.
+- No scene content of any kind. No terrain, sky, water, props. The tide is the
+  one exception, and it is a number rather than content: see above for why it
+  is not in the water module.
 - No physics, no collision.
 - No asset *loading* — only URL resolution through `assetUrl`.
 - No gameplay. No input handling beyond the debug orbit camera.
 - No sky dome, sun disc, stars or clouds — only the light, fog and background
   colour. A sky module adds the geometry and drives the time of day.
 - No post-processing stack.
+- **No storm surge, no spring and neap cycle, no shoaling.** The tide is the
+  same every day. A spring/neap cycle needs a count of days, which this clock
+  does not keep — it wraps — and a tide you cannot reach by scrubbing a single
+  day is a tide that cannot be reviewed.
 
 ## How to use it from a new module
 

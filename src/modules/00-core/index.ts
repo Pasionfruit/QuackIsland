@@ -35,6 +35,7 @@ export {
   type LightingPreset,
   type TimeOfDay,
 } from './internal/lighting'
+export { TIDE, TIDE_MAX, TIDE_RANGE, tideAt, tideRising } from './internal/tide'
 export { getCameraMode, setCameraMode, useCameraMode, type CameraMode } from './internal/view'
 export { GameCanvas } from './internal/GameCanvas'
 export { PerfHUD } from './internal/PerfHUD'

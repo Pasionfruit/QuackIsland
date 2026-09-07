@@ -67,6 +67,17 @@ export const PLAYER = {
   gravity: -26,
   /** How quickly the body swings round to face the camera, radians per second. */
   turnRate: 14,
+  /**
+   * How far the feet will reach down to stay on the ground, in metres.
+   *
+   * Walking downhill, the ground falls away faster than gravity pulls you into
+   * it: running down the island's steepest slope drops the ground about 30 cm
+   * in a frame, while gravity moves you 4 mm. Without this the body spends the
+   * whole descent a few centimetres airborne - which reads fine, but means it
+   * is not grounded, so it leaves no footprints going downhill. That is the bug
+   * this exists to fix.
+   */
+  groundSnap: 0.45,
   /** Eye height above the ground, for the camera. */
   eyeHeight: 1.7,
   /** Half the capsule, so the origin sits at the feet. */
@@ -139,6 +150,9 @@ export function stepPlayer(
   opts: StepOptions = {},
 ): PlayerState {
   const step = Math.min(Math.max(dt, 0), 0.1)
+  // Whether the feet were down at the start of the frame, which is what tells
+  // walking off a lip apart from jumping off it.
+  const wasGrounded = state.grounded
   const bounds = opts.bounds
   const seaLevel = opts.seaLevel ?? 0
 
@@ -213,6 +227,16 @@ export function stepPlayer(
     if (state.y <= ground) {
       // Land. Snapping to the ground every frame is also what carries the
       // player up and down slopes without any slope handling of its own.
+      state.y = ground
+      state.vy = 0
+      state.grounded = true
+    } else if (wasGrounded && state.vy <= 0 && state.y - ground <= PLAYER.groundSnap) {
+      // Walking off a lip, not jumping off it. Reach down and stay on the
+      // ground rather than falling the last few centimetres, which is what
+      // going downhill looks like every single frame.
+      //
+      // Only from a standing start: after a jump `grounded` is already false,
+      // so this cannot reach down and cut the jump short.
       state.y = ground
       state.vy = 0
       state.grounded = true
