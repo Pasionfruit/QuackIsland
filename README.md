@@ -11,7 +11,7 @@ npm run dev
 
 Third person: **WASD** to move, **shift** to run, **space** to jump. A and D
 are side-steps - the body keeps facing the camera rather than turning to face
-the step.
+the step. Walk into the sea and you swim; walk back out and you stand up.
 
 **Hold left and drag** to look. **Hold right and drag** to slide the view off
 the player. **Wheel** to pull back and see the whole island. **F** or the button
@@ -66,12 +66,18 @@ world is reproducible and testable.
 | --- | --- |
 | `00-core` | The canvas, render loop, lights, frame ordering, seeded RNG, perf HUD |
 | `01-terrain` | The sandy island: height function, chunked LOD mesh, sand shading |
-| `02-player` | Third-person body: walks, jumps, mouse-aimed camera |
+| `02-player` | Third-person body: walks, runs, jumps, swims, mouse-aimed camera |
 | `03-footprints` | Prints left in the sand, fading, in one draw call |
+| `04-water` | The sea at `y = 0`: a calm swell, lit per fragment, in one draw call |
 
-Next up: water at `y = 0`, then a sky dome driving the day cycle that
-`00-core` already exposes, then the Meshy asset pipeline and vegetation placed
-against the terrain's height contract.
+Next up: a sky dome driving the day cycle that `00-core` already exposes, then
+the Meshy asset pipeline and vegetation placed against the terrain's height
+contract.
+
+Sea level is owned by `01-terrain`, not by `04-water` — the water module draws
+a surface at that level rather than defining it. That is why the player still
+swims with the sea switched off in the panel, and it is the shape every
+seam here is meant to have.
 
 ## Where Meshy fits
 

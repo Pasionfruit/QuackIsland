@@ -80,6 +80,12 @@ export function createTrail(config: TrailConfig = TRAIL): TrailState {
 export interface Walker {
   x: number
   z: number
+  /**
+   * Which way the body points. Only used to orient a print when the walker has
+   * barely moved; otherwise the direction of travel wins - a print should lie
+   * along the way the foot went, and with a strafing body those are different
+   * things.
+   */
   facing: number
   grounded: boolean
   /** Optional. Running lengthens the stride, as it does in life. */
@@ -119,9 +125,17 @@ export function stepTrail(
     return state
   }
 
-  const moved = Math.hypot(walker.x - state.lastX, walker.z - state.lastZ)
+  const dx = walker.x - state.lastX
+  const dz = walker.z - state.lastZ
+  const moved = Math.hypot(dx, dz)
   state.lastX = walker.x
   state.lastZ = walker.z
+
+  // Lay the print along the way the foot actually went. With a body that
+  // strafes, that is not the way it is facing - side-stepping while facing
+  // forward would otherwise leave a line of prints all pointing sideways.
+  // Below a hair of movement the direction is noise, so the body wins.
+  const heading = moved > 1e-4 ? Math.atan2(dx, dz) : walker.facing
 
   // Nothing is left while airborne - you are not touching the sand.
   if (!walker.grounded) return state
@@ -138,8 +152,8 @@ export function stepTrail(
   // Offset to the side of the line of travel, so the pair reads as a stride.
   const side = state.nextSide
   // Offset along the body's right, so side +1 really is the right foot.
-  const ox = -Math.cos(walker.facing) * config.spread * side
-  const oz = Math.sin(walker.facing) * config.spread * side
+  const ox = -Math.cos(heading) * config.spread * side
+  const oz = Math.sin(heading) * config.spread * side
   const x = walker.x + ox
   const z = walker.z + oz
 
@@ -147,7 +161,7 @@ export function stepTrail(
   print.x = x
   print.z = z
   print.y = groundAt(x, z)
-  print.facing = walker.facing
+  print.facing = heading
   print.side = side
   print.age = 0
   print.used = true

@@ -53,17 +53,17 @@ describe('leaving prints', () => {
     for (let i = 1; i < sides.length; i++) expect(sides[i]).not.toBe(sides[i - 1])
   })
 
-  it('puts the two feet either side of the body, along its right', () => {
+  it('puts the two feet either side of the line of travel', () => {
     const prints = live(walkLine(6))
-    // Facing 0 means forward is +Z, so the body's right is -X.
+    // walkLine travels along -Z, a heading of PI, so the walker's right is +X.
     const rightFoot = prints.filter((p) => p.side === 1).map((p) => p.x)
     const leftFoot = prints.filter((p) => p.side === -1).map((p) => p.x)
     expect(rightFoot.length).toBeGreaterThan(0)
     expect(leftFoot.length).toBeGreaterThan(0)
-    expect(Math.max(...rightFoot)).toBeLessThan(Math.min(...leftFoot))
+    expect(Math.min(...rightFoot)).toBeGreaterThan(Math.max(...leftFoot))
     // And they straddle the line rather than both landing on one side.
-    expect(Math.min(...leftFoot)).toBeGreaterThan(0)
-    expect(Math.max(...rightFoot)).toBeLessThan(0)
+    expect(Math.min(...rightFoot)).toBeGreaterThan(0)
+    expect(Math.max(...leftFoot)).toBeLessThan(0)
   })
 
   it('leaves nothing while airborne', () => {
@@ -174,5 +174,42 @@ describe('the disc a print is drawn on', () => {
     // Flat is the part that matters: no extent at all in the up axis.
     expect(spanY).toBeCloseTo(0, 6)
     g.dispose()
+  })
+})
+
+describe('which way a print points', () => {
+  it('lies along the way the foot went, not the way the body faces', () => {
+    // The body strafes, so it can face north while stepping east. A print
+    // pointing north there would look like the feet were sliding sideways.
+    const trail = createTrail()
+    // Facing +Z throughout, but walking along +X.
+    stepTrail(trail, walker(0, 0, { facing: 0 }), 1 / 60, flat)
+    for (let i = 1; i <= 10; i++) stepTrail(trail, walker(i, 0, { facing: 0 }), 1 / 60, flat)
+    const prints = live(trail)
+    expect(prints.length).toBeGreaterThan(0)
+    // Travelling along +X is a heading of a quarter turn.
+    for (const p of prints) expect(p.facing).toBeCloseTo(Math.PI / 2, 3)
+  })
+
+  it('follows the travel round a turn', () => {
+    const trail = createTrail()
+    stepTrail(trail, walker(0, 0, { facing: 0 }), 1 / 60, flat)
+    for (let i = 1; i <= 30; i++) {
+      const a = (i / 30) * (Math.PI / 2)
+      stepTrail(trail, walker(Math.sin(a) * 8, Math.cos(a) * 8 - 8, { facing: 0 }), 1 / 60, flat)
+    }
+    const headings = live(trail).map((p) => p.facing)
+    expect(headings.length).toBeGreaterThan(1)
+    // The prints turn through the corner rather than all pointing one way.
+    expect(Math.max(...headings) - Math.min(...headings)).toBeGreaterThan(0.3)
+  })
+
+  it('falls back to the body when the walker has barely moved', () => {
+    // Below a hair of movement the direction is numerical noise.
+    const trail = createTrail()
+    stepTrail(trail, walker(0, 0, { facing: 1.2 }), 1 / 60, flat)
+    for (let i = 1; i <= 40; i++) stepTrail(trail, walker(0, -i / 2, { facing: 1.2 }), 1 / 60, flat)
+    // Moving along -Z is a heading of PI, not the body's 1.2.
+    for (const p of live(trail)) expect(Math.abs(p.facing)).toBeCloseTo(Math.PI, 3)
   })
 })

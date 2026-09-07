@@ -21,8 +21,9 @@ The bookkeeping — spacing, alternating feet, recycling — is pure and lives i
 | `TRAIL` | `{ capacity, stride, life, spread }` |
 | `Footprint`, `TrailState`, `Walker` | The shapes above |
 
-`Walker` is `{ x, z, facing, grounded }` — deliberately narrower than the
-player's state, so anything that walks can leave prints, not just the player.
+`Walker` is `{ x, z, facing, grounded, speed? }` — deliberately narrower than
+the player's state, so anything that walks can leave prints, not just the
+player. `facing` is only a fallback; see below.
 
 ## Invariants you may rely on
 
@@ -30,6 +31,8 @@ player's state, so anything that walks can leave prints, not just the player.
   nothing, and walking slowly does not bunch them up. The leftover distance is
   carried between frames, so spacing does not drift with frame rate.
 - **Feet alternate**, and the pair sit either side of the line of travel.
+- **Prints lie along the way the foot actually went**, not the way the body is
+  pointing. `Footprint.facing` is the heading of the step itself.
 - **Running lengthens the stride** rather than taking the same little steps
   faster, capped at `strideMax`. A sprint leaving walk-spaced prints reads as a
   shuffle.
@@ -45,8 +48,8 @@ player's state, so anything that walks can leave prints, not just the player.
 
 - **No prints from anything but the player.** The `Walker` shape is general, but
   only one is wired up.
-- No prints below sea level. There is no water yet, but seabed prints would be
-  wrong either way.
+- No prints below sea level — no seabed trail, and nothing while swimming,
+  since the walker is not grounded.
 - **No real depth.** A print is a darker oval sunk into the surface - a solid
   dark middle, the edge feathered off, and nothing else. It is still a decal.
   Genuinely denting the ground would mean the terrain stops being a pure
@@ -65,6 +68,19 @@ stepTrail(trail, { x, z, facing, grounded }, delta, heightAt)
 ```
 
 Then draw `trail.prints` however you like, using `fadeOf` for opacity.
+
+## Prints point along the travel, not along the body
+
+The player strafes: the body faces the camera, so it can be facing north while
+stepping east. Orienting prints by `Walker.facing` there lays every print
+across the direction of travel, which reads as the feet sliding sideways.
+
+So the heading comes from the step itself — the delta between where the walker
+was and where it is. `Walker.facing` is used only when the walker has barely
+moved, where the delta is numerical noise rather than a direction.
+
+The same heading also decides which side each foot lands on, so a side-step
+puts the prints either side of the path rather than in front of and behind it.
 
 ## Why there is no rim
 
@@ -107,7 +123,12 @@ is not visible in the code that does the aligning.
 - **Walk in circles for a minute.** The oldest prints should fade out rather
   than the trail growing forever, and the draw call count in the perf HUD must
   not climb.
-- **Walk into the sea.** Prints should stop at the waterline.
+- **Strafe.** Hold A or D and walk sideways across the beach: the prints should
+  lie along the way you are moving, not across it, and should straddle the path
+  rather than landing in front of and behind you.
+- **Walk a curve.** The prints should turn through it.
+- **Walk into the sea.** Prints should stop at the waterline, and nothing should
+  be left while swimming.
 - Check them at night as well as daylight — they should read as depressions in
   both, not as black holes.
 

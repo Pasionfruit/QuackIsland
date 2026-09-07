@@ -133,7 +133,7 @@ describe('walking', () => {
   it('stays inside the world when bounds are given', () => {
     const p = createPlayer(0, 0, flat(0))
     const bounds = { minX: -5, maxX: 5, minZ: -5, maxZ: 5 }
-    for (let i = 0; i < 600; i++) stepPlayer(p, press({ forward: true, right: true }), 1 / 60, flat(0), bounds)
+    for (let i = 0; i < 600; i++) stepPlayer(p, press({ forward: true, right: true }), 1 / 60, flat(0), { bounds })
     expect(p.x).toBeLessThanOrEqual(5)
     expect(p.z).toBeGreaterThanOrEqual(-5)
   })
@@ -255,5 +255,107 @@ describe('running', () => {
       stepPlayer(p, press({ forward: true, run: true, cameraYaw: i * 0.01 }), 1 / 60, bumpy)
       expect(p.y).toBeGreaterThanOrEqual(bumpy(p.x, p.z) - 1e-6)
     }
+  })
+})
+
+describe('swimming', () => {
+  /** A shelf: land at negative x, deep water at positive x. */
+  const shelf = (x: number): number => (x < 0 ? 4 : -6)
+  const sea = { seaLevel: 0 }
+
+  it('walks on ground that is above water', () => {
+    const p = createPlayer(0, 0, flat(3))
+    stepPlayer(p, press(), 1 / 60, flat(3), sea)
+    expect(p.swimming).toBe(false)
+    expect(p.grounded).toBe(true)
+  })
+
+  it('still walks in water too shallow to swim in', () => {
+    // Ankle deep is wading, not swimming.
+    const shallow = flat(-PLAYER.swimDepth * 0.5)
+    const p = createPlayer(0, 0, shallow)
+    stepPlayer(p, press(), 1 / 60, shallow, sea)
+    expect(p.swimming).toBe(false)
+  })
+
+  it('swims once the bed drops out of its depth', () => {
+    const deep = flat(-8)
+    const p = createPlayer(0, 0, deep)
+    run(p, press(), 60, deep)
+    expect(p.swimming).toBe(true)
+    expect(p.grounded).toBe(false)
+  })
+
+  it('floats at the surface rather than sinking to the bed', () => {
+    const deep = flat(-30)
+    const p = createPlayer(0, 0, deep)
+    for (let i = 0; i < 300; i++) stepPlayer(p, press(), 1 / 60, deep, sea)
+    expect(p.y).toBeCloseTo(-PLAYER.floatDepth, 2)
+    // Nowhere near the bottom, whatever the depth.
+    expect(p.y).toBeGreaterThan(-2)
+  })
+
+  it('surfaces after walking off a shelf instead of dropping to the bed', () => {
+    const ground = (x: number) => shelf(x)
+    const p = createPlayer(-4, 0, ground)
+    // Facing +X, walk off the edge.
+    for (let i = 0; i < 240; i++) {
+      stepPlayer(p, press({ right: true, cameraYaw: Math.PI }), 1 / 60, ground, { seaLevel: 0 })
+    }
+    expect(p.x).toBeGreaterThan(0)
+    expect(p.swimming).toBe(true)
+    expect(p.y).toBeCloseTo(-PLAYER.floatDepth, 1)
+  })
+
+  it('swims slower than it walks', () => {
+    const deep = flat(-8)
+    const p = createPlayer(0, 0, deep)
+    run(p, press(), 30, deep)
+    stepPlayer(p, press({ forward: true, run: true }), 1 / 60, deep, sea)
+    // Run is ignored in the water.
+    expect(p.speed).toBe(PLAYER.swimSpeed)
+    expect(PLAYER.swimSpeed).toBeLessThan(PLAYER.walkSpeed)
+  })
+
+  it('cannot jump out of deep water', () => {
+    const deep = flat(-8)
+    const p = createPlayer(0, 0, deep)
+    run(p, press(), 60, deep)
+    const before = p.y
+    stepPlayer(p, press({ jump: true }), 1 / 60, deep, sea)
+    expect(p.y).toBeCloseTo(before, 2)
+  })
+
+  it('tips flat in the water and stands back up on land', () => {
+    const deep = flat(-8)
+    const p = createPlayer(0, 0, deep)
+    expect(p.lean).toBe(0)
+    for (let i = 0; i < 120; i++) stepPlayer(p, press(), 1 / 60, deep, sea)
+    expect(p.lean).toBeCloseTo(1, 2)
+    // Back onto dry land.
+    for (let i = 0; i < 120; i++) stepPlayer(p, press(), 1 / 60, flat(5), sea)
+    expect(p.lean).toBeCloseTo(0, 2)
+    expect(p.swimming).toBe(false)
+  })
+
+  it('tips over gradually rather than snapping flat', () => {
+    const deep = flat(-8)
+    const p = createPlayer(0, 0, deep)
+    stepPlayer(p, press(), 1 / 60, deep, sea)
+    expect(p.lean).toBeGreaterThan(0)
+    expect(p.lean).toBeLessThan(0.2)
+  })
+
+  it('does not flicker between walking and swimming at the exact depth', () => {
+    // Whether you are out of your depth is a question about the bed, not about
+    // where the body happens to be that frame - otherwise it oscillates.
+    const edge = flat(-PLAYER.swimDepth)
+    const p = createPlayer(0, 0, edge)
+    const seen = new Set<boolean>()
+    for (let i = 0; i < 200; i++) {
+      stepPlayer(p, press({ forward: true }), 1 / 60, edge, sea)
+      seen.add(p.swimming)
+    }
+    expect(seen.size).toBe(1)
   })
 })

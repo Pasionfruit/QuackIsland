@@ -101,7 +101,8 @@
       "dependents": [
         "01-terrain",
         "02-player",
-        "03-footprints"
+        "03-footprints",
+        "04-water"
       ],
       "generation": 1,
       "contract": {
@@ -149,7 +150,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T14:27:08.819Z"
+          "at": "2026-09-07T18:28:59.492Z"
         },
         "human": {
           "status": "pending"
@@ -180,7 +181,8 @@
       ],
       "dependents": [
         "02-player",
-        "03-footprints"
+        "03-footprints",
+        "04-water"
       ],
       "generation": 1,
       "contract": {
@@ -228,7 +230,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T14:06:30.337Z"
+          "at": "2026-09-07T18:28:53.822Z"
         },
         "human": {
           "status": "pending"
@@ -300,7 +302,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T14:53:56.743Z"
+          "at": "2026-09-07T18:28:42.329Z"
         },
         "human": {
           "status": "pending"
@@ -358,7 +360,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T14:57:06.533Z"
+          "at": "2026-09-07T18:28:48.083Z"
         },
         "human": {
           "status": "pending"
@@ -374,6 +376,70 @@
       ],
       "budgets": {
         "drawCallsMax": 2
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "04-water",
+      "phase": "P1",
+      "title": "A calm sea at y=0: long low swells, depth shading, soft shoreline",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "01-terrain"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "04.1",
+          "title": "Swell table, shared by the CPU and the generated shader",
+          "status": "done"
+        },
+        {
+          "id": "04.2",
+          "title": "Plane with baked depth from the terrain height",
+          "status": "done"
+        },
+        {
+          "id": "04.3",
+          "title": "Per-fragment normals, depth shading, shoreline fade",
+          "status": "done"
+        },
+        {
+          "id": "04.4",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-07T18:28:31.516Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No swimming logic - the player decides that from the terrain height",
+        "No foam, spray, or breaking waves at the shore",
+        "No reflection or refraction of the world",
+        "No underwater fog or colour grading when the camera goes under",
+        "No tides; sea level is fixed at zero forever",
+        "No buoyancy for anything else"
+      ],
+      "budgets": {
+        "drawCallsMax": 2,
+        "trianglesMax": 130000
       },
       "measured": null,
       "blockers": []

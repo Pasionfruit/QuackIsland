@@ -13,7 +13,7 @@ import { useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import { Group, Vector3 } from 'three'
 import { PRIORITY, setCameraMode, useGameFrame } from '../../00-core'
-import { heightAt, worldBounds } from '../../01-terrain'
+import { SEA_LEVEL, heightAt, worldBounds } from '../../01-terrain'
 import { IDLE_INPUT, PLAYER, createPlayer, stepPlayer, type PlayerInput, type PlayerState } from './controller'
 
 const CAM_HEIGHT = 2.6
@@ -68,6 +68,7 @@ export function Player({ spawnX = 0, spawnZ = 0 }: { spawnX?: number; spawnZ?: n
   const camera = useThree((s) => s.camera)
   const domElement = useThree((s) => s.gl.domElement)
   const body = useRef<Group>(null)
+  const tilt = useRef<Group>(null)
 
   const state = useMemo(() => createPlayer(spawnX, spawnZ, heightAt), [spawnX, spawnZ])
   const keys = useRef<PlayerInput>({ ...IDLE_INPUT })
@@ -206,11 +207,19 @@ export function Player({ spawnX = 0, spawnZ = 0 }: { spawnX?: number; spawnZ?: n
     const input: PlayerInput = { ...k, jump: jumpEdge.current, cameraYaw: rig.yaw }
     jumpEdge.current = false
 
-    stepPlayer(state, input, delta, heightAt, bounds)
+    stepPlayer(state, input, delta, heightAt, { bounds, seaLevel: SEA_LEVEL })
 
     if (body.current) {
-      body.current.position.set(state.x, state.y + PLAYER.height / 2, state.z)
+      // Standing, the origin is at the feet so the middle of the capsule is
+      // half a body up. Lying flat, the middle is only a radius above the
+      // surface - so the offset has to come down as the body tips over.
+      const rise = PLAYER.height / 2 - state.lean * (PLAYER.height / 2 - PLAYER.radius)
+      body.current.position.set(state.x, state.y + rise, state.z)
       body.current.rotation.y = state.facing
+    }
+    if (tilt.current) {
+      // A quarter turn lays the capsule's long axis along the way it is facing.
+      tilt.current.rotation.x = state.lean * (Math.PI / 2)
     }
 
     // What the camera is pointed at: the player, plus however far the view has
@@ -237,15 +246,19 @@ export function Player({ spawnX = 0, spawnZ = 0 }: { spawnX?: number; spawnZ?: n
 
   return (
     <group ref={body}>
-      <mesh castShadow>
-        <capsuleGeometry args={[PLAYER.radius, PLAYER.height - PLAYER.radius * 2, 6, 12]} />
-        <meshStandardMaterial color="#e0563f" roughness={0.55} />
-      </mesh>
-      {/* A snout, so which way the body is facing is obvious. */}
-      <mesh castShadow position={[0, 0.25, PLAYER.radius + 0.16]}>
-        <boxGeometry args={[0.22, 0.22, 0.34]} />
-        <meshStandardMaterial color="#f2e9d8" roughness={0.6} />
-      </mesh>
+      {/* The outer group owns which way the body faces; this one owns the tip
+          from standing to swimming, so the two never fight over one rotation. */}
+      <group ref={tilt}>
+        <mesh castShadow>
+          <capsuleGeometry args={[PLAYER.radius, PLAYER.height - PLAYER.radius * 2, 6, 12]} />
+          <meshStandardMaterial color="#e0563f" roughness={0.55} />
+        </mesh>
+        {/* A snout, so which way the body is facing is obvious. */}
+        <mesh castShadow position={[0, 0.25, PLAYER.radius + 0.16]}>
+          <boxGeometry args={[0.22, 0.22, 0.34]} />
+          <meshStandardMaterial color="#f2e9d8" roughness={0.6} />
+        </mesh>
+      </group>
     </group>
   )
 }

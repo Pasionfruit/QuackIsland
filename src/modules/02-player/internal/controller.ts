@@ -24,6 +24,13 @@ export interface PlayerState {
   grounded: boolean
   /** How fast the body is actually moving across the ground, for animation. */
   speed: number
+  /** Floating rather than walking: the sea bed here is too deep to stand on. */
+  swimming: boolean
+  /**
+   * 0 upright, 1 flat on the water. Eased rather than switched, so the body
+   * tips into a swim and stands back up instead of snapping between the two.
+   */
+  lean: number
 }
 
 export interface PlayerInput {
@@ -47,6 +54,14 @@ export const PLAYER = {
   walkSpeed: 9.5,
   /** Metres per second with run held. */
   runSpeed: 17,
+  /** Metres per second in the water. Slower than a walk, as it should be. */
+  swimSpeed: 6.5,
+  /** Water this deep or deeper is out of your depth, and you swim. */
+  swimDepth: 1.35,
+  /** How far the body floats below the surface while swimming. */
+  floatDepth: 0.55,
+  /** How quickly the body tips between standing and swimming, per second. */
+  leanRate: 3.4,
   /** Straight up, metres per second. Roughly a 1.6 m hop under this gravity. */
   jumpSpeed: 11,
   gravity: -26,
@@ -70,7 +85,28 @@ export const IDLE_INPUT: PlayerInput = {
 }
 
 export function createPlayer(x: number, z: number, groundAt: (x: number, z: number) => number): PlayerState {
-  return { x, y: groundAt(x, z), z, vy: 0, facing: 0, grounded: true, speed: 0 }
+  return {
+    x,
+    y: groundAt(x, z),
+    z,
+    vy: 0,
+    facing: 0,
+    grounded: true,
+    speed: 0,
+    swimming: false,
+    lean: 0,
+  }
+}
+
+export interface StepOptions {
+  /** Keeps the player inside the meshed world. */
+  bounds?: { minX: number; maxX: number; minZ: number; maxZ: number }
+  /**
+   * Where the water is. Passed in rather than imported so this file stays pure
+   * and so the player still swims with the water module switched off - whether
+   * you are in water is a fact about the ground, not about anything rendering.
+   */
+  seaLevel?: number
 }
 
 function shortestAngle(from: number, to: number): number {
@@ -91,9 +127,11 @@ export function stepPlayer(
   input: PlayerInput,
   dt: number,
   groundAt: (x: number, z: number) => number,
-  bounds?: { minX: number; maxX: number; minZ: number; maxZ: number },
+  opts: StepOptions = {},
 ): PlayerState {
   const step = Math.min(Math.max(dt, 0), 0.1)
+  const bounds = opts.bounds
+  const seaLevel = opts.seaLevel ?? 0
 
   // Build the basis explicitly rather than rotating a vector: getting a sign
   // wrong in a rotation is invisible at one camera angle and obviously broken
@@ -121,7 +159,7 @@ export function stepPlayer(
     moveZ = forwardZ * f + rightZ * r
   }
 
-  const pace = input.run ? PLAYER.runSpeed : PLAYER.walkSpeed
+  const pace = state.swimming ? PLAYER.swimSpeed : input.run ? PLAYER.runSpeed : PLAYER.walkSpeed
   state.x += moveX * pace * step
   state.z += moveZ * pace * step
   state.speed = magnitude > 0 ? pace : 0
@@ -144,26 +182,49 @@ export function stepPlayer(
     state.facing += Math.max(-maxTurn, Math.min(maxTurn, delta))
   }
 
-  // Jump only from the ground, and only on the frame the key goes down - the
-  // caller is responsible for edge detection, so holding space does not hover.
-  if (input.jump && state.grounded) {
-    state.vy = PLAYER.jumpSpeed
-    state.grounded = false
-  }
-
-  state.vy += PLAYER.gravity * step
-  state.y += state.vy * step
-
   const ground = groundAt(state.x, state.z)
-  if (state.y <= ground) {
-    // Land. Snapping to the ground every frame is also what carries the player
-    // up and down slopes without any slope handling of its own.
-    state.y = ground
-    state.vy = 0
-    state.grounded = true
-  } else {
+  // Out of your depth is a question about the sea bed, not about where the
+  // body happens to be this frame - otherwise wading out gets stuck flickering
+  // between walking and swimming at the exact depth where it changes.
+  const outOfDepth = seaLevel - ground >= PLAYER.swimDepth
+
+  if (outOfDepth) {
+    state.swimming = true
     state.grounded = false
+    // Float, rather than fall. Easing to the waterline also means walking off
+    // a shelf into deep water surfaces you instead of dropping you to the bed.
+    const floatLine = seaLevel - PLAYER.floatDepth
+    state.vy = 0
+    state.y += (floatLine - state.y) * Math.min(1, step * 6)
+  } else {
+    state.swimming = false
+
+    // Jump only from the ground, and only on the frame the key goes down - the
+    // caller is responsible for edge detection, so holding space does not
+    // hover. No jumping while out of your depth.
+    if (input.jump && state.grounded) {
+      state.vy = PLAYER.jumpSpeed
+      state.grounded = false
+    }
+
+    state.vy += PLAYER.gravity * step
+    state.y += state.vy * step
+
+    if (state.y <= ground) {
+      // Land. Snapping to the ground every frame is also what carries the
+      // player up and down slopes without any slope handling of its own.
+      state.y = ground
+      state.vy = 0
+      state.grounded = true
+    } else {
+      state.grounded = false
+    }
   }
+
+  // Tip into the swim, or stand back up, over about a third of a second.
+  const wantLean = state.swimming ? 1 : 0
+  const leanStep = PLAYER.leanRate * step
+  state.lean += Math.max(-leanStep, Math.min(leanStep, wantLean - state.lean))
 
   return state
 }
