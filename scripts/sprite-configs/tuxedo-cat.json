@@ -1,4 +1,0 @@
-{
-  "sheet": "src/Tuxedo_Cat_Sprite.png",
-  "panels": [{ "id": "tuxedocat", "rect": [0, 0, 1402, 1122], "protectDark": true }]
-}

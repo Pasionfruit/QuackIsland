@@ -1,0 +1,33 @@
+/**
+ * 00-core - the public contract.
+ *
+ * This file is the only part of this module anyone may import. Everything in
+ * internal/ is private and may change without notice while this module is
+ * still open; once it is frozen, this surface is fixed.
+ */
+
+export { CONVENTIONS, PRIORITY, type Priority } from './internal/conventions'
+export { createRng, hashSeed } from './internal/rng'
+export { assetUrl } from './internal/assets'
+export { useGameFrame, type FrameCallback } from './internal/frame'
+export { readPerf, type PerfSample } from './internal/perf'
+export { GameCanvas } from './internal/GameCanvas'
+export { PerfHUD } from './internal/PerfHUD'
+
+/**
+ * One entry in the scene registry. The registry itself lives in
+ * src/app/scene.ts, which is deliberately never frozen, so a new module adds
+ * itself with a single line and never edits anyone else's.
+ */
+import type { ComponentType } from 'react'
+
+export interface SceneEntry {
+  /** Module id, e.g. '01-terrain'. */
+  id: string
+  /** Draw order. Lower renders first. Use the module number times ten. */
+  order: number
+  /** Turn a module off to inspect another one in isolation while gating it. */
+  enabled: boolean
+  /** Components may take optional props; the registry renders them bare. */
+  Component: ComponentType
+}

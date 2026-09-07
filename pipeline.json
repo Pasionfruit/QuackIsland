@@ -1,0 +1,239 @@
+{
+  "schemaVersion": 1,
+  "project": "LocalRot",
+  "referenceMachine": "Windows 11, Chrome, 1440x900",
+  "conventions": {
+    "units": "meters",
+    "upAxis": "+Y",
+    "handedness": "right",
+    "north": "-Z",
+    "seaLevelY": 0,
+    "worldSeed": 1337,
+    "frameBudgetMs": 16.6,
+    "useFramePriorities": {
+      "input": 0,
+      "simulation": 10,
+      "world": 20,
+      "camera": 30,
+      "post": 40
+    }
+  },
+  "budgets": {
+    "bundleGzipKb": 900,
+    "drawCallsMax": 150,
+    "trianglesMax": 900000,
+    "assetTrianglesDefault": 3000,
+    "assetTextureMaxPx": 1024
+  },
+  "mutableFiles": [
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "pipeline.json",
+    "index.html",
+    "AGENTS.md",
+    "src/app/**",
+    "scripts/**"
+  ],
+  "phases": [
+    {
+      "id": "P0",
+      "title": "Foundation",
+      "modules": [
+        "00-core"
+      ]
+    },
+    {
+      "id": "P1",
+      "title": "World",
+      "modules": [
+        "01-terrain",
+        "02-water",
+        "03-sky"
+      ]
+    },
+    {
+      "id": "P2",
+      "title": "Life",
+      "modules": [
+        "04-assets",
+        "05-vegetation",
+        "06-rocks"
+      ]
+    },
+    {
+      "id": "P3",
+      "title": "Player",
+      "modules": [
+        "07-physics",
+        "08-character",
+        "09-camera"
+      ]
+    },
+    {
+      "id": "P4",
+      "title": "Multiplayer",
+      "modules": [
+        "10-transport",
+        "11-world-sync"
+      ]
+    },
+    {
+      "id": "P5",
+      "title": "Operations",
+      "modules": [
+        "12-deploy",
+        "13-perf-harness"
+      ]
+    }
+  ],
+  "modules": [
+    {
+      "id": "00-core",
+      "phase": "P0",
+      "title": "Canvas, render loop, conventions, perf HUD, scene registry",
+      "status": "ready_for_review",
+      "dependsOn": [],
+      "dependents": [
+        "01-terrain"
+      ],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "00.1",
+          "title": "Conventions, seeded RNG, assetUrl",
+          "status": "done"
+        },
+        {
+          "id": "00.2",
+          "title": "GameCanvas: renderer, lights, tone mapping, camera",
+          "status": "done"
+        },
+        {
+          "id": "00.3",
+          "title": "Frame priorities and perf sampling, window.__perf",
+          "status": "done"
+        },
+        {
+          "id": "00.4",
+          "title": "Perf HUD overlay",
+          "status": "done"
+        },
+        {
+          "id": "00.5",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-07T13:54:47.190Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No scene content of any kind",
+        "No physics",
+        "No asset loading (only URL resolution)",
+        "No gameplay"
+      ],
+      "budgets": {
+        "bundleGzipKb": 400,
+        "drawCallsMax": 8
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "01-terrain",
+      "phase": "P1",
+      "title": "Deterministic sandy island: heightfield, chunked LOD mesh, sand shading",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "01.1",
+          "title": "Seeded noise and heightfield core, zero three.js",
+          "status": "done"
+        },
+        {
+          "id": "01.2",
+          "title": "Island shaping: falloff, beach band, dunes",
+          "status": "done"
+        },
+        {
+          "id": "01.3",
+          "title": "Chunk geometry builder, pure typed arrays",
+          "status": "done"
+        },
+        {
+          "id": "01.4",
+          "title": "LOD rings, skirts, chunk residency",
+          "status": "done"
+        },
+        {
+          "id": "01.5",
+          "title": "Sand material: slope and height blending",
+          "status": "done"
+        },
+        {
+          "id": "01.6",
+          "title": "R3F component, scene registration, debug marker",
+          "status": "done"
+        },
+        {
+          "id": "01.7",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-07T14:06:30.337Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No water, not even a placeholder plane (02-water owns sea level rendering)",
+        "No trees, rocks, props, or any Meshy asset",
+        "No physics colliders (heightAt is the collision contract)",
+        "No character controller; debug orbit camera only",
+        "No textures - procedural sand shading only",
+        "No biomes, weather, day/night, or terrain editing"
+      ],
+      "budgets": {
+        "trianglesMax": 400000,
+        "drawCallsMax": 64,
+        "bundleGzipKb": 200
+      },
+      "measured": null,
+      "blockers": []
+    }
+  ]
+}

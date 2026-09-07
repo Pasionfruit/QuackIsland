@@ -1,31 +1,39 @@
 {
-  "name": "polyland",
+  "name": "localrot",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Polyland - a pixel-art arcade hub for polygon characters",
+  "description": "A browser 3D world, built through a gated module pipeline",
   "scripts": {
     "dev": "vite",
-    "server": "node server/index.mjs",
-    "dev:all": "node scripts/dev-all.mjs",
     "build": "tsc -p tsconfig.json && vite build",
-    "start": "node server/index.mjs",
     "preview": "vite preview",
-    "smoke": "node scripts/smoke.mjs",
-    "balance": "node scripts/balance.mjs",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "check:frozen": "node scripts/check-frozen.mjs",
+    "check:contracts": "node scripts/check-contracts.mjs",
+    "check:budgets": "node scripts/check-budgets.mjs",
+    "check": "npm run check:boundaries && npm run check:frozen && npm run check:contracts && npm run check:budgets",
+    "gate": "node scripts/gate.mjs",
+    "gate:pass": "node scripts/gate-pass.mjs",
+    "gate:fail": "node scripts/gate-fail.mjs",
+    "unfreeze": "node scripts/unfreeze.mjs"
   },
   "dependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "ws": "^8.18.0"
+    "@react-three/fiber": "^9.7.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "three": "^0.185.1"
   },
   "devDependencies": {
-    "@napi-rs/canvas": "^1.0.8",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@types/three": "^0.185.4",
+    "@vitejs/plugin-react": "^6.1.1",
     "typescript": "^5.6.3",
-    "vite": "^5.4.11"
+    "vite": "^8.2.2",
+    "vitest": "^5.0.0"
   }
 }
