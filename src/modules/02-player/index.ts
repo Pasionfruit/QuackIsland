@@ -1,8 +1,8 @@
 /**
  * 02-player - the public contract.
  *
- * A body that walks the island with WASD and jumps with space, and a camera
- * that follows it. Movement resolves against the terrain module's height
+ * A body that walks the island with WASD and jumps with space, in third
+ * person, with the mouse aiming the camera. Movement resolves against the terrain module's height
  * contract, so the player stands on exactly the ground that is drawn.
  */
 
@@ -15,4 +15,4 @@ export {
   type PlayerInput,
 } from './internal/controller'
 
-export { Player } from './internal/PlayerView'
+export { Player, getPlayerState } from './internal/PlayerView'

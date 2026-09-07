@@ -11,10 +11,12 @@
 import type { SceneEntry } from '../modules/00-core'
 import { Terrain } from '../modules/01-terrain'
 import { Player } from '../modules/02-player'
+import { Footprints } from '../modules/03-footprints'
 
 export const SCENE: SceneEntry[] = [
   { id: '01-terrain', order: 10, enabled: true, Component: Terrain },
   { id: '02-player', order: 20, enabled: true, Component: Player },
+  { id: '03-footprints', order: 30, enabled: true, Component: Footprints },
 ]
 
 // Toggling a module on or off has to reach the canvas, which is a different

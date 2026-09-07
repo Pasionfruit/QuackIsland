@@ -51,8 +51,9 @@
       "modules": [
         "01-terrain",
         "02-player",
-        "03-water",
-        "04-sky"
+        "03-footprints",
+        "04-water",
+        "05-sky"
       ]
     },
     {
@@ -99,7 +100,8 @@
       "dependsOn": [],
       "dependents": [
         "01-terrain",
-        "02-player"
+        "02-player",
+        "03-footprints"
       ],
       "generation": 1,
       "contract": {
@@ -137,12 +139,17 @@
           "id": "00.6",
           "title": "Four times of day, blended, plus camera mode arbitration",
           "status": "done"
+        },
+        {
+          "id": "00.7",
+          "title": "Continuous day cycle: one hour, four sections",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T14:15:09.725Z"
+          "at": "2026-09-07T14:27:08.819Z"
         },
         "human": {
           "status": "pending"
@@ -172,7 +179,8 @@
         "00-core"
       ],
       "dependents": [
-        "02-player"
+        "02-player",
+        "03-footprints"
       ],
       "generation": 1,
       "contract": {
@@ -253,7 +261,9 @@
         "00-core",
         "01-terrain"
       ],
-      "dependents": [],
+      "dependents": [
+        "03-footprints"
+      ],
       "generation": 1,
       "contract": {
         "version": "0.1.0",
@@ -280,12 +290,17 @@
           "id": "02.4",
           "title": "Contract, tests, MODULE.md",
           "status": "done"
+        },
+        {
+          "id": "02.5",
+          "title": "Third person: mouse look",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T14:14:54.371Z"
+          "at": "2026-09-07T14:27:14.449Z"
         },
         "human": {
           "status": "pending"
@@ -302,6 +317,63 @@
       ],
       "budgets": {
         "drawCallsMax": 4
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "03-footprints",
+      "phase": "P1",
+      "title": "Prints left in the sand as the player walks, fading over time",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "01-terrain",
+        "02-player"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "03.1",
+          "title": "Pure trail: spacing by distance, alternating feet, recycling",
+          "status": "done"
+        },
+        {
+          "id": "03.2",
+          "title": "Instanced renderer with per-instance fade",
+          "status": "done"
+        },
+        {
+          "id": "03.3",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-07T14:27:20.177Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No prints from anything but the player",
+        "No prints below sea level",
+        "No depth in the sand - a decal, not deformed geometry",
+        "No persistence; the trail is lost on reload"
+      ],
+      "budgets": {
+        "drawCallsMax": 2
       },
       "measured": null,
       "blockers": []

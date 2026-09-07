@@ -12,12 +12,26 @@ export { assetUrl } from './internal/assets'
 export { useGameFrame, type FrameCallback } from './internal/frame'
 export { readPerf, type PerfSample } from './internal/perf'
 export {
+  CYCLE_SECONDS,
   LIGHTING,
+  SECTION_SECONDS,
   TIMES_OF_DAY,
   TIME_LABELS,
+  advanceCycle,
+  getDayTime,
   getTimeOfDay,
+  getTimeScale,
+  isCycleRunning,
+  nameAt,
+  normaliseTime,
+  sectionAt,
+  setCycleRunning,
+  setDayTime,
   setTimeOfDay,
-  useTimeOfDay,
+  setTimeScale,
+  timeOf,
+  useLightingSettings,
+  type DaySection,
   type LightingPreset,
   type TimeOfDay,
 } from './internal/lighting'

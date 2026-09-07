@@ -2,8 +2,9 @@
 
 ## What this is
 
-A body you walk around the island with: WASD to move, space to jump, and a
-camera that follows over its shoulder. It resolves height through
+A body you walk around the island with, in third person: WASD to move, space
+to jump, and the mouse to aim the camera. Drag to look, or click to capture the
+pointer and look freely; Escape lets it go. It resolves height through
 `01-terrain`, so it stands on exactly the ground being drawn.
 
 All of the movement is pure arithmetic in `internal/controller.ts` with no
@@ -19,6 +20,7 @@ three.js in it, so how the player moves is tested in Node rather than by eye.
 | `PlayerState` | `{ x, y, z, vy, facing, grounded, speed }`. `y` is at the feet |
 | `PlayerInput` | `{ forward, back, left, right, jump, cameraYaw }` |
 | `PLAYER` | Speeds, gravity, capsule size, eye height |
+| `getPlayerState()` | The live player, or `null` when the module is off |
 
 `groundAt` is passed in rather than imported, so a test can hand it flat ground
 or a slope. The component passes `heightAt` from `01-terrain`.
@@ -43,7 +45,7 @@ or a slope. The component passes `heightAt` from `01-terrain`.
   does not exist yet.
 - No animation. The body is a capsule with a snout so you can see which way it
   faces.
-- No mouse look and no first person.
+- No first person, and no aiming beyond turning the camera.
 - No physics engine — gravity and a ground snap, nothing more.
 
 ## How to use it from a new module
@@ -69,8 +71,9 @@ stepPlayer(state, { ...IDLE_INPUT, forward: true, cameraYaw }, delta, heightAt)
 
 - Walking off the island keeps going down the seabed rather than swimming.
   That is expected until water exists.
-- The camera trails the body's facing rather than being independently aimed, so
-  there is no way to look behind you while walking forward.
+- The camera is aimed by the mouse and the body walks where it points, so you
+  cannot look behind you while walking forward - a proper strafing camera is a
+  separate job.
 - No slope limit: the island is gentle enough that nothing is unclimbable, but
   a steeper world would want one.
 - The controller uses a fixed capsule and no ground friction, so stopping is
@@ -78,8 +81,11 @@ stepPlayer(state, { ...IDLE_INPUT, forward: true, cameraYaw }, delta, heightAt)
 
 ## How to review
 
-- **WASD walks and the body turns to face where it is going**, smoothly rather
-  than snapping.
+- **The mouse turns the camera**, left and right, and a little up and down.
+  Drag works; clicking captures the pointer so you can keep turning.
+- **WASD walks relative to the camera** and the body turns to face where it is
+  going, smoothly rather than snapping. Walking while turning should feel like
+  steering, not like the world spinning.
 - **Space jumps**, once, from the ground. Holding it does not hover or repeat.
 - **The feet stay on the sand** over every slope, and across chunk and
   level-of-detail borders. This is the same check as the terrain probe, but

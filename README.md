@@ -9,9 +9,14 @@ npm install
 npm run dev
 ```
 
-**WASD** to walk, **space** to jump. The panel on the right sets the time of
-day and toggles modules on and off; the perf readout is top left. Turn the
-player module off to get the free orbit camera back for inspecting terrain.
+Third person: **WASD** to walk, **space** to jump, **drag the mouse** to look
+around (or click to capture the pointer, Escape to release).
+
+The panel on the right runs the day: an hour a full cycle, fifteen minutes each
+in dawn, daylight, dusk and night. Scrub the slider, jump to a named time, or
+pause it. **Speed it up to 60x or 600x** if you want to watch a whole day
+rather than sit through one. It also toggles modules on and off - turn the
+player off to get the free orbit camera back for inspecting terrain.
 
 ## How this project is built
 
@@ -56,9 +61,10 @@ world is reproducible and testable.
 | --- | --- |
 | `00-core` | The canvas, render loop, lights, frame ordering, seeded RNG, perf HUD |
 | `01-terrain` | The sandy island: height function, chunked LOD mesh, sand shading |
-| `02-player` | A body that walks the island and jumps, with a follow camera |
+| `02-player` | Third-person body: walks, jumps, mouse-aimed camera |
+| `03-footprints` | Prints left in the sand, fading, in one draw call |
 
-Next up: water at `y = 0`, then a sky dome driving the times of day that
+Next up: water at `y = 0`, then a sky dome driving the day cycle that
 `00-core` already exposes, then the Meshy asset pipeline and vegetation placed
 against the terrain's height contract.
 

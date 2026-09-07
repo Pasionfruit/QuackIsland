@@ -24,7 +24,12 @@ Import from `../00-core`. Never reach into `internal/`.
 | `GameCanvas` | The canvas. Modules render as its children |
 | `PerfHUD` | DOM overlay showing the above. Mounted outside the canvas |
 | `SceneEntry` | `{ id, order, enabled, Component }` — the registry row type |
-| `setTimeOfDay(t)` / `useTimeOfDay()` | The lighting preset in force. `'dawn' \| 'daylight' \| 'dusk' \| 'night'` |
+| `getDayTime()` / `setDayTime(t)` | Where in the cycle we are, `0..1` |
+| `sectionAt(t)` | `{ from, to, blend }` - the two times being mixed. Pure |
+| `advanceCycle(dt)` | Moves the clock. Called by the renderer |
+| `setCycleRunning(b)` / `setTimeScale(n)` | Pause, and how many times real speed |
+| `setTimeOfDay(name)` / `getTimeOfDay()` | Jump to, and name, a section |
+| `CYCLE_SECONDS`, `SECTION_SECONDS` | 3600 and 900 |
 | `LIGHTING`, `TIMES_OF_DAY`, `TIME_LABELS` | The presets and their order |
 | `setCameraMode(m)` / `useCameraMode()` | Who drives the camera: `'orbit'` or `'player'` |
 
