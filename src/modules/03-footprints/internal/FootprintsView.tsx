@@ -11,6 +11,7 @@
  */
 import { useEffect, useMemo, useRef } from 'react'
 import {
+  CircleGeometry,
   DoubleSide,
   InstancedBufferAttribute,
   InstancedMesh,
@@ -65,9 +66,9 @@ function createPrintMaterial(): MeshStandardMaterial {
         '#include <begin_vertex>',
         `#include <begin_vertex>
         vFade = aFade;
-        // The disc is built in its own XY plane, so this is the offset from the
-        // middle of the print, before any scaling.
-        vLocal = position.xy;`,
+        // The disc is laid flat at construction, so it spans XZ and this is
+        // the offset from the middle of the print, before any scaling.
+        vLocal = position.xz;`,
       )
 
     shader.fragmentShader = shader.fragmentShader
@@ -100,6 +101,16 @@ export function Footprints() {
   const trail = useMemo(() => createTrail(), [])
   const material = useMemo(() => createPrintMaterial(), [])
 
+  // CircleGeometry is built standing up in the XY plane, so its normal is +Z.
+  // Everything here reasons in terms of +Y being up - aligning the disc's "up"
+  // to the ground normal left every print standing on its edge. Laying it flat
+  // once at construction is cheaper and clearer than compensating per print.
+  const disc = useMemo(() => {
+    const g = new CircleGeometry(1, 14)
+    g.rotateX(-Math.PI / 2)
+    return g
+  }, [])
+
   const fades = useMemo(() => new Float32Array(TRAIL.capacity), [])
   const dummy = useMemo(() => new Object3D(), [])
   const normal = useMemo(() => new Vector3(), [])
@@ -112,8 +123,9 @@ export function Footprints() {
     m.geometry.setAttribute('aFade', new InstancedBufferAttribute(fades, 1))
     return () => {
       material.dispose()
+      disc.dispose()
     }
-  }, [fades, material])
+  }, [fades, material, disc])
 
   useGameFrame((_state, delta) => {
     const m = mesh.current
@@ -160,12 +172,9 @@ export function Footprints() {
   return (
     <instancedMesh
       ref={mesh}
-      args={[undefined, undefined, TRAIL.capacity]}
-      material={material}
+      args={[disc, material, TRAIL.capacity]}
       frustumCulled={false}
       receiveShadow
-    >
-      <circleGeometry args={[1, 14]} />
-    </instancedMesh>
+    />
   )
 }

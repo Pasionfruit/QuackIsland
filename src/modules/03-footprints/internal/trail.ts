@@ -137,8 +137,9 @@ export function stepTrail(
 
   // Offset to the side of the line of travel, so the pair reads as a stride.
   const side = state.nextSide
-  const ox = Math.cos(walker.facing) * config.spread * side
-  const oz = -Math.sin(walker.facing) * config.spread * side
+  // Offset along the body's right, so side +1 really is the right foot.
+  const ox = -Math.cos(walker.facing) * config.spread * side
+  const oz = Math.sin(walker.facing) * config.spread * side
   const x = walker.x + ox
   const z = walker.z + oz
 

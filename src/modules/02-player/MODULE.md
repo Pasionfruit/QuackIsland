@@ -46,13 +46,16 @@ or a slope. The component passes `heightAt` from `01-terrain`.
   accepted cost of the strafe model. The body only turns while there is
   movement input, so looking around while stood still does not spin it on the
   spot.
-- **Forward is always away from the camera, at every angle.** `cameraYaw` is
-  the direction the camera looks, and forward is `(sin(yaw), cos(yaw))`. The
-  basis is built from that directly rather than by rotating a vector - an
-  earlier version rotated, with a sign wrong on Z, which was correct at one
-  camera angle and inverted at another. It felt like the controls breaking
-  whenever you looked around while walking. There is a test that walks at
-  seven different angles.
+- **Forward is always away from the camera, and D is always screen-right.**
+  `cameraYaw` is the direction the camera looks; forward is
+  `(sin(yaw), cos(yaw))` and right is `(-cos(yaw), sin(yaw))`.
+
+  Both of these have been wrong at some point, silently and at every angle,
+  because the algebra looks reasonable either way round. The tests now build a
+  real `PerspectiveCamera`, place it exactly as the rig does, read its own
+  right vector out of its world matrix, and check the movement against that.
+  **Do not re-derive this by hand** - a sign error here is invisible in review
+  and obvious the moment anyone plays.
 - **`dt` is clamped**, so a tab left in the background does not come back and
   teleport the player across the island.
 - Jump is edge-detected by the component, so holding space does not hover.

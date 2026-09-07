@@ -109,8 +109,10 @@ export function Player({ spawnX = 0, spawnZ = 0 }: { spawnX?: number; spawnZ?: n
         const scale = PAN_SENSITIVITY * (rig.distance / CAM_DISTANCE_DEFAULT)
         const fx = Math.sin(rig.yaw)
         const fz = Math.cos(rig.yaw)
-        rig.panX += (-e.movementX * fz - e.movementY * fx) * scale
-        rig.panZ += (e.movementX * fx - e.movementY * fz) * scale
+        // Grab and drag: the focus moves opposite to the mouse, so the world
+        // follows the cursor. Right is (-fz, fx), same as the controller.
+        rig.panX += (e.movementX * fz - e.movementY * fx) * scale
+        rig.panZ += (-e.movementX * fx - e.movementY * fz) * scale
         const off = Math.hypot(rig.panX, rig.panZ)
         if (off > PAN_LIMIT) {
           rig.panX = (rig.panX / off) * PAN_LIMIT

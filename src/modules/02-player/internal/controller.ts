@@ -101,8 +101,12 @@ export function stepPlayer(
   // direction the camera looks, so forward is where it is pointing.
   const forwardX = Math.sin(input.cameraYaw)
   const forwardZ = Math.cos(input.cameraYaw)
-  const rightX = forwardZ
-  const rightZ = -forwardX
+  // Screen-right is cross(forward, up), which for a +Y-up right-handed world
+  // works out as (-forwardZ, forwardX). Getting this backwards is easy and
+  // silent - it was, for a while - so it is checked against a real camera's
+  // own right vector in the tests rather than re-derived by hand.
+  const rightX = -forwardZ
+  const rightZ = forwardX
 
   const fwd = (input.forward ? 1 : 0) - (input.back ? 1 : 0)
   const side = (input.right ? 1 : 0) - (input.left ? 1 : 0)

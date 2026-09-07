@@ -1,3 +1,4 @@
+import { PerspectiveCamera, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 import { IDLE_INPUT, PLAYER, createPlayer, stepPlayer, type PlayerInput } from '../internal/controller'
 
@@ -54,14 +55,28 @@ describe('walking', () => {
     }
   })
 
-  it('strafes square to the way it is looking', () => {
+  it('sends D to the right of the screen, and A to the left', () => {
+    // Checked against a real camera rather than a hand-derived right vector.
+    // Deriving it by hand is how this came out inverted in the first place -
+    // the algebra looked fine and was wrong at every angle.
     for (const cameraYaw of [0, 1.2, Math.PI, 5.0]) {
-      const p = createPlayer(0, 0, flat(0))
-      run(p, press({ right: true, cameraYaw }), 30)
-      const travelled = Math.hypot(p.x, p.z)
-      // Right is forward turned a quarter: (cos, -sin).
-      expect(p.x / travelled).toBeCloseTo(Math.cos(cameraYaw), 3)
-      expect(p.z / travelled).toBeCloseTo(-Math.sin(cameraYaw), 3)
+      const camera = new PerspectiveCamera()
+      const fx = Math.sin(cameraYaw)
+      const fz = Math.cos(cameraYaw)
+      camera.position.set(-fx * 9, 3, -fz * 9)
+      camera.lookAt(new Vector3(0, 0, 0))
+      camera.updateMatrixWorld()
+      const screenRight = new Vector3().setFromMatrixColumn(camera.matrixWorld, 0)
+
+      const d = createPlayer(0, 0, flat(0))
+      run(d, press({ right: true, cameraYaw }), 30)
+      const dDir = new Vector3(d.x, 0, d.z).normalize()
+      expect(dDir.dot(screenRight)).toBeGreaterThan(0.99)
+
+      const a = createPlayer(0, 0, flat(0))
+      run(a, press({ left: true, cameraYaw }), 30)
+      const aDir = new Vector3(a.x, 0, a.z).normalize()
+      expect(aDir.dot(screenRight)).toBeLessThan(-0.99)
     }
   })
 

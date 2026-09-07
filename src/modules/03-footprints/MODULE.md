@@ -67,6 +67,14 @@ stepTrail(trail, { x, z, facing, grounded }, delta, heightAt)
 
 Then draw `trail.prints` however you like, using `fadeOf` for opacity.
 
+## The disc is laid flat at construction
+
+`CircleGeometry` is built in the XY plane, so its normal is `+Z`. Everything
+here reasons in `+Y`-up terms, and aligning the disc's "up" to the ground
+normal without accounting for that leaves every print standing on its edge.
+The geometry is rotated once when it is made, and a test pins that, because it
+is not visible in the code that does the aligning.
+
 ## Known limitations
 
 - One trail, one capacity, shared by whoever walks. Two walkers would fight

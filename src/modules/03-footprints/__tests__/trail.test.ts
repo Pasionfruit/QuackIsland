@@ -1,3 +1,4 @@
+import { CircleGeometry } from 'three'
 import { describe, expect, it } from 'vitest'
 import { TRAIL, createTrail, fadeOf, stepTrail, strideFor, type TrailState, type Walker } from '../internal/trail'
 
@@ -52,13 +53,17 @@ describe('leaving prints', () => {
     for (let i = 1; i < sides.length; i++) expect(sides[i]).not.toBe(sides[i - 1])
   })
 
-  it('puts the two feet either side of the line of travel', () => {
+  it('puts the two feet either side of the body, along its right', () => {
     const prints = live(walkLine(6))
-    const lefts = prints.filter((p) => p.side === 1).map((p) => p.x)
-    const rights = prints.filter((p) => p.side === -1).map((p) => p.x)
-    expect(lefts.length).toBeGreaterThan(0)
-    expect(rights.length).toBeGreaterThan(0)
-    expect(Math.min(...lefts)).toBeGreaterThan(Math.max(...rights))
+    // Facing 0 means forward is +Z, so the body's right is -X.
+    const rightFoot = prints.filter((p) => p.side === 1).map((p) => p.x)
+    const leftFoot = prints.filter((p) => p.side === -1).map((p) => p.x)
+    expect(rightFoot.length).toBeGreaterThan(0)
+    expect(leftFoot.length).toBeGreaterThan(0)
+    expect(Math.max(...rightFoot)).toBeLessThan(Math.min(...leftFoot))
+    // And they straddle the line rather than both landing on one side.
+    expect(Math.min(...leftFoot)).toBeGreaterThan(0)
+    expect(Math.max(...rightFoot)).toBeLessThan(0)
   })
 
   it('leaves nothing while airborne', () => {
@@ -143,5 +148,31 @@ describe('running', () => {
     stepTrail(sprint, walker(0, 0, { speed: fast }), 1 / 60, flat)
     for (let i = 1; i <= 20; i++) stepTrail(sprint, walker(0, -i, { speed: fast }), 1 / 60, flat)
     expect(live(sprint).length).toBeLessThan(live(walk).length)
+  })
+})
+
+describe('the disc a print is drawn on', () => {
+  it('lies flat once rotated, rather than standing on its edge', () => {
+    // CircleGeometry is built in the XY plane, so its normal is +Z. Everything
+    // here reasons in +Y-up terms, and aligning the disc's "up" to the ground
+    // normal without this rotation left every print standing vertically.
+    const g = new CircleGeometry(1, 14)
+    g.rotateX(-Math.PI / 2)
+    const pos = g.getAttribute('position')
+    let spanX = 0
+    let spanY = 0
+    let spanZ = 0
+    for (let i = 0; i < pos.count; i++) {
+      spanX = Math.max(spanX, Math.abs(pos.getX(i)))
+      spanY = Math.max(spanY, Math.abs(pos.getY(i)))
+      spanZ = Math.max(spanZ, Math.abs(pos.getZ(i)))
+    }
+    // A fourteen-sided polygon, so its corners do not quite reach radius one
+    // on every axis - roughly unit is the honest assertion here.
+    expect(spanX).toBeGreaterThan(0.95)
+    expect(spanZ).toBeGreaterThan(0.95)
+    // Flat is the part that matters: no extent at all in the up axis.
+    expect(spanY).toBeCloseTo(0, 6)
+    g.dispose()
   })
 })
