@@ -14,7 +14,11 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    // Tests run in Node and some of them read fixtures off disk - the duck
+    // model is checked by loading the actual GLB. Only the tests use this;
+    // module code that reached for `node:fs` would not run in a browser.
+    "types": ["node"]
   },
   "include": ["src", "vite.config.ts"]
 }

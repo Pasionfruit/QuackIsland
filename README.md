@@ -70,7 +70,7 @@ world is reproducible and testable.
 | --- | --- |
 | `00-core` | The canvas, render loop, lights, day cycle, tide, frame ordering, seeded RNG, perf HUD |
 | `01-terrain` | The sandy island: height function, chunked LOD mesh, sand shading |
-| `02-player` | Third-person body: walks, runs, jumps, swims, mouse-aimed camera |
+| `02-player` | Third-person duck: walks, runs, jumps, swims, mouse-aimed camera |
 | `03-footprints` | Webbed duck prints in the sand, fading, in one draw call |
 | `04-water` | The sea at `y = 0`: an ocean swell, lit per fragment, one draw call |
 

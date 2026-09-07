@@ -15,6 +15,8 @@ import { Group, Vector3 } from 'three'
 import { PRIORITY, getDayTime, setCameraMode, tideAt, useGameFrame } from '../../00-core'
 import { SEA_LEVEL, heightAt, worldBounds } from '../../01-terrain'
 import { IDLE_INPUT, PLAYER, createPlayer, stepPlayer, type PlayerInput, type PlayerState } from './controller'
+import { DUCK } from './duck'
+import { useDuck } from './DuckModel'
 
 const CAM_HEIGHT = 2.6
 const CAM_EASE = 12
@@ -83,6 +85,7 @@ export function Player({ spawnX = 0, spawnZ = 0, surfaceAt }: PlayerProps) {
   const domElement = useThree((s) => s.gl.domElement)
   const body = useRef<Group>(null)
   const tilt = useRef<Group>(null)
+  const duck = useDuck()
 
   const state = useMemo(() => createPlayer(spawnX, spawnZ, heightAt), [spawnX, spawnZ])
   const keys = useRef<PlayerInput>({ ...IDLE_INPUT })
@@ -242,17 +245,21 @@ export function Player({ spawnX = 0, spawnZ = 0, surfaceAt }: PlayerProps) {
       surfaceAt: surface,
     })
 
+    // How far over the body actually goes. The controller's `lean` means "lie
+    // flat", which suits a body that swims horizontally; a duck floats upright
+    // and only leans into the paddle, so it takes a fraction of it.
+    const tip = state.lean * DUCK.swimTip
+
     if (body.current) {
-      // Standing, the origin is at the feet so the middle of the capsule is
-      // half a body up. Lying flat, the middle is only a radius above the
-      // surface - so the offset has to come down as the body tips over.
-      const rise = PLAYER.height / 2 - state.lean * (PLAYER.height / 2 - PLAYER.radius)
+      // Standing, the origin is at the feet, so the middle of the body is half
+      // a body up. Tipped over, the middle drops towards the surface - so the
+      // offset comes down with it.
+      const rise = PLAYER.height / 2 - tip * (PLAYER.height / 2 - PLAYER.radius)
       body.current.position.set(state.x, state.y + rise, state.z)
       body.current.rotation.y = state.facing
     }
     if (tilt.current) {
-      // A quarter turn lays the capsule's long axis along the way it is facing.
-      tilt.current.rotation.x = state.lean * (Math.PI / 2)
+      tilt.current.rotation.x = tip * (Math.PI / 2)
     }
 
     // What the camera is pointed at: the player, plus however far the view has
@@ -282,15 +289,27 @@ export function Player({ spawnX = 0, spawnZ = 0, surfaceAt }: PlayerProps) {
       {/* The outer group owns which way the body faces; this one owns the tip
           from standing to swimming, so the two never fight over one rotation. */}
       <group ref={tilt}>
-        <mesh castShadow>
-          <capsuleGeometry args={[PLAYER.radius, PLAYER.height - PLAYER.radius * 2, 6, 12]} />
-          <meshStandardMaterial color="#e0563f" roughness={0.55} />
-        </mesh>
-        {/* A snout, so which way the body is facing is obvious. */}
-        <mesh castShadow position={[0, 0.25, PLAYER.radius + 0.16]}>
-          <boxGeometry args={[0.22, 0.22, 0.34]} />
-          <meshStandardMaterial color="#f2e9d8" roughness={0.6} />
-        </mesh>
+        {/* Both bodies hang half a height below the tilt, because that is the
+            middle of the body and the middle is what should pivot. The duck's
+            own origin is at its feet, so this puts them on the ground. */}
+        <group position={[0, -PLAYER.height / 2, 0]}>
+          {duck ? (
+            <primitive object={duck} />
+          ) : (
+            // Shown only until the model arrives, and left in place if it never
+            // does - an invisible player is a worse failure than a plain one.
+            <group position={[0, PLAYER.height / 2, 0]}>
+              <mesh castShadow>
+                <capsuleGeometry args={[PLAYER.radius, PLAYER.height - PLAYER.radius * 2, 6, 12]} />
+                <meshStandardMaterial color="#e0563f" roughness={0.55} />
+              </mesh>
+              <mesh castShadow position={[0, 0.25, PLAYER.radius + 0.16]}>
+                <boxGeometry args={[0.22, 0.22, 0.34]} />
+                <meshStandardMaterial color="#f2e9d8" roughness={0.6} />
+              </mesh>
+            </group>
+          )}
+        </group>
       </group>
     </group>
   )

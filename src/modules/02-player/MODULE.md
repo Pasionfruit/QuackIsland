@@ -27,6 +27,8 @@ three.js in it, so how the player moves is tested in Node rather than by eye.
 | --- | --- |
 | `Player` | The R3F component. Registered in `src/app/scene.ts` |
 | `PlayerProps` | `{ spawnX?, spawnZ?, surfaceAt? }` |
+| `DUCK` | The model: asset id, which way it is authored, how far it tips |
+| `fitToHeight(bounds, height)` | The scale and lift that stand a model on the ground. Pure |
 | `stepPlayer(state, input, dt, groundAt, opts?)` | One step of movement. Pure |
 | `createPlayer(x, z, groundAt)` | A player standing on the ground at that spot |
 | `StepOptions` | `{ bounds?, seaLevel?, surfaceAt? }`. All optional |
@@ -109,8 +111,9 @@ reason — see **Why the water module does not own swimming** below.
 - **No diving and no treading water.** Swimming is horizontal only: you are held
   at the surface and cannot go under or climb out onto anything but the beach.
 - **No drowning, stamina, or any other state that could kill you.**
-- No animation. The body is a capsule with a snout so you can see which way it
-  faces.
+- **No animation.** The duck is one rigid piece: no waddle, no wing beat, no
+  head turn, no paddling feet. The model carries no skeleton, so animating it
+  at all means a different asset, not more code here.
 - No first person, and no aiming beyond turning the camera.
 - No physics engine — gravity and a ground snap, nothing more.
 
@@ -140,6 +143,48 @@ stepPlayer(state, { ...IDLE_INPUT, forward: true, cameraYaw }, delta, heightAt, 
 Every option may be left out. Without `bounds` the body walks off the meshed
 world; without `seaLevel` it never swims and simply walks the sea bed; without
 `surfaceAt` it floats at a flat sea level instead of riding the swell.
+
+## The duck
+
+The body is `cute_duck_avatar_base.glb`, resolved through `assetUrl` so the
+assets can move to a CDN without unfreezing anything.
+
+**Its axes are stated, not detected.** The model is authored Z-up and facing
+-Y — it came out of trimesh, and its beak sits at negative Y while its tail
+sits at positive. This world is Y-up with a heading of zero pointing down +Z,
+so `DUCK.rotationX` is a quarter turn about X and that is the whole conversion.
+
+Guessing the up axis from a bounding box works right until it does not, and the
+failure is a duck lying on its back that passes every numeric check and still
+renders. So only the *size* is measured: `fitToHeight` reads the model's own
+height and returns the scale that makes it `PLAYER.height` tall along with the
+lift that puts its feet on `y = 0`, which is where the controller keeps them.
+
+There are tests that load the actual GLB off disk and check the duck comes out
+the right way up, facing forward, standing on the ground and the right height.
+They are worth having because every way this goes wrong still draws something.
+
+**Twenty-four parts become six.** The model arrives as separate meshes — body,
+head, each eye, each toe — sharing six materials. Merging the ones that share a
+material takes the player from twenty-four draw calls to six. That is only safe
+because the parts cannot move relative to each other: there is no skeleton and
+no animation in the file, and a test asserts both.
+
+**It loads imperatively, not through `useLoader`.** `useLoader` suspends, and
+there is no Suspense boundary above the canvas. A slow or missing asset leaves
+the old capsule on screen rather than blanking the scene; a failure logs and
+keeps the capsule. An invisible player is a worse failure than a plain one.
+
+## How far a duck tips when it swims
+
+`lean` in the controller means *lie flat*, which is right for a body that swims
+horizontally and wrong for a duck — ducks float upright and lean into the
+paddle. Rather than change the swim mechanic, `DUCK.swimTip` is the fraction of
+that quarter turn a duck actually takes: about fifteen degrees nose-down under
+way, upright the moment it stops.
+
+Set it to `1` and the duck swims flat, exactly as the capsule did. The
+controller is untouched either way.
 
 ## Why the water module does not own swimming
 
@@ -231,6 +276,15 @@ that the seam is the right way round, and it is in both modules' review lists.
   still swim.
 - Walking to the edge of the world stops you rather than dropping you off it.
 - The camera does not clip into the ground when you walk downhill.
+- **Look at the duck itself.** Right way up, facing where it walks, standing on
+  the sand rather than sunk into it or hovering. About as tall as you would
+  expect a character to be against the dunes.
+- **Walk in a circle and watch the beak.** It should lead. A model imported
+  backwards looks like a controls bug, not an import bug.
+- **Swim.** The duck should sit in the water leaning slightly forward, not lying
+  on its face. Stop and it should come upright.
+- **Check the draw calls in the perf HUD** with the player on and off. The duck
+  should cost six, not twenty-four.
 - Try it at **night** as well as daylight — the body should still read against
   the sand.
 
