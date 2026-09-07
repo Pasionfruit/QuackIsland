@@ -29,28 +29,29 @@ import { TRAIL, createTrail, fadeOf, stepTrail } from './trail'
 const UP = new Vector3(0, 1, 0)
 
 /**
- * A print reads as a hollow rather than a sticker.
+ * A print is a darker oval sunk into the sand.
  *
- * The trick is entirely in the shading: dark and soft in the middle where the
- * sand is compressed and in shadow, with a thin bright lip around it where the
- * sand has been pushed up and catches the light. A flat disc with a uniform
- * colour reads as something lying on the surface no matter how thin it is.
+ * Deliberately plain: a solid dark middle with the edge feathered off, and
+ * nothing else. An earlier version added a bright lip around the rim to
+ * suggest pushed-up sand, but a bright edge is what makes a thing read as
+ * raised - it turned every print into an iris. Shadow alone is what says
+ * "pressed in".
  *
  * Alpha comes in per instance, because the alternative is a material per print
  * and a draw call each.
  */
-function createPrintMaterial(): MeshStandardMaterial {
+export function createPrintMaterial(): MeshStandardMaterial {
   const material = new MeshStandardMaterial({
-    color: '#6b5a41',
-    roughness: 0.98,
+    color: '#4a3d2c',
+    roughness: 1,
     metalness: 0,
     transparent: true,
     depthWrite: false,
     side: DoubleSide,
     // Sitting flush with the terrain, these would z-fight without a nudge.
     polygonOffset: true,
-    polygonOffsetFactor: -6,
-    polygonOffsetUnits: -6,
+    polygonOffsetFactor: -8,
+    polygonOffsetUnits: -8,
   })
 
   material.onBeforeCompile = (shader) => {
@@ -82,17 +83,14 @@ function createPrintMaterial(): MeshStandardMaterial {
         '#include <dithering_fragment>',
         `#include <dithering_fragment>
         float r = length(vLocal);
-        // Hollow: dark through the middle, easing out.
-        float hollow = 1.0 - smoothstep(0.0, 0.86, r);
-        // Lip: the ridge of sand pushed up around the edge.
-        float lip = smoothstep(0.72, 0.92, r) * (1.0 - smoothstep(0.92, 1.0, r));
-        gl_FragColor.rgb = mix(gl_FragColor.rgb, gl_FragColor.rgb * 2.35, lip);
-        float shape = max(hollow, lip * 0.85);
-        gl_FragColor.a *= vFade * shape * 0.8;
+        // A solid oval with the edge feathered off - no ring, no gradient
+        // through the middle, nothing that could read as an iris.
+        float shape = 1.0 - smoothstep(0.62, 1.0, r);
+        gl_FragColor.a *= vFade * shape * 0.72;
         if (gl_FragColor.a < 0.01) discard;`,
       )
   }
-  material.customProgramCacheKey = () => 'localrot-footprint-v2'
+  material.customProgramCacheKey = () => 'localrot-footprint-v3'
   return material
 }
 
@@ -154,9 +152,9 @@ export function Footprints() {
       const sample = sampleAt(print.x, print.z)
       normal.set(sample.normalX, sample.normalY, sample.normalZ)
       quat.setFromUnitVectors(UP, normal)
-      // Flush with the ground. The polygon offset keeps it out of a
-      // z-fight; lifting it was what made the prints look stuck on top.
-      dummy.position.set(print.x, print.y + 0.004, print.z)
+      // Sunk into the surface, not resting on it. The polygon offset is what
+      // keeps it winning the depth test rather than any lift.
+      dummy.position.set(print.x, print.y - 0.01, print.z)
       dummy.quaternion.copy(quat)
       dummy.rotateY(print.facing)
       // A footprint is longer than it is wide, and the two feet mirror.

@@ -47,12 +47,11 @@ player's state, so anything that walks can leave prints, not just the player.
   only one is wired up.
 - No prints below sea level. There is no water yet, but seabed prints would be
   wrong either way.
-- **No real depth.** A print reads as a hollow entirely through shading - dark
-  and soft through the middle, with a thin bright lip of pushed-up sand around
-  it - and sits flush with the ground rather than hovering over it. It is still
-  a decal. Genuinely denting the ground would mean the terrain stops being a
-  pure function of position, which every other module depends on, so that is a
-  much bigger decision than it looks.
+- **No real depth.** A print is a darker oval sunk into the surface - a solid
+  dark middle, the edge feathered off, and nothing else. It is still a decal.
+  Genuinely denting the ground would mean the terrain stops being a pure
+  function of position, which every other module depends on, so that is a much
+  bigger decision than it looks.
 - No persistence — the trail is lost on reload.
 - No prints from wind, rain, tide, or anything else erasing them beyond time.
 
@@ -66,6 +65,14 @@ stepTrail(trail, { x, z, facing, grounded }, delta, heightAt)
 ```
 
 Then draw `trail.prints` however you like, using `fadeOf` for opacity.
+
+## Why there is no rim
+
+An earlier version drew a bright lip around each print, meaning to suggest sand
+pushed up at the edge. A bright edge is exactly what makes something read as
+*raised*, so every print came out looking like an iris. Shadow alone is what
+says "pressed in". There is a test that fails if anything in the injected
+fragment code brightens the output again.
 
 ## The disc is laid flat at construction
 
@@ -95,8 +102,8 @@ is not visible in the code that does the aligning.
 - **Jump.** Nothing should be left mid-air; the next print lands where you do.
 - **Walk up a dune.** Prints should lie along the slope, not float flat above
   it.
-- **Get close and look at one.** It should read as pressed *into* the sand -
-  darker in the middle, a faint bright rim - not as a sticker lying on top.
+- **Get close and look at one.** It should be a plain darker oval sunk into the
+  sand: no ring, no bright rim, nothing that looks like an eye.
 - **Walk in circles for a minute.** The oldest prints should fade out rather
   than the trail growing forever, and the draw call count in the perf HUD must
   not climb.
