@@ -4,7 +4,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { PLAYER } from '../internal/controller'
 import { DUCK, fitToHeight } from '../internal/duck'
-import { normaliseDuck } from '../internal/DuckModel'
+import { normaliseDuck, repairFeet } from '../internal/DuckModel'
 
 /**
  * These load the real file off disk.
@@ -85,6 +85,45 @@ describe('the file on disk', () => {
   })
 })
 
+describe('the feet, which the model gets wrong', () => {
+  it('ships with every toe floating in front of its foot and off the ground', () => {
+    // Not a complaint, a record: this is why `repairFeet` exists, and if the
+    // model is ever fixed this test is the one that says so by failing.
+    const fresh = raw.clone()
+    fresh.updateMatrixWorld(true)
+    const foot = boxOf(fresh.getObjectByName('Foot_L') as Group)
+    const toe = boxOf(fresh.getObjectByName('Toe_L_0') as Group)
+    // The model faces -Y, so this is a hole between the toe and the foot.
+    expect(foot.min.y - toe.max.y).toBeGreaterThan(0.05)
+    // And Z is up, so the toe hovers well above the sole.
+    expect(toe.min.z - foot.min.z).toBeGreaterThan(0.1)
+  })
+
+  it('joins them back on and stands them on the sole', () => {
+    const fixed = raw.clone()
+    expect(repairFeet(fixed)).toBe(6)
+    const foot = boxOf(fixed.getObjectByName('Foot_L') as Group)
+    const toe = boxOf(fixed.getObjectByName('Toe_L_0') as Group)
+    // Overlapping now, not merely touching, so the join is not a visible seam.
+    expect(foot.min.y - toe.max.y).toBeLessThan(0)
+    expect(toe.min.z).toBeCloseTo(foot.min.z, 6)
+  })
+
+  it('leaves a model that is already right alone', () => {
+    // Running twice must not walk the toes back through the foot, and a duck
+    // whose feet are correct must come out untouched. That is what makes this
+    // safe to leave in once the asset is fixed.
+    const fixed = raw.clone()
+    repairFeet(fixed)
+    expect(repairFeet(fixed)).toBe(0)
+  })
+
+  it('ignores a model whose parts it does not recognise', () => {
+    const anonymous = new Group()
+    expect(repairFeet(anonymous)).toBe(0)
+  })
+})
+
 describe('standing the duck up', () => {
   it('makes it exactly as tall as the body the controller moves', () => {
     const size = boxOf(duck).getSize(new Vector3())
@@ -162,6 +201,31 @@ describe('what it costs to draw', () => {
 
   it('casts a shadow', () => {
     for (const mesh of meshes(duck)) expect(mesh.castShadow).toBe(true)
+  })
+
+  it('is shaded round rather than faceted', () => {
+    // The file carries no normals, so glTF says shade it flat and the loader
+    // does - which on a duck made of low-poly spheres is what "looks flat"
+    // actually is. Every part is a subdivided icosahedron with shared
+    // vertices, so averaging at each vertex rounds it off properly.
+    for (const mesh of meshes(duck)) {
+      expect(mesh.geometry.attributes.normal).toBeTruthy()
+      expect((mesh.material as { flatShading?: boolean }).flatShading).toBe(false)
+    }
+  })
+
+  it('has normals that are actually normalised and actually vary', () => {
+    // A geometry can carry a normal attribute full of zeroes and still pass a
+    // "has normals" check, and it would render black.
+    const mesh = meshes(duck)[0]
+    const n = mesh.geometry.attributes.normal
+    const seen = new Set<string>()
+    for (let i = 0; i < n.count; i++) {
+      const v = new Vector3().fromBufferAttribute(n, i)
+      expect(v.length()).toBeCloseTo(1, 4)
+      seen.add(v.toArray().map((c) => c.toFixed(2)).join(','))
+    }
+    expect(seen.size).toBeGreaterThan(20)
   })
 })
 

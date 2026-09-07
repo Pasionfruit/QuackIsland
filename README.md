@@ -9,9 +9,8 @@ npm install
 npm run dev
 ```
 
-Third person: **WASD** to move, **shift** to run, **space** to jump. A and D
-are side-steps - the body keeps facing the camera rather than turning to face
-the step. Walk into the sea and you swim - the body tips flat and turns to
+Third person: **WASD** to move, **shift** to run, **space** to jump. Movement
+is relative to the camera and the duck turns to face wherever it is going. Walk into the sea and you swim - the body tips flat and turns to
 face where it is going. Stop and it stands upright, treading water; walk back
 out and it stands up on the sand.
 

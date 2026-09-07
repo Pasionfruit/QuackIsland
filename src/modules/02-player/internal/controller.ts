@@ -17,8 +17,8 @@ export interface PlayerState {
   /** Vertical speed, metres per second. */
   vy: number
   /**
-   * Which way the body faces, radians. Follows the camera rather than the
-   * direction of travel, so sideways input reads as a side-step.
+   * Which way the body faces, radians. Follows the direction of travel, so the
+   * duck always points where it is going.
    */
   facing: number
   grounded: boolean
@@ -245,20 +245,20 @@ export function stepPlayer(
     }
   }
 
-  // Which way the body points.
+  // Which way the body points: where it is going, on land and in the water
+  // alike.
   //
-  // On land it faces where the camera looks, not where it is walking - that is
-  // what makes A and D read as side-steps rather than pivoting the body to
-  // face the step. Backing up moon-walks, which is the accepted cost.
+  // Movement itself stays camera-relative - forward is still away from the
+  // camera and D is still screen-right - but the body turns to follow it, so
+  // pressing A turns and walks left rather than side-stepping left while still
+  // facing forwards. A creature with a beak has to point where it is going;
+  // the earlier model, where the body faced the camera, was built for a
+  // featureless capsule and left the duck walking sideways and backwards.
   //
-  // Swimming is the other way round: a body lying flat in the water goes head
-  // first, so it turns to face the way it is actually travelling. Strafing
-  // face-up would look like being dragged sideways.
-  //
-  // Either way, only while moving - looking around while treading water or
-  // stood still must not spin the body on the spot.
+  // Only while moving, so looking around while stood still or treading water
+  // does not spin the body on the spot.
   if (magnitude > 0) {
-    const target = state.swimming ? Math.atan2(moveX, moveZ) : input.cameraYaw
+    const target = Math.atan2(moveX, moveZ)
     const delta = shortestAngle(state.facing, target)
     const maxTurn = PLAYER.turnRate * step
     state.facing += Math.max(-maxTurn, Math.min(maxTurn, delta))

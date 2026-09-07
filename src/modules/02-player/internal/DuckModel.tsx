@@ -14,12 +14,70 @@
  * scene, and a failure says so in the console rather than unmounting the world.
  */
 import { useEffect, useState } from 'react'
-import { Box3, Group, Mesh, Vector3, type BufferGeometry, type Material } from 'three'
+import {
+  Box3,
+  Group,
+  Mesh,
+  MeshStandardMaterial,
+  Vector3,
+  type BufferGeometry,
+  type Material,
+} from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { assetUrl } from '../../00-core'
 import { DUCK, fitToHeight } from './duck'
 import { PLAYER } from './controller'
+
+/**
+ * Puts the toes back on the feet.
+ *
+ * The model has every toe floating in front of its foot with a visible gap,
+ * and hovering at shin height rather than sitting on the ground. It is a
+ * defect in the asset, not in anything here - the parts are simply placed
+ * wrong - but it is very visible, so this closes the gap on the way in.
+ *
+ * Measured rather than hardcoded, and it does nothing when there is nothing
+ * wrong: fix the model and this quietly becomes a no-op. It is keyed to the
+ * part names in this particular file, so a different duck it does not
+ * recognise passes through untouched.
+ *
+ * Returns how many toes it moved, which is what the tests assert on.
+ */
+export function repairFeet(root: Group): number {
+  root.updateMatrixWorld(true)
+  let moved = 0
+
+  for (const side of ['L', 'R']) {
+    const foot = root.getObjectByName(`Foot_${side}`)
+    if (!foot) continue
+    const footBox = new Box3().setFromObject(foot)
+
+    for (let i = 0; i < 8; i++) {
+      const toe = root.getObjectByName(`Toe_${side}_${i}`)
+      if (!toe) continue
+      const box = new Box3().setFromObject(toe)
+      // The model faces -Y, so a toe is in front of its foot when the toe's
+      // greatest Y is still below the foot's least Y. That difference is the
+      // hole between them.
+      const gap = footBox.min.y - box.max.y
+      // And the model is Z-up, so this is how far the toe floats off the sole.
+      const hover = box.min.z - footBox.min.z
+      if (gap <= 0 && hover <= 0) continue
+      // Pull it back into the foot, with a little to spare so the join is not
+      // a seam, and drop it onto the sole.
+      if (gap > 0) toe.position.y += gap + TOE_OVERLAP
+      if (hover > 0) toe.position.z -= hover
+      moved++
+    }
+  }
+
+  root.updateMatrixWorld(true)
+  return moved
+}
+
+/** How far a toe is pushed into its foot, in model units, to hide the join. */
+const TOE_OVERLAP = 0.05
 
 /**
  * Bakes every mesh into one per material.
@@ -48,7 +106,19 @@ function mergeByMaterial(root: Group): Group {
     const geometry = mergeGeometries(geometries, false)
     for (const g of geometries) g.dispose()
     if (!geometry) continue
-    const mesh = new Mesh(geometry, material)
+    // The file carries no normals at all, so glTF says to shade it flat and
+    // the loader duly does. On a duck made of low-polygon spheres that reads
+    // as a bundle of facets - which is what "flat" looks like in practice.
+    // Every part here is a subdivided icosahedron with its vertices shared
+    // between faces, so averaging the face normals at each vertex rounds them
+    // all off properly. Nothing is meant to have a hard edge.
+    geometry.computeVertexNormals()
+
+    const rounded = (material as MeshStandardMaterial).clone()
+    rounded.flatShading = false
+    rounded.needsUpdate = true
+
+    const mesh = new Mesh(geometry, rounded)
     mesh.castShadow = true
     // The duck stands on sand it also shades, so it takes its own shadow too.
     mesh.receiveShadow = true
@@ -62,6 +132,7 @@ function mergeByMaterial(root: Group): Group {
  * right way round, and `PLAYER.height` tall.
  */
 export function normaliseDuck(scene: Group): Group {
+  repairFeet(scene)
   const parts = mergeByMaterial(scene)
 
   // Measured in the model's own space, before anything is rotated - which is

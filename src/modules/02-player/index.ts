@@ -17,6 +17,7 @@ export {
 } from './internal/controller'
 
 export { DUCK, fitToHeight, type Bounds } from './internal/duck'
+export { loadDuck, normaliseDuck, repairFeet } from './internal/DuckModel'
 
 export {
   CAM_DISTANCE_MAX,

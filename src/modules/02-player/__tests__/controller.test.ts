@@ -105,23 +105,53 @@ describe('walking', () => {
     expect(b).toBeCloseTo(a, 3)
   })
 
-  it('keeps facing the camera while stepping sideways', () => {
-    // The whole point of the strafe model: A and D slide you left and right
-    // without the body pivoting to face the way it is stepping.
+  it('turns to face the way it is stepping, not the camera', () => {
+    // Movement stays camera-relative - D is still screen-right - but the body
+    // follows it round. A duck side-stepping while facing the camera walks
+    // sideways with its beak pointing at you, which is why this changed.
     for (const cameraYaw of [0, 1.2, Math.PI]) {
-      const p = createPlayer(0, 0, flat(0))
-      run(p, press({ right: true, cameraYaw }), 90)
-      expect(Math.abs(shortest(p.facing - cameraYaw))).toBeLessThan(0.05)
+      const right = createPlayer(0, 0, flat(0))
+      run(right, press({ right: true, cameraYaw }), 90)
+      expect(Math.abs(shortest(right.facing - Math.atan2(right.x, right.z)))).toBeLessThan(0.05)
+      // Which is a quarter turn off the camera, not lined up with it.
+      expect(Math.abs(shortest(right.facing - cameraYaw))).toBeGreaterThan(1.4)
+
       const left = createPlayer(0, 0, flat(0))
       run(left, press({ left: true, cameraYaw }), 90)
-      expect(Math.abs(shortest(left.facing - cameraYaw))).toBeLessThan(0.05)
+      expect(Math.abs(shortest(left.facing - Math.atan2(left.x, left.z)))).toBeLessThan(0.05)
+      // And the two face opposite ways.
+      expect(Math.abs(shortest(left.facing - right.facing))).toBeGreaterThan(3)
     }
   })
 
-  it('faces the camera when backing up, rather than turning around', () => {
+  it('turns around to back up, rather than moon-walking', () => {
+    // The old strafe model reversed down the beach still facing away, which is
+    // exactly the thing a body with a front cannot do.
     const p = createPlayer(0, 0, flat(0))
     run(p, press({ back: true, cameraYaw: 0 }), 90)
-    expect(Math.abs(shortest(p.facing))).toBeLessThan(0.05)
+    expect(Math.abs(shortest(p.facing - Math.PI))).toBeLessThan(0.05)
+    // And it really did travel backwards relative to the camera.
+    expect(p.z).toBeLessThan(0)
+  })
+
+  it('turns smoothly rather than snapping to a new heading', () => {
+    // Whipping round in a frame reads as a glitch. `turnRate` caps it.
+    const p = createPlayer(0, 0, flat(0))
+    run(p, press({ forward: true, cameraYaw: 0 }), 60)
+    const before = p.facing
+    stepPlayer(p, press({ back: true, cameraYaw: 0 }), 1 / 60, flat(0))
+    expect(Math.abs(shortest(p.facing - before))).toBeLessThanOrEqual(PLAYER.turnRate / 60 + 1e-9)
+  })
+
+  it('still walks where the camera points, whichever way the body ends up', () => {
+    // The turn is cosmetic: it must not feed back into the movement basis, or
+    // holding forward would send the duck spiralling.
+    for (const cameraYaw of [0.4, 2.2, 4.9]) {
+      const p = createPlayer(0, 0, flat(0))
+      run(p, press({ forward: true, cameraYaw }), 120)
+      const heading = Math.atan2(p.x, p.z)
+      expect(Math.abs(shortest(heading - cameraYaw))).toBeLessThan(0.02)
+    }
   })
 
   it('does not spin on the spot while you look around standing still', () => {
@@ -362,8 +392,8 @@ describe('swimming', () => {
   })
 
   it('turns to face the way it is swimming, not the camera', () => {
-    // Lying flat, a body goes head first. Strafing face-up would look like
-    // being dragged sideways.
+    // The same rule as on land, checked here too because swimming takes a
+    // different branch through the step and could drift from it.
     const deep = flat(-8)
     for (const cameraYaw of [0, 1.1, Math.PI / 2, 3.3, 5.2]) {
       const p = createPlayer(0, 0, deep)
@@ -378,13 +408,17 @@ describe('swimming', () => {
     }
   })
 
-  it('goes back to facing the camera once it is walking again', () => {
+  it('points the same way swimming and walking, so wading ashore does not spin it', () => {
+    // Body and water used to disagree about what `facing` meant, so leaving the
+    // sea swung the duck round for no reason the player could see.
     const deep = flat(-8)
-    const p = createPlayer(0, 0, deep)
     const cameraYaw = 2.2
+    const p = createPlayer(0, 0, deep)
     for (let i = 0; i < 240; i++) stepPlayer(p, press({ right: true, cameraYaw }), 1 / 60, deep, sea)
+    const swimming = p.facing
     for (let i = 0; i < 240; i++) stepPlayer(p, press({ right: true, cameraYaw }), 1 / 60, flat(3), sea)
-    expect(Math.abs(shortest(p.facing - cameraYaw))).toBeLessThan(0.05)
+    expect(p.swimming).toBe(false)
+    expect(Math.abs(shortest(p.facing - swimming))).toBeLessThan(0.05)
   })
 
   it('does not spin on the spot while treading water', () => {

@@ -52,12 +52,21 @@ reason — see **Why the water module does not own swimming** below.
   over hundreds of frames of rough ground.
 - **Diagonals are not faster than cardinals.** Input is normalised before the
   basis is applied.
-- **The body faces the camera, not the way it is walking.** A and D are
-  side-steps: hold A and you slide left while still facing forward, rather than
-  pivoting to face left and walking off. Backing up moon-walks, which is the
-  accepted cost of the strafe model. The body only turns while there is
-  movement input, so looking around while stood still does not spin it on the
-  spot.
+- **The body faces the way it is going**, on land and in the water alike.
+  Movement itself stays camera-relative — forward is still away from the camera
+  and D is still screen-right — but the body turns to follow it, so A turns and
+  walks left rather than side-stepping left while still facing forward, and
+  backing up turns around instead of moon-walking.
+
+  This replaced a strafe model, where the body faced the camera. That suited a
+  featureless capsule and does not suit a duck: anything with a beak has to
+  point where it is going, or it walks sideways and reverses with its face to
+  you.
+
+  The turn is **cosmetic** — it must never feed back into the movement basis,
+  or holding forward would send the duck spiralling. There is a test for that.
+  The body only turns while there is movement input, so looking around while
+  stood still does not spin it on the spot.
 - **Forward is always away from the camera, and D is always screen-right.**
   `cameraYaw` is the direction the camera looks; forward is
   `(sin(yaw), cos(yaw))` and right is `(-cos(yaw), sin(yaw))`.
@@ -82,11 +91,8 @@ reason — see **Why the water module does not own swimming** below.
   holding a direction. Float still and the body stands up — that is treading
   water, and it is what makes stopping in deep water look deliberate rather
   than like a body face down in the sea.
-- **Swimming turns the body to face where it is going.** On land the body
-  faces the camera and A and D are side-steps; in the water it turns to the
-  direction of travel, because something lying flat goes head first and
-  strafing face-up would look like being dragged sideways. Either way it only
-  turns while there is movement input.
+- **Swimming and walking agree about which way the body points**, so wading
+  ashore does not swing the duck round for no visible reason.
 - **The swell never decides anything.** `surfaceAt` changes how the body sits
   while floating and nothing else. Whether you swim comes from the bed and
   `seaLevel`, so a heaving surface cannot make wading flicker into swimming.
@@ -115,6 +121,9 @@ reason — see **Why the water module does not own swimming** below.
   head turn, no paddling feet. The model carries no skeleton, so animating it
   at all means a different asset, not more code here.
 - No first person, and no aiming beyond turning the camera.
+- **No repair of the model beyond the feet.** `repairFeet` closes one specific,
+  very visible defect. It is not a general asset-fixing pass and should not
+  grow into one — the right place to fix a model is the model.
 - No physics engine — gravity and a ground snap, nothing more.
 
 ## How to use it from a new module
@@ -169,6 +178,25 @@ head, each eye, each toe — sharing six materials. Merging the ones that share 
 material takes the player from twenty-four draw calls to six. That is only safe
 because the parts cannot move relative to each other: there is no skeleton and
 no animation in the file, and a test asserts both.
+
+**Its feet are wrong in the file, and are repaired on the way in.** Every toe
+ships floating in front of its foot with a visible gap, hovering at shin height
+rather than resting on the sole. That is a defect in the asset rather than in
+anything here, but it is the first thing you see, so `repairFeet` measures the
+gap and closes it.
+
+It is measured rather than hardcoded and it is idempotent: fix the model and it
+quietly becomes a no-op, and a duck whose part names it does not recognise
+passes through untouched. There are tests for both, and a test that records the
+defect as it ships — that one starts failing the day the model is fixed, which
+is the point.
+
+**It is shaded round, not flat.** The file carries no normals at all, so glTF
+says to shade it flat and the loader duly does. On a duck built from low-poly
+spheres that is what "looks flat" actually is: a bundle of facets. Every part
+is a subdivided icosahedron with its vertices shared between faces, so
+averaging the face normals at each vertex rounds them all off. Nothing in this
+model is meant to have a hard edge.
 
 **It loads imperatively, not through `useLoader`.** `useLoader` suspends, and
 there is no Suspense boundary above the canvas. A slow or missing asset leaves
@@ -229,17 +257,19 @@ that the seam is the right way round, and it is in both modules' review lists.
   all.** This is the whole reason there is no pointer lock.
 - **Hold shift to run.** Nearly twice walking pace, and it must not punch
   through the ground on a slope or make diagonals faster.
-- **Hold A, then D.** You should side-step left and right without the body
-  pivoting to face the step, at any camera angle.
+- **Hold A, then D.** You should move left and right relative to the camera,
+  with the duck turning to face the way it is going, at any camera angle.
 - **Hold left and drag** to look, left and right and a little up and down.
 - **Hold right and drag** to slide the view off the player; the world should
   follow the cursor. **Wheel** to pull back far enough to see the whole island.
   **F or the button** snaps back to the player.
 - **Look around while walking.** Walking forward must keep going away from the
   camera as it turns - steering, not stuttering or reversing.
-- **WASD walks relative to the camera**, and the body faces the camera rather
-  than the way it is walking. Walking while turning should feel like steering,
-  not like the world spinning.
+- **WASD walks relative to the camera**, and the duck turns to face where it
+  is going. Walking while turning should feel like steering, not like the world
+  spinning — and holding forward must go in a straight line, not a spiral.
+- **Hold S.** The duck should turn around and walk towards the camera, not
+  reverse with its beak still pointing away.
 - **Space jumps**, once, from the ground. Holding it does not hover or repeat.
 - **The feet stay on the sand** over every slope, and across chunk and
   level-of-detail borders. This is the same check as the terrain probe, but
