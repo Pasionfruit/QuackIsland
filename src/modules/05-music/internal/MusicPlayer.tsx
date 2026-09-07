@@ -35,6 +35,27 @@ function readStoredVolume(): number {
   }
 }
 
+/**
+ * Whether the panel is folded, remembered between reloads. Every storage call
+ * can throw, and a panel that will not render because it could not remember a
+ * boolean would be a silly way to lose the game.
+ */
+function readFolded(): boolean {
+  try {
+    return window.localStorage.getItem(MUSIC.foldKey) === '1'
+  } catch {
+    return false
+  }
+}
+
+function storeFolded(folded: boolean): void {
+  try {
+    window.localStorage.setItem(MUSIC.foldKey, folded ? '1' : '0')
+  } catch {
+    // Not worth caring about.
+  }
+}
+
 function storeVolume(volume: number): void {
   try {
     window.localStorage.setItem(MUSIC.storageKey, String(volume))
@@ -55,6 +76,7 @@ export function MusicPlayer() {
   const [blocked, setBlocked] = useState(false)
   /** Tracks that failed in a row, so a broken playlist stops rather than spins. */
   const failures = useRef(0)
+  const [folded, setFolded] = useState(readFolded)
 
   const track = tracks[index] ?? null
 
@@ -242,11 +264,28 @@ export function MusicPlayer() {
 
   return (
     <div style={panel}>
-      <div style={heading}>MUSIC</div>
+      <button
+        type="button"
+        onClick={() => {
+          const next = !folded
+          setFolded(next)
+          storeFolded(next)
+        }}
+        style={foldHeader}
+        title={folded ? 'Show' : 'Hide'}
+      >
+        <span>MUSIC</span>
+        <span style={{ opacity: 0.7 }}>{folded ? '+' : '–'}</span>
+      </button>
 
+      {/* The track stays visible folded: what is playing is the one thing you
+          want to see without opening anything. */}
       <div style={title} title={trackLabel(track)}>
         {trackLabel(track)}
       </div>
+
+      {folded ? null : (
+        <>
 
       <div style={rail}>
         <div style={{ ...fill, width: `${Math.min(100, progress * 100)}%` }} />
@@ -284,6 +323,8 @@ export function MusicPlayer() {
           title={`${Math.round(volume * 100)}%`}
         />
       </div>
+        </>
+      )}
     </div>
   )
 }
@@ -299,10 +340,21 @@ const panel: React.CSSProperties = {
   userSelect: 'none',
 }
 
-const heading: React.CSSProperties = {
-  letterSpacing: 1,
-  opacity: 0.5,
+const foldHeader: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  width: '100%',
+  background: 'none',
+  border: 'none',
+  font: 'inherit',
+  color: 'inherit',
+  padding: 0,
   marginBottom: 4,
+  letterSpacing: 0.6,
+  opacity: 0.55,
+  cursor: 'pointer',
+  textAlign: 'left',
 }
 
 const title: React.CSSProperties = {

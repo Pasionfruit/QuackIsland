@@ -36,6 +36,22 @@ export {
   type TimeOfDay,
 } from './internal/lighting'
 export { TIDE, TIDE_MAX, TIDE_RANGE, tideAt, tideRising } from './internal/tide'
+export {
+  WEATHER,
+  WEATHER_FADE,
+  WEATHER_KINDS,
+  WEATHER_LABELS,
+  applyWeather,
+  blendWeather,
+  getWeather,
+  setWeather,
+  useWeather,
+  type LightingNumbers,
+  type Precipitation,
+  type WeatherKind,
+  type WeatherPreset,
+} from './internal/weather'
+export { readSky, type SkyState } from './internal/Environment'
 export { getCameraMode, setCameraMode, useCameraMode, type CameraMode } from './internal/view'
 export { GameCanvas } from './internal/GameCanvas'
 export { PerfHUD } from './internal/PerfHUD'

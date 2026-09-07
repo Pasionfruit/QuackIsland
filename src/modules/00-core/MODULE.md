@@ -101,6 +101,25 @@ the level, whether it is making or falling, and a marker in its range.
 `dayTime` is a **turn**, 0 to 1 — the same units as everything else on this
 clock, not seconds.
 
+## The weather
+
+Four states — sunny, cloudy, rainy, snowing — chosen rather than simulated, and
+here for the same reason as the tide: several modules need the same answer and
+none of them should depend on each other. `06-sky` draws the cloud and the
+rain, but the **lights** live here, and an overcast day that did not dim the
+sun would not be overcast at all.
+
+Every preset is a set of **multipliers** on whatever the time of day worked out,
+never an absolute. Rain at noon and rain at midnight are both rain, and both
+still have to be lit like noon and midnight. The one thing weather sets rather
+than scales is `grey`: how far the colours are dragged towards a flat overcast
+grey. Without it, rain is sunshine with particles falling through it.
+
+Changing weather eases over `WEATHER_FADE` seconds, and a change made part way
+through another one carries on from where it had actually reached rather than
+snapping. `readSky()` hands `06-sky` the eased result along with the sun's
+direction, so the sky never has to mix any of this a second time.
+
 ## Deliberate non-goals
 
 - No scene content of any kind. No terrain, sky, water, props. The tide is the
@@ -109,8 +128,8 @@ clock, not seconds.
 - No physics, no collision.
 - No asset *loading* — only URL resolution through `assetUrl`.
 - No gameplay. No input handling beyond the debug orbit camera.
-- No sky dome, sun disc, stars or clouds — only the light, fog and background
-  colour. A sky module adds the geometry and drives the time of day.
+- No sky geometry — only the light, fog and background colour. `06-sky` draws
+  the dome, the sun, the stars and the cloud, and reads the weather from here.
 - No post-processing stack.
 - **No storm surge, no spring and neap cycle, no shoaling.** The tide is the
   same every day. A spring/neap cycle needs a count of days, which this clock

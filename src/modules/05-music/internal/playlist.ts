@@ -29,6 +29,8 @@ export const MUSIC = {
   restartWindow: 3,
   /** Where the volume is remembered between sessions. */
   storageKey: 'localrot.music.volume',
+  /** And whether the panel was folded away. */
+  foldKey: 'localrot.music.folded',
 } as const
 
 /** The next track, wrapping at the end so the playlist runs forever. */

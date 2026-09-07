@@ -23,6 +23,12 @@ day controls skips, rewinds, pauses and sets the volume; **back** restarts the
 track first and goes to the previous one if pressed again straight away. To add
 a song, drop it in that folder and run `npm run music:scan`.
 
+Pick the **weather** in the same panel: sunny, cloudy, rainy or snowing. It
+takes a couple of seconds to come over rather than cutting, and it dims the sun
+and thickens the fog as well as filling the sky — the weather lives in
+`00-core` next to the tide, so the sky and the ground can never disagree about
+what it is doing. Every panel section folds away.
+
 The panel on the right runs the day: an hour a full cycle, fifteen minutes each
 in dawn, daylight, dusk and night. The **tide** runs off the same clock — two
 high waters a day, of unequal height — so scrubbing the slider walks the
@@ -78,6 +84,7 @@ world is reproducible and testable.
 | `03-footprints` | Webbed duck prints in the sand, fading, in one draw call |
 | `04-water` | The sea at `y = 0`: an ocean swell, lit per fragment, one draw call |
 | `05-music` | Background playlist, with a panel to skip, rewind, pause and set the volume |
+| `06-sky` | Sky dome with sun, stars and cloud, and the rain and snow falling out of it |
 
 Next up: a sky dome driving the day cycle that `00-core` already exposes, then
 the Meshy asset pipeline and vegetation placed against the terrain's height

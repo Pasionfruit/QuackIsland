@@ -106,7 +106,8 @@
         "02-player",
         "03-footprints",
         "04-water",
-        "05-music"
+        "05-music",
+        "06-sky"
       ],
       "generation": 1,
       "contract": {
@@ -154,7 +155,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T20:30:03.594Z"
+          "at": "2026-09-07T20:43:42.874Z"
         },
         "human": {
           "status": "pending"
@@ -166,7 +167,9 @@
         "No scene content of any kind",
         "No physics",
         "No asset loading (only URL resolution)",
-        "No gameplay"
+        "No gameplay",
+        "No sky geometry - 06-sky draws the dome, the sun, the stars and the cloud",
+        "No simulated weather; the four states are chosen and never change on their own"
       ],
       "budgets": {
         "bundleGzipKb": 400,
@@ -234,7 +237,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T20:30:10.139Z"
+          "at": "2026-09-07T20:43:49.924Z"
         },
         "human": {
           "status": "pending"
@@ -306,7 +309,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T20:30:16.692Z"
+          "at": "2026-09-07T20:43:56.886Z"
         },
         "human": {
           "status": "pending"
@@ -364,7 +367,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T20:30:23.234Z"
+          "at": "2026-09-07T20:44:03.874Z"
         },
         "human": {
           "status": "pending"
@@ -425,7 +428,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T20:30:29.797Z"
+          "at": "2026-09-07T20:44:10.847Z"
         },
         "human": {
           "status": "pending"
@@ -488,7 +491,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T20:30:36.284Z"
+          "at": "2026-09-07T20:44:17.819Z"
         },
         "human": {
           "status": "pending"
@@ -508,6 +511,70 @@
       "budgets": {
         "drawCallsMax": 0,
         "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "06-sky",
+      "phase": "P1",
+      "title": "Sky dome with sun, stars and cloud, and four weathers you can pick",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "06.1",
+          "title": "Dome sizing, cloud projection, cover threshold",
+          "status": "done"
+        },
+        {
+          "id": "06.2",
+          "title": "Gradient, sun, stars and cloud in one shader",
+          "status": "done"
+        },
+        {
+          "id": "06.3",
+          "title": "Rain and snow as one GPU-animated instanced system",
+          "status": "done"
+        },
+        {
+          "id": "06.4",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-07T20:44:24.854Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No ownership of the weather or the light - 00-core owns both; this draws them",
+        "No simulated weather: it is chosen, never a front moving across the island",
+        "No accumulation - snow does not settle and rain does not wet anything",
+        "No lightning, thunder, wind on the vegetation, or any sound",
+        "No volumetric cloud, god rays, or anything needing a second pass",
+        "No moon; night is stars and a dark gradient",
+        "No effect on the water surface or the footprints"
+      ],
+      "budgets": {
+        "drawCallsMax": 2,
+        "trianglesMax": 12000
       },
       "measured": null,
       "blockers": []
