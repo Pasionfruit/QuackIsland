@@ -16,7 +16,7 @@ import { Canvas, useThree } from '@react-three/fiber'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { ACESFilmicToneMapping, PCFSoftShadowMap } from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { PRIORITY } from './conventions'
+import { CAMERA, PRIORITY } from './conventions'
 import { useGameFrame } from './frame'
 import { installPerfProbe, resetPerf, samplePerf } from './perf'
 import { Environment } from './Environment'
@@ -67,7 +67,7 @@ export function GameCanvas({ children }: { children?: ReactNode }) {
     <Canvas
       shadows={{ type: PCFSoftShadowMap }}
       dpr={[1, 2]}
-      camera={{ fov: 55, near: 0.5, far: 5000, position: [180, 120, 180] }}
+      camera={{ fov: CAMERA.fov, near: CAMERA.near, far: CAMERA.far, position: CAMERA.start }}
       gl={{ antialias: true, powerPreference: 'high-performance' }}
       onCreated={({ gl }) => {
         gl.toneMapping = ACESFilmicToneMapping

@@ -1,26 +1,41 @@
 import { describe, expect, it } from 'vitest'
-import { LIGHTING, TIMES_OF_DAY, WEATHER, WEATHER_KINDS } from '../../00-core'
+import { CAMERA, LIGHTING, TIMES_OF_DAY, WEATHER, WEATHER_KINDS } from '../../00-core'
 import { SKY, cloudThreshold, cloudUv, domeFits, hazeAt, horizonClip } from '../internal/dome'
 import { PRECIPITATION } from '../internal/fall'
 
 describe('the dome', () => {
-  it('sits outside the fog and inside the far plane, in every weather', () => {
-    // Inside the fog it is painted out with the very colour it is supposed to
-    // be providing; past the far plane it is clipped and there is no sky at
-    // all. Both look like the module is broken rather than mis-sized.
-    const cameraFar = 12000
+  it('sits outside the fog and inside the real far plane, in every weather', () => {
+    // Against `CAMERA.far` itself, not a number invented here. An earlier
+    // version of this test made up a far plane of 12000 and passed while the
+    // dome was 6000 against a real far plane of 5000 - so the test was green
+    // and the sky had a hole in it.
     for (const name of TIMES_OF_DAY) {
       for (const kind of WEATHER_KINDS) {
         // Weather only pulls the fog in, so clear weather is the worst case.
         const fogFar = LIGHTING[name].fogFar * Math.max(1, WEATHER[kind].fogFar)
-        expect(domeFits(SKY.radius, fogFar, cameraFar)).toBe(true)
+        expect(domeFits(SKY.radius, fogFar, CAMERA.far)).toBe(true)
       }
     }
   })
 
+  it('leaves no circular hole where the far plane cuts across it', () => {
+    // The far plane clips on view-space *depth*, not on distance from the
+    // camera. A dome of radius R is at depth R * cos(theta) for a direction
+    // theta off the view axis, so a dome bigger than `far` survives at the
+    // edges of the screen and is clipped in the middle - a circular hole
+    // centred on wherever you look, following you about. This is that check,
+    // stated the way the hardware actually behaves.
+    const worstDepth = SKY.radius // straight ahead, theta = 0
+    expect(worstDepth).toBeLessThan(CAMERA.far)
+    // And with room to spare, so a small change to either does not reopen it.
+    expect(SKY.radius).toBeLessThan(CAMERA.far * 0.9)
+  })
+
   it('rejects a dome that is too small or too big', () => {
-    expect(domeFits(100, 2600, 12000)).toBe(false)
-    expect(domeFits(20000, 2600, 12000)).toBe(false)
+    expect(domeFits(100, 2600, CAMERA.far)).toBe(false)
+    expect(domeFits(CAMERA.far + 1, 2600, CAMERA.far)).toBe(false)
+    // The exact case that shipped.
+    expect(domeFits(6000, 2600, 5000)).toBe(false)
   })
 })
 

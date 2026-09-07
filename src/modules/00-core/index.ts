@@ -6,7 +6,7 @@
  * still open; once it is frozen, this surface is fixed.
  */
 
-export { CONVENTIONS, PRIORITY, type Priority } from './internal/conventions'
+export { CAMERA, CONVENTIONS, PRIORITY, type Priority } from './internal/conventions'
 export { createRng, hashSeed } from './internal/rng'
 export { assetUrl } from './internal/assets'
 export { useGameFrame, type FrameCallback } from './internal/frame'

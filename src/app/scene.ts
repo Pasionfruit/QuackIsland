@@ -15,6 +15,7 @@ import { Player } from '../modules/02-player'
 import { Footprints } from '../modules/03-footprints'
 import { Water, swellAt } from '../modules/04-water'
 import { Sky } from '../modules/06-sky'
+import { Shore } from '../modules/07-shore'
 
 /**
  * The player, floating on the actual swell rather than on a flat mean level -
@@ -47,6 +48,7 @@ export const SCENE: SceneEntry[] = [
   { id: '03-footprints', order: 30, enabled: true, Component: Footprints },
   { id: '04-water', order: 40, enabled: true, Component: Water },
   { id: '06-sky', order: 60, enabled: true, Component: Sky },
+  { id: '07-shore', order: 70, enabled: true, Component: Shore },
 ]
 
 // Toggling a module on or off has to reach the canvas, which is a different

@@ -11,10 +11,17 @@ export const SKY = {
   /**
    * Radius of the dome, in metres.
    *
-   * It has to sit outside everything that is drawn and inside the camera's far
-   * plane, and it must not be fogged - it *is* the distance.
+   * It has to sit outside the fog and **inside the camera's far plane**, and it
+   * must not be fogged - it *is* the distance.
+   *
+   * The far plane is the constraint that bites, and it bites in a way that is
+   * not obvious: it clips on view-space depth, not on distance. A dome larger
+   * than `far` is therefore clipped where you are looking straight at it and
+   * not at the edges of the screen, which reads as a circular hole centred on
+   * the middle of the view that follows you everywhere. This was 6000 against
+   * a far plane of 5000, and that is precisely what it did.
    */
-  radius: 6000,
+  radius: 4000,
   /**
    * How far a view direction is spread across the cloud layer. Bigger makes
    * the clouds smaller.

@@ -63,6 +63,7 @@
       "id": "P2",
       "title": "Life",
       "modules": [
+        "07-shore",
         "04-assets",
         "05-vegetation",
         "06-rocks"
@@ -107,7 +108,8 @@
         "03-footprints",
         "04-water",
         "05-music",
-        "06-sky"
+        "06-sky",
+        "07-shore"
       ],
       "generation": 1,
       "contract": {
@@ -155,7 +157,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T23:22:14.505Z"
+          "at": "2026-09-07T23:34:07.215Z"
         },
         "human": {
           "status": "pending"
@@ -189,7 +191,8 @@
       "dependents": [
         "02-player",
         "03-footprints",
-        "04-water"
+        "04-water",
+        "07-shore"
       ],
       "generation": 1,
       "contract": {
@@ -237,7 +240,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T23:22:21.236Z"
+          "at": "2026-09-07T23:34:15.075Z"
         },
         "human": {
           "status": "pending"
@@ -309,7 +312,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T23:22:27.947Z"
+          "at": "2026-09-07T23:34:22.950Z"
         },
         "human": {
           "status": "pending"
@@ -367,7 +370,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T23:22:34.668Z"
+          "at": "2026-09-07T23:34:30.844Z"
         },
         "human": {
           "status": "pending"
@@ -428,7 +431,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T23:22:41.387Z"
+          "at": "2026-09-07T23:34:38.670Z"
         },
         "human": {
           "status": "pending"
@@ -491,7 +494,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T23:22:48.116Z"
+          "at": "2026-09-07T23:34:46.523Z"
         },
         "human": {
           "status": "pending"
@@ -555,7 +558,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T23:22:54.796Z"
+          "at": "2026-09-07T23:34:54.378Z"
         },
         "human": {
           "status": "pending"
@@ -575,6 +578,70 @@
       "budgets": {
         "drawCallsMax": 2,
         "trianglesMax": 12000
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "07-shore",
+      "phase": "P2",
+      "title": "Shells and coloured pebbles scattered along the water line",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "01-terrain"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "07.1",
+          "title": "Seeded rejection scatter against the terrain height and slope",
+          "status": "done"
+        },
+        {
+          "id": "07.2",
+          "title": "Procedural pebble, clam and cone shapes",
+          "status": "done"
+        },
+        {
+          "id": "07.3",
+          "title": "One instanced mesh per kind, with per-instance colour",
+          "status": "done"
+        },
+        {
+          "id": "07.4",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-07T23:35:02.236Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No collision - you walk through them",
+        "No picking up, kicking, or any interaction at all",
+        "No movement with the tide; placed once and never washed about",
+        "No models - every shape is geometry and none of it goes near the loader",
+        "No seaweed, driftwood, crabs or anything that is not a shell or a pebble",
+        "No change to the terrain they sit on"
+      ],
+      "budgets": {
+        "drawCallsMax": 3,
+        "trianglesMax": 40000
       },
       "measured": null,
       "blockers": []

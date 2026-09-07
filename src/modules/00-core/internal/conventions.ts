@@ -25,6 +25,26 @@ export const CONVENTIONS = {
 } as const
 
 /**
+ * The one camera's lens.
+ *
+ * Exported rather than written inline on the Canvas because `far` is a hard
+ * limit other modules have to live inside, and one that fails in a way nobody
+ * would guess at: the far plane clips on view-space *depth*, not on distance
+ * from the camera. Anything spherical around the camera and larger than `far`
+ * is therefore clipped in the middle of the screen and not at the edges, which
+ * appears as a circular hole centred on wherever you are looking.
+ *
+ * That is exactly what happened to the sky dome. It is a number worth being
+ * able to test against.
+ */
+export const CAMERA = {
+  fov: 55,
+  near: 0.5,
+  far: 5000,
+  start: [180, 120, 180] as [number, number, number],
+} as const
+
+/**
  * Ordering bands for per-frame work.
  *
  * useFrame priority is a hidden global: two modules that never import each

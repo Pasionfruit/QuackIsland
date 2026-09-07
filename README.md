@@ -85,6 +85,7 @@ world is reproducible and testable.
 | `04-water` | The sea at `y = 0`: an ocean swell, lit per fragment, one draw call |
 | `05-music` | Background playlist, with a panel to skip, rewind, pause and set the volume |
 | `06-sky` | Sky dome with sun, stars and cloud, and the rain and snow falling out of it |
+| `07-shore` | Shells and coloured pebbles along the water line, in three draw calls |
 
 Next up: a sky dome driving the day cycle that `00-core` already exposes, then
 the Meshy asset pipeline and vegetation placed against the terrain's height
