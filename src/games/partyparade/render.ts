@@ -17,6 +17,7 @@ import { bush, pine, rock } from '../../art/props'
 import { flag, water } from '../../art/scenes'
 import { domePoly, ellipse, facet, noise, shade, softShadow, withAlpha, type Pt } from '../../lib/draw'
 import { HUD, hudPlate, hudText, nameTag } from '../../lib/hud'
+import { textWidth } from '../../lib/text'
 import {
   BOARD_TILES,
   FORK_INDEX,
@@ -570,6 +571,21 @@ function drawMinimap(ctx: CanvasRenderingContext2D, eng: PartyParadeEngine, cam:
   ctx.restore()
 }
 
+/**
+ * Two lines on a plate, sized to whatever is actually in them.
+ *
+ * drawText lays text out from the *top*, not the baseline, so the numbers here
+ * are the top edge of each line - getting that wrong is what used to push the
+ * second line out through the bottom of the plate.
+ */
+function statusPlate(ctx: CanvasRenderingContext2D, title: string, sub: string, accent?: string): void {
+  const padX = 10
+  const w = Math.max(textWidth(ctx, title, { size: 11, weight: 700 }), textWidth(ctx, sub, { size: 8, weight: 700 })) + padX * 2
+  hudPlate(ctx, 8, 8, w, 32, { accent })
+  hudText(ctx, title, 8 + padX, 13, { size: 11, weight: 700, color: HUD.ink })
+  hudText(ctx, sub, 8 + padX, 26, { size: 8, color: HUD.dim })
+}
+
 export function drawChrome(
   ctx: CanvasRenderingContext2D,
   eng: PartyParadeEngine,
@@ -580,30 +596,32 @@ export function drawChrome(
   const cur = eng.current
   if (eng.phase === 'over' && eng.winner !== null) {
     const win = eng.playerAt(eng.winner)
-    hudPlate(ctx, 8, 8, 178, 30, { accent: win?.color })
-    hudText(ctx, 'TREASURE FOUND', 16, 22, { size: 11, weight: 700, color: HUD.ink })
-    hudText(ctx, `${win?.name ?? 'Somebody'} wins the parade`, 16, 33, { size: 8, color: HUD.dim })
+    statusPlate(ctx, 'TREASURE FOUND', `${win?.name ?? 'Somebody'} wins the parade`, win?.color)
   } else if (cur) {
     const char = PARADE_CAST[cur.castIndex % PARADE_CAST.length]
     const yours = cur.slot === viewerSlot
-    hudPlate(ctx, 8, 8, 168, 30, { accent: cur.color })
-    hudText(ctx, yours ? 'YOUR TURN' : cur.name, 16, 22, { size: 11, weight: 700, color: HUD.ink })
-    hudText(ctx, `Round ${eng.round} - ${char.name}`, 16, 33, { size: 8, color: HUD.dim })
+    statusPlate(ctx, yours ? 'YOUR TURN' : cur.name, `Round ${eng.round} - ${char.name}`, cur.color)
   }
 
   if (eng.turnPhase !== 'idle' && eng.lastRoll !== null) {
     const rolling = eng.turnPhase === 'rolling'
     const face = rolling ? eng.rollFace : eng.lastRoll
     const tilt = rolling ? Math.sin(frame * 0.5) * 0.22 : 0
-    drawDie(ctx, 26, 62, 26, face, tilt)
-    if (!rolling) hudText(ctx, `${eng.lastRoll} spaces`, 44, 66, { size: 9, color: HUD.dim })
+    drawDie(ctx, 26, 64, 26, face, tilt)
+    if (!rolling) hudText(ctx, `${eng.lastRoll} spaces`, 44, 60, { size: 9, color: HUD.dim })
   }
 
   // Whatever just happened, so a setback is never silent.
   if (eng.message) {
-    const w = Math.min(300, 14 + eng.message.length * 4.6)
-    hudPlate(ctx, VIEW_W / 2 - w / 2, VIEW_H - 30, w, 20, { radius: 6 })
-    hudText(ctx, eng.message, VIEW_W / 2, VIEW_H - 17, { size: 9, align: 'center', color: HUD.ink })
+    // Centred on the space beside the minimap, not the whole view, or a long
+    // line runs underneath it.
+    const free = VIEW_W - 124
+    const tw = textWidth(ctx, eng.message, { size: 9, weight: 700 })
+    const w = Math.min(free - 16, tw + 20)
+    const h = 20
+    const y = VIEW_H - 30
+    hudPlate(ctx, free / 2 - w / 2, y, w, h, { radius: 6 })
+    hudText(ctx, eng.message, free / 2, y + 6, { size: 9, align: 'center', color: HUD.ink })
   }
 
   drawMinimap(ctx, eng, cam)

@@ -47,6 +47,10 @@ const ppBoardOut = join(tmp, 'pp-board.mjs')
 await bundle('src/games/partyparade/engine/board.ts', ppBoardOut)
 const ppEngineOut = join(tmp, 'pp-engine.mjs')
 await bundle('src/games/partyparade/engine/engine.ts', ppEngineOut)
+const ppGamesOut = join(tmp, 'pp-games.mjs')
+await bundle('src/games/partyparade/minigames/games.ts', ppGamesOut)
+const ppMgTypesOut = join(tmp, 'pp-mgtypes.mjs')
+await bundle('src/games/partyparade/minigames/types.ts', ppMgTypesOut)
 
 const { SmashEngine } = await import(pathToFileURL(out).href)
 
@@ -2280,6 +2284,150 @@ console.log('\nPolyland Smash - engine smoke test\n')
     const turnBefore = guest.turnIndex
     for (let i = 0; i < 400; i++) guest.stepVisual()
     check('a guest never advances the turn by itself', guest.turnIndex === turnBefore)
+  }
+}
+
+// -------------------------------------------------- Party Parade minigames
+// Four free-for-alls sharing one frame: a roster, a clock, and a single number
+// per player that decides the placings. These drive each one end to end.
+{
+  const { buildMinigame, NEVER, PRECISION_RANGE } = await import(pathToFileURL(ppGamesOut).href)
+  const { INTRO_FRAMES, MINIGAMES, MINIGAME_ORDER } = await import(pathToFileURL(ppMgTypesOut).href)
+
+  console.log('\nParty Parade - the minigames\n')
+
+  const roster = (n) =>
+    Array.from({ length: n }, (_, i) => ({ slot: i, name: `P${i}`, color: '#fff', castIndex: i }))
+
+  /** Steps the clock, holding the given inputs. */
+  const run = (g, frames, inputs = {}) => {
+    for (let f = 0; f < frames; f++) {
+      for (const [slot, i] of Object.entries(inputs)) {
+        g.setInput(Number(slot), typeof i === 'function' ? i(f) : i)
+      }
+      g.step()
+    }
+  }
+  const tap = (every) => (f) => ({ press: f % every === 0, left: false, right: false })
+  const idle = { press: false, left: false, right: false }
+
+  check('every minigame in the list has a description', MINIGAME_ORDER.every((id) => MINIGAMES[id]?.name))
+  check('every minigame builds', MINIGAME_ORDER.every((id) => buildMinigame(id, roster(2), 7)))
+  check(
+    'every minigame starts on its countdown',
+    MINIGAME_ORDER.every((id) => buildMinigame(id, roster(2), 7).phase === 'intro'),
+  )
+  check(
+    'every minigame gets going once the countdown ends',
+    MINIGAME_ORDER.every((id) => {
+      const g = buildMinigame(id, roster(2), 7)
+      run(g, INTRO_FRAMES + 2)
+      return g.phase === 'play'
+    }),
+  )
+  check(
+    'every minigame round-trips a snapshot',
+    MINIGAME_ORDER.every((id) => {
+      const host = buildMinigame(id, roster(2), 7)
+      run(host, INTRO_FRAMES + 40, { 0: tap(4) })
+      const guest = buildMinigame(id, roster(2), 7)
+      guest.applySnapshot(JSON.parse(JSON.stringify(host.snapshot())))
+      return guest.phase === host.phase && guest.players.length === 2
+    }),
+  )
+
+  // --- Flag Drop
+
+  {
+    const g = buildMinigame('reaction', roster(3), 7)
+    run(g, INTRO_FRAMES + 2)
+    check('the flag starts up', g.armed === false)
+    // Going before the flag drops is the one unforgivable thing.
+    run(g, 2, { 0: { press: true, left: false, right: false } })
+    check('going early puts you out', g.playerAt(0).out === true)
+    check('and scores worst', g.playerAt(0).score >= NEVER)
+
+    let guard = 0
+    while (!g.armed && guard++ < 600) g.step()
+    check('the flag does drop', g.armed === true)
+    run(g, 8, { 1: idle })
+    run(g, 2, { 1: { press: true, left: false, right: false } })
+    check('pressing after the flag records a time', g.playerAt(1).score > 0 && g.playerAt(1).score < NEVER)
+    run(g, 400, { 1: idle, 2: idle })
+    check('dithering forever ends the round', g.phase === 'done')
+    check('the quickest finger wins', g.standings()[0].slot === 1, `${g.standings()[0].slot}`)
+    // Both the false start and the player who never pressed are out on the
+    // same score, so they share last place rather than one trailing the other.
+    check('a false start never beats a real time', g.playerAt(0).rank > g.playerAt(1).rank)
+    check('and ties with anyone else who failed to go', g.playerAt(0).rank === g.playerAt(2).rank)
+  }
+
+  // --- Coconut Shake
+
+  {
+    const g = buildMinigame('masher', roster(2), 7)
+    run(g, INTRO_FRAMES + 2)
+    // Holding the key down is not shaking: only the press counts.
+    run(g, 120, { 0: tap(2), 1: { press: true, left: false, right: false } })
+    check('every press counts a shake', g.playerAt(0).score > 20, `${g.playerAt(0).score}`)
+    check('leaning on the key counts once', g.playerAt(1).score === 1, `${g.playerAt(1).score}`)
+    run(g, 8 * 60)
+    check('the shake ends on its own clock', g.phase === 'done')
+    check('the hardest shaker wins', g.standings()[0].slot === 0)
+  }
+
+  // --- Falling Coconuts
+
+  {
+    const g = buildMinigame('dodge', roster(2), 3)
+    run(g, INTRO_FRAMES + 2)
+    const start = g.pos.get(0)
+    run(g, 20, { 0: { press: false, left: false, right: true }, 1: idle })
+    check('holding right moves you right', g.pos.get(0) > start, `${start} -> ${g.pos.get(0)}`)
+    run(g, 30, { 0: { press: false, left: true, right: false } })
+    check('and left moves you back', g.pos.get(0) < start + 40)
+    // Nobody dodging means somebody eventually wears one.
+    run(g, 30 * 60, { 0: idle, 1: idle })
+    check('standing still under falling coconuts ends badly', g.phase === 'done')
+    check('surviving longer scores higher', g.standings()[0].score >= g.standings()[1].score)
+  }
+
+  {
+    // A single player has nobody to outlast, so it has to run its clock out
+    // rather than ending the instant they are hit.
+    const g = buildMinigame('dodge', roster(1), 5)
+    run(g, INTRO_FRAMES + 2)
+    run(g, 30 * 60 + 10, { 0: idle })
+    check('a solo dodge still finishes', g.phase === 'done')
+  }
+
+  // --- Stop the Tide
+
+  {
+    const g = buildMinigame('precision', roster(2), 9)
+    run(g, INTRO_FRAMES + 2)
+    run(g, 30, { 0: idle, 1: idle })
+    run(g, 2, { 0: { press: true, left: false, right: false } })
+    check('pressing stops the marker', g.stops.has(0))
+    check('the score is how far off you were', g.playerAt(0).score === Math.round(Math.abs(g.stops.get(0)) * 10) / 10)
+    check('and it is inside the swing', g.playerAt(0).score <= PRECISION_RANGE)
+    run(g, 12 * 60)
+    check('never pressing ends the round anyway', g.phase === 'done')
+    check('somebody who never pressed is out', g.playerAt(1).out === true)
+    check('and the one who stopped it wins', g.standings()[0].slot === 0)
+  }
+
+  // --- placings
+
+  {
+    const g = buildMinigame('masher', roster(3), 7)
+    run(g, INTRO_FRAMES + 2)
+    g.playerAt(0).score = 5
+    g.playerAt(1).score = 5
+    g.playerAt(2).score = 1
+    g.finish()
+    check('an exact tie shares a placing', g.playerAt(0).rank === g.playerAt(1).rank, `${g.playerAt(0).rank} vs ${g.playerAt(1).rank}`)
+    check('and the next one down is third', g.playerAt(2).rank === 3, `${g.playerAt(2).rank}`)
   }
 }
 

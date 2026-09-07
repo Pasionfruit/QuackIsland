@@ -158,6 +158,7 @@ own machine) is just opening that one URL twice.
 | Party Parade panel (lobby, board) | [src/games/partyparade/PartyParadePanel.tsx](src/games/partyparade/PartyParadePanel.tsx) |
 | Party Parade board: islands, bridges, the tile loop | [src/games/partyparade/engine/board.ts](src/games/partyparade/engine/board.ts) |
 | Party Parade match state and cast line-up | [src/games/partyparade/engine/engine.ts](src/games/partyparade/engine/engine.ts) |
+| Party Parade minigames (four free-for-alls) | [src/games/partyparade/minigames/games.ts](src/games/partyparade/minigames/games.ts) |
 
 ## The art rules
 
@@ -571,6 +572,22 @@ touching it. It is drawn in world units, so it sticks to the board as the
 camera moves, and it is deliberately not in the snapshot: it is decoration, and
 putting it there would bloat every frame of state for something nobody needs
 resynced.
+**The minigames are four free-for-alls sharing one frame.** A minigame here is
+a roster, one clock, and a single number per player that decides the placings -
+that is the whole Wii Party shape, and it means a new one is a `step()` and a
+painter rather than a new subsystem
+([minigames/types.ts](src/games/partyparade/minigames/types.ts)). They are
+deliberately unalike - a reaction test, a masher, a dodge and a precision stop -
+so a run of them does not feel like one game wearing four hats. The lobby has a
+**Minigames** tab that starts any of them on their own, which is how they get
+tested without walking a board first.
+
+Two details in there are worth knowing because they are easy to get wrong.
+Presses are **edge-detected**, so leaning on the key scores one shake rather
+than sixty. And a game where lower wins has to tell the difference between
+"scored zero" and "has not gone yet" - otherwise everyone still waiting sits at
+the top of the board looking like they played a perfect round, which is what
+`hasScored` exists to prevent.
 
 ## Adding a game
 
@@ -604,4 +621,7 @@ that is both genuinely shorter and genuinely rougher, and three checkpoints no
 route can duck - then drives whole turns: rolling only in turn, stopping at the
 fork and being told which way, a checkpoint turning the leader away while the
 pack walks past, spaces that shove you forwards and back, winning at the chest,
-and snapshot round-tripping.
+and snapshot round-tripping. It then drives all four minigames: a false start
+putting you out, edge-detected presses so holding a key is not mashing it,
+dodging and being knocked out, stopping the marker, tied placings being shared,
+and every one of them round-tripping a snapshot.

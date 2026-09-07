@@ -18,6 +18,16 @@ import {
   type TileKind,
 } from './engine/board'
 import { PARADE_CAST, PLAYER_COLORS, PartyParadeEngine, VIEW_H, VIEW_W } from './engine/engine'
+import { buildMinigame, type AnyMinigame } from './minigames/games'
+import { renderMinigame } from './minigames/render'
+import {
+  MG_VIEW_H,
+  MG_VIEW_W,
+  MINIGAMES,
+  MINIGAME_ORDER,
+  type MgRosterEntry,
+  type MinigameId,
+} from './minigames/types'
 import {
   TILE_COLORS,
   TILE_LABELS,
@@ -46,10 +56,11 @@ import {
  */
 
 const net = new NetClient()
-type Screen = 'lobby' | 'play'
+type Screen = 'lobby' | 'play' | 'minigame'
 type Role = 'solo' | 'host' | 'guest'
 /** The camera follows the turn until you take hold of it, and "find me" sticks to your own pawn. */
 type CamMode = 'turn' | 'me' | 'free'
+type LobbyTab = 'parade' | 'minigames'
 
 const KIND_ORDER: TileKind[] = ['start', 'plain', 'good', 'bad', 'hostile', 'gate', 'treasure']
 const CAM_EASE = 0.08
@@ -90,6 +101,7 @@ export function PartyParadePanel() {
   const [picks, setPicks] = useState<Record<number, number>>({ 0: 0 })
   const [drawing, setDrawing] = useState(false)
   const [camMode, setCamMode] = useState<CamMode>('turn')
+  const [lobbyTab, setLobbyTab] = useState<LobbyTab>('parade')
   const [, setTick] = useState(0)
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -112,6 +124,10 @@ export function PartyParadePanel() {
   const inkRef = useRef<(InkStroke & { slot: number })[]>([])
   const strokeRef = useRef<number[] | null>(null)
   const dragRef = useRef<{ x: number; y: number } | null>(null)
+  const mgRef = useRef<AnyMinigame | null>(null)
+  const mgKeys = useRef({ press: false, left: false, right: false })
+  /** Where to go when the minigame ends: back to the lobby, or back to the board. */
+  const mgReturnRef = useRef<Screen>('lobby')
   const fullscreen = useFullscreen<HTMLDivElement>()
 
   function buildEngine(roster: { slot: number; name: string; castIndex: number }[]): PartyParadeEngine {
@@ -129,6 +145,33 @@ export function PartyParadePanel() {
       name: p.name,
       castIndex: picksRef.current[p.slot] ?? p.slot % PARADE_CAST.length,
     }))
+  }
+
+  /** The same roster the parade uses, plus the colours a minigame needs. */
+  function mgRoster(): MgRosterEntry[] {
+    const eng = engineRef.current
+    if (eng && eng.players.length) {
+      return eng.players.map((p) => ({ slot: p.slot, name: p.name, color: p.color, castIndex: p.castIndex }))
+    }
+    return rosterFromLobby().map((r) => ({
+      ...r,
+      color: PLAYER_COLORS[r.slot % PLAYER_COLORS.length],
+    }))
+  }
+
+  function startMinigame(id: MinigameId, from: Screen = 'lobby'): void {
+    const roster = mgRoster()
+    const seed = (Date.now() & 0xffff) + 1
+    mgReturnRef.current = from
+    mgRef.current = buildMinigame(id, roster, seed)
+    setScreen('minigame')
+    if (roleRef.current === 'host') net.send({ k: 'mgStart', id, seed, roster } satisfies PartyParadePayload)
+  }
+
+  function leaveMinigame(): void {
+    mgRef.current = null
+    setScreen(mgReturnRef.current)
+    if (roleRef.current === 'host') net.send({ k: 'mgLeave' } satisfies PartyParadePayload)
   }
 
   useEffect(() => {
@@ -186,6 +229,9 @@ export function PartyParadePanel() {
             case 'route':
               eng?.chooseRoute(from, msg.shortcut)
               break
+            case 'mgInput':
+              mgRef.current?.setInput(from, msg.i)
+              break
             case 'pick':
               setPicks((prev) => {
                 if (Object.entries(prev).some(([s, c]) => Number(s) !== from && c === msg.castIndex)) return prev
@@ -214,6 +260,17 @@ export function PartyParadePanel() {
           const next: Record<number, number> = {}
           for (const [s, c] of msg.map) next[s] = c
           setPicks(next)
+        } else if (msg.k === 'mgStart') {
+          mgReturnRef.current = 'lobby'
+          mgRef.current = buildMinigame(msg.id as MinigameId, msg.roster, msg.seed)
+          setScreen('minigame')
+          setTick((t) => t + 1)
+        } else if (msg.k === 'mgSnap') {
+          mgRef.current?.applySnapshot(msg.s as ReturnType<AnyMinigame['snapshot']>)
+        } else if (msg.k === 'mgLeave') {
+          mgRef.current = null
+          setScreen('lobby')
+          setTick((t) => t + 1)
         }
       },
     })
@@ -356,6 +413,89 @@ export function PartyParadePanel() {
     net.send({ k: 'ink', color, pts } satisfies PartyParadePayload)
   }
 
+  // -------------------------------------------------------------- minigame
+
+  useEffect(() => {
+    if (screen !== 'minigame') return
+    const codes = {
+      press: codeFor('partyparade.action', 'Space'),
+      left: codeFor('partyparade.left', 'KeyA'),
+      right: codeFor('partyparade.right', 'KeyD'),
+    }
+    const set = (e: KeyboardEvent, down: boolean) => {
+      const el = e.target as HTMLElement | null
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
+      const k = mgKeys.current
+      if (e.code === codes.press || e.code === 'Space') k.press = down
+      else if (e.code === codes.left || e.code === 'ArrowLeft') k.left = down
+      else if (e.code === codes.right || e.code === 'ArrowRight') k.right = down
+      else return
+      e.preventDefault()
+    }
+    const kd = (e: KeyboardEvent) => set(e, true)
+    const ku = (e: KeyboardEvent) => set(e, false)
+    window.addEventListener('keydown', kd)
+    window.addEventListener('keyup', ku)
+    return () => {
+      window.removeEventListener('keydown', kd)
+      window.removeEventListener('keyup', ku)
+    }
+  }, [screen])
+
+  useEffect(() => {
+    if (screen !== 'minigame') return
+    const canvas = canvasRef.current
+    if (!canvas) return
+    let ctx = fitScene(canvas, MG_VIEW_W, MG_VIEW_H)
+    const observer = new ResizeObserver(() => {
+      ctx = fitScene(canvas, MG_VIEW_W, MG_VIEW_H)
+    })
+    observer.observe(canvas)
+
+    let raf = 0
+    let frame = 0
+    let sinceSend = 0
+    let lastPhase = ''
+
+    const tick = () => {
+      raf = requestAnimationFrame(tick)
+      const game = mgRef.current
+      if (!game) return
+      frame++
+
+      const mine = { ...mgKeys.current }
+      if (roleRef.current === 'guest') {
+        // A guest only sends what its keys are doing; the host decides what
+        // that was worth, exactly like every other game here.
+        sinceSend++
+        if (sinceSend >= 2) {
+          sinceSend = 0
+          net.send({ k: 'mgInput', i: mine } satisfies PartyParadePayload)
+        }
+      } else {
+        game.setInput(slotRef.current, mine)
+        game.step()
+        sinceSend++
+        if (roleRef.current === 'host' && sinceSend >= 2) {
+          sinceSend = 0
+          net.send({ k: 'mgSnap', s: game.snapshot() } satisfies PartyParadePayload)
+        }
+      }
+
+      renderMinigame(ctx, game, frame, slotRef.current)
+
+      if (game.phase !== lastPhase) {
+        lastPhase = game.phase
+        setTick((t) => t + 1)
+      }
+    }
+    raf = requestAnimationFrame(tick)
+    return () => {
+      cancelAnimationFrame(raf)
+      observer.disconnect()
+    }
+  }, [screen])
+
   // ------------------------------------------------------------------- loop
 
   useEffect(() => {
@@ -455,8 +595,61 @@ export function PartyParadePanel() {
           </span>
           <span className="chip">Party board game</span>
           <span className="chip">2-8 players</span>
+          <div className="spacer" />
+          <button
+            type="button"
+            className={`btn btn--sm ${lobbyTab === 'parade' ? '' : 'btn--ghost'}`}
+            onClick={() => setLobbyTab('parade')}
+          >
+            The parade
+          </button>
+          <button
+            type="button"
+            className={`btn btn--sm ${lobbyTab === 'minigames' ? '' : 'btn--ghost'}`}
+            onClick={() => setLobbyTab('minigames')}
+          >
+            Minigames
+          </button>
         </div>
 
+        {lobbyTab === 'minigames' ? (
+          <div className="infogrid">
+            <div className="panel">
+              <div className="panel__title">Try a minigame</div>
+              <p className="muted" style={{ marginTop: 0, fontSize: 12 }}>
+                Each one is a free-for-all: everybody plays at once and the placings come out at the end.
+                Start one here to try it on its own - {role === 'host' ? 'the whole room comes with you.' : role === 'guest' ? 'the host starts these for the room.' : 'you can practise solo.'}
+              </p>
+            </div>
+            {MINIGAME_ORDER.map((id) => {
+              const def = MINIGAMES[id]
+              return (
+                <div className="panel" key={id}>
+                  <div className="panel__title">{def.name}</div>
+                  <p className="muted" style={{ marginTop: 0, fontSize: 12 }}>
+                    {def.brief}
+                  </p>
+                  <p className="muted" style={{ marginTop: 6, fontSize: 12 }}>
+                    {def.how}
+                  </p>
+                  <div className="chiprow" style={{ marginTop: 10 }}>
+                    <button
+                      type="button"
+                      className="btn btn--sm"
+                      disabled={role === 'guest'}
+                      onClick={() => startMinigame(id, 'lobby')}
+                    >
+                      {role === 'guest' ? 'Host starts it' : 'Play it'}
+                    </button>
+                    <span className="muted" style={{ fontSize: 12 }}>
+                      {def.higherWins ? 'most wins' : 'lowest wins'}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
         <div className="infogrid">
           <div className="panel">
             <div className="panel__title">A board, a die, and forty minutes of betrayal.</div>
@@ -589,6 +782,87 @@ export function PartyParadePanel() {
             </div>
           </div>
         </div>
+        )}
+      </div>
+    )
+  }
+
+  // -------------------------------------------------------------- minigame
+
+  if (screen === 'minigame') {
+    const game = mgRef.current
+    const def = game ? MINIGAMES[game.id] : null
+    const rows = game?.standings() ?? []
+    return (
+      <div>
+        <div className="gamehead">
+          <h2>{def?.name ?? 'Minigame'}</h2>
+          <span className="chip chip--gold">{game?.phase === 'done' ? 'Result' : 'Free-for-all'}</span>
+          <div className="spacer" />
+          <button className="btn btn--ghost btn--sm" onClick={leaveMinigame}>
+            {mgReturnRef.current === 'play' ? 'Back to the board' : 'Back to the lobby'}
+          </button>
+        </div>
+
+        <div className="stage-wrap" ref={fullscreen.ref}>
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm stage-wrap__fullscreen"
+            onClick={fullscreen.toggle}
+          >
+            {fullscreen.active ? 'Exit fullscreen' : 'Fullscreen'}
+          </button>
+          <canvas
+            ref={canvasRef}
+            className="stage"
+            style={{ width: '100%', height: 'auto', aspectRatio: `${MG_VIEW_W} / ${MG_VIEW_H}` }}
+          />
+          {game?.phase === 'done' && role !== 'guest' && (
+            <div className="stage-ctl stage-ctl--roll">
+              <button type="button" className="btn" onClick={() => startMinigame(game.id, mgReturnRef.current)}>
+                Play it again
+              </button>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={leaveMinigame}>
+                Done
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="infogrid">
+          <div className="panel">
+            <div className="panel__title">{game?.phase === 'done' ? 'Result' : 'How it goes'}</div>
+            <p className="muted" style={{ marginTop: 0, fontSize: 12 }}>
+              {def?.brief} {def?.how}
+            </p>
+            <div style={{ display: 'grid', gap: 6, marginTop: 10 }}>
+              {rows.map((p, i) => (
+                <div className="keyrow" key={p.slot}>
+                  <span style={{ color: p.color }}>
+                    {game?.phase === 'done' ? `${p.rank}.` : `${i + 1}.`} {p.name}
+                    {p.slot === slot ? ' (you)' : ''}
+                  </span>
+                  <span className="muted">{def?.unit(p.score)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <ControlsSettings
+            title="Controls"
+            resetPrefix="partyparade"
+            groups={[
+              {
+                title: 'Minigames',
+                rows: [
+                  { key: 'partyparade.action', label: 'Action', fallback: 'Space' },
+                  { key: 'partyparade.left', label: 'Move left', fallback: 'KeyA' },
+                  { key: 'partyparade.right', label: 'Move right', fallback: 'KeyD' },
+                ],
+              },
+            ]}
+          />
+        </div>
       </div>
     )
   }
@@ -655,7 +929,7 @@ export function PartyParadePanel() {
             {drawing ? 'Drawing' : 'Draw'}
           </button>
           <button type="button" className="btn btn--ghost btn--sm" onClick={clearMyInk}>
-            Rub out
+            Erase
           </button>
           <button
             type="button"
