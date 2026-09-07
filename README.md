@@ -510,46 +510,67 @@ are the natural next steps, not blockers for a first playable version.
 
 ## Party Parade
 
-A 180-space loop across nine islands joined by bridges, in the shape of Wii
-Party's Island Race: take turns round the circuit, land on a space, and
-periodically everyone drops out of the board into a minigame. Two to eight
-players, one animal from the cast each, swappable at any time.
+A 180-space run from the start line to the treasure, across nine islands
+joined by bridges, in the shape of Wii Party's Island Race. Two to eight
+players, one animal from the cast each, first to the chest wins. The minigames
+between rounds are still to come, so it sits on the dashboard as a `prototype`
+rather than `live`.
 
-**It is being built in phases.** The board and the die are in - you can host,
-join, pick an animal, take turns and walk the loop. What the coloured spaces
-actually do to you, and the minigames between rounds, are still to come, so it
-sits on the dashboard as a `prototype` rather than `live`.
+**A player's position is one integer, but the course is not a line.** Every
+space points at what comes next rather than being followed by `i+1`, which is
+what lets the causeway exist: one space partway round forks, and the shortcut
+across the middle skips about a third of the run. Walking is therefore a route
+rather than a sum - `walkForward` hands back every space you step through, and
+stops early at the fork (you choose), at a checkpoint (everybody stops), and at
+the treasure (overshooting still arrives).
 
-**A player's position is one integer.** The loop is a flat ordered array and a
-pawn's position is an index into it, so moving is `nextTileIndex(i, steps)` -
-modular arithmetic, not the graph walk Case Closed needs, because a closed loop
-has no branching exits. Pawns also carry `totalSteps`, which never wraps: the
-renderer animates against that instead, so a pawn crossing the start line walks
-forward over it rather than scrubbing backwards round the whole board.
-
-**At 180 spaces the board is authored as a shape, not as spaces.** Nine islands
-and the waypoints between them are hand-placed; the spaces themselves are
-sampled at even arc length along a smooth closed curve through that shape
+**The course is authored as a shape, not as spaces.** Nine islands and the
+waypoints between them are hand-placed; the spaces are sampled at even arc
+length along a smooth curve through that shape
 ([engine/board.ts](src/games/partyparade/engine/board.ts)). Typing out 180
-coordinates would be miserable to author and worse to tune, and it would let a
-bridge drift out of line with the path it is supposed to carry. Deriving both
-from one curve means a bridge is simply a run of consecutive spaces that landed
-on open water - it cannot be in the wrong place.
+coordinates would be miserable to tune and would let a bridge drift out of line
+with the path it carries - deriving both from one curve means a bridge is
+simply a run of consecutive spaces that landed on open water.
+
+**Two rules exist to keep a runaway leader in reach.** The three checkpoints
+only obstruct whoever is in front: the leader has to roll an odd number, then
+an even one, then above a five to get through, and everybody behind walks
+straight past. All three sit on stretches every route has to cross, so taking
+the causeway cannot duck one. The causeway itself is the other rule - it is
+genuinely shorter, and it is also where most of the hostile spaces live, so it
+is a gamble rather than a free saving.
+
+**"First place" means nearest the treasure, not furthest travelled.** With a
+branch in the course those are different numbers, and the difference is not a
+detail: somebody just past the fork on the main road is *further* from the
+chest than somebody sat before it, because the shortcut is still open to the
+one behind. Distance is measured by shortest remaining route
+(`distanceToGoal`), which is what the checkpoints and the standings both read.
 
 **This is the one game here with a camera.** Every other game fits its whole
-level in a fixed 480x270 frame and says so; a 180-space loop is far too big for
-that, so the camera follows whoever is up and a minimap in the corner keeps the
-shape of the circuit on screen. That is also why the board has no sky: with the
-view roaming a world nine times its size there is no fixed horizon to anchor
-one to.
+level in a fixed 480x270 frame and says so; a 180-space course is far too big
+for that, so the camera follows whoever is up, you can drag the board to look
+around, and "find me" snaps back to your own pawn. A minimap keeps the shape of
+the course - both routes, the checkpoints and the chest - on screen throughout.
+That is also why there is no sky: with the view roaming a world nine times its
+size there is no fixed horizon to anchor one to.
 
-**The engine has a clock now, but only for animation.** Turns are still
-event-driven and every mutator checks it is actually your turn first, the same
-shape Case Closed uses. What `step()` drives is the die tumbling, the pawn
-hopping space to space, and the beat before the turn passes - the host owns all
-of it and broadcasts snapshots while something is moving. A guest sends nothing
-but "roll" and "I want to be that animal", and carries only the walk animation
-forward locally between snapshots so a hop does not stutter.
+**The engine has a clock, but only for animation.** Turns are event-driven and
+every mutator checks it is your turn first, the same shape Case Closed uses.
+What `step()` drives is the die tumbling, the pawn hopping space to space, the
+shove a space gives you when you land on it, and the beat before the turn
+passes. A guest sends "roll" and "this way at the fork" and renders what
+arrives, carrying only the walk animation forward locally between snapshots so
+a hop does not stutter.
+
+**Ink never goes near the host.** Anyone can scribble on the map - plotting a
+route, marking a space, drawing something unrepeatable about the player in
+front - and because the relay already fans a message out to everyone else in
+the room, a scribble reaches every other player in one hop without the host
+touching it. It is drawn in world units, so it sticks to the board as the
+camera moves, and it is deliberately not in the snapshot: it is decoration, and
+putting it there would bloat every frame of state for something nobody needs
+resynced.
 
 ## Adding a game
 
@@ -576,10 +597,11 @@ bundles Build & Betray's pieces, course and match engine, checking placement
 rules and the anti-grief hazard cap, the build/preview/run/results/next-round
 state machine, gravity/jumping/landing, hazard kills with betrayal credit,
 the goal and its scoring, Classic and Quick Play win conditions, and snapshot
-round-tripping. Finally it bundles Party Parade's board and match
-state, checking the generated 180-space loop holds together - even spacing, no
-space stranded off an island, every island visited, and bridges that cover
-exactly the water spaces - then drives a whole turn: rolling only when it is
-your turn, walking the rolled number of spaces, counting a lap across the start
-line, handing over to the next player, one animal each, and snapshot
-round-tripping.
+round-tripping. Finally it bundles Party Parade's course and match
+state, checking the generated run holds together - even spacing, a road that
+ends at the treasure, bridges covering exactly the water spaces, a causeway
+that is both genuinely shorter and genuinely rougher, and three checkpoints no
+route can duck - then drives whole turns: rolling only in turn, stopping at the
+fork and being told which way, a checkpoint turning the leader away while the
+pack walks past, spaces that shove you forwards and back, winning at the chest,
+and snapshot round-tripping.

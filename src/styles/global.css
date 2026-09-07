@@ -1160,3 +1160,24 @@ kbd {
   background: var(--leaf);
   transform: rotate(45deg);
 }
+
+/* Party Parade's on-stage controls: rolling, drawing and finding yourself
+   again all belong over the board rather than in a panel below it. */
+.stage-ctl {
+  position: absolute;
+  z-index: 6;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.stage-ctl--roll {
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+}
+
+.stage-ctl--tools {
+  left: 12px;
+  bottom: 12px;
+}

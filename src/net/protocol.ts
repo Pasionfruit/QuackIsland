@@ -155,10 +155,16 @@ export type PartyParadePayload =
   | { k: 'start'; roster: { slot: Slot; name: string; castIndex: number }[] }
   | { k: 'snap'; s: unknown }
   | { k: 'roll' }
-  /** A guest choosing an animal, in the lobby or mid-match. */
+  /** A guest choosing an animal. Lobby only - you are stuck with it once the parade starts. */
   | { k: 'pick'; castIndex: number }
   /** The host echoing every lobby choice back out, so nobody picks a taken animal. */
   | { k: 'picks'; map: [Slot, number][] }
+  /** Which way to go at the causeway fork. */
+  | { k: 'route'; shortcut: boolean }
+  /** A scribble on the map, in world units as flat x,y pairs. Peer to peer - the relay already fans it out. */
+  | { k: 'ink'; color: string; pts: number[] }
+  /** Rubs out everything the sender drew. */
+  | { k: 'clearInk' }
 
 export type SmashPayload =
   | { k: 'pick'; slot: Slot; charId: string }

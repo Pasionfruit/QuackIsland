@@ -1,14 +1,15 @@
 /**
- * Draws the Party Parade board.
+ * Draws the Party Parade course.
  *
- * The loop is 180 spaces across a world far bigger than the view, so unlike
- * the other games here this one has a camera: it follows whoever is taking
- * their turn. A minimap in the corner keeps the whole circuit on screen so
- * following the action never costs you the shape of the board.
+ * The run is 180 spaces across a world far bigger than the view, so unlike the
+ * other games here this one has a camera: it follows whoever is taking their
+ * turn unless you take hold of it yourself. A minimap in the corner keeps the
+ * whole course on screen so following the action never costs you the shape of
+ * it.
  *
- * Draw order is back to front: sea, islands, the bridges between them, the
- * loop on top of both, the cast standing on it, then the chrome on top in
- * screen space.
+ * Draw order is back to front: sea, islands, bridges, the two routes, whatever
+ * people have scribbled on the map, the cast standing on it, then chrome on
+ * top in screen space.
  */
 import { drawAvatar } from '../../art/avatar'
 import { PAL } from '../../art/palette'
@@ -18,7 +19,13 @@ import { domePoly, ellipse, facet, noise, shade, softShadow, withAlpha, type Pt 
 import { HUD, hudPlate, hudText, nameTag } from '../../lib/hud'
 import {
   BOARD_TILES,
+  FORK_INDEX,
   ISLANDS,
+  MAIN_COUNT,
+  REJOIN_INDEX,
+  SHORT_COUNT,
+  SHORT_START,
+  TREASURE_INDEX,
   VIEW_H,
   VIEW_W,
   WORLD_H,
@@ -29,30 +36,41 @@ import {
 } from './engine/board'
 import { PARADE_CAST, type PPPlayer, type PartyParadeEngine } from './engine/engine'
 
-/** What each kind of space looks like. The panel repeats this as a legend. */
 export const TILE_COLORS: Record<TileKind, string> = {
   start: PAL.cream,
   plain: '#7f9c62',
   good: '#e8c05f',
   bad: '#8d7aa0',
   hostile: PAL.fireDeep,
+  gate: '#6fa8c4',
+  treasure: '#f0c449',
 }
 
 export const TILE_LABELS: Record<TileKind, string> = {
-  start: 'Start',
+  start: 'Start line',
   plain: 'Open road',
   good: 'Good news',
   bad: 'Bad news',
   hostile: 'Actively hostile',
+  gate: 'Checkpoint',
+  treasure: 'The treasure',
 }
 
 const SAND = shade(PAL.dirt, 0.42)
 const SPANS = bridgeSpans()
+const MAIN_LINE = Array.from({ length: MAIN_COUNT }, (_, i) => i)
+const SHORT_LINE = [FORK_INDEX, ...Array.from({ length: SHORT_COUNT }, (_, k) => SHORT_START + k), REJOIN_INDEX]
 
 export interface Camera {
   x: number
   y: number
   zoom: number
+}
+
+/** A scribble somebody drew on the map, in world units. Flat x,y pairs to keep it small on the wire. */
+export interface InkStroke {
+  color: string
+  pts: number[]
 }
 
 // ---------------------------------------------------------------- geometry
@@ -72,20 +90,27 @@ function nearPath(x: number, y: number, pad: number): boolean {
   return false
 }
 
+export function applyCamera(ctx: CanvasRenderingContext2D, cam: Camera): void {
+  ctx.translate(VIEW_W / 2, VIEW_H / 2)
+  ctx.scale(cam.zoom, cam.zoom)
+  ctx.translate(-cam.x, -cam.y)
+}
+
+/** Screen point to world point, for drawing on the map. */
+export function screenToWorld(sx: number, sy: number, cam: Camera): Pt {
+  return { x: (sx - VIEW_W / 2) / cam.zoom + cam.x, y: (sy - VIEW_H / 2) / cam.zoom + cam.y }
+}
+
 /** Where a pawn is standing or walking, in world units. */
 export function pawnSpot(eng: PartyParadeEngine, p: PPPlayer): { x: number; y: number; hop: number; facing: 1 | -1 } {
-  const n = BOARD_TILES.length
-  const abs = eng.displaySteps(p)
-  const i0 = Math.floor(abs)
-  const f = abs - i0
-  const a = BOARD_TILES[((i0 % n) + n) % n]
-  const b = BOARD_TILES[((((i0 + 1) % n) + n) % n)]
+  const { a, b, f } = eng.liveTile(p)
+  const ta = BOARD_TILES[a]
+  const tb = BOARD_TILES[b] ?? ta
   return {
-    x: a.x + (b.x - a.x) * f,
-    y: a.y + (b.y - a.y) * f,
-    // A little arc over each space, so a walk reads as hopping rather than sliding.
+    x: ta.x + (tb.x - ta.x) * f,
+    y: ta.y + (tb.y - ta.y) * f,
     hop: eng.isWalking(p.slot) ? Math.sin(f * Math.PI) * 7 : 0,
-    facing: b.x >= a.x ? 1 : -1,
+    facing: tb.x >= ta.x ? 1 : -1,
   }
 }
 
@@ -106,11 +131,6 @@ function drawIsland(ctx: CanvasRenderingContext2D, isl: Island): void {
   drawIslandScatter(ctx, isl)
 }
 
-/**
- * Trees and rocks, placed from the island's seed rather than hand-listed -
- * stable between reloads and cheap to author for nine islands. The path runs
- * straight over each island, so anything that would land on it is skipped.
- */
 function drawIslandScatter(ctx: CanvasRenderingContext2D, isl: Island): void {
   const spots: Pt[] = []
   for (let i = 0; i < 16; i++) {
@@ -132,13 +152,14 @@ function drawIslandScatter(ctx: CanvasRenderingContext2D, isl: Island): void {
 
 // ----------------------------------------------------------------- bridges
 
-/** One bridge per run of spaces out over water, so a deck always lands on the path. */
 function drawBridge(ctx: CanvasRenderingContext2D, span: number[]): void {
-  const n = BOARD_TILES.length
-  const first = span[0]
-  const last = span[span.length - 1]
-  // Reach one space onto the land at each end so the deck meets the shore.
-  const pts: Pt[] = [BOARD_TILES[(first - 1 + n) % n], ...span.map((i) => BOARD_TILES[i]), BOARD_TILES[(last + 1) % n]]
+  const first = BOARD_TILES[span[0]]
+  const last = BOARD_TILES[span[span.length - 1]]
+  const pts: Pt[] = [
+    BOARD_TILES[first.prev >= 0 ? first.prev : span[0]],
+    ...span.map((i) => BOARD_TILES[i]),
+    BOARD_TILES[last.next >= 0 ? last.next : span[span.length - 1]],
+  ]
   const width = 17
 
   ctx.save()
@@ -160,12 +181,10 @@ function drawBridge(ctx: CanvasRenderingContext2D, span: number[]): void {
   ctx.stroke()
 
   ctx.strokeStyle = withAlpha(PAL.woodShade, 0.5)
-  ctx.lineWidth = width
   ctx.setLineDash([3, 7])
   ctx.stroke()
   ctx.setLineDash([])
 
-  // Rails.
   ctx.strokeStyle = shade(PAL.wood, -0.24)
   ctx.lineWidth = 1.6
   for (const side of [-1, 1]) {
@@ -186,23 +205,103 @@ function drawBridge(ctx: CanvasRenderingContext2D, span: number[]): void {
   ctx.restore()
 }
 
-// -------------------------------------------------------------------- path
+// ----------------------------------------------------------- notable spaces
 
-function drawPath(ctx: CanvasRenderingContext2D, frame: number): void {
+function drawTreasure(ctx: CanvasRenderingContext2D, x: number, y: number, frame: number): void {
+  const bob = Math.sin(frame * 0.06) * 1.4
+  softShadow(ctx, x, y + 3, 14, 5, 0.3)
+  // Chest: a body, a lid, and a band.
+  facet(
+    ctx,
+    [
+      { x: x - 12, y: y - 4 + bob },
+      { x: x + 12, y: y - 4 + bob },
+      { x: x + 10, y: y + 6 + bob },
+      { x: x - 10, y: y + 6 + bob },
+    ],
+    PAL.wood,
+    { dark: 0.26, light: 0.16 },
+  )
+  facet(
+    ctx,
+    [
+      { x: x - 12, y: y - 5 + bob },
+      { x: x - 7, y: y - 12 + bob },
+      { x: x + 7, y: y - 12 + bob },
+      { x: x + 12, y: y - 5 + bob },
+    ],
+    '#c9a24a',
+    { dark: 0.24, light: 0.22 },
+  )
+  ellipse(ctx, x, y - 4 + bob, 2.6, 2.6, '#f6e3a8')
+  // A couple of glints, so it reads as the prize from a distance.
+  for (let i = 0; i < 3; i++) {
+    const t = (frame * 0.03 + i * 0.7) % 1
+    ctx.save()
+    ctx.globalAlpha = Math.max(0, 1 - t) * 0.8
+    ellipse(ctx, x - 9 + i * 9, y - 18 - t * 8 + bob, 1.4, 1.4, '#fff3c4')
+    ctx.restore()
+  }
+}
+
+function drawGate(ctx: CanvasRenderingContext2D, x: number, y: number, rule: string): void {
+  // Two posts and a rope: a checkpoint you can see coming.
+  for (const dx of [-11, 11]) {
+    facet(
+      ctx,
+      [
+        { x: x + dx - 2, y: y - 16 },
+        { x: x + dx + 2, y: y - 16 },
+        { x: x + dx + 2, y: y + 2 },
+        { x: x + dx - 2, y: y + 2 },
+      ],
+      PAL.wood,
+      { dark: 0.28, flat: true },
+    )
+  }
   ctx.save()
-  ctx.strokeStyle = withAlpha('#5a4c38', 0.24)
-  ctx.lineWidth = 12
+  ctx.strokeStyle = '#6fa8c4'
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  ctx.moveTo(x - 11, y - 14)
+  ctx.quadraticCurveTo(x, y - 9, x + 11, y - 14)
+  ctx.stroke()
+  ctx.restore()
+  const mark = rule === 'odd' ? '1 3 5' : rule === 'even' ? '2 4 6' : '6'
+  hudText(ctx, mark, x, y - 19, { size: 7, align: 'center', color: HUD.ink })
+}
+
+// ------------------------------------------------------------------ routes
+
+function strokeRoute(ctx: CanvasRenderingContext2D, line: number[], color: string, width: number): void {
+  ctx.save()
+  ctx.strokeStyle = color
+  ctx.lineWidth = width
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
   ctx.beginPath()
-  BOARD_TILES.forEach((t, i) => (i ? ctx.lineTo(t.x, t.y) : ctx.moveTo(t.x, t.y)))
-  ctx.closePath()
+  line.forEach((i, k) => {
+    const t = BOARD_TILES[i]
+    if (k) ctx.lineTo(t.x, t.y)
+    else ctx.moveTo(t.x, t.y)
+  })
   ctx.stroke()
   ctx.restore()
+}
 
-  for (const t of BOARD_TILES) {
+function drawRoutes(ctx: CanvasRenderingContext2D, frame: number): void {
+  strokeRoute(ctx, MAIN_LINE, withAlpha('#5a4c38', 0.24), 12)
+  // The causeway reads as the rougher option even before you know what is on it.
+  ctx.save()
+  ctx.setLineDash([9, 6])
+  strokeRoute(ctx, SHORT_LINE, withAlpha('#7a4a38', 0.3), 10)
+  ctx.restore()
+
+  for (let i = 0; i < BOARD_TILES.length; i++) {
+    const t = BOARD_TILES[i]
+    if (t.kind === 'treasure') continue
     const c = TILE_COLORS[t.kind]
-    const big = t.kind === 'start'
+    const big = t.kind === 'start' || t.kind === 'gate'
     const rx = big ? 8 : 6.2
     const ry = big ? 5.2 : 4
     ellipse(ctx, t.x, t.y + 1.8, rx, ry, shade(c, -0.34))
@@ -210,26 +309,52 @@ function drawPath(ctx: CanvasRenderingContext2D, frame: number): void {
     ellipse(ctx, t.x, t.y - 0.7, rx * 0.66, ry * 0.6, shade(c, 0.22))
   }
 
+  for (const t of BOARD_TILES) if (t.gate) drawGate(ctx, t.x, t.y, t.gate)
+
   const s = BOARD_TILES[0]
   flag(ctx, s.x + 2, s.y - 3, 38, '#e8703a', frame)
+
+  const g = BOARD_TILES[TREASURE_INDEX]
+  drawTreasure(ctx, g.x, g.y, frame)
+}
+
+// -------------------------------------------------------------------- ink
+
+export function drawInk(ctx: CanvasRenderingContext2D, strokes: InkStroke[], cam: Camera): void {
+  if (!strokes.length) return
+  ctx.save()
+  applyCamera(ctx, cam)
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  ctx.lineWidth = 3 / Math.max(0.4, cam.zoom)
+  for (const s of strokes) {
+    if (s.pts.length < 4) {
+      if (s.pts.length === 2) ellipse(ctx, s.pts[0], s.pts[1], 1.8, 1.8, s.color)
+      continue
+    }
+    ctx.strokeStyle = s.color
+    ctx.beginPath()
+    for (let i = 0; i < s.pts.length; i += 2) {
+      if (i) ctx.lineTo(s.pts[i], s.pts[i + 1])
+      else ctx.moveTo(s.pts[i], s.pts[i + 1])
+    }
+    ctx.stroke()
+  }
+  ctx.restore()
 }
 
 // ------------------------------------------------------------------- world
 
 export function drawBoard(ctx: CanvasRenderingContext2D, frame: number, cam: Camera): void {
-  // Open sea, painted in screen space - with the camera roaming a board this
+  // Open sea, painted in screen space - with the camera roaming a course this
   // wide there is no fixed horizon to anchor a sky to.
   water(ctx, VIEW_W, VIEW_H, 0, frame)
 
   ctx.save()
-  ctx.translate(VIEW_W / 2, VIEW_H / 2)
-  ctx.scale(cam.zoom, cam.zoom)
-  ctx.translate(-cam.x, -cam.y)
-
+  applyCamera(ctx, cam)
   for (const isl of ISLANDS) drawIsland(ctx, isl)
   for (const span of SPANS) drawBridge(ctx, span)
-  drawPath(ctx, frame)
-
+  drawRoutes(ctx, frame)
   ctx.restore()
 }
 
@@ -250,12 +375,8 @@ export function drawPawns(
   cam: Camera,
 ): void {
   ctx.save()
-  ctx.translate(VIEW_W / 2, VIEW_H / 2)
-  ctx.scale(cam.zoom, cam.zoom)
-  ctx.translate(-cam.x, -cam.y)
+  applyCamera(ctx, cam)
 
-  // Anyone standing still on the same space gets fanned out so nobody is
-  // completely hidden; whoever is mid-walk stands on their own.
   const parked = new Map<number, PPPlayer[]>()
   for (const p of eng.players) {
     if (eng.isWalking(p.slot)) continue
@@ -264,24 +385,27 @@ export function drawPawns(
     else parked.set(p.tileIndex, [p])
   }
 
-  const placed: { p: PPPlayer; x: number; y: number; hop: number; facing: 1 | -1; crowd: number }[] = []
+  const placed: { p: PPPlayer; x: number; y: number; hop: number; facing: 1 | -1; crowd: number; rank: number }[] =
+    []
   for (const p of eng.players) {
     const spot = pawnSpot(eng, p)
-    const group = parked.get(p.tileIndex)
     const walking = eng.isWalking(p.slot)
+    const group = parked.get(p.tileIndex)
     let off: Pt = { x: 0, y: 0 }
     let crowd = 1
+    let rank = 0
     if (!walking && group) {
       crowd = group.length
-      off = pawnOffset(group.indexOf(p), crowd)
+      rank = group.indexOf(p)
+      off = pawnOffset(rank, crowd)
     }
-    placed.push({ p, x: spot.x + off.x, y: spot.y + off.y, hop: spot.hop, facing: spot.facing, crowd })
+    placed.push({ p, x: spot.x + off.x, y: spot.y + off.y, hop: spot.hop, facing: spot.facing, crowd, rank })
   }
 
   placed.sort((a, b) => a.y - b.y)
 
   const active = eng.current?.slot
-  for (const { p, x, y, hop, facing, crowd } of placed) {
+  for (const { p, x, y, hop, facing, crowd, rank } of placed) {
     const char = PARADE_CAST[p.castIndex % PARADE_CAST.length]
     const walking = eng.isWalking(p.slot)
     softShadow(ctx, x, y + 1.5, 6, 2.2, 0.24)
@@ -291,9 +415,7 @@ export function drawPawns(
     ellipse(ctx, x, y + 1, 4.6, 1.7, withAlpha(p.color, 0.25))
     ctx.restore()
 
-    // A ring of light under whoever is up, so the turn is readable on the
-    // board and not only in the banner.
-    if (p.slot === active && !walking) {
+    if (p.slot === active && !walking && eng.phase === 'board') {
       const pulse = 0.5 + Math.sin(frame * 0.12) * 0.2
       ctx.save()
       ctx.globalAlpha = pulse
@@ -313,7 +435,11 @@ export function drawPawns(
     })
 
     const self = p.slot === viewerSlot
-    if (self || crowd <= 3 || walking) nameTag(ctx, p.name, x, y - hop - 30, p.color, { self })
+    // Two pawns on one space would otherwise print their names on top of each
+    // other, so a shared space stacks its tags instead.
+    if (self || crowd <= 3 || walking) {
+      nameTag(ctx, p.name, x, y - hop - 30 - (crowd > 1 ? rank * 9 : 0), p.color, { self })
+    }
   }
 
   ctx.restore()
@@ -392,7 +518,6 @@ export function drawDie(
 
 // ------------------------------------------------------------------- chrome
 
-/** The whole loop, shrunk into a corner, so following the action never loses the board. */
 function drawMinimap(ctx: CanvasRenderingContext2D, eng: PartyParadeEngine, cam: Camera): void {
   const w = 108
   const h = 68
@@ -403,20 +528,26 @@ function drawMinimap(ctx: CanvasRenderingContext2D, eng: PartyParadeEngine, cam:
   const oy = y + h / 2 - (WORLD_H / 2) * k
 
   // Nearly opaque: the shared HUD plate is see-through, and a pawn showing
-  // through the map behind the loop makes both harder to read.
+  // through the map behind the course makes both harder to read.
   hudPlate(ctx, x, y, w, h, { radius: 6, fill: 'rgba(28, 26, 22, 0.86)' })
 
   ctx.save()
-  ctx.strokeStyle = withAlpha(HUD.dim, 0.75)
-  ctx.lineWidth = 1.4
-  ctx.beginPath()
-  BOARD_TILES.forEach((t, i) =>
-    i ? ctx.lineTo(ox + t.x * k, oy + t.y * k) : ctx.moveTo(ox + t.x * k, oy + t.y * k),
-  )
-  ctx.closePath()
-  ctx.stroke()
+  const line = (idx: number[], color: string, dash: number[]) => {
+    ctx.strokeStyle = color
+    ctx.lineWidth = 1.3
+    ctx.setLineDash(dash)
+    ctx.beginPath()
+    idx.forEach((i, n) => {
+      const t = BOARD_TILES[i]
+      if (n) ctx.lineTo(ox + t.x * k, oy + t.y * k)
+      else ctx.moveTo(ox + t.x * k, oy + t.y * k)
+    })
+    ctx.stroke()
+    ctx.setLineDash([])
+  }
+  line(MAIN_LINE, withAlpha(HUD.dim, 0.75), [])
+  line(SHORT_LINE, withAlpha('#e8a06a', 0.8), [3, 2])
 
-  // What the camera is looking at.
   ctx.strokeStyle = withAlpha(HUD.ink, 0.4)
   ctx.lineWidth = 0.8
   ctx.strokeRect(
@@ -426,8 +557,11 @@ function drawMinimap(ctx: CanvasRenderingContext2D, eng: PartyParadeEngine, cam:
     (VIEW_H / cam.zoom) * k,
   )
 
-  const start = BOARD_TILES[0]
-  ellipse(ctx, ox + start.x * k, oy + start.y * k, 1.8, 1.8, PAL.cream)
+  for (const t of BOARD_TILES) {
+    if (t.gate) ellipse(ctx, ox + t.x * k, oy + t.y * k, 1.6, 1.6, '#6fa8c4')
+  }
+  const goal = BOARD_TILES[TREASURE_INDEX]
+  ellipse(ctx, ox + goal.x * k, oy + goal.y * k, 2.6, 2.6, '#f0c449')
 
   for (const p of eng.players) {
     const spot = pawnSpot(eng, p)
@@ -444,10 +578,15 @@ export function drawChrome(
   cam: Camera,
 ): void {
   const cur = eng.current
-  if (cur) {
+  if (eng.phase === 'over' && eng.winner !== null) {
+    const win = eng.playerAt(eng.winner)
+    hudPlate(ctx, 8, 8, 178, 30, { accent: win?.color })
+    hudText(ctx, 'TREASURE FOUND', 16, 22, { size: 11, weight: 700, color: HUD.ink })
+    hudText(ctx, `${win?.name ?? 'Somebody'} wins the parade`, 16, 33, { size: 8, color: HUD.dim })
+  } else if (cur) {
     const char = PARADE_CAST[cur.castIndex % PARADE_CAST.length]
     const yours = cur.slot === viewerSlot
-    hudPlate(ctx, 8, 8, 156, 30, { accent: cur.color })
+    hudPlate(ctx, 8, 8, 168, 30, { accent: cur.color })
     hudText(ctx, yours ? 'YOUR TURN' : cur.name, 16, 22, { size: 11, weight: 700, color: HUD.ink })
     hudText(ctx, `Round ${eng.round} - ${char.name}`, 16, 33, { size: 8, color: HUD.dim })
   }
@@ -458,6 +597,13 @@ export function drawChrome(
     const tilt = rolling ? Math.sin(frame * 0.5) * 0.22 : 0
     drawDie(ctx, 26, 62, 26, face, tilt)
     if (!rolling) hudText(ctx, `${eng.lastRoll} spaces`, 44, 66, { size: 9, color: HUD.dim })
+  }
+
+  // Whatever just happened, so a setback is never silent.
+  if (eng.message) {
+    const w = Math.min(300, 14 + eng.message.length * 4.6)
+    hudPlate(ctx, VIEW_W / 2 - w / 2, VIEW_H - 30, w, 20, { radius: 6 })
+    hudText(ctx, eng.message, VIEW_W / 2, VIEW_H - 17, { size: 9, align: 'center', color: HUD.ink })
   }
 
   drawMinimap(ctx, eng, cam)

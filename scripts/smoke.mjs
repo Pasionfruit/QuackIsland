@@ -1990,50 +1990,60 @@ console.log('\nPolyland Smash - engine smoke test\n')
 }
 
 // ------------------------------------------------------------- Party Parade
-// The 180-space loop is generated from an authored shape rather than typed
-// out space by space, so most of these check the generator: even spacing, no
-// space stranded off an island, and bridges that line up with the path. The
-// rest drive a turn end to end - roll, walk, hand over.
+// The course is generated from an authored shape rather than typed out space
+// by space, so the first half of these check the generator: even spacing, a
+// route that ends at the treasure, bridges that line up with the path, and
+// three checkpoints no route can duck. The rest drive whole turns - rolling,
+// the fork, the checkpoints, what the spaces do to you, and winning.
 {
-  const { BOARD_TILES, ISLANDS, START_INDEX, TILE_COUNT, WORLD_H, WORLD_W, bridgeSpans, nextTileIndex } =
-    await import(pathToFileURL(ppBoardOut).href)
-  const { LAND_FRAMES, PARADE_CAST, PartyParadeEngine, ROLL_FRAMES, STEP_FRAMES } = await import(
-    pathToFileURL(ppEngineOut).href
-  )
+  const {
+    BOARD_TILES,
+    FORK_INDEX,
+    GATE_INDICES,
+    ISLANDS,
+    MAIN_COUNT,
+    REJOIN_INDEX,
+    SHORT_COUNT,
+    SHORT_START,
+    START_INDEX,
+    TREASURE_INDEX,
+    WORLD_H,
+    WORLD_W,
+    bridgeSpans,
+    distanceToGoal,
+    gateAllows,
+    walkBack,
+    walkForward,
+  } = await import(pathToFileURL(ppBoardOut).href)
+  const { PARADE_CAST, PartyParadeEngine } = await import(pathToFileURL(ppEngineOut).href)
 
-  console.log('\nParty Parade - the board and the die\n')
+  console.log('\nParty Parade - the course, the die and the causeway\n')
 
-  check('the loop is the full 180 spaces', BOARD_TILES.length === TILE_COUNT, `${BOARD_TILES.length}`)
-  check('the loop opens on a start space', BOARD_TILES[START_INDEX].kind === 'start')
-  check('there is exactly one start space', BOARD_TILES.filter((t) => t.kind === 'start').length === 1)
-  check('every kind of space is somewhere on the board', new Set(BOARD_TILES.map((t) => t.kind)).size === 5)
+  // --- the generated course
 
-  // Spaces are sampled by arc length, so they should be near enough identical
-  // distances apart - uneven spacing would make the walk visibly lurch.
-  const gaps = BOARD_TILES.map((t, i) => {
-    const b = BOARD_TILES[(i + 1) % BOARD_TILES.length]
-    return Math.hypot(b.x - t.x, b.y - t.y)
-  })
+  check('the main road is the full 180 spaces', MAIN_COUNT === 180, `${MAIN_COUNT}`)
+  check('the course opens on a start space', BOARD_TILES[START_INDEX].kind === 'start')
+  check('the course ends at the treasure', BOARD_TILES[TREASURE_INDEX].kind === 'treasure')
+  check('the treasure is the end of the road', BOARD_TILES[TREASURE_INDEX].next === -1)
+  check('nothing points past the treasure', BOARD_TILES.every((t) => t.next < BOARD_TILES.length))
+
+  const gaps = []
+  for (let i = 0; i < MAIN_COUNT - 1; i++) {
+    gaps.push(Math.hypot(BOARD_TILES[i + 1].x - BOARD_TILES[i].x, BOARD_TILES[i + 1].y - BOARD_TILES[i].y))
+  }
   const spread = Math.max(...gaps) / Math.min(...gaps)
-  check('the spaces are evenly spread round the loop', spread < 1.1, `max/min ${spread.toFixed(3)}`)
+  check('the spaces are evenly spread along the road', spread < 1.1, `max/min ${spread.toFixed(3)}`)
   check(
-    'the whole loop fits inside the world',
+    'the whole course fits inside the world',
     BOARD_TILES.every((t) => t.x > 0 && t.x < WORLD_W && t.y > 0 && t.y < WORLD_H),
   )
-
-  const islandIds = new Set(ISLANDS.map((i) => i.id))
-  const stray = BOARD_TILES.find((t) => t.islandId !== null && !islandIds.has(t.islandId))
-  check('every space is on a real island or out on the water', !stray, stray ? String(stray.islandId) : '')
   check(
-    'the loop actually visits every island',
+    'the road actually visits every island',
     new Set(BOARD_TILES.map((t) => t.islandId).filter(Boolean)).size === ISLANDS.length,
   )
 
-  // A bridge is derived from the path, so it can never drift out of line with
-  // it - these check the derivation rather than a hand-placed list.
   const spans = bridgeSpans()
   const water = BOARD_TILES.filter((t) => t.islandId === null).length
-  check('there is a bridge for every crossing', spans.length > 0, `${spans.length}`)
   check(
     'every bridge is made only of water spaces',
     spans.every((s) => s.every((i) => BOARD_TILES[i].islandId === null)),
@@ -2044,88 +2054,206 @@ console.log('\nPolyland Smash - engine smoke test\n')
     `${spans.reduce((a, s) => a + s.length, 0)} vs ${water}`,
   )
 
-  // The one bit of arithmetic every later phase leans on.
-  check('the last space wraps round to the first', nextTileIndex(BOARD_TILES.length - 1, 1) === 0)
-  check('a roll that laps the board keeps going', nextTileIndex(0, BOARD_TILES.length + 3) === 3)
-  check('stepping back off the start wraps too', nextTileIndex(0, -1) === BOARD_TILES.length - 1)
+  // --- the causeway
 
-  // --- roster and animals
+  check('exactly one space forks', BOARD_TILES.filter((t) => t.alt !== null).length === 1)
+  check('the fork opens onto the causeway', BOARD_TILES[FORK_INDEX].alt === SHORT_START)
+  check('the causeway rejoins the road', BOARD_TILES[SHORT_START + SHORT_COUNT - 1].next === REJOIN_INDEX)
+  check(
+    'the causeway is genuinely shorter',
+    distanceToGoal(SHORT_START) < distanceToGoal(FORK_INDEX + 1),
+    `${distanceToGoal(SHORT_START)} vs ${distanceToGoal(FORK_INDEX + 1)}`,
+  )
+  // It has to cost something, or nobody would ever stay on the road.
+  const shortTiles = Array.from({ length: SHORT_COUNT }, (_, k) => BOARD_TILES[SHORT_START + k])
+  const roadRisk = BOARD_TILES.slice(0, MAIN_COUNT).filter((t) => t.kind === 'hostile').length / MAIN_COUNT
+  const causewayRisk = shortTiles.filter((t) => t.kind === 'hostile').length / SHORT_COUNT
+  check('the causeway is rougher than the road', causewayRisk > roadRisk, `${causewayRisk.toFixed(2)} vs ${roadRisk.toFixed(2)}`)
 
-  const eng = new PartyParadeEngine()
-  eng.addPlayer(0, 'Host')
-  eng.addPlayer(1, 'Guest')
-  eng.addPlayer(1, 'Guest again')
-  check('one slot cannot join twice', eng.players.length === 2, `${eng.players.length}`)
-  check('everybody starts on the start space', eng.players.every((p) => p.tileIndex === START_INDEX))
-  check('a full room of eight still gets one animal each', PARADE_CAST.length >= 8, `${PARADE_CAST.length}`)
+  // --- the checkpoints
+
+  check('there are three checkpoints', GATE_INDICES.length === 3)
+  check('every checkpoint is a gate space', GATE_INDICES.every((i) => BOARD_TILES[i].kind === 'gate' && BOARD_TILES[i].gate))
+  check(
+    'no checkpoint can be ducked by taking the causeway',
+    GATE_INDICES.every((i) => !(i > FORK_INDEX && i < REJOIN_INDEX)),
+    GATE_INDICES.join(','),
+  )
+  check('the three checkpoints ask for different rolls', new Set(GATE_INDICES.map((i) => BOARD_TILES[i].gate)).size === 3)
+  check('an odd checkpoint takes odds only', gateAllows('odd', 3) && !gateAllows('odd', 4))
+  check('an even checkpoint takes evens only', gateAllows('even', 4) && !gateAllows('even', 3))
+  check('a high checkpoint takes a six only', gateAllows('high', 6) && !gateAllows('high', 5))
+
+  // --- walking
+
+  check('a walk of five covers five spaces', walkForward(0, 5).route.length === 6)
+  check('a walk stops dead at a checkpoint', walkForward(GATE_INDICES[0] - 3, 6).stopped === 'gate')
+  check('a walk stops at the fork to be told which way', walkForward(FORK_INDEX - 2, 5).stopped === 'fork')
+  check('taking the causeway steps onto it', walkForward(FORK_INDEX, 2, true).route[1] === SHORT_START)
+  check('keeping to the road does not', walkForward(FORK_INDEX, 2, false).route[1] === FORK_INDEX + 1)
+  check('a walk stops at the treasure however big the roll', walkForward(TREASURE_INDEX - 1, 6).stopped === 'goal')
+  check('walking back retraces the road', walkBack(10, 4).join(',') === '10,9,8,7,6')
+  check('you cannot be pushed back off the start', walkBack(1, 5).length === 2)
+
+  // --- roster
 
   {
-    // Everyone asking for the same animal still ends up with different ones.
     const room = new PartyParadeEngine()
     for (let i = 0; i < 8; i++) room.addPlayer(i, `P${i}`, 0)
-    check('no two players are the same animal', new Set(room.players.map((p) => p.castIndex)).size === 8)
-    check('swapping onto a taken animal is refused', room.setCast(1, room.players[0].castIndex) === false)
-    const free = PARADE_CAST.length - 1
-    check('swapping onto a free animal works', room.setCast(1, free) === true)
-    check('the swap stuck', room.playerAt(1).castIndex === free)
+    check('a full room of eight gets one animal each', PARADE_CAST.length >= 8 && new Set(room.players.map((p) => p.castIndex)).size === 8)
+    check('everybody starts on the start space', room.players.every((p) => p.tileIndex === START_INDEX))
   }
 
-  // --- a whole turn, start to finish
-
-  const turn = (e, face) => {
-    e.roll(e.current.slot, () => (face - 0.5) / 6)
-    for (let i = 0; i < ROLL_FRAMES + face * STEP_FRAMES + LAND_FRAMES + 4; i++) e.step()
+  /** Runs the clock until the turn hands over, so a test can just check the outcome. */
+  const settle = (e, guard = 4000) => {
+    let i = 0
+    while (e.phase === 'board' && e.turnPhase !== 'idle' && i++ < guard) e.step()
   }
+  const face = (n) => () => (n - 0.5) / 6
 
-  check('the die only rolls for whoever is up', eng.roll(1, () => 0.5) === null)
-  check('rolling gives a face between one and six', eng.roll(0, () => 0.99) === 6)
-  eng.endTurn()
+  // --- a whole turn
 
   {
     const e = new PartyParadeEngine()
     e.addPlayer(0, 'Host')
     e.addPlayer(1, 'Guest')
-    const before = e.playerAt(0).totalSteps
-    turn(e, 4)
-    check('a roll of four walks exactly four spaces', e.playerAt(0).totalSteps === before + 4, `${e.playerAt(0).totalSteps}`)
-    check('the walk lands on the matching space', e.playerAt(0).tileIndex === 4)
+    check('the die only rolls for whoever is up', e.roll(1, face(3)) === null)
+    check('rolling gives back the face', e.roll(0, face(4)) === 4)
+    settle(e)
+    check('a roll of four walks four spaces', e.playerAt(0).spacesMoved >= 4, `${e.playerAt(0).spacesMoved}`)
     check('the turn passes to the next player', e.current.slot === 1)
-    check('nobody else moved', e.playerAt(1).totalSteps === 0)
-    check('the die is cleared for the next player', e.turnPhase === 'idle' && e.lastRoll === null)
+    check('nobody else moved', e.playerAt(1).spacesMoved === 0)
+    check('the die is cleared for the next player', e.lastRoll === null)
+  }
 
-    turn(e, 3)
-    check('the round ticks over once everyone has been', e.round === 2, `${e.round}`)
+  // --- checkpoints hold up the leader and nobody else
 
-    // Mid-walk the pawn is partway between two spaces, which is what the
-    // renderer interpolates against.
-    const e2 = new PartyParadeEngine()
-    e2.addPlayer(0, 'Solo')
-    e2.roll(0, () => 0.99)
-    for (let i = 0; i < ROLL_FRAMES + 3 * STEP_FRAMES; i++) e2.step()
-    const live = e2.displaySteps(e2.playerAt(0))
-    check('a pawn mid-walk is between spaces', live > 0 && live < 6, `${live.toFixed(2)}`)
-    check('a walking pawn is reported as walking', e2.isWalking(0) === true)
+  {
+    const e = new PartyParadeEngine()
+    e.addPlayer(0, 'Lead')
+    e.addPlayer(1, 'Back')
+    const gate = GATE_INDICES[0] // asks for an odd roll
+    e.playerAt(0).tileIndex = gate
+    const before = e.playerAt(0).tileIndex
+    check('the leader is the one out in front', e.isLeader(0) && !e.isLeader(1))
+    e.roll(0, face(4)) // even, so the checkpoint refuses it
+    settle(e)
+    check('a checkpoint turns the leader away', e.playerAt(0).tileIndex === before, `${e.playerAt(0).tileIndex}`)
+    check('being turned away still costs the turn', e.current.slot === 1)
+
+    e.turnIndex = 0
+    e.roll(0, face(3)) // odd, so through they go
+    settle(e)
+    check('the right roll gets the leader through', e.playerAt(0).tileIndex > before)
   }
 
   {
-    // Crossing the start line counts a lap and keeps walking forward rather
-    // than scrubbing back round the loop.
+    // The same checkpoint, but stood on by somebody at the back: no obstacle.
     const e = new PartyParadeEngine()
-    e.addPlayer(0, 'Solo')
-    const p = e.playerAt(0)
-    p.totalSteps = TILE_COUNT - 2
-    p.tileIndex = TILE_COUNT - 2
-    turn(e, 5)
-    check('walking past the start wraps the space', p.tileIndex === 3, `${p.tileIndex}`)
-    check('walking past the start counts a lap', p.laps === 1, `${p.laps}`)
-    check('total spaces walked keeps climbing', p.totalSteps === TILE_COUNT + 3, `${p.totalSteps}`)
+    e.addPlayer(0, 'Back')
+    e.addPlayer(1, 'Lead')
+    const gate = GATE_INDICES[0]
+    e.playerAt(0).tileIndex = gate
+    // Past the rejoin, so they are genuinely nearer the treasure. Being just
+    // past the fork would not do it: the causeway is still open to anyone
+    // behind it, so they would be the further away of the two.
+    e.playerAt(1).tileIndex = REJOIN_INDEX + 20
+    check('somebody at the back is not the leader', !e.isLeader(0))
+    e.roll(0, face(4)) // even, which the checkpoint would have refused
+    settle(e)
+    check('a checkpoint lets the pack straight through', e.playerAt(0).tileIndex > gate, `${e.playerAt(0).tileIndex}`)
   }
 
-  const guest = new PartyParadeEngine()
-  guest.applySnapshot(JSON.parse(JSON.stringify(eng.snapshot())))
-  check('a snapshot round-trips into a guest', guest.players.length === 2 && guest.phase === 'board')
-  check('the round-tripped roster keeps its names', guest.players[1].name === 'Guest')
-  check('the round-tripped turn matches', guest.turnIndex === eng.turnIndex)
+  // --- the fork
+
+  {
+    const e = new PartyParadeEngine()
+    e.addPlayer(0, 'Solo')
+    e.playerAt(0).tileIndex = FORK_INDEX - 1
+    e.roll(0, face(5))
+    let guard = 0
+    while (e.turnPhase !== 'fork' && guard++ < 2000) e.step()
+    check('reaching the fork asks which way', e.turnPhase === 'fork' && e.pending.slot === 0)
+    check('the walk pauses with steps still to spend', e.pending.remaining > 0, `${e.pending.remaining}`)
+    check('somebody else cannot answer for you', e.chooseRoute(1, true) === false)
+    e.chooseRoute(0, true)
+    settle(e)
+    check('choosing the causeway puts you on it', e.playerAt(0).tookShortcut === true)
+    check('and lands you out over the middle', e.playerAt(0).tileIndex >= SHORT_START, `${e.playerAt(0).tileIndex}`)
+  }
+
+  // --- what the spaces do
+
+  {
+    const back = BOARD_TILES.findIndex((t, i) => i > 5 && i < MAIN_COUNT && t.effect && t.effect.kind === 'back')
+    const e = new PartyParadeEngine()
+    e.addPlayer(0, 'Solo')
+    e.playerAt(0).tileIndex = back - 1
+    e.roll(0, face(1))
+    settle(e)
+    check('a bad space sets you back', e.playerAt(0).tileIndex < back, `landed ${back}, ended ${e.playerAt(0).tileIndex}`)
+  }
+
+  {
+    const fwd = BOARD_TILES.findIndex((t, i) => i > 5 && i < MAIN_COUNT - 20 && t.effect && t.effect.kind === 'forward')
+    const e = new PartyParadeEngine()
+    e.addPlayer(0, 'Solo')
+    e.playerAt(0).tileIndex = fwd - 1
+    e.roll(0, face(1))
+    settle(e)
+    check('a good space carries you on', e.playerAt(0).tileIndex > fwd, `landed ${fwd}, ended ${e.playerAt(0).tileIndex}`)
+  }
+
+  {
+    const skip = BOARD_TILES.findIndex((t, i) => i > 5 && i < MAIN_COUNT && t.effect && t.effect.kind === 'skip')
+    const e = new PartyParadeEngine()
+    e.addPlayer(0, 'Stuck')
+    e.addPlayer(1, 'Free')
+    e.playerAt(0).tileIndex = skip - 1
+    e.roll(0, face(1))
+    settle(e)
+    check('a hostile space can cost you your next go', e.playerAt(0).skipTurns > 0 || e.playerAt(0).tileIndex < skip)
+  }
+
+  // --- winning
+
+  {
+    const e = new PartyParadeEngine()
+    e.addPlayer(0, 'First')
+    e.addPlayer(1, 'Second')
+    e.playerAt(0).tileIndex = TREASURE_INDEX - 1
+    e.roll(0, face(6)) // overshooting still arrives
+    settle(e)
+    check('reaching the treasure ends the parade', e.phase === 'over', e.phase)
+    check('and names a winner', e.winner === 0, `${e.winner}`)
+    check('the winner is marked finished first', e.playerAt(0).finished && e.playerAt(0).rank === 1)
+    check('the standings put the winner top', e.standings()[0].slot === 0)
+    check('nobody can roll once it is over', e.roll(1, face(3)) === null)
+  }
+
+  // --- snapshots
+
+  {
+    const host = new PartyParadeEngine()
+    host.addPlayer(0, 'Host')
+    host.addPlayer(1, 'Guest')
+    host.roll(0, face(3))
+    for (let i = 0; i < 60; i++) host.step()
+    const guest = new PartyParadeEngine()
+    guest.applySnapshot(JSON.parse(JSON.stringify(host.snapshot())))
+    check('a snapshot round-trips into a guest', guest.players.length === 2 && guest.phase === 'board')
+    check('the round-tripped roster keeps its names', guest.players[1].name === 'Guest')
+    check('the round-tripped walk is carried across', guest.turnPhase === host.turnPhase)
+    check('a guest can carry the walk on between snapshots', (() => {
+      const was = guest.move ? guest.move.elapsed : -1
+      guest.stepVisual()
+      return guest.move ? guest.move.elapsed >= was : true
+    })())
+    // A guest must never advance the game on its own.
+    const turnBefore = guest.turnIndex
+    for (let i = 0; i < 400; i++) guest.stepVisual()
+    check('a guest never advances the turn by itself', guest.turnIndex === turnBefore)
+  }
 }
 
 console.log(failures === 0 ? '\nAll checks passed.\n' : `\n${failures} check(s) failed.\n`)
