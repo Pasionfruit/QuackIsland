@@ -15,4 +15,11 @@ export {
   type PlayerInput,
 } from './internal/controller'
 
-export { Player, getPlayerState } from './internal/PlayerView'
+export {
+  CAM_DISTANCE_MAX,
+  CAM_DISTANCE_MIN,
+  Player,
+  getPlayerState,
+  isCameraOffPlayer,
+  refocusCamera,
+} from './internal/PlayerView'

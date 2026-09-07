@@ -29,7 +29,11 @@ export interface PlayerInput {
   left: boolean
   right: boolean
   jump: boolean
-  /** Where the camera is looking, radians. Movement is relative to this. */
+  /**
+   * Where the camera is looking, in radians, such that forward is
+   * `(sin(yaw), cos(yaw))`. Movement is relative to this, so the player always
+   * walks away from the camera on `forward`.
+   */
   cameraYaw: number
 }
 
@@ -83,20 +87,26 @@ export function stepPlayer(
 ): PlayerState {
   const step = Math.min(Math.max(dt, 0), 0.1)
 
-  // Intent in camera space, then rotated into the world.
-  const ix = (input.right ? 1 : 0) - (input.left ? 1 : 0)
-  const iz = (input.back ? 1 : 0) - (input.forward ? 1 : 0)
+  // Build the basis explicitly rather than rotating a vector: getting a sign
+  // wrong in a rotation is invisible at one camera angle and obviously broken
+  // at another, which is exactly the bug this replaces. `cameraYaw` is the
+  // direction the camera looks, so forward is where it is pointing.
+  const forwardX = Math.sin(input.cameraYaw)
+  const forwardZ = Math.cos(input.cameraYaw)
+  const rightX = forwardZ
+  const rightZ = -forwardX
+
+  const fwd = (input.forward ? 1 : 0) - (input.back ? 1 : 0)
+  const side = (input.right ? 1 : 0) - (input.left ? 1 : 0)
+  const magnitude = Math.hypot(fwd, side)
   let moveX = 0
   let moveZ = 0
-  const magnitude = Math.hypot(ix, iz)
   if (magnitude > 0) {
-    const nx = ix / magnitude
-    const nz = iz / magnitude
-    const sin = Math.sin(input.cameraYaw)
-    const cos = Math.cos(input.cameraYaw)
-    // Diagonals must not be faster than the cardinals, hence normalising first.
-    moveX = nx * cos - nz * sin
-    moveZ = nx * sin + nz * cos
+    // Normalise first, or a diagonal is forty percent faster than a cardinal.
+    const f = fwd / magnitude
+    const r = side / magnitude
+    moveX = forwardX * f + rightX * r
+    moveZ = forwardZ * f + rightZ * r
   }
 
   state.x += moveX * PLAYER.walkSpeed * step

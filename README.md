@@ -9,8 +9,11 @@ npm install
 npm run dev
 ```
 
-Third person: **WASD** to walk, **space** to jump, **drag the mouse** to look
-around (or click to capture the pointer, Escape to release).
+Third person: **WASD** to walk, **space** to jump.
+
+**Hold left and drag** to look. **Hold right and drag** to slide the view off
+the player. **Wheel** to pull back and see the whole island. **F** or the button
+in the panel snaps back. A plain click, either button, never moves the camera.
 
 The panel on the right runs the day: an hour a full cycle, fifteen minutes each
 in dawn, daylight, dusk and night. Scrub the slider, jump to a named time, or

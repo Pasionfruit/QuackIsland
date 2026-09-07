@@ -1,9 +1,13 @@
 /**
  * The player on screen: a body that walks the island, and a camera you aim.
  *
- * Third person. The mouse turns the camera; the body walks wherever the camera
- * is facing and turns to follow. All the movement maths is in controller.ts;
- * this reads input, feeds it in, and puts the result on a mesh.
+ * Third person. Hold the left button and drag to look; hold the right button
+ * and drag to slide the view off the player; the wheel pulls back. A click
+ * that does not drag does nothing at all - the camera only ever moves while a
+ * button is actually held, which is why there is no pointer lock here.
+ *
+ * All the movement maths is in controller.ts. This reads input, feeds it in,
+ * and puts the result on a mesh.
  */
 import { useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
@@ -12,20 +16,24 @@ import { PRIORITY, setCameraMode, useGameFrame } from '../../00-core'
 import { heightAt, worldBounds } from '../../01-terrain'
 import { IDLE_INPUT, PLAYER, createPlayer, stepPlayer, type PlayerInput, type PlayerState } from './controller'
 
-/** How far back and up the camera sits, and how quickly it catches up. */
-const CAM_DISTANCE = 9
 const CAM_HEIGHT = 2.6
 const CAM_EASE = 12
-/** Radians per pixel of mouse movement. */
-const SENSITIVITY = 0.0026
-/** How far up and down the camera may be aimed. Kept well short of straight up. */
-const PITCH_MIN = -0.55
-const PITCH_MAX = 0.85
+/** Radians per pixel dragged. */
+const SENSITIVITY = 0.0042
+/** Metres per pixel dragged, at the closest zoom. Scaled up as you pull back. */
+const PAN_SENSITIVITY = 0.016
+const PITCH_MIN = -0.5
+const PITCH_MAX = 1.05
+export const CAM_DISTANCE_MIN = 4
+export const CAM_DISTANCE_MAX = 260
+const CAM_DISTANCE_DEFAULT = 9
+/** How far the view may be slid off the player before it stops. */
+const PAN_LIMIT = 400
 
 /**
  * The live player, readable by other modules.
  *
- * Footprints and anything else that follows the player need its position every
+ * Footprints and anything else following the player need its position every
  * frame, which is far too often to go through React state. This is the same
  * object the controller mutates, exposed read-only.
  */
@@ -33,6 +41,27 @@ let live: PlayerState | null = null
 
 export function getPlayerState(): Readonly<PlayerState> | null {
   return live
+}
+
+/** Camera state, kept outside React so dragging costs no re-renders. */
+const rig = {
+  yaw: Math.PI,
+  pitch: 0.2,
+  distance: CAM_DISTANCE_DEFAULT,
+  panX: 0,
+  panZ: 0,
+}
+
+/** Snaps the view back onto the player. Wired to the button in the panel. */
+export function refocusCamera(): void {
+  rig.panX = 0
+  rig.panZ = 0
+  rig.distance = CAM_DISTANCE_DEFAULT
+}
+
+/** True when the view has been slid off the player, so the button can say so. */
+export function isCameraOffPlayer(): boolean {
+  return Math.hypot(rig.panX, rig.panZ) > 0.5
 }
 
 export function Player({ spawnX = 0, spawnZ = 0 }: { spawnX?: number; spawnZ?: number }) {
@@ -43,8 +72,6 @@ export function Player({ spawnX = 0, spawnZ = 0 }: { spawnX?: number; spawnZ?: n
   const state = useMemo(() => createPlayer(spawnX, spawnZ, heightAt), [spawnX, spawnZ])
   const keys = useRef<PlayerInput>({ ...IDLE_INPUT })
   const jumpEdge = useRef(false)
-  const yaw = useRef(Math.PI)
-  const pitch = useRef(0.16)
 
   const bounds = useMemo(() => {
     const b = worldBounds()
@@ -60,36 +87,63 @@ export function Player({ spawnX = 0, spawnZ = 0 }: { spawnX?: number; spawnZ?: n
     }
   }, [state])
 
-  // Mouse look. Click to capture the pointer; Escape releases it. Dragging
-  // works too, so the camera is still usable without committing to a lock.
+  // Look, pan and zoom. Everything is drag-driven: the camera moves only while
+  // a button is down and the mouse is actually moving, so a plain click - left
+  // or right - leaves the view exactly where it was.
   useEffect(() => {
-    let dragging = false
+    let button = -1
+
+    const onDown = (e: MouseEvent) => {
+      if (e.button !== 0 && e.button !== 2) return
+      button = e.button
+      e.preventDefault()
+    }
 
     const onMove = (e: MouseEvent) => {
-      const locked = document.pointerLockElement === domElement
-      if (!locked && !dragging) return
-      yaw.current -= e.movementX * SENSITIVITY
-      pitch.current = Math.min(PITCH_MAX, Math.max(PITCH_MIN, pitch.current + e.movementY * SENSITIVITY))
-    }
-    const onDown = (e: MouseEvent) => {
-      if (e.button !== 0) return
-      dragging = true
-      // requestPointerLock can reject (a recent Escape, or no gesture); the
-      // drag path above keeps the camera working either way.
-      void Promise.resolve(domElement.requestPointerLock()).catch(() => {})
-    }
-    const onUp = () => {
-      dragging = false
+      if (button === 0) {
+        rig.yaw -= e.movementX * SENSITIVITY
+        rig.pitch = Math.min(PITCH_MAX, Math.max(PITCH_MIN, rig.pitch + e.movementY * SENSITIVITY))
+      } else if (button === 2) {
+        // Slide the view across the ground, in the camera's own directions, so
+        // dragging right always moves the view right whichever way you face.
+        const scale = PAN_SENSITIVITY * (rig.distance / CAM_DISTANCE_DEFAULT)
+        const fx = Math.sin(rig.yaw)
+        const fz = Math.cos(rig.yaw)
+        rig.panX += (-e.movementX * fz - e.movementY * fx) * scale
+        rig.panZ += (e.movementX * fx - e.movementY * fz) * scale
+        const off = Math.hypot(rig.panX, rig.panZ)
+        if (off > PAN_LIMIT) {
+          rig.panX = (rig.panX / off) * PAN_LIMIT
+          rig.panZ = (rig.panZ / off) * PAN_LIMIT
+        }
+      }
     }
 
+    const onUp = () => {
+      button = -1
+    }
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      // Proportional, so a notch feels the same close in and far out.
+      const next = rig.distance * Math.exp(e.deltaY * 0.0012)
+      rig.distance = Math.min(CAM_DISTANCE_MAX, Math.max(CAM_DISTANCE_MIN, next))
+    }
+
+    // Right-drag is a camera control here, so the browser menu is in the way.
+    const onContext = (e: Event) => e.preventDefault()
+
     domElement.addEventListener('mousedown', onDown)
+    domElement.addEventListener('wheel', onWheel, { passive: false })
+    domElement.addEventListener('contextmenu', onContext)
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
     return () => {
       domElement.removeEventListener('mousedown', onDown)
+      domElement.removeEventListener('wheel', onWheel)
+      domElement.removeEventListener('contextmenu', onContext)
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onUp)
-      if (document.pointerLockElement === domElement) document.exitPointerLock()
     }
   }, [domElement])
 
@@ -120,6 +174,9 @@ export function Player({ spawnX = 0, spawnZ = 0 }: { spawnX?: number; spawnZ?: n
           if (down && !k.jump) jumpEdge.current = true
           k.jump = down
           break
+        case 'KeyF':
+          if (down) refocusCamera()
+          break
         default:
           return
       }
@@ -140,7 +197,7 @@ export function Player({ spawnX = 0, spawnZ = 0 }: { spawnX?: number; spawnZ?: n
 
   useGameFrame((_s, delta) => {
     const k = keys.current
-    const input: PlayerInput = { ...k, jump: jumpEdge.current, cameraYaw: yaw.current }
+    const input: PlayerInput = { ...k, jump: jumpEdge.current, cameraYaw: rig.yaw }
     jumpEdge.current = false
 
     stepPlayer(state, input, delta, heightAt, bounds)
@@ -150,20 +207,25 @@ export function Player({ spawnX = 0, spawnZ = 0 }: { spawnX?: number; spawnZ?: n
       body.current.rotation.y = state.facing
     }
 
-    // Orbit the body at the aimed angle rather than trailing behind it, so
-    // looking around does not drag the player round with it.
-    const flat = Math.cos(pitch.current) * CAM_DISTANCE
+    // What the camera is pointed at: the player, plus however far the view has
+    // been slid off them.
+    const focusX = state.x + rig.panX
+    const focusZ = state.z + rig.panZ
+    const focusY = state.y + CAM_HEIGHT
+
+    // Camera sits behind the focus along the look direction, so forward in the
+    // controller is always away from the camera.
+    const flat = Math.cos(rig.pitch) * rig.distance
     camWant.set(
-      state.x - Math.sin(yaw.current) * flat,
-      state.y + CAM_HEIGHT + Math.sin(pitch.current) * CAM_DISTANCE,
-      state.z - Math.cos(yaw.current) * flat,
+      focusX - Math.sin(rig.yaw) * flat,
+      focusY + Math.sin(rig.pitch) * rig.distance,
+      focusZ - Math.cos(rig.yaw) * flat,
     )
-    // Never let the camera end up under the sand.
     const floor = heightAt(camWant.x, camWant.z) + 1.2
     if (camWant.y < floor) camWant.y = floor
 
     camera.position.lerp(camWant, 1 - Math.exp(-delta * CAM_EASE))
-    camLook.set(state.x, state.y + PLAYER.eyeHeight, state.z)
+    camLook.set(focusX, focusY - CAM_HEIGHT + PLAYER.eyeHeight, focusZ)
     camera.lookAt(camLook)
   }, PRIORITY.camera)
 

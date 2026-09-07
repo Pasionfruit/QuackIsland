@@ -3,8 +3,14 @@
 ## What this is
 
 A body you walk around the island with, in third person: WASD to move, space
-to jump, and the mouse to aim the camera. Drag to look, or click to capture the
-pointer and look freely; Escape lets it go. It resolves height through
+to jump, and the mouse for the camera.
+
+**Hold left and drag to look. Hold right and drag to slide the view off the
+player. Wheel to pull back. F, or the button in the panel, snaps back.** The
+camera only ever moves while a button is genuinely held and the mouse is
+moving, so a plain click - either button - leaves the view exactly where it
+was. There is no pointer lock, on purpose: a lock makes every stray mouse
+movement turn the camera, which is the opposite of what a click should do. It resolves height through
 `01-terrain`, so it stands on exactly the ground being drawn.
 
 All of the movement is pure arithmetic in `internal/controller.ts` with no
@@ -21,6 +27,9 @@ three.js in it, so how the player moves is tested in Node rather than by eye.
 | `PlayerInput` | `{ forward, back, left, right, jump, cameraYaw }` |
 | `PLAYER` | Speeds, gravity, capsule size, eye height |
 | `getPlayerState()` | The live player, or `null` when the module is off |
+| `refocusCamera()` | Snap the view back onto the player and reset the zoom |
+| `isCameraOffPlayer()` | Whether the view has been slid away |
+| `CAM_DISTANCE_MIN` / `MAX` | The zoom limits, in metres |
 
 `groundAt` is passed in rather than imported, so a test can hand it flat ground
 or a slope. The component passes `heightAt` from `01-terrain`.
@@ -29,8 +38,15 @@ or a slope. The component passes `heightAt` from `01-terrain`.
 
 - **The player never ends a frame below the ground**, on any terrain, tested
   over hundreds of frames of rough ground.
-- **Diagonals are not faster than cardinals.** Input is normalised before it is
-  rotated into the world.
+- **Diagonals are not faster than cardinals.** Input is normalised before the
+  basis is applied.
+- **Forward is always away from the camera, at every angle.** `cameraYaw` is
+  the direction the camera looks, and forward is `(sin(yaw), cos(yaw))`. The
+  basis is built from that directly rather than by rotating a vector - an
+  earlier version rotated, with a sign wrong on Z, which was correct at one
+  camera angle and inverted at another. It felt like the controls breaking
+  whenever you looked around while walking. There is a test that walks at
+  seven different angles.
 - **`dt` is clamped**, so a tab left in the background does not come back and
   teleport the player across the island.
 - Jump is edge-detected by the component, so holding space does not hover.
@@ -74,6 +90,9 @@ stepPlayer(state, { ...IDLE_INPUT, forward: true, cameraYaw }, delta, heightAt)
 - The camera is aimed by the mouse and the body walks where it points, so you
   cannot look behind you while walking forward - a proper strafing camera is a
   separate job.
+- Panning slides the view but the player keeps walking relative to the camera
+  angle, not the panned focus. Walking while panned far away is disorienting;
+  that is what refocus is for.
 - No slope limit: the island is gentle enough that nothing is unclimbable, but
   a steeper world would want one.
 - The controller uses a fixed capsule and no ground friction, so stopping is
@@ -81,8 +100,14 @@ stepPlayer(state, { ...IDLE_INPUT, forward: true, cameraYaw }, delta, heightAt)
 
 ## How to review
 
-- **The mouse turns the camera**, left and right, and a little up and down.
-  Drag works; clicking captures the pointer so you can keep turning.
+- **Click once, left and right, without dragging. The camera must not move at
+  all.** This is the whole reason there is no pointer lock.
+- **Hold left and drag** to look, left and right and a little up and down.
+- **Hold right and drag** to slide the view off the player; the world should
+  follow the cursor. **Wheel** to pull back far enough to see the whole island.
+  **F or the button** snaps back to the player.
+- **Look around while walking.** Walking forward must keep going away from the
+  camera as it turns - steering, not stuttering or reversing.
 - **WASD walks relative to the camera** and the body turns to face where it is
   going, smoothly rather than snapping. Walking while turning should feel like
   steering, not like the world spinning.

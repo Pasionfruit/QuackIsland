@@ -43,9 +43,12 @@ player's state, so anything that walks can leave prints, not just the player.
   only one is wired up.
 - No prints below sea level. There is no water yet, but seabed prints would be
   wrong either way.
-- **No depth.** These are decals lying on the surface, not deformed terrain.
-  Actually pressing them into the heightfield would mean the terrain stops
-  being a pure function of position, which is a much bigger decision.
+- **No real depth.** A print reads as a hollow entirely through shading - dark
+  and soft through the middle, with a thin bright lip of pushed-up sand around
+  it - and sits flush with the ground rather than hovering over it. It is still
+  a decal. Genuinely denting the ground would mean the terrain stops being a
+  pure function of position, which every other module depends on, so that is a
+  much bigger decision than it looks.
 - No persistence — the trail is lost on reload.
 - No prints from wind, rain, tide, or anything else erasing them beyond time.
 
@@ -77,8 +80,10 @@ Then draw `trail.prints` however you like, using `fadeOf` for opacity.
   left and right alternating, not a single line down the middle.
 - **Stand still.** Nothing new should appear.
 - **Jump.** Nothing should be left mid-air; the next print lands where you do.
-- **Walk up a dune.** Prints should lie along the slope, not float flat above it
-  or sink into it.
+- **Walk up a dune.** Prints should lie along the slope, not float flat above
+  it.
+- **Get close and look at one.** It should read as pressed *into* the sand -
+  darker in the middle, a faint bright rim - not as a sticker lying on top.
 - **Walk in circles for a minute.** The oldest prints should fade out rather
   than the trail growing forever, and the draw call count in the perf HUD must
   not climb.

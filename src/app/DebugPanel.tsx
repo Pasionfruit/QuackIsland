@@ -22,6 +22,7 @@ import {
   useCameraMode,
   useLightingSettings,
 } from '../modules/00-core'
+import { isCameraOffPlayer, refocusCamera } from '../modules/02-player'
 import { SCENE, setModuleEnabled } from './scene'
 
 const panel: React.CSSProperties = {
@@ -138,7 +139,25 @@ export function DebugPanel() {
       <div style={{ color: camera === 'player' ? '#ffcf8a' : '#8d8a84' }}>
         {camera === 'player' ? 'third person' : 'free orbit'}
       </div>
-      <div style={{ opacity: 0.5 }}>WASD walk, space jump, drag to look</div>
+      <div style={{ opacity: 0.5 }}>WASD walk, space jump</div>
+      <div style={{ opacity: 0.5 }}>drag to look, right-drag to pan, wheel to zoom</div>
+      <button
+        type="button"
+        onClick={() => {
+          refocusCamera()
+          tick((n) => n + 1)
+        }}
+        style={{
+          ...flat,
+          marginTop: 6,
+          border: '1px solid #6b6862',
+          borderRadius: 4,
+          padding: '2px 8px',
+          color: isCameraOffPlayer() ? '#ffcf8a' : '#f2ece2',
+        }}
+      >
+        refocus on player (F)
+      </button>
 
       <div style={heading}>MODULES</div>
       {SCENE.map((entry) => (
