@@ -16,7 +16,7 @@ export {
   type StepOptions,
 } from './internal/controller'
 
-export { DUCK, fitToHeight, type Bounds } from './internal/duck'
+export { DUCK, bodyPose, fitToHeight, type Bounds } from './internal/duck'
 export { loadDuck, normaliseDuck, repairFeet } from './internal/DuckModel'
 
 export {

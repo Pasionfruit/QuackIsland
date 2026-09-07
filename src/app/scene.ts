@@ -16,6 +16,8 @@ import { Footprints } from '../modules/03-footprints'
 import { Water, swellAt } from '../modules/04-water'
 import { Sky } from '../modules/06-sky'
 import { Shore } from '../modules/07-shore'
+import { AudioCues } from '../modules/08-audio'
+import { NetPlayers } from '../modules/09-net'
 
 /**
  * The player, floating on the actual swell rather than on a flat mean level -
@@ -49,6 +51,8 @@ export const SCENE: SceneEntry[] = [
   { id: '04-water', order: 40, enabled: true, Component: Water },
   { id: '06-sky', order: 60, enabled: true, Component: Sky },
   { id: '07-shore', order: 70, enabled: true, Component: Shore },
+  { id: '08-audio', order: 80, enabled: true, Component: AudioCues },
+  { id: '09-net', order: 90, enabled: true, Component: NetPlayers },
 ]
 
 // Toggling a module on or off has to reach the canvas, which is a different

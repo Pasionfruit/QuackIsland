@@ -64,3 +64,20 @@ export function fitToHeight(bounds: Bounds, targetHeight: number): { scale: numb
   // The model's feet sit a hair below its own origin, so lift by that much.
   return { scale, liftY: -bounds.minZ * scale }
 }
+
+/**
+ * How the body sits, given how far it has leaned into a swim.
+ *
+ * Standing, the origin is at the feet so the middle of the body is half a
+ * height up; tipped over, the middle drops towards the surface. Both the local
+ * duck and every remote one are placed with this, so a remote player can never
+ * float at a different height from the one driving them.
+ *
+ * `lean` is the controller's 0-to-1; the duck takes a fraction of it, because
+ * a duck floats upright and only leans into the paddle.
+ */
+export function bodyPose(lean: number, height: number, radius: number): { rise: number; tip: number } {
+  const eased = Math.min(1, Math.max(0, lean))
+  const tip = eased * DUCK.swimTip
+  return { rise: height / 2 - tip * (height / 2 - radius), tip }
+}

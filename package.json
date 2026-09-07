@@ -20,13 +20,17 @@
     "gate:pass": "node scripts/gate-pass.mjs",
     "gate:fail": "node scripts/gate-fail.mjs",
     "unfreeze": "node scripts/unfreeze.mjs",
-    "music:scan": "node scripts/scan-music.mjs"
+    "music:scan": "node scripts/scan-music.mjs",
+    "relay": "node server/relay.mjs",
+    "start": "node server/relay.mjs",
+    "dev:multi": "npm run build && node server/relay.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "^9.7.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "three": "^0.185.1"
+    "three": "^0.185.1",
+    "ws": "^8.21.3"
   },
   "devDependencies": {
     "@types/node": "^26.5.0",

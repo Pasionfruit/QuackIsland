@@ -8,6 +8,10 @@
 
 export { CAMERA, CONVENTIONS, PRIORITY, type Priority } from './internal/conventions'
 export { createRng, hashSeed } from './internal/rng'
+// The three-line external store. Exported because a module that owns state the
+// DOM has to read - the lobby, the camera mode - would otherwise write its own,
+// and there would be four of them.
+export { createStore, useStore, type Store } from './internal/store'
 export { assetUrl } from './internal/assets'
 export { useGameFrame, type FrameCallback } from './internal/frame'
 export { readPerf, type PerfSample } from './internal/perf'

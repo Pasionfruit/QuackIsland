@@ -15,7 +15,7 @@ import { Group, Vector3 } from 'three'
 import { PRIORITY, getDayTime, setCameraMode, tideAt, useGameFrame } from '../../00-core'
 import { SEA_LEVEL, heightAt, worldBounds } from '../../01-terrain'
 import { IDLE_INPUT, PLAYER, createPlayer, stepPlayer, type PlayerInput, type PlayerState } from './controller'
-import { DUCK } from './duck'
+import { bodyPose } from './duck'
 import { useDuck } from './DuckModel'
 
 const CAM_HEIGHT = 2.6
@@ -245,16 +245,10 @@ export function Player({ spawnX = 0, spawnZ = 0, surfaceAt }: PlayerProps) {
       surfaceAt: surface,
     })
 
-    // How far over the body actually goes. The controller's `lean` means "lie
-    // flat", which suits a body that swims horizontally; a duck floats upright
-    // and only leans into the paddle, so it takes a fraction of it.
-    const tip = state.lean * DUCK.swimTip
+    // Shared with every remote duck, so they cannot sit at different heights.
+    const { rise, tip } = bodyPose(state.lean, PLAYER.height, PLAYER.radius)
 
     if (body.current) {
-      // Standing, the origin is at the feet, so the middle of the body is half
-      // a body up. Tipped over, the middle drops towards the surface - so the
-      // offset comes down with it.
-      const rise = PLAYER.height / 2 - tip * (PLAYER.height / 2 - PLAYER.radius)
       body.current.position.set(state.x, state.y + rise, state.z)
       body.current.rotation.y = state.facing
     }

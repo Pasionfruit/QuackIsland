@@ -37,6 +37,22 @@ pause it. **Speed it up to 60x or 600x** if you want to watch a whole day
 rather than sit through one. It also toggles modules on and off - turn the
 player off to get the free orbit camera back for inspecting terrain.
 
+## Playing together
+
+Two browsers, two terminals:
+
+```
+npm run relay      # the lobby relay on :8791
+npm run dev        # the game on :5173
+```
+
+Open `http://localhost:5173` in two different browsers, press **new** for a
+code in one, type it into the other, and press **join** in both. Both ducks
+walk about the same island.
+
+**[DEPLOY.md](DEPLOY.md)** has the rest: running it as one process, and putting
+it on a free host.
+
 ## How this project is built
 
 Work is divided into **phases → modules → blocks → gates**.
@@ -86,6 +102,8 @@ world is reproducible and testable.
 | `05-music` | Background playlist, with a panel to skip, rewind, pause and set the volume |
 | `06-sky` | Sky dome with sun, stars and cloud, and the rain and snow falling out of it |
 | `07-shore` | Shells and coloured pebbles along the water line, in three draw calls |
+| `08-audio` | Footsteps, jumps, landings and swim strokes |
+| `09-net` | Lobbies by code, and everyone else’s duck |
 
 Next up: a sky dome driving the day cycle that `00-core` already exposes, then
 the Meshy asset pipeline and vegetation placed against the terrain's height

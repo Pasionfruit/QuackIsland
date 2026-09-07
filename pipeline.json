@@ -37,7 +37,8 @@
     "src/app/**",
     "scripts/**",
     "src/App.tsx",
-    "src/main.tsx"
+    "src/main.tsx",
+    "server/**"
   ],
   "phases": [
     {
@@ -66,7 +67,8 @@
         "07-shore",
         "04-assets",
         "05-vegetation",
-        "06-rocks"
+        "06-rocks",
+        "08-audio"
       ]
     },
     {
@@ -82,8 +84,7 @@
       "id": "P4",
       "title": "Multiplayer",
       "modules": [
-        "10-transport",
-        "11-world-sync"
+        "09-net"
       ]
     },
     {
@@ -109,7 +110,9 @@
         "04-water",
         "05-music",
         "06-sky",
-        "07-shore"
+        "07-shore",
+        "08-audio",
+        "09-net"
       ],
       "generation": 1,
       "contract": {
@@ -157,7 +160,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T23:34:07.215Z"
+          "at": "2026-09-07T23:55:15.946Z"
         },
         "human": {
           "status": "pending"
@@ -240,7 +243,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T23:34:15.075Z"
+          "at": "2026-09-07T23:55:23.626Z"
         },
         "human": {
           "status": "pending"
@@ -274,7 +277,9 @@
         "01-terrain"
       ],
       "dependents": [
-        "03-footprints"
+        "03-footprints",
+        "08-audio",
+        "09-net"
       ],
       "generation": 1,
       "contract": {
@@ -312,7 +317,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T23:34:22.950Z"
+          "at": "2026-09-07T23:55:31.313Z"
         },
         "human": {
           "status": "pending"
@@ -370,7 +375,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T23:34:30.844Z"
+          "at": "2026-09-07T23:55:38.884Z"
         },
         "human": {
           "status": "pending"
@@ -431,7 +436,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T23:34:38.670Z"
+          "at": "2026-09-07T23:55:46.524Z"
         },
         "human": {
           "status": "pending"
@@ -494,7 +499,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T23:34:46.523Z"
+          "at": "2026-09-07T23:55:54.152Z"
         },
         "human": {
           "status": "pending"
@@ -504,7 +509,7 @@
       "freeze": null,
       "nonGoals": [
         "No positional or diegetic audio - this is background music, not a sound in the world",
-        "No sound effects; footsteps, water and wind are a different module",
+        "No sound effects - 08-audio owns those",
         "No ducking, crossfading, or reacting to anything on screen",
         "No shuffle, repeat-one, or a visible queue",
         "No seeking within a track - the bar is a readout, not a scrubber",
@@ -558,7 +563,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T23:34:54.378Z"
+          "at": "2026-09-07T23:56:01.737Z"
         },
         "human": {
           "status": "pending"
@@ -623,7 +628,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T23:35:02.236Z"
+          "at": "2026-09-07T23:56:09.357Z"
         },
         "human": {
           "status": "pending"
@@ -642,6 +647,140 @@
       "budgets": {
         "drawCallsMax": 3,
         "trianglesMax": 40000
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "08-audio",
+      "phase": "P2",
+      "title": "Footsteps, jumps, landings and swim strokes for the local player",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "08.1",
+          "title": "Pure cue state machine: stride, jump, land, stroke",
+          "status": "done"
+        },
+        {
+          "id": "08.2",
+          "title": "Web Audio engine with pitch variation and a voice cap",
+          "status": "done"
+        },
+        {
+          "id": "08.3",
+          "title": "Frame driver, autoplay policy, volume in the panel",
+          "status": "done"
+        },
+        {
+          "id": "08.4",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-07T23:56:16.978Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No positional audio - these are the player own sounds and do not pan",
+        "No ambience: wind, surf and birds are a soundscape, not a cue",
+        "No sounds for the water, the weather, the shore or the UI",
+        "No sound for remote players in a lobby",
+        "No variation packs; one file per cue, pitched about",
+        "No ducking against the music"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "09-net",
+      "phase": "P4",
+      "title": "Lobbies by code, with everyone else’s duck drawn from a relay",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "09.1",
+          "title": "Protocol: codes, names, validated wire format",
+          "status": "done"
+        },
+        {
+          "id": "09.2",
+          "title": "Snapshot history and interpolation behind live",
+          "status": "done"
+        },
+        {
+          "id": "09.3",
+          "title": "WebSocket client, lobby state, dumb room relay",
+          "status": "done"
+        },
+        {
+          "id": "09.4",
+          "title": "Remote ducks cloned from the local model",
+          "status": "done"
+        },
+        {
+          "id": "09.5",
+          "title": "Contract, tests, MODULE.md, DEPLOY.md",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-07T23:56:24.626Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No authority - the relay passes on what it is told and validates nothing",
+        "No persistence; rooms exist only while somebody is in them",
+        "No accounts, matchmaking or lobby list - you share a code",
+        "No voice and no chat",
+        "No shared clock, tide or weather; everyone runs their own",
+        "No sound or name labels for remote players",
+        "No reconnection after a dropped connection"
+      ],
+      "budgets": {
+        "drawCallsMax": 96,
+        "trianglesMax": 60000
       },
       "measured": null,
       "blockers": []

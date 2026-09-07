@@ -35,6 +35,8 @@ import {
   useWeather,
 } from '../modules/00-core'
 import { isCameraOffPlayer, refocusCamera } from '../modules/02-player'
+import { AUDIO, getCueEngine, readStoredVolume, setEffectsVolume } from '../modules/08-audio'
+import { joinLobby, leaveLobby, makeCode, useNet } from '../modules/09-net'
 import { SCENE, setModuleEnabled } from './scene'
 
 /**
@@ -122,7 +124,20 @@ function clockLabel(t: number, scale: number): string {
 export function DebugPanel() {
   const camera = useCameraMode()
   const weather = useWeather()
+  const net = useNet()
   useLightingSettings()
+
+  // The lobby code and name are only ever typed into, so they are ordinary
+  // React state; nothing in the world reads them.
+  const [code, setCode] = useState(() => makeCode())
+  const [name, setName] = useState('duck')
+  const [effects, setEffects] = useState(() => {
+    try {
+      return readStoredVolume()
+    } catch {
+      return AUDIO.defaultVolume
+    }
+  })
 
   // The clock moves every frame; polling four times a second keeps the panel
   // live without dragging React into the render loop.
@@ -250,6 +265,96 @@ export function DebugPanel() {
         <div style={{ opacity: 0.45 }}>takes a few seconds to come over</div>
       </Section>
 
+      <Section id="lobby" title="LOBBY">
+        {/* A code to share, or one to type in. The relay only ever knows about
+            rooms; what a duck is stays entirely in the browser. */}
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          <input
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 5))}
+            placeholder="CODE"
+            spellCheck={false}
+            style={{
+              ...field,
+              width: 74,
+              letterSpacing: 2,
+              textAlign: 'center',
+              color: '#ffcf8a',
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => setCode(makeCode())}
+            style={{ ...flat, border: '1px solid #6b6862', borderRadius: 4, padding: '2px 6px' }}
+            title="Make a new code"
+          >
+            new
+          </button>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value.slice(0, 16))}
+            placeholder="name"
+            spellCheck={false}
+            style={{ ...field, flex: 1, minWidth: 40 }}
+          />
+        </div>
+
+        <div style={{ display: 'flex', gap: 6, marginTop: 5, alignItems: 'center' }}>
+          <button
+            type="button"
+            onClick={() => (net.status === 'joined' ? leaveLobby() : joinLobby(code, name))}
+            style={{
+              ...flat,
+              border: '1px solid #6b6862',
+              borderRadius: 4,
+              padding: '2px 10px',
+              background: net.status === 'joined' ? '#e0a05a' : 'none',
+              color: net.status === 'joined' ? '#20222a' : '#f2ece2',
+            }}
+          >
+            {net.status === 'joined' ? 'leave' : 'join'}
+          </button>
+          <span style={{ opacity: 0.6 }}>
+            {net.status === 'joined'
+              ? `${net.room} - ${net.peers} other${net.peers === 1 ? '' : 's'}`
+              : net.status === 'connecting'
+                ? 'connecting...'
+                : net.status === 'error'
+                  ? net.why
+                  : 'not in a lobby'}
+          </span>
+        </div>
+        <div style={{ opacity: 0.45, marginTop: 3 }}>
+          share the code; anyone who types it is in the same world
+        </div>
+      </Section>
+
+      <Section id="sound" title="SOUND">
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <span style={{ opacity: 0.55 }}>effects</span>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={effects}
+            onChange={(e) => {
+              const level = Number(e.target.value)
+              setEffects(level)
+              setEffectsVolume(level)
+            }}
+            style={{ flex: 1, accentColor: '#6fb6c8' }}
+            title={`${Math.round(effects * 100)}%`}
+          />
+          <span style={{ opacity: 0.45, width: 26, textAlign: 'right' }}>
+            {Math.round(effects * 100)}
+          </span>
+        </div>
+        <div style={{ opacity: 0.45, marginTop: 2 }}>
+          footsteps, jumps and strokes{getCueEngine().ready ? '' : ' - click the world to start'}
+        </div>
+      </Section>
+
       <Section id="view" title="VIEW">
         <div style={{ color: camera === 'player' ? '#ffcf8a' : '#8d8a84' }}>
           {camera === 'player' ? 'third person' : 'free orbit'}
@@ -312,6 +417,16 @@ const panel: React.CSSProperties = {
 }
 
 const heading: React.CSSProperties = { opacity: 0.55, letterSpacing: 0.6, margin: '12px 0 4px' }
+
+const field: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.06)',
+  border: '1px solid rgba(255,255,255,0.14)',
+  borderRadius: 4,
+  color: '#f2ece2',
+  font: 'inherit',
+  padding: '2px 6px',
+  minWidth: 0,
+}
 
 const flat: React.CSSProperties = {
   background: 'none',

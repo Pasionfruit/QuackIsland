@@ -1,0 +1,51 @@
+/**
+ * 09-net - the public contract.
+ *
+ * Lobbies: join one with a code, see everyone else's duck move. One WebSocket
+ * to a relay that knows about rooms and nothing about the game.
+ *
+ * This covers what the plan called `10-transport` and `11-world-sync`. They
+ * are one module because the only thing being synced is a duck, and two gates
+ * for that would be ceremony rather than safety. If a second kind of thing
+ * ever needs syncing, that is the moment to split them.
+ */
+
+export {
+  CODE_ALPHABET,
+  CODE_LENGTH,
+  NET,
+  cleanName,
+  decodeMessage,
+  encodeState,
+  makeCode,
+  normaliseCode,
+  type DuckMessage,
+  type DuckState,
+  type Peer,
+} from './internal/protocol'
+
+export {
+  createTrack,
+  record,
+  sampleTrack,
+  shortestAngle,
+  stale,
+  type Snapshot,
+  type Track,
+} from './internal/interpolate'
+
+export {
+  getNet,
+  joinLobby,
+  leaveLobby,
+  peerAt,
+  peerTracks,
+  publish,
+  relayUrl,
+  sweep,
+  useNet,
+  type NetInfo,
+  type NetStatus,
+} from './internal/client'
+
+export { NetPlayers } from './internal/NetPlayers'
