@@ -6,7 +6,7 @@
  * 00-core and draws them; it decides neither.
  */
 
-export { SKY, cloudThreshold, cloudUv, domeFits, horizonFalloff } from './internal/dome'
+export { SKY, cloudThreshold, cloudUv, domeFits, hazeAt, horizonClip } from './internal/dome'
 export { PRECIPITATION, type FallStyle } from './internal/fall'
 export { SkyDome } from './internal/SkyDome'
 export { Precipitation } from './internal/Precipitation'

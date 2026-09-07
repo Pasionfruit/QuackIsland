@@ -18,9 +18,10 @@ disagree.
 | `SkyDome` | Just the dome, if something ever wants it alone |
 | `Precipitation` | Just the rain and snow |
 | `domeFits(radius, fogFar, cameraFar)` | Whether the dome is sized to be seen. Pure |
-| `cloudUv(x, y, z, height)` | Where a view direction lands on the cloud layer. Pure |
-| `cloudThreshold(cover)` | Cover to noise threshold. Pure |
-| `horizonFalloff(dirY, fade?)` | How far clouds have faded near the horizon. Pure |
+| `cloudUv(x, y, z)` | Where a view direction lands on the cloud layer. Pure |
+| `cloudThreshold(cover, dirY?)` | Cover to noise threshold, thicker near the horizon. Pure |
+| `hazeAt(dirY)` | How far cloud has merged into the horizon haze. Pure |
+| `horizonClip(dirY)` | Keeps cloud off the sliver below the horizon. Pure |
 | `SKY` | Dome radius, cloud height and drift, sun sharpness |
 | `PRECIPITATION` | The box, the particle budget, and the rain and snow styles |
 | `FallStyle` | The shape of one of those styles |
@@ -75,8 +76,31 @@ the horizon the way a real cloud layer does rather than wrapping around the dome
 like a fisheye. It costs four octaves of value noise and no extra geometry at
 all.
 
-The projection runs to infinity at the horizon, which is why cloud fades out
-below `SKY.horizonFade`: past that the noise smears into stripes.
+## The ring round the player, and why it was there
+
+The projection runs to infinity at the horizon, and the first version dealt
+with that by simply not drawing cloud below about seventeen degrees. On an
+overcast day that left **a band of bright clear sky all the way round the
+horizon** — a very obvious circle, centred on wherever you happened to be
+standing, and the thing this section exists to stop coming back.
+
+The fix is to compress the distance instead of clipping it. `log(1 + r) / r`
+never stops growing, so detail carries on all the way down and the noise never
+smears into radial stripes, but it grows slowly enough to stay somewhere a
+noise function can be sampled. Near the zenith the compression fades out
+entirely, so the clouds overhead are not stretched.
+
+Two more things follow from doing it properly:
+
+- **Cloud thickens towards the horizon**, because a flat layer seen edge-on
+  really does pack together — you are looking through more of it. Going the
+  other way is what produced the ring.
+- **Cloud goes to haze at the horizon, not to nothing.** It blends into the
+  horizon colour, which is what a real layer does and what leaves no edge to
+  see.
+
+There are tests for all three, including one that walks every degree from the
+horizon to the zenith and fails if an overcast sky is clear anywhere.
 
 ## Why weather is multipliers
 
@@ -93,6 +117,9 @@ through it.
 
 - **The cloud layer has no thickness.** It is a shaded pattern, not volume, so
   flying up through it is not a thing that can happen.
+- **The compression is not physical.** Real perspective is `1/y`; this is a
+  logarithm chosen because it looks right and stays samplable. Cloud near the
+  horizon is closer together than it strictly should be.
 - **Stars are a hash on a grid**, so they are evenly spread rather than
   clustered into anything you could name.
 - **The precipitation box is 90 m across.** Far enough not to notice the edge
@@ -126,6 +153,13 @@ through it.
 - **Check each weather at each time of day.** Night rain should be dark, snow
   should be the brightest of the bad weathers, and nothing should ever be lit
   the same at midnight as at noon.
+- **Watch the horizon, in cloudy and in rain.** Cloud should run continuously
+  down into the haze. There must be no band of clear sky between the cloud and
+  the horizon — that ring was the first bug this module had, and it is centred
+  on the player, so it follows you around and is unmissable once seen.
+- **Spin on the spot under an overcast sky.** Nothing about the cloud should
+  appear to be centred on you.
+- **Look straight up.** The clouds overhead should not be stretched or smeared.
 - **Watch the horizon.** The world should fade into the sky, not meet it at a
   line. Look at the waterline especially.
 - **Turn the sky module off in the panel.** Everything else should carry on,

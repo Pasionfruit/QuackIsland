@@ -96,24 +96,36 @@ void main() {
   colour += uSunColor * pow(toSun, ${SKY.glowSharpness.toFixed(1)}) * 0.28 * uSunStrength;
   colour += uSunColor * pow(toSun, ${SKY.sunSharpness.toFixed(1)}) * 6.0 * uSunStrength;
 
-  // Cloud, projected onto a flat layer so it converges at the horizon rather
-  // than wrapping round the dome like a fisheye.
-  if (uCloud > 0.001 && dir.y > 0.0) {
-    vec2 uv = dir.xz / max(1e-4, dir.y) * ${(SKY.cloudHeight / 1000).toFixed(3)};
+  // Cloud, projected onto a flat layer so it converges towards the horizon
+  // rather than wrapping round the dome like a fisheye.
+  if (uCloud > 0.001 && dir.y > -0.02) {
+    // The projection runs away to infinity at the horizon. Compressing that
+    // distance logarithmically keeps the layer going all the way down with its
+    // detail intact; simply not drawing it below a cutoff - which is what this
+    // replaces - left a ring of clear sky right round the player.
+    float y = max(dir.y, ${SKY.cloudFloor.toFixed(4)});
+    vec2 p = dir.xz / y;
+    float r = length(p);
+    vec2 uv = p * (log(1.0 + r) / max(r, 1e-4)) * ${SKY.cloudScale.toFixed(3)};
     uv += vec2(uTime * ${(SKY.cloudDrift / 1000).toFixed(5)}, uTime * ${(SKY.cloudDrift / 2600).toFixed(5)});
 
     float n = fbm(uv * 1.6);
-    // Cover is the height of the threshold, so 0 is clear and 1 is solid.
-    float threshold = 1.05 - uCloud * 1.1;
+
+    // Thicker towards the horizon: more of the layer is in the way.
+    float edge = 1.0 - smoothstep(0.0, ${SKY.edgeRange.toFixed(3)}, dir.y);
+    float thickened = min(1.0, uCloud + edge * ${SKY.edgeBoost.toFixed(3)});
+    float threshold = 1.05 - thickened * 1.1;
     float cover = smoothstep(threshold, threshold + 0.34, n);
 
-    // Fade out towards the horizon, where the projection runs to infinity and
-    // the noise would smear into stripes.
-    cover *= smoothstep(${SKY.horizonFade.toFixed(3)}, ${(SKY.horizonFade * 5).toFixed(3)}, dir.y);
+    // Only the last sliver, so nothing is painted below the horizon line.
+    cover *= smoothstep(-0.01, 0.045, dir.y);
 
     // Lit from the sun side, dark underneath, so they read as volumes.
     vec3 lit = mix(uCloudColor, uCloudColor * 0.35, uCloudShade);
     lit = mix(lit, uSunColor, pow(toSun, 4.0) * 0.4 * uSunStrength);
+    // And into the haze at the horizon rather than out of existence.
+    lit = mix(lit, uHorizon, 1.0 - smoothstep(0.0, ${SKY.hazeTo.toFixed(3)}, dir.y));
+
     colour = mix(colour, lit, cover);
   }
 
