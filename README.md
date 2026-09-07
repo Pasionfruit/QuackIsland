@@ -9,7 +9,9 @@ npm install
 npm run dev
 ```
 
-Drag to orbit, scroll to zoom, right-drag to pan. The perf readout is top left.
+**WASD** to walk, **space** to jump. The panel on the right sets the time of
+day and toggles modules on and off; the perf readout is top left. Turn the
+player module off to get the free orbit camera back for inspecting terrain.
 
 ## How this project is built
 
@@ -54,9 +56,11 @@ world is reproducible and testable.
 | --- | --- |
 | `00-core` | The canvas, render loop, lights, frame ordering, seeded RNG, perf HUD |
 | `01-terrain` | The sandy island: height function, chunked LOD mesh, sand shading |
+| `02-player` | A body that walks the island and jumps, with a follow camera |
 
-Next up: water at `y = 0`, then sky, then the Meshy asset pipeline and
-vegetation placed against the terrain's height contract.
+Next up: water at `y = 0`, then a sky dome driving the times of day that
+`00-core` already exposes, then the Meshy asset pipeline and vegetation placed
+against the terrain's height contract.
 
 ## Where Meshy fits
 

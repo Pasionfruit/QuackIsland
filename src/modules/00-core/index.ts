@@ -11,6 +11,17 @@ export { createRng, hashSeed } from './internal/rng'
 export { assetUrl } from './internal/assets'
 export { useGameFrame, type FrameCallback } from './internal/frame'
 export { readPerf, type PerfSample } from './internal/perf'
+export {
+  LIGHTING,
+  TIMES_OF_DAY,
+  TIME_LABELS,
+  getTimeOfDay,
+  setTimeOfDay,
+  useTimeOfDay,
+  type LightingPreset,
+  type TimeOfDay,
+} from './internal/lighting'
+export { getCameraMode, setCameraMode, useCameraMode, type CameraMode } from './internal/view'
 export { GameCanvas } from './internal/GameCanvas'
 export { PerfHUD } from './internal/PerfHUD'
 

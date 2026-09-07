@@ -19,6 +19,8 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { PRIORITY } from './conventions'
 import { useGameFrame } from './frame'
 import { installPerfProbe, resetPerf, samplePerf } from './perf'
+import { Environment } from './Environment'
+import { useCameraMode } from './view'
 
 /** Renders the frame and then reads the counters it produced. */
 function RenderLoop() {
@@ -31,11 +33,13 @@ function RenderLoop() {
 
 /** A debug camera for inspecting whatever a module is building. */
 function DebugOrbit() {
+  const mode = useCameraMode()
   const camera = useThree((s) => s.camera)
   const domElement = useThree((s) => s.gl.domElement)
   const controls = useRef<OrbitControls | null>(null)
 
   useEffect(() => {
+    if (mode !== 'orbit') return
     const c = new OrbitControls(camera, domElement)
     c.enableDamping = true
     c.dampingFactor = 0.08
@@ -47,34 +51,10 @@ function DebugOrbit() {
       c.dispose()
       controls.current = null
     }
-  }, [camera, domElement])
+  }, [camera, domElement, mode])
 
   useGameFrame(() => controls.current?.update(), PRIORITY.camera)
   return null
-}
-
-/** Sun and sky fill. Warm key from the south-west, cool bounce from above. */
-function Lighting() {
-  return (
-    <>
-      <hemisphereLight args={['#bcd6ff', '#8a7f6a', 0.9]} />
-      <directionalLight
-        castShadow
-        position={[120, 180, 90]}
-        intensity={2.4}
-        color="#fff3e0"
-        shadow-mapSize={[2048, 2048]}
-        shadow-camera-near={1}
-        shadow-camera-far={600}
-        shadow-camera-left={-250}
-        shadow-camera-right={250}
-        shadow-camera-top={250}
-        shadow-camera-bottom={-250}
-        shadow-bias={-0.0005}
-      />
-      <ambientLight intensity={0.35} color="#cfe3ff" />
-    </>
-  )
 }
 
 export function GameCanvas({ children }: { children?: ReactNode }) {
@@ -94,9 +74,7 @@ export function GameCanvas({ children }: { children?: ReactNode }) {
         gl.toneMappingExposure = 1.05
       }}
     >
-      <color attach="background" args={['#9fc4dd']} />
-      <fog attach="fog" args={['#a8c8dd', 600, 2600]} />
-      <Lighting />
+      <Environment />
       {children}
       <DebugOrbit />
       <RenderLoop />

@@ -1,5 +1,6 @@
 import { GameCanvas, PerfHUD } from './modules/00-core'
 import { World } from './app/World'
+import { DebugPanel } from './app/DebugPanel'
 
 export default function App() {
   return (
@@ -8,6 +9,7 @@ export default function App() {
         <World />
       </GameCanvas>
       <PerfHUD />
+      <DebugPanel />
     </>
   )
 }

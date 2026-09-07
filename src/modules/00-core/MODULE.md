@@ -24,6 +24,9 @@ Import from `../00-core`. Never reach into `internal/`.
 | `GameCanvas` | The canvas. Modules render as its children |
 | `PerfHUD` | DOM overlay showing the above. Mounted outside the canvas |
 | `SceneEntry` | `{ id, order, enabled, Component }` — the registry row type |
+| `setTimeOfDay(t)` / `useTimeOfDay()` | The lighting preset in force. `'dawn' \| 'daylight' \| 'dusk' \| 'night'` |
+| `LIGHTING`, `TIMES_OF_DAY`, `TIME_LABELS` | The presets and their order |
+| `setCameraMode(m)` / `useCameraMode()` | Who drives the camera: `'orbit'` or `'player'` |
 
 **Units are metres. +Y is up. Right-handed. -Z is north. Sea level is exactly
 `y = 0`.** Terrain is expected to go negative below it.
@@ -50,12 +53,30 @@ What this means for you: **use `useGameFrame` with a band and ignore all of the
 above.** Do not call `gl.render` yourself, and do not use `useFrame` directly
 with priority `0` — mixing the two modes is how the screen goes black.
 
+## Times of day, and why they live here
+
+There is one sun and one sky, so a content module installing its own lights
+would fight whatever else did the same. Instead this module owns them and
+exposes `setTimeOfDay`. Changes are **blended over about half a second** rather
+than switched, so dragging the slider looks like the sun moving.
+
+A later sky module should drive this rather than adding lights of its own —
+that is the seam that keeps the sun singular.
+
+## Camera arbitration
+
+Same reasoning: one camera. The built-in debug orbit stands down when a module
+calls `setCameraMode('player')`, and resumes when it is set back to `'orbit'`.
+A module that takes the camera must hand it back on unmount.
+
 ## Deliberate non-goals
 
 - No scene content of any kind. No terrain, sky, water, props.
 - No physics, no collision.
 - No asset *loading* — only URL resolution through `assetUrl`.
-- No gameplay, no input handling beyond the debug orbit camera.
+- No gameplay. No input handling beyond the debug orbit camera.
+- No sky dome, sun disc, stars or clouds — only the light, fog and background
+  colour. A sky module adds the geometry and drives the time of day.
 - No post-processing stack.
 
 ## How to use it from a new module

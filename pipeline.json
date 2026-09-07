@@ -50,8 +50,9 @@
       "title": "World",
       "modules": [
         "01-terrain",
-        "02-water",
-        "03-sky"
+        "02-player",
+        "03-water",
+        "04-sky"
       ]
     },
     {
@@ -93,11 +94,12 @@
     {
       "id": "00-core",
       "phase": "P0",
-      "title": "Canvas, render loop, conventions, perf HUD, scene registry",
+      "title": "Canvas, render loop, times of day, camera arbitration, perf HUD",
       "status": "ready_for_review",
       "dependsOn": [],
       "dependents": [
-        "01-terrain"
+        "01-terrain",
+        "02-player"
       ],
       "generation": 1,
       "contract": {
@@ -130,12 +132,17 @@
           "id": "00.5",
           "title": "Contract, tests, MODULE.md",
           "status": "done"
+        },
+        {
+          "id": "00.6",
+          "title": "Four times of day, blended, plus camera mode arbitration",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T13:54:47.190Z"
+          "at": "2026-09-07T14:15:09.725Z"
         },
         "human": {
           "status": "pending"
@@ -164,7 +171,9 @@
       "dependsOn": [
         "00-core"
       ],
-      "dependents": [],
+      "dependents": [
+        "02-player"
+      ],
       "generation": 1,
       "contract": {
         "version": "0.1.0",
@@ -231,6 +240,68 @@
         "trianglesMax": 400000,
         "drawCallsMax": 64,
         "bundleGzipKb": 200
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "02-player",
+      "phase": "P1",
+      "title": "A body that walks the island with WASD and jumps",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "01-terrain"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "02.1",
+          "title": "Pure movement: walk, jump, gravity, ground snap",
+          "status": "done"
+        },
+        {
+          "id": "02.2",
+          "title": "Keyboard input with edge-detected jump",
+          "status": "done"
+        },
+        {
+          "id": "02.3",
+          "title": "Follow camera and camera claim",
+          "status": "done"
+        },
+        {
+          "id": "02.4",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-07T14:14:54.371Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No collision with anything but the ground - there is nothing else yet",
+        "No swimming; below sea level you simply walk the seabed",
+        "No animation rig; the body is a capsule",
+        "No first-person view, no mouse look",
+        "No physics engine - gravity and a ground snap, nothing more"
+      ],
+      "budgets": {
+        "drawCallsMax": 4
       },
       "measured": null,
       "blockers": []
