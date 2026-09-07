@@ -48,7 +48,7 @@ await bundle('src/games/partyparade/engine/board.ts', ppBoardOut)
 const ppEngineOut = join(tmp, 'pp-engine.mjs')
 await bundle('src/games/partyparade/engine/engine.ts', ppEngineOut)
 const ppGamesOut = join(tmp, 'pp-games.mjs')
-await bundle('src/games/partyparade/minigames/games.ts', ppGamesOut)
+await bundle('src/games/partyparade/minigames/index.ts', ppGamesOut)
 const ppMgTypesOut = join(tmp, 'pp-mgtypes.mjs')
 await bundle('src/games/partyparade/minigames/types.ts', ppMgTypesOut)
 
@@ -2291,7 +2291,9 @@ console.log('\nPolyland Smash - engine smoke test\n')
 // Four free-for-alls sharing one frame: a roster, a clock, and a single number
 // per player that decides the placings. These drive each one end to end.
 {
-  const { buildMinigame, NEVER, PRECISION_RANGE } = await import(pathToFileURL(ppGamesOut).href)
+  const { buildMinigame, CHIP_BAND, MAZE_COLS, MAZE_ROWS, NEVER, PRECISION_RANGE } = await import(
+    pathToFileURL(ppGamesOut).href,
+  )
   const { INTRO_FRAMES, MINIGAMES, MINIGAME_ORDER } = await import(pathToFileURL(ppMgTypesOut).href)
 
   console.log('\nParty Parade - the minigames\n')
@@ -2308,8 +2310,8 @@ console.log('\nPolyland Smash - engine smoke test\n')
       g.step()
     }
   }
-  const tap = (every) => (f) => ({ press: f % every === 0, left: false, right: false })
-  const idle = { press: false, left: false, right: false }
+  const tap = (every) => (f) => ({ press: f % every === 0, left: false, right: false, up: false, down: false })
+  const idle = { press: false, left: false, right: false, up: false, down: false }
 
   check('every minigame in the list has a description', MINIGAME_ORDER.every((id) => MINIGAMES[id]?.name))
   check('every minigame builds', MINIGAME_ORDER.every((id) => buildMinigame(id, roster(2), 7)))
@@ -2343,7 +2345,7 @@ console.log('\nPolyland Smash - engine smoke test\n')
     run(g, INTRO_FRAMES + 2)
     check('the flag starts up', g.armed === false)
     // Going before the flag drops is the one unforgivable thing.
-    run(g, 2, { 0: { press: true, left: false, right: false } })
+    run(g, 2, { 0: { press: true, left: false, right: false, up: false, down: false } })
     check('going early puts you out', g.playerAt(0).out === true)
     check('and scores worst', g.playerAt(0).score >= NEVER)
 
@@ -2351,7 +2353,7 @@ console.log('\nPolyland Smash - engine smoke test\n')
     while (!g.armed && guard++ < 600) g.step()
     check('the flag does drop', g.armed === true)
     run(g, 8, { 1: idle })
-    run(g, 2, { 1: { press: true, left: false, right: false } })
+    run(g, 2, { 1: { press: true, left: false, right: false, up: false, down: false } })
     check('pressing after the flag records a time', g.playerAt(1).score > 0 && g.playerAt(1).score < NEVER)
     run(g, 400, { 1: idle, 2: idle })
     check('dithering forever ends the round', g.phase === 'done')
@@ -2368,7 +2370,7 @@ console.log('\nPolyland Smash - engine smoke test\n')
     const g = buildMinigame('masher', roster(2), 7)
     run(g, INTRO_FRAMES + 2)
     // Holding the key down is not shaking: only the press counts.
-    run(g, 120, { 0: tap(2), 1: { press: true, left: false, right: false } })
+    run(g, 120, { 0: tap(2), 1: { press: true, left: false, right: false, up: false, down: false } })
     check('every press counts a shake', g.playerAt(0).score > 20, `${g.playerAt(0).score}`)
     check('leaning on the key counts once', g.playerAt(1).score === 1, `${g.playerAt(1).score}`)
     run(g, 8 * 60)
@@ -2382,14 +2384,39 @@ console.log('\nPolyland Smash - engine smoke test\n')
     const g = buildMinigame('dodge', roster(2), 3)
     run(g, INTRO_FRAMES + 2)
     const start = g.pos.get(0)
-    run(g, 20, { 0: { press: false, left: false, right: true }, 1: idle })
+    run(g, 20, { 0: { press: false, left: false, right: true, up: false, down: false }, 1: idle })
     check('holding right moves you right', g.pos.get(0) > start, `${start} -> ${g.pos.get(0)}`)
-    run(g, 30, { 0: { press: false, left: true, right: false } })
+    run(g, 30, { 0: { press: false, left: true, right: false, up: false, down: false } })
     check('and left moves you back', g.pos.get(0) < start + 40)
     // Nobody dodging means somebody eventually wears one.
     run(g, 30 * 60, { 0: idle, 1: idle })
     check('standing still under falling coconuts ends badly', g.phase === 'done')
     check('surviving longer scores higher', g.standings()[0].score >= g.standings()[1].score)
+  }
+
+  {
+    // Jumping over a coconut, and shoving somebody under one.
+    const g = buildMinigame('dodge', roster(2), 3)
+    run(g, INTRO_FRAMES + 2)
+    run(g, 3, { 0: { press: true, left: false, right: false, up: false, down: false }, 1: idle })
+    check('the action key gets you off the ground', (g.air.get(0) ?? 0) > 0)
+    const air = g.air.get(0)
+    run(g, 3, { 0: { press: true, left: false, right: false, up: false, down: false } })
+    check('holding it does not keep you up there', (g.air.get(0) ?? 0) < air)
+  }
+
+  {
+    const g = buildMinigame('dodge', roster(2), 3)
+    run(g, INTRO_FRAMES + 2)
+    // Park them on top of each other and let the shove sort it out.
+    g.pos.set(0, 200)
+    g.pos.set(1, 206)
+    run(g, 20, { 0: idle, 1: idle })
+    check(
+      'standing on somebody shoves them along',
+      Math.abs(g.pos.get(1) - g.pos.get(0)) > 6,
+      `${g.pos.get(0).toFixed(1)} / ${g.pos.get(1).toFixed(1)}`,
+    )
   }
 
   {
@@ -2407,10 +2434,23 @@ console.log('\nPolyland Smash - engine smoke test\n')
     const g = buildMinigame('precision', roster(2), 9)
     run(g, INTRO_FRAMES + 2)
     run(g, 30, { 0: idle, 1: idle })
-    run(g, 2, { 0: { press: true, left: false, right: false } })
+    run(g, 2, { 0: { press: true, left: false, right: false, up: false, down: false } })
     check('pressing stops the marker', g.stops.has(0))
     check('the score is how far off you were', g.playerAt(0).score === Math.round(Math.abs(g.stops.get(0)) * 10) / 10)
     check('and it is inside the swing', g.playerAt(0).score <= PRECISION_RANGE)
+    // The marker used to be worked out from , which both climb
+    // together - so the angle never changed and it sat dead still.
+    {
+      const m = buildMinigame('precision', roster(1), 9)
+      run(m, INTRO_FRAMES + 2)
+      const seen = new Set()
+      for (let f = 0; f < 120; f++) {
+        m.step()
+        seen.add(Math.round(m.marker))
+      }
+      check('the marker actually swings', seen.size > 12, `${seen.size} distinct positions`)
+      check('and it swings both ways', Math.min(...seen) < 0 && Math.max(...seen) > 0)
+    }
     run(g, 12 * 60)
     check('never pressing ends the round anyway', g.phase === 'done')
     check('somebody who never pressed is out', g.playerAt(1).out === true)
@@ -2418,6 +2458,153 @@ console.log('\nPolyland Smash - engine smoke test\n')
   }
 
   // --- placings
+
+
+  // --- the five roaming games
+
+  {
+    // Everything has to cope with a full room, not just a duel.
+    const eight = roster(8)
+    for (const id of MINIGAME_ORDER) {
+      const g = buildMinigame(id, eight, 5)
+      run(g, INTRO_FRAMES + 60, { 0: tap(3) })
+      if (g.players.length !== 8) {
+        check(`${id} seats eight players`, false, `${g.players.length}`)
+      }
+    }
+    check('every minigame seats a full room of eight', true)
+  }
+
+  {
+    // Zombie Tag: the two it starts with are not players, so nobody is
+    // punished for being picked.
+    const g = buildMinigame('zombie', roster(4), 5)
+    run(g, INTRO_FRAMES + 2)
+    check('the first zombies are not players', g.shamblers.length === 2 && g.turned.size === 0)
+    check('everybody starts human', g.players.every((p) => !g.turned.has(p.slot)))
+    const at = g.pos.get(0)
+    const x0 = at.x
+    run(g, 20, { 0: { press: false, left: false, right: true, up: false, down: false } })
+    check('you can run from them', g.pos.get(0).x > x0)
+    // Standing still with zombies homing in only ends one way.
+    run(g, 30 * 60, { 0: idle, 1: idle, 2: idle, 3: idle })
+    check('standing still gets you caught', g.phase === 'done')
+    check('being caught freezes your score', g.players.every((p) => p.score > 0))
+  }
+
+  {
+    // Jumbo Jump: the rope is only survivable by leaving the ground.
+    const g = buildMinigame('jumbo', roster(2), 5)
+    run(g, INTRO_FRAMES + 2)
+    run(g, 40 * 60, { 0: idle, 1: idle })
+    check('never jumping ends the round', g.phase === 'done')
+  }
+
+  {
+    // Somebody who actually jumps it survives passes - which is the only way
+    // to see the rope wind up, since a round where nobody jumps is over
+    // before the first pass finishes.
+    const g = buildMinigame('jumbo', roster(1), 5)
+    run(g, INTRO_FRAMES + 2)
+    const startSpeed = g.speed
+    for (let f = 0; f < 40 * 60 && g.phase === 'play'; f++) {
+      const near = Math.abs(g.ropeX - (g.spot.get(0) ?? 0)) < 26
+      g.setInput(0, { press: near, left: false, right: false, up: false, down: false })
+      g.step()
+    }
+    check('jumping it survives a pass', g.passes > 0, `${g.passes} passes`)
+    check('the rope speeds up each pass', g.speed > startSpeed, `${startSpeed} -> ${g.speed}`)
+  }
+
+  {
+    // A jump has to actually clear it, and cannot be held down.
+    const g = buildMinigame('jumbo', roster(1), 5)
+    run(g, INTRO_FRAMES + 2)
+    run(g, 4, { 0: { press: true, left: false, right: false, up: false, down: false } })
+    check('pressing leaves the ground', (g.air.get(0) ?? 0) > 0)
+    const air = g.air.get(0)
+    run(g, 3, { 0: { press: true, left: false, right: false, up: false, down: false } })
+    check('holding the key does not extend the jump', (g.air.get(0) ?? 0) < air)
+  }
+
+  {
+    // Space Saucer flies in two dimensions, unlike the beach games.
+    const g = buildMinigame('saucer', roster(2), 5)
+    run(g, INTRO_FRAMES + 2)
+    const a = { ...g.pos.get(0) }
+    run(g, 20, { 0: { press: false, left: false, right: false, up: false, down: true }, 1: idle })
+    check('a saucer flies downward too', g.pos.get(0).y > a.y)
+    run(g, 30 * 60, { 0: idle, 1: idle })
+    check('the rocks eventually get you', g.phase === 'done')
+  }
+
+  {
+    // Quicker Chipper: timing, not mashing.
+    const g = buildMinigame('chipper', roster(2), 5)
+    run(g, INTRO_FRAMES + 2)
+    // Player 0 swings only when the log is on the mark; player 1 flails.
+    for (let f = 0; f < 20 * 60; f++) {
+      const at = g.logs.get(0) ?? 0
+      const onMark = at >= CHIP_BAND[0] && at <= CHIP_BAND[1]
+      g.setInput(0, { press: onMark && f % 2 === 0, left: false, right: false, up: false, down: false })
+      g.setInput(1, { press: f % 2 === 0, left: false, right: false, up: false, down: false })
+      g.step()
+    }
+    check('chopping on the mark scores', g.playerAt(0).score > 5, `${g.playerAt(0).score}`)
+    check('timing beats flailing', g.playerAt(0).score > g.playerAt(1).score, `${g.playerAt(0).score} vs ${g.playerAt(1).score}`)
+    check('a wild swing stalls you', g.playerAt(1).score < g.playerAt(0).score)
+  }
+
+  {
+    // Maze Daze: a real maze, and everybody gets the same one.
+    const g = buildMinigame('maze', roster(3), 12)
+    run(g, INTRO_FRAMES + 2)
+    check('the maze has a wall around it', g.solidAt(0, 0) && g.solidAt(MAZE_COLS - 1, MAZE_ROWS - 1))
+    check('the entrance is open', !g.solidAt(1, 1))
+    check('the way out is open', !g.solidAt(g.goal.cx, g.goal.cy))
+    const open = []
+    for (let cy = 0; cy < MAZE_ROWS; cy++) for (let cx = 0; cx < MAZE_COLS; cx++) if (!g.solidAt(cx, cy)) open.push([cx, cy])
+    check('it is a maze rather than a room', open.length > 20 && open.length < MAZE_COLS * MAZE_ROWS * 0.75, `${open.length} open`)
+
+    // Flood fill from the entrance: every carved cell has to be reachable, or
+    // somebody could be dropped somewhere with no way out.
+    const seen = new Set(['1,1'])
+    const queue = [[1, 1]]
+    while (queue.length) {
+      const [cx, cy] = queue.pop()
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = cx + dx
+        const ny = cy + dy
+        if (g.solidAt(nx, ny) || seen.has(`${nx},${ny}`)) continue
+        seen.add(`${nx},${ny}`)
+        queue.push([nx, ny])
+      }
+    }
+    check('every open cell can be reached from the start', seen.size === open.length, `${seen.size} of ${open.length}`)
+    check('and the way out is among them', seen.has(`${g.goal.cx},${g.goal.cy}`))
+
+    // Walls are solid: walking into one gets you nowhere.
+    const before = { ...g.pos.get(0) }
+    run(g, 120, { 0: { press: false, left: false, right: false, up: true, down: false }, 1: idle, 2: idle })
+    check('you cannot walk through a hedge', Math.abs(g.pos.get(0).y - before.y) < 12, `${before.y} -> ${g.pos.get(0).y}`)
+
+    run(g, 45 * 60)
+    check('the maze gives up on stragglers', g.phase === 'done')
+    check('anyone still lost is marked so', g.players.every((p) => p.out || g.home.has(p.slot)))
+  }
+
+  {
+    // The same seed has to give the same maze, or a guest would draw a
+    // different one from the host.
+    const a = buildMinigame('maze', roster(2), 42)
+    const b = buildMinigame('maze', roster(2), 42)
+    run(a, INTRO_FRAMES + 2)
+    run(b, INTRO_FRAMES + 2)
+    check('the same seed builds the same maze', a.walls.join('') === b.walls.join(''))
+    const c = buildMinigame('maze', roster(2), 43)
+    run(c, INTRO_FRAMES + 2)
+    check('a different seed builds a different one', a.walls.join('') !== c.walls.join(''))
+  }
 
   {
     const g = buildMinigame('masher', roster(3), 7)

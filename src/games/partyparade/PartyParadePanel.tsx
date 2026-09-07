@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ControlsSettings } from '../../components/ControlsSettings'
+import { play as playSound } from '../../lib/audio'
 import { codeFor } from '../../lib/controls'
 import { fitScene } from '../../lib/draw'
 import { useFullscreen } from '../../lib/fullscreen'
@@ -18,7 +19,7 @@ import {
   type TileKind,
 } from './engine/board'
 import { PARADE_CAST, PLAYER_COLORS, PartyParadeEngine, VIEW_H, VIEW_W } from './engine/engine'
-import { buildMinigame, type AnyMinigame } from './minigames/games'
+import { buildMinigame, type AnyMinigame } from './minigames/index'
 import { renderMinigame } from './minigames/render'
 import {
   MG_VIEW_H,
@@ -125,7 +126,7 @@ export function PartyParadePanel() {
   const strokeRef = useRef<number[] | null>(null)
   const dragRef = useRef<{ x: number; y: number } | null>(null)
   const mgRef = useRef<AnyMinigame | null>(null)
-  const mgKeys = useRef({ press: false, left: false, right: false })
+  const mgKeys = useRef({ press: false, left: false, right: false, up: false, down: false })
   /** Where to go when the minigame ends: back to the lobby, or back to the board. */
   const mgReturnRef = useRef<Screen>('lobby')
   const fullscreen = useFullscreen<HTMLDivElement>()
@@ -421,14 +422,20 @@ export function PartyParadePanel() {
       press: codeFor('partyparade.action', 'Space'),
       left: codeFor('partyparade.left', 'KeyA'),
       right: codeFor('partyparade.right', 'KeyD'),
+      up: codeFor('partyparade.up', 'KeyW'),
+      down: codeFor('partyparade.down', 'KeyS'),
     }
     const set = (e: KeyboardEvent, down: boolean) => {
       const el = e.target as HTMLElement | null
       if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
       const k = mgKeys.current
+      // Arrows always work alongside whatever is bound, so nobody has to
+      // rebind anything to play with one hand.
       if (e.code === codes.press || e.code === 'Space') k.press = down
       else if (e.code === codes.left || e.code === 'ArrowLeft') k.left = down
       else if (e.code === codes.right || e.code === 'ArrowRight') k.right = down
+      else if (e.code === codes.up || e.code === 'ArrowUp') k.up = down
+      else if (e.code === codes.down || e.code === 'ArrowDown') k.down = down
       else return
       e.preventDefault()
     }
@@ -456,6 +463,11 @@ export function PartyParadePanel() {
     let frame = 0
     let sinceSend = 0
     let lastPhase = ''
+    // Sound is triggered by watching state change, not from inside the engine -
+    // the engines are DOM-free so a test can drive them from Node.
+    let wasArmed = false
+    let lastCount = -1
+    let wasOut = 0
 
     const tick = () => {
       raf = requestAnimationFrame(tick)
@@ -482,10 +494,26 @@ export function PartyParadePanel() {
         }
       }
 
+      // The starter pistol on Flag Drop, and a tick per second before it.
+      if (game.id === 'reaction' && game.armed && !wasArmed) playSound('shotgun')
+      if (game.id === 'reaction') wasArmed = game.armed
+      if (game.phase === 'intro') {
+        const n = Math.ceil(game.timer / 50)
+        if (n !== lastCount) {
+          lastCount = n
+          if (n > 0) playSound('tick')
+        }
+      }
+      const outNow = game.players.filter((p) => p.out).length
+      if (outNow > wasOut) playSound(game.id === 'chipper' ? 'clank' : 'thud')
+      wasOut = outNow
+
       renderMinigame(ctx, game, frame, slotRef.current)
 
       if (game.phase !== lastPhase) {
         lastPhase = game.phase
+        if (game.phase === 'play' && game.id !== 'reaction') playSound('ding')
+        if (game.phase === 'done') playSound('fanfare')
         setTick((t) => t + 1)
       }
     }
@@ -855,9 +883,11 @@ export function PartyParadePanel() {
               {
                 title: 'Minigames',
                 rows: [
-                  { key: 'partyparade.action', label: 'Action', fallback: 'Space' },
+                  { key: 'partyparade.action', label: 'Action / jump / chop', fallback: 'Space' },
                   { key: 'partyparade.left', label: 'Move left', fallback: 'KeyA' },
                   { key: 'partyparade.right', label: 'Move right', fallback: 'KeyD' },
+                  { key: 'partyparade.up', label: 'Move up', fallback: 'KeyW' },
+                  { key: 'partyparade.down', label: 'Move down', fallback: 'KeyS' },
                 ],
               },
             ]}

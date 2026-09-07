@@ -167,7 +167,7 @@ export type PartyParadePayload =
   | { k: 'clearInk' }
   /** Drop the room into a minigame. The seed travels so every peer builds the same one. */
   | { k: 'mgStart'; id: string; seed: number; roster: { slot: Slot; name: string; color: string; castIndex: number }[] }
-  | { k: 'mgInput'; i: { press: boolean; left: boolean; right: boolean } }
+  | { k: 'mgInput'; i: { press: boolean; left: boolean; right: boolean; up: boolean; down: boolean } }
   | { k: 'mgSnap'; s: unknown }
   /** Back out of the minigame to wherever we came from. */
   | { k: 'mgLeave' }

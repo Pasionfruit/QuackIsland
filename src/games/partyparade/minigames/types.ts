@@ -16,7 +16,16 @@ export const MG_VIEW_H = 270
 /** The countdown before every game, and the pause on the scoreboard after it. */
 export const INTRO_FRAMES = 150
 
-export type MinigameId = 'reaction' | 'masher' | 'dodge' | 'precision'
+export type MinigameId =
+  | 'reaction'
+  | 'masher'
+  | 'dodge'
+  | 'precision'
+  | 'zombie'
+  | 'jumbo'
+  | 'saucer'
+  | 'chipper'
+  | 'maze'
 
 export type MgPhase = 'intro' | 'play' | 'done'
 
@@ -24,9 +33,14 @@ export interface MgInput {
   press: boolean
   left: boolean
   right: boolean
+  up: boolean
+  down: boolean
 }
 
-export const IDLE_INPUT: MgInput = { press: false, left: false, right: false }
+export const IDLE_INPUT: MgInput = { press: false, left: false, right: false, up: false, down: false }
+
+/** The playing field the roaming games use - clear of the sky and the scoreboard. */
+export const FIELD = { x0: 12, y0: 112, x1: MG_VIEW_W - 12, y1: MG_VIEW_H - 10 }
 
 export interface MgPlayer {
   slot: number
@@ -254,7 +268,7 @@ export const MINIGAMES: Record<MinigameId, MinigameDef> = {
     id: 'dodge',
     name: 'Falling Coconuts',
     brief: 'Stay under nothing. Last one standing takes it.',
-    how: 'Left and right to dodge.',
+    how: 'Left and right to dodge, action to jump. Shove people under one.',
     higherWins: true,
     unit: (s) => `${(s / 60).toFixed(1)}s`,
   },
@@ -266,6 +280,56 @@ export const MINIGAMES: Record<MinigameId, MinigameDef> = {
     higherWins: false,
     unit: (s) => (s >= 9000 ? 'never stopped' : `${s.toFixed(1)} off`),
   },
+  zombie: {
+    id: 'zombie',
+    name: 'Zombie Tag',
+    brief: 'Two of them to start. Everyone they catch joins in.',
+    how: 'Run with the arrows or WASD. Survive.',
+    higherWins: true,
+    unit: (s) => `${(s / 60).toFixed(1)}s`,
+  },
+  jumbo: {
+    id: 'jumbo',
+    name: 'Jumbo Jump',
+    brief: 'A rope sweeping the beach, faster every pass.',
+    how: 'Action to jump it. You cannot hold the jump.',
+    higherWins: true,
+    unit: (s) => `${(s / 60).toFixed(1)}s`,
+  },
+  saucer: {
+    id: 'saucer',
+    name: 'Space Saucer',
+    brief: 'Fly the gap. The rocks do not stop coming.',
+    how: 'Arrows or WASD to fly in any direction.',
+    higherWins: true,
+    unit: (s) => `${(s / 60).toFixed(1)}s`,
+  },
+  chipper: {
+    id: 'chipper',
+    name: 'Quicker Chipper',
+    brief: 'Logs down the chute. Hit the mark, not the air.',
+    how: 'Action as the log crosses the line. Swing early and you stall.',
+    higherWins: true,
+    unit: (s) => `${s} logs`,
+  },
+  maze: {
+    id: 'maze',
+    name: 'Maze Daze',
+    brief: 'One hedge maze, everybody at once, one way out.',
+    how: 'Arrows or WASD. First to the gap takes it.',
+    higherWins: false,
+    unit: (s) => (s >= 9000 ? 'lost in it' : `${(s / 60).toFixed(1)}s`),
+  },
 }
 
-export const MINIGAME_ORDER: MinigameId[] = ['reaction', 'masher', 'dodge', 'precision']
+export const MINIGAME_ORDER: MinigameId[] = [
+  'reaction',
+  'masher',
+  'dodge',
+  'precision',
+  'zombie',
+  'jumbo',
+  'saucer',
+  'chipper',
+  'maze',
+]

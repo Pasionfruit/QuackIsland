@@ -15,8 +15,6 @@ import {
   MG_VIEW_H,
   MG_VIEW_W,
   type MgPlayer,
-  type MgRosterEntry,
-  type MinigameId,
 } from './types'
 
 /** A score that means "never managed it", so it always sorts last. */
@@ -140,19 +138,25 @@ const DODGE_FLOOR = MG_VIEW_H - 54
 const DODGE_SPEED = 1.9
 const DODGE_HIT_X = 11
 const DODGE_HIT_Y = 13
+export const DODGE_JUMP_FRAMES = 22
+const DODGE_PUSH_X = 15
 
 export class DodgeGame extends BaseMinigame {
   readonly id = 'dodge' as const
   coconuts: Coconut[] = []
   /** Where each player is standing along the beach. */
   pos = new Map<number, number>()
+  /** Frames left in the air, for anyone mid-jump. */
+  air = new Map<number, number>()
+  /** Frames until they can jump again, so it cannot be held down. */
+  landed = new Map<number, number>()
   left = DODGE_LIMIT
   private nextId = 1
   private cool = 0
 
   protected begin(): void {
     this.left = DODGE_LIMIT
-    this.message = 'Look up!'
+    this.message = ''
     const n = this.players.length
     this.players.forEach((p, i) => {
       // Spread the field along the beach so nobody starts underneath anybody.
@@ -169,8 +173,37 @@ export class DodgeGame extends BaseMinigame {
       const x = this.pos.get(p.slot) ?? MG_VIEW_W / 2
       const dx = (i.right ? 1 : 0) - (i.left ? 1 : 0)
       this.pos.set(p.slot, Math.max(14, Math.min(MG_VIEW_W - 14, x + dx * 2.4)))
+
+      // A jump gets you over a coconut, but you cannot steer much while you
+      // are in the air - that is the trade for the free dodge.
+      const air = this.air.get(p.slot) ?? 0
+      if (air > 0) this.air.set(p.slot, air - 1)
+      else if (i.press && (this.landed.get(p.slot) ?? 0) <= 0) {
+        this.air.set(p.slot, DODGE_JUMP_FRAMES)
+        this.landed.set(p.slot, DODGE_JUMP_FRAMES + 12)
+      }
+      const cool = this.landed.get(p.slot) ?? 0
+      if (cool > 0) this.landed.set(p.slot, cool - 1)
+
       // Surviving longer is the score, so it ticks up every frame you last.
       p.score = this.frame
+    }
+
+    // Shoving: stand against somebody and you push them along, which is how
+    // you put a rival under a coconut instead of just avoiding your own.
+    for (const a of this.players) {
+      if (a.out) continue
+      for (const b of this.players) {
+        if (b.out || b.slot === a.slot) continue
+        const ax = this.pos.get(a.slot) ?? 0
+        const bx = this.pos.get(b.slot) ?? 0
+        const gap = bx - ax
+        if (Math.abs(gap) >= DODGE_PUSH_X) continue
+        const dir = gap === 0 ? (a.slot < b.slot ? 1 : -1) : Math.sign(gap)
+        const shove = (DODGE_PUSH_X - Math.abs(gap)) * 0.22
+        this.pos.set(b.slot, Math.max(14, Math.min(MG_VIEW_W - 14, bx + dir * shove)))
+        this.pos.set(a.slot, Math.max(14, Math.min(MG_VIEW_W - 14, ax - dir * shove * 0.35)))
+      }
     }
 
     // The rain gets heavier the longer it goes on, or a careful player could
@@ -192,6 +225,8 @@ export class DodgeGame extends BaseMinigame {
 
     for (const p of this.players) {
       if (p.out) continue
+      // In the air is out of the way.
+      if ((this.air.get(p.slot) ?? 0) > 0) continue
       const px = this.pos.get(p.slot) ?? 0
       for (const c of this.coconuts) {
         if (Math.abs(c.x - px) < DODGE_HIT_X && Math.abs(c.y - DODGE_FLOOR) < DODGE_HIT_Y) {
@@ -216,17 +251,24 @@ export class DodgeGame extends BaseMinigame {
       left: this.left,
       coconuts: this.coconuts.map((c) => [c.id, Math.round(c.x), Math.round(c.y), c.vy] as const),
       pos: [...this.pos.entries()],
+      air: [...this.air.entries()],
     }
   }
 
   protected applyExtra(extra: unknown): void {
     const e = extra as
-      | { left?: number; coconuts?: [number, number, number, number][]; pos?: [number, number][] }
+      | {
+          left?: number
+          coconuts?: [number, number, number, number][]
+          pos?: [number, number][]
+          air?: [number, number][]
+        }
       | null
     if (!e) return
     if (e.left !== undefined) this.left = e.left
     if (e.coconuts) this.coconuts = e.coconuts.map(([id, x, y, vy]) => ({ id, x, y, vy }))
     if (e.pos) this.pos = new Map(e.pos)
+    if (e.air) this.air = new Map(e.air)
   }
 }
 
@@ -254,7 +296,11 @@ export class PrecisionGame extends BaseMinigame {
   protected play(): void {
     this.left--
     // A steady swing rather than a bounce, so the timing is learnable.
-    this.marker = Math.sin((this.frame - (PRECISION_LIMIT - this.left)) * 0.02 * this.speed) * PRECISION_RANGE
+    // Swing off elapsed time alone. This used to be `frame - elapsed`, which
+    // both climb by one every step - so the angle never changed and the marker
+    // sat dead still.
+    const elapsed = PRECISION_LIMIT - this.left
+    this.marker = Math.sin(elapsed * 0.028 * this.speed) * PRECISION_RANGE
 
     for (const p of this.players) {
       if (this.stops.has(p.slot)) continue
@@ -289,15 +335,4 @@ export class PrecisionGame extends BaseMinigame {
     if (e.marker !== undefined) this.marker = e.marker
     if (e.stops) this.stops = new Map(e.stops)
   }
-}
-
-// ------------------------------------------------------------------ index
-
-export type AnyMinigame = ReactionGame | MasherGame | DodgeGame | PrecisionGame
-
-export function buildMinigame(id: MinigameId, roster: MgRosterEntry[], seed = 1): AnyMinigame {
-  if (id === 'masher') return new MasherGame(roster, seed)
-  if (id === 'dodge') return new DodgeGame(roster, seed)
-  if (id === 'precision') return new PrecisionGame(roster, seed)
-  return new ReactionGame(roster, seed)
 }
