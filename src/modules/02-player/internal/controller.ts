@@ -16,7 +16,10 @@ export interface PlayerState {
   z: number
   /** Vertical speed, metres per second. */
   vy: number
-  /** Which way the body faces, radians. */
+  /**
+   * Which way the body faces, radians. Follows the camera rather than the
+   * direction of travel, so sideways input reads as a side-step.
+   */
   facing: number
   grounded: boolean
   /** How fast the body is actually moving across the ground, for animation. */
@@ -29,6 +32,8 @@ export interface PlayerInput {
   left: boolean
   right: boolean
   jump: boolean
+  /** Hold to run. */
+  run: boolean
   /**
    * Where the camera is looking, in radians, such that forward is
    * `(sin(yaw), cos(yaw))`. Movement is relative to this, so the player always
@@ -40,11 +45,13 @@ export interface PlayerInput {
 export const PLAYER = {
   /** Metres per second on flat ground. */
   walkSpeed: 9.5,
+  /** Metres per second with run held. */
+  runSpeed: 17,
   /** Straight up, metres per second. Roughly a 1.6 m hop under this gravity. */
   jumpSpeed: 11,
   gravity: -26,
-  /** How quickly the body turns to face where it is going, radians per second. */
-  turnRate: 12,
+  /** How quickly the body swings round to face the camera, radians per second. */
+  turnRate: 14,
   /** Eye height above the ground, for the camera. */
   eyeHeight: 1.7,
   /** Half the capsule, so the origin sits at the feet. */
@@ -58,6 +65,7 @@ export const IDLE_INPUT: PlayerInput = {
   left: false,
   right: false,
   jump: false,
+  run: false,
   cameraYaw: 0,
 }
 
@@ -109,19 +117,25 @@ export function stepPlayer(
     moveZ = forwardZ * f + rightZ * r
   }
 
-  state.x += moveX * PLAYER.walkSpeed * step
-  state.z += moveZ * PLAYER.walkSpeed * step
-  state.speed = magnitude > 0 ? PLAYER.walkSpeed : 0
+  const pace = input.run ? PLAYER.runSpeed : PLAYER.walkSpeed
+  state.x += moveX * pace * step
+  state.z += moveZ * pace * step
+  state.speed = magnitude > 0 ? pace : 0
 
   if (bounds) {
     state.x = Math.min(Math.max(state.x, bounds.minX), bounds.maxX)
     state.z = Math.min(Math.max(state.z, bounds.minZ), bounds.maxZ)
   }
 
-  // Turn toward the direction of travel rather than snapping to it.
+  // The body faces where the camera looks, not where it is walking. That is
+  // what makes A and D read as side-steps: hold A and you slide left while
+  // still facing forward, rather than pivoting to face left and walking off.
+  // Backing up moon-walks, which is the accepted cost of this model.
+  //
+  // Only while moving, so looking around while stood still does not spin the
+  // body on the spot.
   if (magnitude > 0) {
-    const want = Math.atan2(moveX, moveZ)
-    const delta = shortestAngle(state.facing, want)
+    const delta = shortestAngle(state.facing, input.cameraYaw)
     const maxTurn = PLAYER.turnRate * step
     state.facing += Math.max(-maxTurn, Math.min(maxTurn, delta))
   }

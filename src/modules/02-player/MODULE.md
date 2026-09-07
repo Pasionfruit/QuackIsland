@@ -2,8 +2,8 @@
 
 ## What this is
 
-A body you walk around the island with, in third person: WASD to move, space
-to jump, and the mouse for the camera.
+A body you walk around the island with, in third person: WASD to move, **shift
+to run**, space to jump, and the mouse for the camera.
 
 **Hold left and drag to look. Hold right and drag to slide the view off the
 player. Wheel to pull back. F, or the button in the panel, snaps back.** The
@@ -25,7 +25,7 @@ three.js in it, so how the player moves is tested in Node rather than by eye.
 | `createPlayer(x, z, groundAt)` | A player standing on the ground at that spot |
 | `PlayerState` | `{ x, y, z, vy, facing, grounded, speed }`. `y` is at the feet |
 | `PlayerInput` | `{ forward, back, left, right, jump, cameraYaw }` |
-| `PLAYER` | Speeds, gravity, capsule size, eye height |
+| `PLAYER` | Speeds (walk and run), gravity, capsule size, eye height |
 | `getPlayerState()` | The live player, or `null` when the module is off |
 | `refocusCamera()` | Snap the view back onto the player and reset the zoom |
 | `isCameraOffPlayer()` | Whether the view has been slid away |
@@ -40,6 +40,12 @@ or a slope. The component passes `heightAt` from `01-terrain`.
   over hundreds of frames of rough ground.
 - **Diagonals are not faster than cardinals.** Input is normalised before the
   basis is applied.
+- **The body faces the camera, not the way it is walking.** A and D are
+  side-steps: hold A and you slide left while still facing forward, rather than
+  pivoting to face left and walking off. Backing up moon-walks, which is the
+  accepted cost of the strafe model. The body only turns while there is
+  movement input, so looking around while stood still does not spin it on the
+  spot.
 - **Forward is always away from the camera, at every angle.** `cameraYaw` is
   the direction the camera looks, and forward is `(sin(yaw), cos(yaw))`. The
   basis is built from that directly rather than by rotating a vector - an
@@ -102,6 +108,10 @@ stepPlayer(state, { ...IDLE_INPUT, forward: true, cameraYaw }, delta, heightAt)
 
 - **Click once, left and right, without dragging. The camera must not move at
   all.** This is the whole reason there is no pointer lock.
+- **Hold shift to run.** Nearly twice walking pace, and it must not punch
+  through the ground on a slope or make diagonals faster.
+- **Hold A, then D.** You should side-step left and right without the body
+  pivoting to face the step, at any camera angle.
 - **Hold left and drag** to look, left and right and a little up and down.
 - **Hold right and drag** to slide the view off the player; the world should
   follow the cursor. **Wheel** to pull back far enough to see the whole island.

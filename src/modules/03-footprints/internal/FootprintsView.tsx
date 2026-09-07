@@ -124,7 +124,7 @@ export function Footprints() {
     // would still be wrong.
     const walker =
       player && heightAt(player.x, player.z) > SEA_LEVEL
-        ? { x: player.x, z: player.z, facing: player.facing, grounded: player.grounded }
+        ? { x: player.x, z: player.z, facing: player.facing, grounded: player.grounded, speed: player.speed }
         : null
 
     stepTrail(trail, walker, delta, heightAt, TRAIL)

@@ -9,7 +9,9 @@ npm install
 npm run dev
 ```
 
-Third person: **WASD** to walk, **space** to jump.
+Third person: **WASD** to move, **shift** to run, **space** to jump. A and D
+are side-steps - the body keeps facing the camera rather than turning to face
+the step.
 
 **Hold left and drag** to look. **Hold right and drag** to slide the view off
 the player. **Wheel** to pull back and see the whole island. **F** or the button

@@ -17,6 +17,7 @@ The bookkeeping — spacing, alternating feet, recycling — is pure and lives i
 | `stepTrail(state, walker, dt, groundAt, config?)` | Ages prints and lays new ones. Pure |
 | `createTrail(config?)` | A trail with every slot free |
 | `fadeOf(print, config?)` | `1` when fresh, `0` once gone |
+| `strideFor(speed, config?)` | Spacing at that pace. Running lengthens it |
 | `TRAIL` | `{ capacity, stride, life, spread }` |
 | `Footprint`, `TrailState`, `Walker` | The shapes above |
 
@@ -29,6 +30,9 @@ player's state, so anything that walks can leave prints, not just the player.
   nothing, and walking slowly does not bunch them up. The leftover distance is
   carried between frames, so spacing does not drift with frame rate.
 - **Feet alternate**, and the pair sit either side of the line of travel.
+- **Running lengthens the stride** rather than taking the same little steps
+  faster, capped at `strideMax`. A sprint leaving walk-spaced prints reads as a
+  shuffle.
 - **Nothing is left while airborne** — you are not touching the sand.
 - **The trail never grows.** It is a fixed ring of `TRAIL.capacity` slots and
   the oldest is overwritten.
@@ -78,6 +82,7 @@ Then draw `trail.prints` however you like, using `fadeOf` for opacity.
 
 - **Walk and look behind you.** Prints should trail off in a believable stride,
   left and right alternating, not a single line down the middle.
+- **Hold shift and run.** The prints should space out, not just arrive faster.
 - **Stand still.** Nothing new should appear.
 - **Jump.** Nothing should be left mid-air; the next print lands where you do.
 - **Walk up a dune.** Prints should lie along the slope, not float flat above

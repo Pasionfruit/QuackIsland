@@ -174,6 +174,10 @@ export function Player({ spawnX = 0, spawnZ = 0 }: { spawnX?: number; spawnZ?: n
           if (down && !k.jump) jumpEdge.current = true
           k.jump = down
           break
+        case 'ShiftLeft':
+        case 'ShiftRight':
+          k.run = down
+          break
         case 'KeyF':
           if (down) refocusCamera()
           break

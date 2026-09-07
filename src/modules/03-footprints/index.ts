@@ -11,6 +11,7 @@ export {
   createTrail,
   stepTrail,
   fadeOf,
+  strideFor,
   type Footprint,
   type TrailConfig,
   type TrailState,

@@ -7,6 +7,14 @@ type Ground = (x: number, z: number) => number
 const flat = (h: number): Ground => () => h
 const press = (over: Partial<PlayerInput> = {}): PlayerInput => ({ ...IDLE_INPUT, ...over })
 
+/** Wraps an angle difference into -PI..PI so comparisons do not trip over the seam. */
+function shortest(a: number): number {
+  let d = a % (Math.PI * 2)
+  if (d > Math.PI) d -= Math.PI * 2
+  if (d < -Math.PI) d += Math.PI * 2
+  return d
+}
+
 /** Runs n frames at a steady 60fps. */
 function run(state: ReturnType<typeof createPlayer>, input: PlayerInput, frames: number, ground: Ground = flat(0)) {
   for (let i = 0; i < frames; i++) stepPlayer(state, input, 1 / 60, ground)
@@ -81,11 +89,30 @@ describe('walking', () => {
     expect(b).toBeCloseTo(a, 3)
   })
 
-  it('turns to face the way it is going', () => {
+  it('keeps facing the camera while stepping sideways', () => {
+    // The whole point of the strafe model: A and D slide you left and right
+    // without the body pivoting to face the way it is stepping.
+    for (const cameraYaw of [0, 1.2, Math.PI]) {
+      const p = createPlayer(0, 0, flat(0))
+      run(p, press({ right: true, cameraYaw }), 90)
+      expect(Math.abs(shortest(p.facing - cameraYaw))).toBeLessThan(0.05)
+      const left = createPlayer(0, 0, flat(0))
+      run(left, press({ left: true, cameraYaw }), 90)
+      expect(Math.abs(shortest(left.facing - cameraYaw))).toBeLessThan(0.05)
+    }
+  })
+
+  it('faces the camera when backing up, rather than turning around', () => {
     const p = createPlayer(0, 0, flat(0))
-    run(p, press({ right: true, cameraYaw: 0 }), 60)
-    // Strafing right at yaw 0 walks toward +X, so the body should face +X.
-    expect(Math.abs(p.facing - Math.PI / 2)).toBeLessThan(0.05)
+    run(p, press({ back: true, cameraYaw: 0 }), 90)
+    expect(Math.abs(shortest(p.facing))).toBeLessThan(0.05)
+  })
+
+  it('does not spin on the spot while you look around standing still', () => {
+    const p = createPlayer(0, 0, flat(0))
+    const before = p.facing
+    for (let i = 0; i < 120; i++) stepPlayer(p, press({ cameraYaw: i * 0.05 }), 1 / 60, flat(0))
+    expect(p.facing).toBe(before)
   })
 
   it('stays inside the world when bounds are given', () => {
@@ -172,5 +199,46 @@ describe('the ground', () => {
     const before = { ...p }
     stepPlayer(p, press({ forward: true }), -1, flat(0))
     expect(p.z).toBeCloseTo(before.z, 6)
+  })
+})
+
+describe('running', () => {
+  it('covers more ground with run held', () => {
+    const walking = createPlayer(0, 0, flat(0))
+    run(walking, press({ forward: true }), 60)
+    const running = createPlayer(0, 0, flat(0))
+    run(running, press({ forward: true, run: true }), 60)
+    expect(Math.hypot(running.x, running.z)).toBeGreaterThan(Math.hypot(walking.x, walking.z) * 1.4)
+  })
+
+  it('runs at the run speed and walks at the walk speed', () => {
+    const p = createPlayer(0, 0, flat(0))
+    stepPlayer(p, press({ forward: true, run: true }), 1 / 60, flat(0))
+    expect(p.speed).toBe(PLAYER.runSpeed)
+    stepPlayer(p, press({ forward: true }), 1 / 60, flat(0))
+    expect(p.speed).toBe(PLAYER.walkSpeed)
+  })
+
+  it('reports no speed when standing still, run held or not', () => {
+    const p = createPlayer(0, 0, flat(0))
+    stepPlayer(p, press({ run: true }), 1 / 60, flat(0))
+    expect(p.speed).toBe(0)
+  })
+
+  it('does not make diagonals faster than cardinals', () => {
+    const straight = createPlayer(0, 0, flat(0))
+    run(straight, press({ forward: true, run: true }), 60)
+    const diagonal = createPlayer(0, 0, flat(0))
+    run(diagonal, press({ forward: true, right: true, run: true }), 60)
+    expect(Math.hypot(diagonal.x, diagonal.z)).toBeCloseTo(Math.hypot(straight.x, straight.z), 3)
+  })
+
+  it('still cannot walk through the ground at run speed', () => {
+    const bumpy = (x: number, z: number) => Math.sin(x * 0.3) * 4 + Math.cos(z * 0.21) * 3
+    const p = createPlayer(0, 0, bumpy)
+    for (let i = 0; i < 600; i++) {
+      stepPlayer(p, press({ forward: true, run: true, cameraYaw: i * 0.01 }), 1 / 60, bumpy)
+      expect(p.y).toBeGreaterThanOrEqual(bumpy(p.x, p.z) - 1e-6)
+    }
   })
 })

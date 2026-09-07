@@ -30,6 +30,10 @@ export interface TrailConfig {
   life: number
   /** How far to either side of the walking line each foot lands. */
   spread: number
+  /** The speed the base stride is measured at. Faster than this lengthens it. */
+  strideSpeed: number
+  /** The longest a stride may get, as a multiple of the base. */
+  strideMax: number
 }
 
 export const TRAIL: TrailConfig = {
@@ -37,6 +41,8 @@ export const TRAIL: TrailConfig = {
   stride: 1.25,
   life: 26,
   spread: 0.34,
+  strideSpeed: 9.5,
+  strideMax: 1.75,
 }
 
 export interface TrailState {
@@ -76,6 +82,8 @@ export interface Walker {
   z: number
   facing: number
   grounded: boolean
+  /** Optional. Running lengthens the stride, as it does in life. */
+  speed?: number
 }
 
 /**
@@ -122,9 +130,10 @@ export function stepTrail(
   // was left over, so the spacing quietly becomes a function of how far the
   // walker happens to move per frame - prints every two metres at one frame
   // rate and every one and a quarter at another.
-  state.sinceLast = Math.min(state.sinceLast + moved, config.stride * 3)
-  if (state.sinceLast < config.stride) return state
-  state.sinceLast -= config.stride
+  const stride = strideFor(walker.speed, config)
+  state.sinceLast = Math.min(state.sinceLast + moved, stride * 3)
+  if (state.sinceLast < stride) return state
+  state.sinceLast -= stride
 
   // Offset to the side of the line of travel, so the pair reads as a stride.
   const side = state.nextSide
@@ -145,6 +154,19 @@ export function stepTrail(
   state.cursor = (state.cursor + 1) % config.capacity
   state.nextSide = side === 1 ? -1 : 1
   return state
+}
+
+/**
+ * How far apart this walker's prints should be.
+ *
+ * Someone running covers ground with longer strides, not with the same little
+ * steps taken faster - keeping the spacing fixed makes a sprint read as a
+ * shuffle.
+ */
+export function strideFor(speed: number | undefined, config: TrailConfig = TRAIL): number {
+  if (!speed || speed <= config.strideSpeed) return config.stride
+  const stretch = Math.min(config.strideMax, speed / config.strideSpeed)
+  return config.stride * stretch
 }
 
 /** 1 when fresh, 0 once gone. */

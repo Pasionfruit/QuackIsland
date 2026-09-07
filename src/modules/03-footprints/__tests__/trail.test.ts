@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { TRAIL, createTrail, fadeOf, stepTrail, type TrailState, type Walker } from '../internal/trail'
+import { TRAIL, createTrail, fadeOf, stepTrail, strideFor, type TrailState, type Walker } from '../internal/trail'
 
 const flat = () => 0
 const walker = (x: number, z: number, over: Partial<Walker> = {}): Walker => ({
@@ -113,5 +113,35 @@ describe('fading and recycling', () => {
     stepTrail(trail, null, 1 / 60, flat)
     stepTrail(trail, walker(50, 50), 1 / 60, flat)
     expect(live(trail).length).toBe(before)
+  })
+})
+
+describe('running', () => {
+  it('lengthens the stride rather than shuffling faster', () => {
+    expect(strideFor(TRAIL.strideSpeed)).toBe(TRAIL.stride)
+    expect(strideFor(TRAIL.strideSpeed * 1.8)).toBeGreaterThan(TRAIL.stride)
+  })
+
+  it('caps how long a stride can get', () => {
+    expect(strideFor(1000)).toBeCloseTo(TRAIL.stride * TRAIL.strideMax, 6)
+  })
+
+  it('treats a missing or slow speed as a walk', () => {
+    expect(strideFor(undefined)).toBe(TRAIL.stride)
+    expect(strideFor(0)).toBe(TRAIL.stride)
+    expect(strideFor(TRAIL.strideSpeed / 2)).toBe(TRAIL.stride)
+  })
+
+  it('leaves fewer prints over the same ground when running', () => {
+    const walk = createTrail()
+    stepTrail(walk, walker(0, 0, { speed: TRAIL.strideSpeed }), 1 / 60, flat)
+    for (let i = 1; i <= 20; i++) {
+      stepTrail(walk, walker(0, -i, { speed: TRAIL.strideSpeed }), 1 / 60, flat)
+    }
+    const sprint = createTrail()
+    const fast = TRAIL.strideSpeed * 1.8
+    stepTrail(sprint, walker(0, 0, { speed: fast }), 1 / 60, flat)
+    for (let i = 1; i <= 20; i++) stepTrail(sprint, walker(0, -i, { speed: fast }), 1 / 60, flat)
+    expect(live(sprint).length).toBeLessThan(live(walk).length)
   })
 })
