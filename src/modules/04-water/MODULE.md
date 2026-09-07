@@ -2,8 +2,13 @@
 
 ## What this is
 
-The sea. One plane at `SEA_LEVEL`, one draw call, carrying a calm swell that
+The sea. One plane at `SEA_LEVEL`, one draw call, carrying an ocean swell that
 is displaced on the GPU and lit per fragment.
+
+Swell, specifically, rather than waves: three long crossing Gerstner waves, the
+longest 118 m from crest to crest, running about a metre and a half trough to
+crest all together. That is what is left of a distant storm once the short chop
+has died out, and it is why it rolls rather than breaks.
 
 It **renders and nothing else.** Whether something is in the water is decided
 from the terrain's height, not from here — which is why the player still swims
@@ -18,12 +23,14 @@ it, so it is tested in Node. The shader is *generated* from that same table.
 | --- | --- |
 | `Water` | The R3F component. Registered in `src/app/scene.ts` at order 40 |
 | `swellAt(x, z, time)` | Surface height above sea level, metres. Pure |
-| `swellNormal(x, z, time)` | Unit surface normal `[x, y, z]`, +Y up. Analytic |
+| `swellDisplace(x, z, time)` | Where that water actually is: `[x, y, z]`, sideways as well as up |
+| `swellNormal(x, z, time)` | Unit normal of the displaced surface, +Y up. Analytic |
+| `waveSpeed(wavelength)` | Deep-water wave speed, m/s: `sqrt(g * lambda / 2pi)` |
 | `swellGlsl()` | The same two functions as GLSL source, generated from `SWELL` |
-| `SWELL` | The wave table: amplitude (m), wavelength (m), direction, speed (m/s) |
-| `SWELL_MAX` | The most the surface can ever rise or fall. Currently 0.142 m |
+| `SWELL` | The wave table: amplitude (m), wavelength (m), direction |
+| `SWELL_MAX` | The most the surface can rise above the mean. Currently 0.78 m |
 | `WATER_HALF` | Half the width of the plane, metres (900) |
-| `WATER_SEGMENTS` | Grid resolution (240) |
+| `WATER_SEGMENTS` | Grid resolution (360). Tied to the shortest wavelength - see below |
 | `DEEP_AT` | Depth in metres at which the water is as dark as it gets (9) |
 | `SwellWave` | The shape in the table above |
 
@@ -36,10 +43,20 @@ everything else.
   zero. The swell moves about it, never away from it.
 - **`|swellAt(...)| <= SWELL_MAX`**, everywhere, at every time. It is a sum of
   bounded sines, so this is structural rather than tuned.
-- **`swellNormal` is a unit vector and agrees with the slope of `swellAt`.**
-  It is the analytic derivative, not a difference of samples, and a test pins
-  the two together — if they drift, the lighting stops describing the shape and
-  the sea reads as foil.
+- **`swellNormal` is the true normal of the surface the vertex shader builds** -
+  taken across the displaced surface, not from the gradient of the height,
+  because the water moves sideways as well as up. A test checks it against
+  tangents measured numerically off `swellDisplace`; if they drift the lighting
+  stops describing the shape and the sea reads as foil.
+- **The speeds are derived, not chosen.** `waveSpeed` is the deep-water
+  dispersion relation, so a long swell outruns a short one. Hand-picked speeds
+  get this wrong and the crests slide like a scrolling texture.
+- **The surface never folds over itself.** A Gerstner wave cusps at `k*A = 1`
+  and curls through itself past that. The sum here is about 0.06, and a test
+  walks along the longest wave checking the displaced points keep their order.
+- **The orbits are circles.** Horizontal displacement equals the amplitude, so
+  each point travels round rather than bobbing - the true trochoidal wave
+  rather than a stylised one.
 - **The CPU and the GPU use the same numbers.** `swellGlsl()` is generated from
   `SWELL`, so tuning an amplitude cannot leave a hand-copied shader behind.
 - **Pure and time-driven.** No state, no history: the surface at a point is a
@@ -58,8 +75,11 @@ everything else.
 - **No refraction, reflection, caustics or screen-space anything.** All of those
   want a second render pass, which is a decision about the frame, and the frame
   belongs to `00-core`.
-- **No foam, no breakers, no shore wash.** The brief was calm, and a breaking
-  wave is a different simulation, not a bigger amplitude.
+- **No foam, no breakers, no shore wash.** Swell reaching shallow water shoals,
+  steepens and breaks; this just flattens out. A breaking wave is a different
+  simulation, not a bigger amplitude.
+- **No wind chop on top of the swell.** The grid could not carry it - see below
+  - and it would want a scrolling normal map rather than geometry.
 - **No tide.** Sea level is a constant, and half the project resolves heights
   against it.
 - **No underwater view** — no fog change, no colour grade when the camera goes
@@ -85,16 +105,29 @@ import { SEA_LEVEL, heightAt } from '../01-terrain'
 const depth = Math.max(0, SEA_LEVEL - heightAt(x, z))
 ```
 
-## Why the normals are per fragment
+## Why the normals are per fragment, and what fixes the grid size
 
-The plane is 1800 m across on a 240 × 240 grid — about 7.5 m per quad. A swell
-74 m long is carried by ten vertices, which is enough for the *shape* and
-nowhere near enough for the *light*. Per-vertex normals on that grid give large
-flat facets that read as a folded sheet.
+The plane is 1800 m across on a 360 x 360 grid - 5 m per quad. Per-vertex
+normals on a grid that coarse give large flat facets that read as a folded
+sheet however good the wave maths underneath is.
 
 Computing the normal per fragment from the same analytic derivative costs a few
 cosines and gives a sea that glints correctly at any distance. This is most of
-why it reads as water at all, and it is the reason the grid can stay coarse.
+why it reads as water at all.
+
+It does **not** mean the grid can be any size it likes. The normals are free of
+the grid; the *shape* is not. Below about eight vertices per wavelength the
+crests alias into moving facets, so the shortest wave in `SWELL` sets the
+minimum resolution:
+
+```
+WATER_HALF * 2 / WATER_SEGMENTS * 8  <=  shortest wavelength
+```
+
+The shortest wave here is 43 m against a 5 m quad - about 8.6 vertices per
+wavelength, close to the line. **There is a test pinning this**, because adding
+a short, pretty, cheap-looking wave to the table is exactly the change that
+would quietly wreck the sea and then look like a driver problem.
 
 ## Why depth is baked into the mesh
 
@@ -114,18 +147,26 @@ interpolated across the fragment for free.
   smooth but not precise. It is a wet edge, not a waterline.
 - **`depthWrite` is off**, so the sea does not occlude anything. Correct while
   it is the only transparent surface; a second one will need sorting.
-- **The swell is a sum of sines, not Gerstner waves** — crests are rounded
-  rather than sharpened. At this amplitude the difference is invisible; it
-  would not be for real waves.
+- **`swellAt` is parametric.** It answers for the water whose *rest* position
+  is `(x, z)`, and that water has been pulled up to about 0.66 m sideways.
+  Anything asking "how high is the sea at this world point" lives with that
+  error - a few centimetres of height on a swell seventy metres long. A test
+  pins the slip. It would matter if the waves were ever steep.
+- **The swell does not shoal.** Real swell slows, steepens and shortens running
+  into shallow water. This just fades out over the last six metres of depth,
+  which is right at the waterline and wrong halfway in.
 - Nothing reacts to the player. No wake, no ripples, no displacement.
 - `WATER_SEGMENTS` is fixed; there is no LOD on the sea.
 
 ## How to review
 
-- **Stand on the beach and look out.** It should read as calm water — a slow
-  breathing swell, no chop, no visible waves rolling in.
-- **Watch the waterline.** The swell should flatten into the sand rather than
-  bobbing up through the beach, and the edge should be a wet fade, not a cut.
+- **Stand on the beach and look out.** It should read as an ocean: long swells
+  rolling through, well spaced, no chop, nothing breaking.
+- **Watch one crest travel.** Steady, holding its shape, at a pace somewhere
+  between walking and jogging - not shimmering and not scrolling.
+- **Watch the waterline.** The swell should flatten out into the sand rather
+  than heaving up through the beach, and the edge should be a wet fade rather
+  than a cut line.
 - **Look along the sun's reflection.** The glint should travel with the swell.
   This is the thing that says water; if it looks like a flat coloured sheet the
   per-fragment normals are not working.
@@ -137,7 +178,10 @@ interpolated across the fragment for free.
   out of your depth, then stand back up on the way out. (That behaviour belongs
   to `02-player`, but this is where you will see it.)
 - **Swim out and look around from the surface.** The body should sit *in* the
-  water, at about half a metre down, not on top of it.
+  water, about half a metre down, not on top of it - and it should **rise and
+  fall with the swell** rather than holding one level while the sea moves past.
+- **Look along the horizon for facets.** If the crests look faceted, or crawl
+  in steps, the grid has gone too coarse for the shortest wave.
 - **Toggle this module off in the panel and walk into the sea again.** You must
   still swim. If you do not, the sea has quietly become the source of truth for
   sea level.

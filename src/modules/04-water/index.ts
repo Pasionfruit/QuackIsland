@@ -7,5 +7,14 @@
  * switched off.
  */
 
-export { SWELL, SWELL_MAX, swellAt, swellGlsl, swellNormal, type SwellWave } from './internal/swell'
+export {
+  SWELL,
+  SWELL_MAX,
+  swellAt,
+  swellDisplace,
+  swellGlsl,
+  swellNormal,
+  waveSpeed,
+  type SwellWave,
+} from './internal/swell'
 export { DEEP_AT, WATER_HALF, WATER_SEGMENTS, Water } from './internal/WaterView'

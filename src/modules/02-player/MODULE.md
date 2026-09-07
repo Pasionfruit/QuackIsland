@@ -14,7 +14,9 @@ movement turn the camera, which is the opposite of what a click should do. It re
 `01-terrain`, so it stands on exactly the ground being drawn.
 
 Walk into the sea and it **swims**: past a certain depth the body tips flat,
-floats at the surface, and stands back up when it reaches the shallows.
+floats at the surface, turns to face the way it is going, and stands back up
+when it reaches the shallows. Stop swimming and it stands upright where it is,
+treading water.
 
 All of the movement is pure arithmetic in `internal/controller.ts` with no
 three.js in it, so how the player moves is tested in Node rather than by eye.
@@ -24,9 +26,10 @@ three.js in it, so how the player moves is tested in Node rather than by eye.
 | Export | Meaning |
 | --- | --- |
 | `Player` | The R3F component. Registered in `src/app/scene.ts` |
+| `PlayerProps` | `{ spawnX?, spawnZ?, surfaceAt? }` |
 | `stepPlayer(state, input, dt, groundAt, opts?)` | One step of movement. Pure |
 | `createPlayer(x, z, groundAt)` | A player standing on the ground at that spot |
-| `StepOptions` | `{ bounds?, seaLevel? }`. Both optional; omit for open dry ground |
+| `StepOptions` | `{ bounds?, seaLevel?, surfaceAt? }`. All optional |
 | `PlayerState` | `{ x, y, z, vy, facing, grounded, speed, swimming, lean }`. `y` is at the feet |
 | `PlayerInput` | `{ forward, back, left, right, jump, run, cameraYaw }` |
 | `PLAYER` | Speeds (walk, run, swim), gravity, capsule size, eye height, depths |
@@ -38,8 +41,8 @@ three.js in it, so how the player moves is tested in Node rather than by eye.
 `groundAt` is passed in rather than imported, so a test can hand it flat ground
 or a slope. The component passes `heightAt` from `01-terrain`.
 
-`seaLevel` is passed in the same way, and for a stronger reason — see
-**Why the water module does not own swimming** below.
+`seaLevel` and `surfaceAt` are passed in the same way, and for a stronger
+reason — see **Why the water module does not own swimming** below.
 
 ## Invariants you may rely on
 
@@ -72,9 +75,19 @@ or a slope. The component passes `heightAt` from `01-terrain`.
   water deep enough to lift you off the bottom changes anything.
 - **You cannot jump while swimming**, and running is ignored in the water —
   `swimSpeed` is slower than a walk.
-- **The tip between standing and swimming is eased, never switched.** `lean`
-  runs 0 (upright) to 1 (flat) at `PLAYER.leanRate` per second, so the body
-  lies down into a swim and stands back up.
+- **You only lie flat to go somewhere.** `lean` runs 0 (upright) to 1 (flat)
+  at `PLAYER.leanRate` per second, and it targets 1 only while swimming *and*
+  holding a direction. Float still and the body stands up — that is treading
+  water, and it is what makes stopping in deep water look deliberate rather
+  than like a body face down in the sea.
+- **Swimming turns the body to face where it is going.** On land the body
+  faces the camera and A and D are side-steps; in the water it turns to the
+  direction of travel, because something lying flat goes head first and
+  strafing face-up would look like being dragged sideways. Either way it only
+  turns while there is movement input.
+- **The swell never decides anything.** `surfaceAt` changes how the body sits
+  while floating and nothing else. Whether you swim comes from the bed and
+  `seaLevel`, so a heaving surface cannot make wading flicker into swimming.
 - **`dt` is clamped**, so a tab left in the background does not come back and
   teleport the player across the island.
 - Jump is edge-detected by the component, so holding space does not hover.
@@ -86,7 +99,7 @@ or a slope. The component passes `heightAt` from `01-terrain`.
 - **No collision with anything but the ground.** There is nothing else in the
   world yet; when there is, that is a physics module's job.
 - **No swimming animation** — the body tips flat and translates. There are no
-  strokes, no bobbing, no wake, and nothing at the waterline.
+  strokes, no wake, and nothing at the waterline.
 - **No diving and no treading water.** Swimming is horizontal only: you are held
   at the surface and cannot go under or climb out onto anything but the beach.
 - **No drowning, stamina, or any other state that could kill you.**
@@ -114,11 +127,13 @@ const state = createPlayer(0, 0, heightAt)
 stepPlayer(state, { ...IDLE_INPUT, forward: true, cameraYaw }, delta, heightAt, {
   bounds: worldBounds(),
   seaLevel: SEA_LEVEL,
+  surfaceAt: (x, z) => SEA_LEVEL + swellAt(x, z, elapsed),
 })
 ```
 
-Both options may be left out. Without `bounds` the body walks off the meshed
-world; without `seaLevel` it never swims and simply walks the sea bed.
+Every option may be left out. Without `bounds` the body walks off the meshed
+world; without `seaLevel` it never swims and simply walks the sea bed; without
+`surfaceAt` it floats at a flat sea level instead of riding the swell.
 
 ## Why the water module does not own swimming
 
@@ -136,12 +151,14 @@ that the seam is the right way round, and it is in both modules' review lists.
 
 ## Known limitations
 
-- Swimming holds the body at a fixed depth rather than riding the swell, so at
-  the surface it does not rise and fall with the water. `04-water` exports
-  `swellAt` if that is ever wanted; the swell is under 15 cm, so it reads as
-  calm either way.
+- Swimming holds the body a fixed distance under whatever surface it is given,
+  so it rides the swell but does not lean into it — the body stays level while
+  the water tilts underneath.
 - The transition is a tip and a float, with no push-off entering the water and
   no clamber leaving it.
+- Turning to face the swim direction and turning to face the camera share one
+  `turnRate`, so leaving the water swings the body round at the same speed it
+  turns in it.
 - The camera is aimed by the mouse and the body walks where it points, so you
   cannot look behind you while walking forward - a proper strafing camera is a
   separate job.
@@ -183,7 +200,15 @@ that the seam is the right way round, and it is in both modules' review lists.
 - **Stand exactly at the depth where it changes and walk along the shore.** It
   must settle on one or the other, not flicker between standing and swimming.
 - **Swim out over deep water.** You should stay at the surface, about half a
-  metre down, however deep the sea bed goes — not sink, not ride on top.
+  metre down, however deep the sea bed goes — not sink, not ride on top — and
+  rise and fall with the swell rather than holding one level.
+- **Swim in a direction, then let go of the keys.** The body should stand
+  upright and tread water where it is, not stay face down. Press again and it
+  should tip back over.
+- **Swim while turning the camera.** The body should follow where it is
+  *going*, not where the camera points — the opposite of how it behaves on
+  land. Check A and D too: swimming right should point the body right.
+- **Turn the camera while treading water.** The body must not spin.
 - **Press space while swimming.** Nothing should happen.
 - **Hold shift while swimming.** No sprint; swimming is slower than walking.
 - **Turn the water module off in the panel and walk into the sea.** You must

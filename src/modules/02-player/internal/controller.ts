@@ -107,6 +107,15 @@ export interface StepOptions {
    * you are in water is a fact about the ground, not about anything rendering.
    */
   seaLevel?: number
+  /**
+   * Where the surface of the water actually is, this instant, at a point. Used
+   * to ride the swell; defaults to a flat `seaLevel`.
+   *
+   * Whether you are *in* water is decided from the ground and `seaLevel`, and
+   * deliberately not from this - so a missing or flat surface never changes
+   * whether the player swims, only how they sit while swimming.
+   */
+  surfaceAt?: (x: number, z: number) => number
 }
 
 function shortestAngle(from: number, to: number): number {
@@ -169,19 +178,6 @@ export function stepPlayer(
     state.z = Math.min(Math.max(state.z, bounds.minZ), bounds.maxZ)
   }
 
-  // The body faces where the camera looks, not where it is walking. That is
-  // what makes A and D read as side-steps: hold A and you slide left while
-  // still facing forward, rather than pivoting to face left and walking off.
-  // Backing up moon-walks, which is the accepted cost of this model.
-  //
-  // Only while moving, so looking around while stood still does not spin the
-  // body on the spot.
-  if (magnitude > 0) {
-    const delta = shortestAngle(state.facing, input.cameraYaw)
-    const maxTurn = PLAYER.turnRate * step
-    state.facing += Math.max(-maxTurn, Math.min(maxTurn, delta))
-  }
-
   const ground = groundAt(state.x, state.z)
   // Out of your depth is a question about the sea bed, not about where the
   // body happens to be this frame - otherwise wading out gets stuck flickering
@@ -193,7 +189,11 @@ export function stepPlayer(
     state.grounded = false
     // Float, rather than fall. Easing to the waterline also means walking off
     // a shelf into deep water surfaces you instead of dropping you to the bed.
-    const floatLine = seaLevel - PLAYER.floatDepth
+    // Ride the swell rather than sitting at a flat mean level: on an ocean
+    // that heaves the better part of a metre, a body held at the mean would
+    // submerge and surface as the crests went past.
+    const surface = opts.surfaceAt ? opts.surfaceAt(state.x, state.z) : seaLevel
+    const floatLine = surface - PLAYER.floatDepth
     state.vy = 0
     state.y += (floatLine - state.y) * Math.min(1, step * 6)
   } else {
@@ -221,8 +221,31 @@ export function stepPlayer(
     }
   }
 
+  // Which way the body points.
+  //
+  // On land it faces where the camera looks, not where it is walking - that is
+  // what makes A and D read as side-steps rather than pivoting the body to
+  // face the step. Backing up moon-walks, which is the accepted cost.
+  //
+  // Swimming is the other way round: a body lying flat in the water goes head
+  // first, so it turns to face the way it is actually travelling. Strafing
+  // face-up would look like being dragged sideways.
+  //
+  // Either way, only while moving - looking around while treading water or
+  // stood still must not spin the body on the spot.
+  if (magnitude > 0) {
+    const target = state.swimming ? Math.atan2(moveX, moveZ) : input.cameraYaw
+    const delta = shortestAngle(state.facing, target)
+    const maxTurn = PLAYER.turnRate * step
+    state.facing += Math.max(-maxTurn, Math.min(maxTurn, delta))
+  }
+
   // Tip into the swim, or stand back up, over about a third of a second.
-  const wantLean = state.swimming ? 1 : 0
+  //
+  // Only while actually swimming somewhere. Floating still in deep water is
+  // treading water, and you tread water upright - so letting go of the keys
+  // stands the body back up without leaving the sea.
+  const wantLean = state.swimming && magnitude > 0 ? 1 : 0
   const leanStep = PLAYER.leanRate * step
   state.lean += Math.max(-leanStep, Math.min(leanStep, wantLean - state.lean))
 

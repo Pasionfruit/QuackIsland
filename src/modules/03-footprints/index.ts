@@ -1,10 +1,12 @@
 /**
  * 03-footprints - the public contract.
  *
- * Prints left in the sand as the player walks, fading over about half a
- * minute. Reads the player's live position and the terrain's height and
+ * Webbed duck prints left in the sand as the player walks, fading over about
+ * half a minute. Reads the player's live position and the terrain's height and
  * normal; owns nothing else.
  */
+
+export { DUCK_FOOT, duckFootAt, duckFootGlsl, type Toe } from './internal/foot'
 
 export {
   TRAIL,

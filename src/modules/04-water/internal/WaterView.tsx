@@ -33,8 +33,16 @@ interface CompiledShader {
 
 /** Half the width of the sea, in metres. Fog swallows the edge long before it. */
 export const WATER_HALF = 900
-/** Grid resolution. Coarse is fine: the normals are per fragment. */
-export const WATER_SEGMENTS = 240
+/**
+ * Grid resolution.
+ *
+ * The normals are worked out per fragment, so this only has to carry the
+ * *shape* of the swell - but it does have to carry it. A quad here is 5 m, and
+ * the shortest wave in the table is 43 m, so the shortest swell gets about
+ * eight vertices per wavelength. Below that the crests start to alias into
+ * moving facets, so there is a test tying this to `SWELL`.
+ */
+export const WATER_SEGMENTS = 360
 /** Past this depth the water is as dark as it gets. */
 export const DEEP_AT = 9
 
@@ -91,11 +99,14 @@ function createWaterMaterial(): MeshStandardMaterial {
         '#include <begin_vertex>',
         `#include <begin_vertex>
         vDepth = aDepth;
+        // The rest position, which is what parameterises the wave. The vertex
+        // itself is about to be moved sideways as well as up.
         vSurface = position.xz;
-        // Flatten the swell out as the water shallows, so it does not bob
-        // through the beach at the water's edge.
-        float shore = smoothstep(0.0, 2.2, aDepth);
-        transformed.y += swellHeight(position.xz, uTime) * shore;`,
+        // Flatten the swell out as the water shallows, so it does not heave
+        // through the beach at the water's edge. Deeper than the old sea:
+        // these waves are most of a metre tall.
+        float shore = smoothstep(0.0, 6.0, aDepth);
+        transformed += swellDisplace(position.xz, uTime) * shore;`,
       )
 
     shader.fragmentShader = shader.fragmentShader
@@ -130,7 +141,7 @@ function createWaterMaterial(): MeshStandardMaterial {
     material.userData.shader = shader
   }
 
-  material.customProgramCacheKey = () => 'localrot-water-v1'
+  material.customProgramCacheKey = () => 'localrot-water-v2'
   return material
 }
 

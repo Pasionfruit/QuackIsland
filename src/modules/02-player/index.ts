@@ -13,12 +13,14 @@ export {
   stepPlayer,
   type PlayerState,
   type PlayerInput,
+  type StepOptions,
 } from './internal/controller'
 
 export {
   CAM_DISTANCE_MAX,
   CAM_DISTANCE_MIN,
   Player,
+  type PlayerProps,
   getPlayerState,
   isCameraOffPlayer,
   refocusCamera,

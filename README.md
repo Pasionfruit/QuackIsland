@@ -11,7 +11,9 @@ npm run dev
 
 Third person: **WASD** to move, **shift** to run, **space** to jump. A and D
 are side-steps - the body keeps facing the camera rather than turning to face
-the step. Walk into the sea and you swim; walk back out and you stand up.
+the step. Walk into the sea and you swim - the body tips flat and turns to
+face where it is going. Stop and it stands upright, treading water; walk back
+out and it stands up on the sand.
 
 **Hold left and drag** to look. **Hold right and drag** to slide the view off
 the player. **Wheel** to pull back and see the whole island. **F** or the button
@@ -67,8 +69,8 @@ world is reproducible and testable.
 | `00-core` | The canvas, render loop, lights, frame ordering, seeded RNG, perf HUD |
 | `01-terrain` | The sandy island: height function, chunked LOD mesh, sand shading |
 | `02-player` | Third-person body: walks, runs, jumps, swims, mouse-aimed camera |
-| `03-footprints` | Prints left in the sand, fading, in one draw call |
-| `04-water` | The sea at `y = 0`: a calm swell, lit per fragment, in one draw call |
+| `03-footprints` | Webbed duck prints in the sand, fading, in one draw call |
+| `04-water` | The sea at `y = 0`: an ocean swell, lit per fragment, one draw call |
 
 Next up: a sky dome driving the day cycle that `00-core` already exposes, then
 the Meshy asset pipeline and vegetation placed against the terrain's height

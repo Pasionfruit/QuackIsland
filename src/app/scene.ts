@@ -8,15 +8,41 @@
  * `enabled` is the practical payoff: while gating a module you can switch
  * everything else off and look at it on its own.
  */
+import { createElement } from 'react'
 import type { SceneEntry } from '../modules/00-core'
 import { Terrain } from '../modules/01-terrain'
 import { Player } from '../modules/02-player'
 import { Footprints } from '../modules/03-footprints'
-import { Water } from '../modules/04-water'
+import { Water, swellAt } from '../modules/04-water'
+
+/**
+ * The player, floating on the actual swell rather than on a flat mean level -
+ * on an ocean that heaves the better part of a metre a body held at the mean
+ * would submerge and surface as the crests went past.
+ *
+ * Handing the swell to the player is this file's job and not the player's:
+ * `02-player` importing `04-water` would be backwards, and would stop the
+ * player ever being frozen before the sea is. The player takes an optional
+ * "where is the surface" function and knows nothing else about water.
+ *
+ * With the sea switched off there is no swell to ride, so the surface goes
+ * flat - but the player still swims, because that decision comes from the
+ * terrain. Walking into the sea with the water module off is the check that
+ * the seam is the right way round.
+ */
+const PlayerOnSea = () =>
+  createElement(Player, {
+    surfaceAt: (x: number, z: number, time: number) => (waterVisible() ? swellAt(x, z, time) : 0),
+  })
+
+/** Whether the sea is currently being drawn. Read per frame; it is a toggle. */
+function waterVisible(): boolean {
+  return SCENE.find((e) => e.id === '04-water')?.enabled ?? false
+}
 
 export const SCENE: SceneEntry[] = [
   { id: '01-terrain', order: 10, enabled: true, Component: Terrain },
-  { id: '02-player', order: 20, enabled: true, Component: Player },
+  { id: '02-player', order: 20, enabled: true, Component: PlayerOnSea },
   { id: '03-footprints', order: 30, enabled: true, Component: Footprints },
   { id: '04-water', order: 40, enabled: true, Component: Water },
 ]

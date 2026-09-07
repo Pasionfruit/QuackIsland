@@ -64,7 +64,21 @@ export function isCameraOffPlayer(): boolean {
   return Math.hypot(rig.panX, rig.panZ) > 0.5
 }
 
-export function Player({ spawnX = 0, spawnZ = 0 }: { spawnX?: number; spawnZ?: number }) {
+export interface PlayerProps {
+  spawnX?: number
+  spawnZ?: number
+  /**
+   * Height of the water surface above sea level at a point, at a moment -
+   * the swell. Optional: without it the player floats at a flat sea level.
+   *
+   * Passed in rather than imported so this module does not depend on the water
+   * module. Whether the player swims at all is decided from the terrain, so a
+   * missing surface changes how they float and never whether they float.
+   */
+  surfaceAt?: (x: number, z: number, time: number) => number
+}
+
+export function Player({ spawnX = 0, spawnZ = 0, surfaceAt }: PlayerProps) {
   const camera = useThree((s) => s.camera)
   const domElement = useThree((s) => s.gl.domElement)
   const body = useRef<Group>(null)
@@ -202,12 +216,22 @@ export function Player({ spawnX = 0, spawnZ = 0 }: { spawnX?: number; spawnZ?: n
   const camWant = useMemo(() => new Vector3(), [])
   const camLook = useMemo(() => new Vector3(), [])
 
-  useGameFrame((_s, delta) => {
+  // The controller asks for the surface at a point, without a time; the time
+  // is whatever frame we are in. Built once over a mutable slot rather than
+  // closed over per frame, so stepping the player allocates nothing.
+  const clock = useRef(0)
+  const surface = useMemo(() => {
+    if (!surfaceAt) return undefined
+    return (x: number, z: number) => SEA_LEVEL + surfaceAt(x, z, clock.current)
+  }, [surfaceAt])
+
+  useGameFrame((frame, delta) => {
     const k = keys.current
     const input: PlayerInput = { ...k, jump: jumpEdge.current, cameraYaw: rig.yaw }
     jumpEdge.current = false
 
-    stepPlayer(state, input, delta, heightAt, { bounds, seaLevel: SEA_LEVEL })
+    clock.current = frame.clock.elapsedTime
+    stepPlayer(state, input, delta, heightAt, { bounds, seaLevel: SEA_LEVEL, surfaceAt: surface })
 
     if (body.current) {
       // Standing, the origin is at the feet so the middle of the capsule is

@@ -326,14 +326,14 @@ describe('swimming', () => {
     expect(p.y).toBeCloseTo(before, 2)
   })
 
-  it('tips flat in the water and stands back up on land', () => {
+  it('tips flat while swimming somewhere, and stands back up on land', () => {
     const deep = flat(-8)
     const p = createPlayer(0, 0, deep)
     expect(p.lean).toBe(0)
-    for (let i = 0; i < 120; i++) stepPlayer(p, press(), 1 / 60, deep, sea)
+    for (let i = 0; i < 120; i++) stepPlayer(p, press({ forward: true }), 1 / 60, deep, sea)
     expect(p.lean).toBeCloseTo(1, 2)
     // Back onto dry land.
-    for (let i = 0; i < 120; i++) stepPlayer(p, press(), 1 / 60, flat(5), sea)
+    for (let i = 0; i < 120; i++) stepPlayer(p, press({ forward: true }), 1 / 60, flat(5), sea)
     expect(p.lean).toBeCloseTo(0, 2)
     expect(p.swimming).toBe(false)
   })
@@ -341,9 +341,82 @@ describe('swimming', () => {
   it('tips over gradually rather than snapping flat', () => {
     const deep = flat(-8)
     const p = createPlayer(0, 0, deep)
-    stepPlayer(p, press(), 1 / 60, deep, sea)
+    stepPlayer(p, press({ forward: true }), 1 / 60, deep, sea)
     expect(p.lean).toBeGreaterThan(0)
     expect(p.lean).toBeLessThan(0.2)
+  })
+
+  it('stands upright when floating still, rather than lying face down', () => {
+    // Treading water. Letting go of the keys in deep water should stand the
+    // body up without leaving the sea - you only lie flat to go somewhere.
+    const deep = flat(-8)
+    const p = createPlayer(0, 0, deep)
+    for (let i = 0; i < 120; i++) stepPlayer(p, press({ forward: true }), 1 / 60, deep, sea)
+    expect(p.lean).toBeCloseTo(1, 2)
+    for (let i = 0; i < 120; i++) stepPlayer(p, press(), 1 / 60, deep, sea)
+    expect(p.lean).toBeCloseTo(0, 2)
+    // Still in the water, still floating - just upright.
+    expect(p.swimming).toBe(true)
+    expect(p.y).toBeCloseTo(-PLAYER.floatDepth, 2)
+  })
+
+  it('turns to face the way it is swimming, not the camera', () => {
+    // Lying flat, a body goes head first. Strafing face-up would look like
+    // being dragged sideways.
+    const deep = flat(-8)
+    for (const cameraYaw of [0, 1.1, Math.PI / 2, 3.3, 5.2]) {
+      const p = createPlayer(0, 0, deep)
+      for (let i = 0; i < 240; i++) {
+        stepPlayer(p, press({ right: true, cameraYaw }), 1 / 60, deep, sea)
+      }
+      // Travelling along screen-right, so that is where the body should point.
+      const heading = Math.atan2(p.x, p.z)
+      expect(Math.abs(shortest(p.facing - heading))).toBeLessThan(0.05)
+      // And that is not where the camera is looking.
+      expect(Math.abs(shortest(p.facing - cameraYaw))).toBeGreaterThan(1)
+    }
+  })
+
+  it('goes back to facing the camera once it is walking again', () => {
+    const deep = flat(-8)
+    const p = createPlayer(0, 0, deep)
+    const cameraYaw = 2.2
+    for (let i = 0; i < 240; i++) stepPlayer(p, press({ right: true, cameraYaw }), 1 / 60, deep, sea)
+    for (let i = 0; i < 240; i++) stepPlayer(p, press({ right: true, cameraYaw }), 1 / 60, flat(3), sea)
+    expect(Math.abs(shortest(p.facing - cameraYaw))).toBeLessThan(0.05)
+  })
+
+  it('does not spin on the spot while treading water', () => {
+    const deep = flat(-8)
+    const p = createPlayer(0, 0, deep)
+    for (let i = 0; i < 60; i++) stepPlayer(p, press(), 1 / 60, deep, sea)
+    const facing = p.facing
+    for (let i = 0; i < 120; i++) stepPlayer(p, press({ cameraYaw: 4.5 }), 1 / 60, deep, sea)
+    expect(p.facing).toBe(facing)
+  })
+
+  it('rides the swell when given one, and floats flat without', () => {
+    // The surface is handed in, so the player never imports the water module.
+    const deep = flat(-20)
+    const swell = { seaLevel: 0, surfaceAt: (x: number) => Math.sin(x * 0.1) * 0.8 }
+    const p = createPlayer(7, 0, deep)
+    for (let i = 0; i < 300; i++) stepPlayer(p, press(), 1 / 60, deep, swell)
+    expect(p.y).toBeCloseTo(Math.sin(7 * 0.1) * 0.8 - PLAYER.floatDepth, 2)
+
+    const flatSea = createPlayer(7, 0, deep)
+    for (let i = 0; i < 300; i++) stepPlayer(flatSea, press(), 1 / 60, deep, sea)
+    expect(flatSea.y).toBeCloseTo(-PLAYER.floatDepth, 2)
+  })
+
+  it('decides whether to swim from the bed, never from the swell', () => {
+    // A surface that heaves must not make wading flicker into swimming.
+    const shallow = flat(-PLAYER.swimDepth * 0.5)
+    const heaving = { seaLevel: 0, surfaceAt: (x: number, z: number) => Math.sin(x + z) * 3 }
+    const p = createPlayer(0, 0, shallow)
+    for (let i = 0; i < 200; i++) {
+      stepPlayer(p, press({ forward: true }), 1 / 60, shallow, heaving)
+      expect(p.swimming).toBe(false)
+    }
   })
 
   it('does not flicker between walking and swimming at the exact depth', () => {

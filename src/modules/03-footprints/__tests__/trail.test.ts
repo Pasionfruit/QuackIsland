@@ -1,4 +1,4 @@
-import { CircleGeometry } from 'three'
+import { PlaneGeometry } from 'three'
 import { describe, expect, it } from 'vitest'
 import { TRAIL, createTrail, fadeOf, stepTrail, strideFor, type TrailState, type Walker } from '../internal/trail'
 
@@ -151,12 +151,12 @@ describe('running', () => {
   })
 })
 
-describe('the disc a print is drawn on', () => {
+describe('the quad a print is drawn on', () => {
   it('lies flat once rotated, rather than standing on its edge', () => {
-    // CircleGeometry is built in the XY plane, so its normal is +Z. Everything
-    // here reasons in +Y-up terms, and aligning the disc's "up" to the ground
+    // PlaneGeometry is built in the XY plane, so its normal is +Z. Everything
+    // here reasons in +Y-up terms, and aligning the quad's "up" to the ground
     // normal without this rotation left every print standing vertically.
-    const g = new CircleGeometry(1, 14)
+    const g = new PlaneGeometry(2, 2)
     g.rotateX(-Math.PI / 2)
     const pos = g.getAttribute('position')
     let spanX = 0
@@ -167,10 +167,10 @@ describe('the disc a print is drawn on', () => {
       spanY = Math.max(spanY, Math.abs(pos.getY(i)))
       spanZ = Math.max(spanZ, Math.abs(pos.getZ(i)))
     }
-    // A fourteen-sided polygon, so its corners do not quite reach radius one
-    // on every axis - roughly unit is the honest assertion here.
-    expect(spanX).toBeGreaterThan(0.95)
-    expect(spanZ).toBeGreaterThan(0.95)
+    // The foot is cut out of this by the distance field, so the quad has to
+    // cover the whole unit square the field is drawn in.
+    expect(spanX).toBe(1)
+    expect(spanZ).toBe(1)
     // Flat is the part that matters: no extent at all in the up axis.
     expect(spanY).toBeCloseTo(0, 6)
     g.dispose()
