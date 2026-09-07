@@ -145,6 +145,17 @@ export type BuildBetrayPayload =
   | { k: 'vote'; category: 'difficulty' | 'creative' | 'devious'; choice: number }
   | { k: 'input'; i: { left: boolean; right: boolean; jump: boolean } }
 
+/**
+ * Party Parade rides the same relay. The board phase has nothing to configure
+ * and nothing that moves yet, so this is the smallest payload here: `start`
+ * flips everyone to the board, and both sides build an identical engine from
+ * the room's own peer list rather than from anything sent inside it. `snap` is
+ * wired up on both ends ready for the die and the movement that follow.
+ */
+export type PartyParadePayload =
+  | { k: 'start'; config: Record<string, never> }
+  | { k: 'snap'; s: unknown }
+
 export type SmashPayload =
   | { k: 'pick'; slot: Slot; charId: string }
   | { k: 'rules'; stocks: number }

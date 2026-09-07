@@ -635,7 +635,7 @@ const PARADE: GameEntry = {
   tagline: 'A board, a die, and forty minutes of betrayal.',
   genre: 'Party board game',
   players: PARTY,
-  status: 'concept',
+  status: 'prototype',
   blurb:
     'Take turns around the board, land on tiles, then everyone drops into a minigame to decide who gets the good stuff.',
   plan: [

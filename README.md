@@ -155,6 +155,9 @@ own machine) is just opening that one URL twice.
 | Build & Betray piece pool | [src/games/buildbetray/engine/pieces.ts](src/games/buildbetray/engine/pieces.ts) |
 | Build & Betray course, placement rules and validator | [src/games/buildbetray/engine/level.ts](src/games/buildbetray/engine/level.ts) |
 | Build & Betray round state machine, physics and scoring | [src/games/buildbetray/engine/engine.ts](src/games/buildbetray/engine/engine.ts) |
+| Party Parade panel (lobby, board) | [src/games/partyparade/PartyParadePanel.tsx](src/games/partyparade/PartyParadePanel.tsx) |
+| Party Parade board: islands, bridges, the tile loop | [src/games/partyparade/engine/board.ts](src/games/partyparade/engine/board.ts) |
+| Party Parade match state and cast line-up | [src/games/partyparade/engine/engine.ts](src/games/partyparade/engine/engine.ts) |
 
 ## The art rules
 
@@ -505,6 +508,42 @@ make at up to eight players. It reads fine for a casual platformer; smoother
 guest movement, more maps, a real Chaos-mode content pass, and actual audio
 are the natural next steps, not blockers for a first playable version.
 
+## Party Parade
+
+A lap of four islands joined by bridges, in the shape of Wii Party's Island
+Race: take turns around the loop, land on a space, and periodically everyone
+drops out of the board into a minigame. Two to eight players, one animal from
+the cast each.
+
+**This is the board and nothing else yet, on purpose.** It is being built in
+phases - the map, then the die, then moving, then what the spaces do to you,
+then the minigames between rounds - and this one is the map. It ships as a
+`prototype` on the dashboard rather than `live`: the card is clickable and
+says so, because a board you can host, join and stand on is worth looking at
+before it can be played.
+
+**A player's position is one integer.** The loop is a flat ordered array
+([engine/board.ts](src/games/partyparade/engine/board.ts)) and a pawn's
+position is an index into it, so moving is `nextTileIndex(i, steps)` - modular
+arithmetic, not the graph walk Case Closed needs. A closed loop has no
+branching exits, and keeping the islands and bridges as scenery the renderer
+reads rather than geometry the rules read is what buys that. The islands exist
+to be looked at; the tile array is the game.
+
+**The engine has no clock.** A board game advances when somebody does
+something, so this follows Case Closed's event-driven shape rather than the
+fixed-timestep loop the platformers use - there is no `step()`. The panel
+still runs an animation frame loop, but only to paint the water and the idle
+bobbing. That is also why there is no Esc pause yet: nothing is running to
+freeze. It arrives with the minigames, which are the first part of this game
+with a clock in it.
+
+**Both sides build the opening board from the room, not from the wire.** The
+host and every guest construct an identical engine from the same
+server-issued peer list when the match starts, so the first frame needs no
+snapshot to agree on - `snap` is wired up on both ends and deliberately unused
+until the die exists.
+
 ## Adding a game
 
 1. Add an entry to `GAMES` in [src/games/registry.ts](src/games/registry.ts)
@@ -530,4 +569,8 @@ bundles Build & Betray's pieces, course and match engine, checking placement
 rules and the anti-grief hazard cap, the build/preview/run/results/next-round
 state machine, gravity/jumping/landing, hazard kills with betrayal credit,
 the goal and its scoring, Classic and Quick Play win conditions, and snapshot
-round-tripping.
+round-tripping. Finally it bundles Party Parade's board and match
+state, checking the hand-authored map holds together - every tile on a real
+island, every bridge joining two different ones, no island poking above the
+waterline - along with the loop's wraparound arithmetic, the one-animal-each
+roster, and snapshot round-tripping.

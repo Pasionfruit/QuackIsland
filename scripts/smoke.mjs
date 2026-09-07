@@ -43,6 +43,10 @@ const bbLevelOut = join(tmp, 'bb-level.mjs')
 await bundle('src/games/buildbetray/engine/level.ts', bbLevelOut)
 const bbPiecesOut = join(tmp, 'bb-pieces.mjs')
 await bundle('src/games/buildbetray/engine/pieces.ts', bbPiecesOut)
+const ppBoardOut = join(tmp, 'pp-board.mjs')
+await bundle('src/games/partyparade/engine/board.ts', ppBoardOut)
+const ppEngineOut = join(tmp, 'pp-engine.mjs')
+await bundle('src/games/partyparade/engine/engine.ts', ppEngineOut)
 
 const { SmashEngine } = await import(pathToFileURL(out).href)
 
@@ -1944,7 +1948,7 @@ console.log('\nPolyland Smash - engine smoke test\n')
   check('the shelf has seven playable games', live.length === 7, live.map((g) => g.id).join(', '))
   const playableIds = new Set(['smash', 'duck-szn', 'tank-trouble', 'hide-and-seek', 'sketch', 'case-closed', 'build-and-betray'])
   check('every playable game has a panel', live.every((g) => playableIds.has(g.id)))
-  check('every other game is marked concept', GAMES.every((g) => g.status === 'live' || g.status === 'concept'))
+  check('every other game is marked concept or prototype', GAMES.every((g) => g.status === 'live' || g.status === 'concept' || g.status === 'prototype'))
   check('party games are all 2-8 players', GAMES.filter((g) => g.status === 'concept').every((g) => g.players === '2-8 players'))
 
   // Paint each card into a stub context: this catches typos in the art code
@@ -1983,6 +1987,55 @@ console.log('\nPolyland Smash - engine smoke test\n')
     }
   }
   check('every card paints without throwing', painted === GAMES.length, calls.slice(0, 3).join('; '))
+}
+
+// ------------------------------------------------------------- Party Parade
+// The board is hand-authored data, so these checks are about the map holding
+// together: a tile pointing at an island that does not exist, or a loop that
+// wraps to the wrong space, would otherwise only turn up as something looking
+// slightly wrong on screen.
+{
+  const { BOARD_TILES, BRIDGES, ISLANDS, START_INDEX, nextTileIndex } = await import(pathToFileURL(ppBoardOut).href)
+  const { PARADE_CAST, PartyParadeEngine } = await import(pathToFileURL(ppEngineOut).href)
+
+  console.log('\nParty Parade - the board\n')
+
+  check('the loop is long enough to be worth walking', BOARD_TILES.length >= 20, `${BOARD_TILES.length}`)
+  check('the loop opens on a start tile', BOARD_TILES[START_INDEX].kind === 'start')
+  check('there is exactly one start tile', BOARD_TILES.filter((t) => t.kind === 'start').length === 1)
+  check('every kind of space is somewhere on the board', new Set(BOARD_TILES.map((t) => t.kind)).size === 5)
+
+  const islandIds = new Set(ISLANDS.map((i) => i.id))
+  const stray = BOARD_TILES.find((t) => t.islandId !== null && !islandIds.has(t.islandId))
+  check('every tile is on a real island or out on the water', !stray, stray ? String(stray.islandId) : '')
+
+  const badBridge = BRIDGES.find((b) => !islandIds.has(b.from) || !islandIds.has(b.to) || b.from === b.to)
+  check('every bridge joins two different real islands', !badBridge, badBridge ? badBridge.id : '')
+  check(
+    'every island is reachable by bridge',
+    ISLANDS.every((i) => BRIDGES.some((b) => b.from === i.id || b.to === i.id)),
+  )
+  // An island drawn above the waterline would paint over the sky.
+  check('no island pokes up into the sky', ISLANDS.every((i) => i.cy - i.ry > 34))
+
+  // The one bit of arithmetic every later phase leans on.
+  check('the last space wraps round to the first', nextTileIndex(BOARD_TILES.length - 1, 1) === 0)
+  check('a roll that laps the board keeps going', nextTileIndex(0, BOARD_TILES.length + 3) === 3)
+  check('stepping back off the start wraps too', nextTileIndex(0, -1) === BOARD_TILES.length - 1)
+
+  const eng = new PartyParadeEngine()
+  eng.addPlayer(0, 'Host')
+  eng.addPlayer(1, 'Guest')
+  eng.addPlayer(1, 'Guest again')
+  check('one slot cannot join twice', eng.players.length === 2, `${eng.players.length}`)
+  check('everybody starts on the start tile', eng.players.every((p) => p.tileIndex === START_INDEX))
+  check('players are dealt different animals', eng.players[0].castIndex !== eng.players[1].castIndex)
+  check('a full room of eight still gets one animal each', PARADE_CAST.length >= 8, `${PARADE_CAST.length}`)
+
+  const guest = new PartyParadeEngine()
+  guest.applySnapshot(JSON.parse(JSON.stringify(eng.snapshot())))
+  check('a snapshot round-trips into a guest', guest.players.length === 2 && guest.phase === 'board')
+  check('the round-tripped roster keeps its names', guest.players[1].name === 'Guest')
 }
 
 console.log(failures === 0 ? '\nAll checks passed.\n' : `\n${failures} check(s) failed.\n`)

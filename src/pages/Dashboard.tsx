@@ -14,7 +14,7 @@ const STATUS_LABEL: Record<GameEntry['status'], string> = {
 }
 
 function GameCard({ game, onOpen }: { game: GameEntry; onOpen: (id: string) => void }) {
-  const playable = game.status === 'live'
+  const playable = game.status === 'live' || game.status === 'prototype'
   const open = () => playable && onOpen(game.id)
   return (
     <div
@@ -32,7 +32,11 @@ function GameCard({ game, onOpen }: { game: GameEntry; onOpen: (id: string) => v
     >
       <div className="card__art">
         <SceneCanvas width={ART_W} height={ART_H} draw={game.art} fluid />
-        <span className={`chip card__badge ${playable ? 'chip--live' : 'chip--soon'}`}>
+        <span
+          className={`chip card__badge ${
+            game.status === 'live' ? 'chip--live' : game.status === 'prototype' ? 'chip--gold' : 'chip--soon'
+          }`}
+        >
           <span className="dot" /> {STATUS_LABEL[game.status]}
         </span>
       </div>
@@ -43,7 +47,9 @@ function GameCard({ game, onOpen }: { game: GameEntry; onOpen: (id: string) => v
           <span>
             {game.genre} &middot; {game.players}
           </span>
-          <span className="card__cta">{playable ? 'PLAY >' : 'SOON'}</span>
+          <span className="card__cta">
+            {game.status === 'live' ? 'PLAY >' : game.status === 'prototype' ? 'TRY IT >' : 'SOON'}
+          </span>
         </span>
       </div>
     </div>

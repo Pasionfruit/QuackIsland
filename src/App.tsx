@@ -8,6 +8,7 @@ import { HidePanel } from './games/hide/HidePanel'
 import { SketchPanel } from './games/sketch/SketchPanel'
 import { CaseClosedPanel } from './games/caseclosed/CaseClosedPanel'
 import { BuildBetrayPanel } from './games/buildbetray/BuildBetrayPanel'
+import { PartyParadePanel } from './games/partyparade/PartyParadePanel'
 import { gameById } from './games/registry'
 import { TemplatePanel } from './games/TemplatePanel'
 
@@ -20,6 +21,7 @@ const PLAYABLE_GAMES = new Set([
   'sketch',
   'case-closed',
   'build-and-betray',
+  'party-parade',
 ])
 
 export type Route = { name: 'dashboard' } | { name: 'game'; id: string }
@@ -76,6 +78,8 @@ export default function App() {
       {route.name === 'game' && game?.id === 'case-closed' && <CaseClosedPanel />}
 
       {route.name === 'game' && game?.id === 'build-and-betray' && <BuildBetrayPanel />}
+
+      {route.name === 'game' && game?.id === 'party-parade' && <PartyParadePanel />}
 
       {route.name === 'game' && game && !PLAYABLE_GAMES.has(game.id) && (
         <TemplatePanel game={game} onBack={() => go({ name: 'dashboard' })} />
