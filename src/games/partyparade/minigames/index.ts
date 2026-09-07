@@ -41,4 +41,17 @@ export function buildMinigame(id: MinigameId, roster: MgRosterEntry[], seed = 1)
 }
 
 export { NEVER, PRECISION_RANGE, DODGE_JUMP_FRAMES } from './games'
-export { CHIP_BAND, JUMBO_AIR, MAZE_CH, MAZE_COLS, MAZE_CW, MAZE_LOST, MAZE_ROWS } from './arena'
+export {
+  CHIP_IN_RANGE,
+  CHIP_PERFECT,
+  CHIP_TARGET,
+  ChipperGame,
+  JUMBO_AIR,
+  LENS,
+  MAZE_CH,
+  MAZE_COLS,
+  MAZE_CW,
+  MAZE_LOST,
+  MAZE_ROWS,
+  SAUCER_NEVER,
+} from './arena'

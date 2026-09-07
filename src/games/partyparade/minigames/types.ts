@@ -31,16 +31,25 @@ export type MgPhase = 'intro' | 'play' | 'done'
 
 export interface MgInput {
   press: boolean
+  /** Shoving, kept off the action key so jumping and pushing are separate things. */
+  push: boolean
   left: boolean
   right: boolean
   up: boolean
   down: boolean
 }
 
-export const IDLE_INPUT: MgInput = { press: false, left: false, right: false, up: false, down: false }
+export const IDLE_INPUT: MgInput = {
+  press: false,
+  push: false,
+  left: false,
+  right: false,
+  up: false,
+  down: false,
+}
 
 /** The playing field the roaming games use - clear of the sky and the scoreboard. */
-export const FIELD = { x0: 12, y0: 112, x1: MG_VIEW_W - 12, y1: MG_VIEW_H - 10 }
+export const FIELD = { x0: 12, y0: 92, x1: MG_VIEW_W - 12, y1: MG_VIEW_H - 8 }
 
 export interface MgPlayer {
   slot: number
@@ -283,40 +292,40 @@ export const MINIGAMES: Record<MinigameId, MinigameDef> = {
   zombie: {
     id: 'zombie',
     name: 'Zombie Tag',
-    brief: 'Two of them to start. Everyone they catch joins in.',
-    how: 'Run with the arrows or WASD. Survive.',
+    brief: 'They are slow, and there is nowhere to go. Last one bitten wins.',
+    how: 'Arrows or WASD to run, push to shove somebody else into them.',
     higherWins: true,
     unit: (s) => `${(s / 60).toFixed(1)}s`,
   },
   jumbo: {
     id: 'jumbo',
     name: 'Jumbo Jump',
-    brief: 'A rope sweeping the beach, faster every pass.',
-    how: 'Action to jump it. You cannot hold the jump.',
+    brief: 'A rope across the field, from any side, at any speed.',
+    how: 'Run anywhere. Action to jump it - you cannot hold the jump.',
     higherWins: true,
     unit: (s) => `${(s / 60).toFixed(1)}s`,
   },
   saucer: {
     id: 'saucer',
     name: 'Space Saucer',
-    brief: 'Fly the gap. The rocks do not stop coming.',
-    how: 'Arrows or WASD to fly in any direction.',
-    higherWins: true,
-    unit: (s) => `${(s / 60).toFixed(1)}s`,
+    brief: 'One pass, one photograph. Get it dead centre in the lens.',
+    how: 'Action to take the picture. You only get the one.',
+    higherWins: false,
+    unit: (s) => (s >= 9000 ? 'never shot' : `${s.toFixed(0)} off centre`),
   },
   chipper: {
     id: 'chipper',
     name: 'Quicker Chipper',
-    brief: 'Logs down the chute. Hit the mark, not the air.',
-    how: 'Action as the log crosses the line. Swing early and you stall.',
+    brief: 'Chip it in. Too soft is short, too hard sails past.',
+    how: 'Hold action to wind up, let go to swing. Dead on is worth more.',
     higherWins: true,
-    unit: (s) => `${s} logs`,
+    unit: (s) => `${s} pts`,
   },
   maze: {
     id: 'maze',
     name: 'Maze Daze',
-    brief: 'One hedge maze, everybody at once, one way out.',
-    how: 'Arrows or WASD. First to the gap takes it.',
+    brief: 'Everybody to the middle. Two pads in there scramble your controls.',
+    how: 'Arrows or WASD - until a pad turns them, and you work out the new ones.',
     higherWins: false,
     unit: (s) => (s >= 9000 ? 'lost in it' : `${(s / 60).toFixed(1)}s`),
   },

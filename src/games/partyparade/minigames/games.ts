@@ -189,10 +189,9 @@ export class DodgeGame extends BaseMinigame {
       p.score = this.frame
     }
 
-    // Shoving: stand against somebody and you push them along, which is how
-    // you put a rival under a coconut instead of just avoiding your own.
+    // Shoving is its own key, so a jump is never an accidental shove.
     for (const a of this.players) {
-      if (a.out) continue
+      if (a.out || !this.inputFor(a.slot).push) continue
       for (const b of this.players) {
         if (b.out || b.slot === a.slot) continue
         const ax = this.pos.get(a.slot) ?? 0

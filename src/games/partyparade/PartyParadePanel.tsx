@@ -19,6 +19,7 @@ import {
   type TileKind,
 } from './engine/board'
 import { PARADE_CAST, PLAYER_COLORS, PartyParadeEngine, VIEW_H, VIEW_W } from './engine/engine'
+import { BOT_NAMES, botInput } from './minigames/bots'
 import { buildMinigame, type AnyMinigame } from './minigames/index'
 import { renderMinigame } from './minigames/render'
 import {
@@ -102,6 +103,7 @@ export function PartyParadePanel() {
   const [picks, setPicks] = useState<Record<number, number>>({ 0: 0 })
   const [drawing, setDrawing] = useState(false)
   const [camMode, setCamMode] = useState<CamMode>('turn')
+  const [botCount, setBotCount] = useState(3)
   const [lobbyTab, setLobbyTab] = useState<LobbyTab>('parade')
   const [, setTick] = useState(0)
 
@@ -126,7 +128,9 @@ export function PartyParadePanel() {
   const strokeRef = useRef<number[] | null>(null)
   const dragRef = useRef<{ x: number; y: number } | null>(null)
   const mgRef = useRef<AnyMinigame | null>(null)
-  const mgKeys = useRef({ press: false, left: false, right: false, up: false, down: false })
+  const mgKeys = useRef({ press: false, push: false, left: false, right: false, up: false, down: false })
+  /** Slots filled by stand-ins, so a minigame can be tried with a full room. */
+  const botsRef = useRef<number[]>([])
   /** Where to go when the minigame ends: back to the lobby, or back to the board. */
   const mgReturnRef = useRef<Screen>('lobby')
   const fullscreen = useFullscreen<HTMLDivElement>()
@@ -160,8 +164,26 @@ export function PartyParadePanel() {
     }))
   }
 
-  function startMinigame(id: MinigameId, from: Screen = 'lobby'): void {
+  function startMinigame(id: MinigameId, from: Screen = 'lobby', bots = 0): void {
     const roster = mgRoster()
+    // Stand-ins take the slots nobody is sitting in, so a game can be tried at
+    // full size without a full room.
+    const botSlots: number[] = []
+    const used = new Set(roster.map((r) => r.slot))
+    for (let i = 0; roster.length < 8 && i < bots; i++) {
+      let slot = 0
+      while (used.has(slot)) slot++
+      used.add(slot)
+      botSlots.push(slot)
+      roster.push({
+        slot,
+        name: BOT_NAMES[slot % BOT_NAMES.length],
+        color: PLAYER_COLORS[slot % PLAYER_COLORS.length],
+        castIndex: slot % PARADE_CAST.length,
+      })
+    }
+    roster.sort((a, b) => a.slot - b.slot)
+    botsRef.current = botSlots
     const seed = (Date.now() & 0xffff) + 1
     mgReturnRef.current = from
     mgRef.current = buildMinigame(id, roster, seed)
@@ -263,6 +285,7 @@ export function PartyParadePanel() {
           setPicks(next)
         } else if (msg.k === 'mgStart') {
           mgReturnRef.current = 'lobby'
+          botsRef.current = []
           mgRef.current = buildMinigame(msg.id as MinigameId, msg.roster, msg.seed)
           setScreen('minigame')
           setTick((t) => t + 1)
@@ -424,6 +447,7 @@ export function PartyParadePanel() {
       right: codeFor('partyparade.right', 'KeyD'),
       up: codeFor('partyparade.up', 'KeyW'),
       down: codeFor('partyparade.down', 'KeyS'),
+      push: codeFor('partyparade.push', 'KeyE'),
     }
     const set = (e: KeyboardEvent, down: boolean) => {
       const el = e.target as HTMLElement | null
@@ -436,6 +460,7 @@ export function PartyParadePanel() {
       else if (e.code === codes.right || e.code === 'ArrowRight') k.right = down
       else if (e.code === codes.up || e.code === 'ArrowUp') k.up = down
       else if (e.code === codes.down || e.code === 'ArrowDown') k.down = down
+      else if (e.code === codes.push || e.code === 'ShiftLeft') k.push = down
       else return
       e.preventDefault()
     }
@@ -486,6 +511,7 @@ export function PartyParadePanel() {
         }
       } else {
         game.setInput(slotRef.current, mine)
+        for (const b of botsRef.current) game.setInput(b, botInput(game, b, game.frame))
         game.step()
         sinceSend++
         if (roleRef.current === 'host' && sinceSend >= 2) {
@@ -646,8 +672,29 @@ export function PartyParadePanel() {
               <div className="panel__title">Try a minigame</div>
               <p className="muted" style={{ marginTop: 0, fontSize: 12 }}>
                 Each one is a free-for-all: everybody plays at once and the placings come out at the end.
-                Start one here to try it on its own - {role === 'host' ? 'the whole room comes with you.' : role === 'guest' ? 'the host starts these for the room.' : 'you can practise solo.'}
+                Start one here to try it on its own -{' '}
+                {role === 'host'
+                  ? 'the whole room comes with you.'
+                  : role === 'guest'
+                    ? 'the host starts these for the room.'
+                    : 'you can practise on your own.'}
               </p>
+              <p className="muted" style={{ marginTop: 10, fontSize: 12 }}>
+                To see one at full size without a full room, add stand-ins. They play well enough to make
+                the field feel busy.
+              </p>
+              <div className="chiprow" style={{ marginTop: 8 }}>
+                {[0, 1, 3, 5, 7].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    className={`btn btn--sm ${botCount === n ? '' : 'btn--ghost'}`}
+                    onClick={() => setBotCount(n)}
+                  >
+                    {n === 0 ? 'No stand-ins' : `+${n}`}
+                  </button>
+                ))}
+              </div>
             </div>
             {MINIGAME_ORDER.map((id) => {
               const def = MINIGAMES[id]
@@ -665,7 +712,7 @@ export function PartyParadePanel() {
                       type="button"
                       className="btn btn--sm"
                       disabled={role === 'guest'}
-                      onClick={() => startMinigame(id, 'lobby')}
+                      onClick={() => startMinigame(id, 'lobby', botCount)}
                     >
                       {role === 'guest' ? 'Host starts it' : 'Play it'}
                     </button>
@@ -847,7 +894,7 @@ export function PartyParadePanel() {
           />
           {game?.phase === 'done' && role !== 'guest' && (
             <div className="stage-ctl stage-ctl--roll">
-              <button type="button" className="btn" onClick={() => startMinigame(game.id, mgReturnRef.current)}>
+              <button type="button" className="btn" onClick={() => startMinigame(game.id, mgReturnRef.current, botsRef.current.length)}>
                 Play it again
               </button>
               <button type="button" className="btn btn--ghost btn--sm" onClick={leaveMinigame}>
@@ -888,6 +935,7 @@ export function PartyParadePanel() {
                   { key: 'partyparade.right', label: 'Move right', fallback: 'KeyD' },
                   { key: 'partyparade.up', label: 'Move up', fallback: 'KeyW' },
                   { key: 'partyparade.down', label: 'Move down', fallback: 'KeyS' },
+                  { key: 'partyparade.push', label: 'Shove somebody', fallback: 'KeyE' },
                 ],
               },
             ]}
