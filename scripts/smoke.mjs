@@ -2148,6 +2148,23 @@ console.log('\nPolyland Smash - engine smoke test\n')
   }
 
   {
+    // A checkpoint used to do nothing at all in a solo run, because "the
+    // leader" was only worked out when two or more were still going.
+    const e = new PartyParadeEngine()
+    e.addPlayer(0, 'Solo')
+    const gate = GATE_INDICES[0] // asks for an odd roll
+    e.playerAt(0).tileIndex = gate
+    check('a player on their own still counts as the leader', e.isLeader(0))
+    check('and is told what the checkpoint wants', e.gateFor(0) !== null)
+    e.roll(0, face(4))
+    settle(e)
+    check('a checkpoint stops a solo player too', e.playerAt(0).tileIndex === gate, `${e.playerAt(0).tileIndex}`)
+    e.roll(0, face(3))
+    settle(e)
+    check('and lets them through on the right roll', e.playerAt(0).tileIndex > gate)
+  }
+
+  {
     // The same checkpoint, but stood on by somebody at the back: no obstacle.
     const e = new PartyParadeEngine()
     e.addPlayer(0, 'Back')
@@ -2162,6 +2179,16 @@ console.log('\nPolyland Smash - engine smoke test\n')
     e.roll(0, face(4)) // even, which the checkpoint would have refused
     settle(e)
     check('a checkpoint lets the pack straight through', e.playerAt(0).tileIndex > gate, `${e.playerAt(0).tileIndex}`)
+  }
+
+  {
+    // Last turn's news used to hang around over somebody else's go.
+    const e = new PartyParadeEngine()
+    e.addPlayer(0, 'A')
+    e.addPlayer(1, 'B')
+    e.message = 'something that happened ages ago'
+    e.roll(0, face(2))
+    check('rolling clears the news from the last turn', e.message === null)
   }
 
   // --- the fork

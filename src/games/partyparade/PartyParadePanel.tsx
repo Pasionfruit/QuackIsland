@@ -89,6 +89,7 @@ export function PartyParadePanel() {
   const [slot, setSlot] = useState(0)
   const [picks, setPicks] = useState<Record<number, number>>({ 0: 0 })
   const [drawing, setDrawing] = useState(false)
+  const [camMode, setCamMode] = useState<CamMode>('turn')
   const [, setTick] = useState(0)
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -226,6 +227,7 @@ export function PartyParadePanel() {
     const first = BOARD_TILES[0]
     camRef.current = { x: first.x, y: first.y, zoom: 1 }
     camModeRef.current = 'turn'
+    setCamMode('turn')
     setScreen('play')
     if (role === 'host') net.send({ k: 'start', roster } satisfies PartyParadePayload)
   }
@@ -266,10 +268,16 @@ export function PartyParadePanel() {
     setTick((t) => t + 1)
   }
 
+  /** Ref drives the render loop; state drives the buttons. Only fires a render when it actually changes. */
+  function setCam(mode: CamMode): void {
+    if (camModeRef.current === mode) return
+    camModeRef.current = mode
+    setCamMode(mode)
+  }
+
   /** Snaps the camera back onto your own pawn and keeps it there. */
   function findMe(): void {
-    camModeRef.current = 'me'
-    setTick((t) => t + 1)
+    setCam('me')
   }
 
   function clearMyInk(): void {
@@ -333,7 +341,7 @@ export function PartyParadePanel() {
       const cam = camRef.current
       cam.x += dragRef.current.x - w.x
       cam.y += dragRef.current.y - w.y
-      camModeRef.current = 'free'
+      setCam('free')
     }
   }
 
@@ -383,11 +391,13 @@ export function PartyParadePanel() {
         }
       }
 
-      // Whoever is up gets followed, unless you have taken the camera yourself.
+      // Whoever is up gets followed - but only while the camera is still on
+      // auto. Once you have dragged off to look at something, it stays where
+      // you put it; snapping back every turn is exactly what makes a board
+      // this size unreadable.
       const key = `${eng.turnIndex}:${eng.phase}`
       if (key !== lastKey) {
         lastKey = key
-        camModeRef.current = 'turn'
         setTick((t) => t + 1)
       }
       const mode = camModeRef.current
@@ -647,9 +657,18 @@ export function PartyParadePanel() {
           <button type="button" className="btn btn--ghost btn--sm" onClick={clearMyInk}>
             Rub out
           </button>
-          <button type="button" className="btn btn--ghost btn--sm" onClick={findMe}>
+          <button
+            type="button"
+            className={`btn btn--sm ${camMode === 'me' ? '' : 'btn--ghost'}`}
+            onClick={findMe}
+          >
             Find me
           </button>
+          {camMode !== 'turn' && (
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setCam('turn')}>
+              Follow turn
+            </button>
+          )}
         </div>
 
         <div className="stage-ctl stage-ctl--roll">

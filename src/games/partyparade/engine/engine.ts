@@ -176,10 +176,14 @@ export class PartyParadeEngine {
     return this.players.find((p) => p.slot === slot)
   }
 
-  /** Closest to the treasure. Ties all count as sharing first place. */
+  /**
+   * Closest to the treasure. Ties all count as sharing first place, and a
+   * player on their own is trivially in front - otherwise the checkpoints
+   * would quietly do nothing at all in a solo run.
+   */
   isLeader(slot: number): boolean {
     const live = this.players.filter((p) => !p.finished)
-    if (live.length < 2) return false
+    if (live.length === 0) return false
     const me = this.playerAt(slot)
     if (!me || me.finished) return false
     const best = Math.min(...live.map((p) => distanceToGoal(p.tileIndex)))
@@ -207,6 +211,9 @@ export class PartyParadeEngine {
     this.rollFace = face
     this.turnPhase = 'rolling'
     this.phaseTimer = ROLL_FRAMES
+    // Clear last turn's news, or a checkpoint refusal hangs around over
+    // somebody else's go.
+    this.message = null
     this.version++
     return face
   }
