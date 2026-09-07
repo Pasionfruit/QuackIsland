@@ -35,7 +35,9 @@
     "index.html",
     "AGENTS.md",
     "src/app/**",
-    "scripts/**"
+    "scripts/**",
+    "src/App.tsx",
+    "src/main.tsx"
   ],
   "phases": [
     {
@@ -53,7 +55,8 @@
         "02-player",
         "03-footprints",
         "04-water",
-        "05-sky"
+        "05-music",
+        "06-sky"
       ]
     },
     {
@@ -102,7 +105,8 @@
         "01-terrain",
         "02-player",
         "03-footprints",
-        "04-water"
+        "04-water",
+        "05-music"
       ],
       "generation": 1,
       "contract": {
@@ -150,7 +154,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T20:15:13.210Z"
+          "at": "2026-09-07T20:30:03.594Z"
         },
         "human": {
           "status": "pending"
@@ -230,7 +234,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T20:15:19.826Z"
+          "at": "2026-09-07T20:30:10.139Z"
         },
         "human": {
           "status": "pending"
@@ -302,7 +306,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T20:15:26.459Z"
+          "at": "2026-09-07T20:30:16.692Z"
         },
         "human": {
           "status": "pending"
@@ -360,7 +364,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T20:15:33.114Z"
+          "at": "2026-09-07T20:30:23.234Z"
         },
         "human": {
           "status": "pending"
@@ -421,7 +425,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-07T20:15:39.715Z"
+          "at": "2026-09-07T20:30:29.797Z"
         },
         "human": {
           "status": "pending"
@@ -434,12 +438,76 @@
         "No foam, spray, or breaking waves at the shore",
         "No reflection or refraction of the world",
         "No underwater fog or colour grading when the camera goes under",
-        "No tides; sea level is fixed at zero forever",
-        "No buoyancy for anything else"
+        "No buoyancy for anything else",
+        "No ownership of the tide - 00-core owns it; this module only draws at it"
       ],
       "budgets": {
         "drawCallsMax": 2,
         "trianglesMax": 130000
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "05-music",
+      "phase": "P1",
+      "title": "Background playlist with a panel to skip, rewind, pause and set the volume",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "05.1",
+          "title": "Playlist arithmetic: order, back button, volume, readout",
+          "status": "done"
+        },
+        {
+          "id": "05.2",
+          "title": "Manifest scanned from the folder, fetched at runtime",
+          "status": "done"
+        },
+        {
+          "id": "05.3",
+          "title": "Audio element, autoplay policy, panel",
+          "status": "done"
+        },
+        {
+          "id": "05.4",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-07T20:30:36.284Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No positional or diegetic audio - this is background music, not a sound in the world",
+        "No sound effects; footsteps, water and wind are a different module",
+        "No ducking, crossfading, or reacting to anything on screen",
+        "No shuffle, repeat-one, or a visible queue",
+        "No seeking within a track - the bar is a readout, not a scrubber",
+        "No metadata beyond what the filename says; no ID3 parsing",
+        "No streaming from anywhere but the assets folder"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
       },
       "measured": null,
       "blockers": []

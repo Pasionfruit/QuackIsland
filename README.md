@@ -18,6 +18,11 @@ out and it stands up on the sand.
 the player. **Wheel** to pull back and see the whole island. **F** or the button
 in the panel snaps back. A plain click, either button, never moves the camera.
 
+Music plays in the background from `public/assets/music/`. The panel above the
+day controls skips, rewinds, pauses and sets the volume; **back** restarts the
+track first and goes to the previous one if pressed again straight away. To add
+a song, drop it in that folder and run `npm run music:scan`.
+
 The panel on the right runs the day: an hour a full cycle, fifteen minutes each
 in dawn, daylight, dusk and night. The **tide** runs off the same clock — two
 high waters a day, of unequal height — so scrubbing the slider walks the
@@ -72,6 +77,7 @@ world is reproducible and testable.
 | `02-player` | Third-person duck: walks, runs, jumps, swims, mouse-aimed camera |
 | `03-footprints` | Webbed duck prints in the sand, fading, in one draw call |
 | `04-water` | The sea at `y = 0`: an ocean swell, lit per fragment, one draw call |
+| `05-music` | Background playlist, with a panel to skip, rewind, pause and set the volume |
 
 Next up: a sky dome driving the day cycle that `00-core` already exposes, then
 the Meshy asset pipeline and vegetation placed against the terrain's height

@@ -28,17 +28,16 @@ import {
 import { isCameraOffPlayer, refocusCamera } from '../modules/02-player'
 import { SCENE, setModuleEnabled } from './scene'
 
+// Placed by the column in App.tsx rather than pinning itself to the corner,
+// so it can share the top right with the music panel.
 const panel: React.CSSProperties = {
-  position: 'fixed',
-  top: 10,
-  right: 10,
-  zIndex: 10,
   padding: '10px 12px',
   borderRadius: 8,
   background: 'rgba(20, 22, 26, 0.78)',
   color: '#f2ece2',
   font: '11px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace',
-  minWidth: 214,
+  width: 214,
+  boxSizing: 'border-box',
   userSelect: 'none',
 }
 

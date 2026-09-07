@@ -1,0 +1,24 @@
+{
+  "tracks": [
+    {
+      "src": "music/massobeats - peach prosecco (freetouse.com).mp3",
+      "artist": "massobeats",
+      "title": "peach prosecco"
+    },
+    {
+      "src": "music/Moavii - Above It All (freetouse.com).mp3",
+      "artist": "Moavii",
+      "title": "Above It All"
+    },
+    {
+      "src": "music/Moavii - Display (freetouse.com).mp3",
+      "artist": "Moavii",
+      "title": "Display"
+    },
+    {
+      "src": "music/Moavii - Summertide (freetouse.com).mp3",
+      "artist": "Moavii",
+      "title": "Summertide"
+    }
+  ]
+}

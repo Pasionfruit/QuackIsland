@@ -19,7 +19,8 @@
     "gate": "node scripts/gate.mjs",
     "gate:pass": "node scripts/gate-pass.mjs",
     "gate:fail": "node scripts/gate-fail.mjs",
-    "unfreeze": "node scripts/unfreeze.mjs"
+    "unfreeze": "node scripts/unfreeze.mjs",
+    "music:scan": "node scripts/scan-music.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "^9.7.0",
