@@ -68,7 +68,8 @@
         "04-assets",
         "05-vegetation",
         "06-rocks",
-        "08-audio"
+        "08-audio",
+        "11-currency"
       ]
     },
     {
@@ -114,7 +115,8 @@
         "07-shore",
         "08-audio",
         "09-net",
-        "10-party"
+        "10-party",
+        "11-currency"
       ],
       "generation": 1,
       "contract": {
@@ -162,7 +164,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T01:05:28.619Z"
+          "at": "2026-09-08T01:49:17.771Z"
         },
         "human": {
           "status": "pending"
@@ -245,7 +247,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T01:05:36.506Z"
+          "at": "2026-09-08T01:49:26.689Z"
         },
         "human": {
           "status": "pending"
@@ -325,7 +327,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T01:05:44.464Z"
+          "at": "2026-09-08T01:49:35.561Z"
         },
         "human": {
           "status": "pending"
@@ -385,7 +387,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T01:05:52.445Z"
+          "at": "2026-09-08T01:49:44.482Z"
         },
         "human": {
           "status": "pending"
@@ -446,7 +448,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T01:06:00.460Z"
+          "at": "2026-09-08T01:49:53.369Z"
         },
         "human": {
           "status": "pending"
@@ -509,7 +511,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T01:06:08.414Z"
+          "at": "2026-09-08T01:50:02.293Z"
         },
         "human": {
           "status": "pending"
@@ -573,7 +575,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T01:06:16.370Z"
+          "at": "2026-09-08T01:50:11.132Z"
         },
         "human": {
           "status": "pending"
@@ -638,7 +640,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T01:06:24.316Z"
+          "at": "2026-09-08T01:50:19.516Z"
         },
         "human": {
           "status": "pending"
@@ -704,7 +706,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T01:06:32.316Z"
+          "at": "2026-09-08T01:50:27.893Z"
         },
         "human": {
           "status": "pending"
@@ -786,7 +788,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T01:06:40.361Z"
+          "at": "2026-09-08T01:50:36.318Z"
         },
         "human": {
           "status": "pending"
@@ -858,7 +860,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T01:06:48.343Z"
+          "at": "2026-09-08T01:50:44.683Z"
         },
         "human": {
           "status": "pending"
@@ -876,6 +878,63 @@
       "budgets": {
         "drawCallsMax": 2,
         "trianglesMax": 4000
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "11-currency",
+      "phase": "P2",
+      "title": "Fish, shells and grapes: the wallet, the arithmetic and the readout",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "11.1",
+          "title": "Pure wallet arithmetic: earn, pay all-or-nothing, parse, format",
+          "status": "done"
+        },
+        {
+          "id": "11.2",
+          "title": "The purse, persisted, and the readout",
+          "status": "done"
+        },
+        {
+          "id": "11.3",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-08T01:50:53.061Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No way to earn anything; fishing, beachcombing and vines are each their own feature",
+        "No shop, prices or trading",
+        "No sync between players; a wallet is yours and lives in your browser",
+        "No exchange rate between the three",
+        "No history, receipts or undo"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
       },
       "measured": null,
       "blockers": []

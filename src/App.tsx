@@ -1,5 +1,6 @@
 import { GameCanvas, PerfHUD } from './modules/00-core'
 import { MusicPlayer } from './modules/05-music'
+import { WalletHUD } from './modules/11-currency'
 import { World } from './app/World'
 import { DebugPanel } from './app/DebugPanel'
 import { PartyPanel } from './app/PartyPanel'
@@ -16,6 +17,7 @@ export default function App() {
           the same corner and overlapping. */}
       <div style={{ ...column, top: 10, left: 10, alignItems: 'flex-start' }}>
         <PerfHUD />
+        <WalletHUD />
         <PartyPanel />
       </div>
 

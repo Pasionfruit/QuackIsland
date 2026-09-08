@@ -38,6 +38,7 @@ import {
 import { isCameraOffPlayer, refocusCamera, toggleViewMode, useViewMode } from '../modules/02-player'
 import { AUDIO, getCueEngine, readStoredVolume, setEffectsVolume } from '../modules/08-audio'
 import { joinLobby, leaveLobby, makeCode, useNet } from '../modules/09-net'
+import { CURRENCIES, clearPurse, earn, trySpend, usePurse } from '../modules/11-currency'
 import { SCENE, setModuleEnabled } from './scene'
 
 function Section({
@@ -97,6 +98,7 @@ export function DebugPanel() {
   const view = useViewMode()
   const weather = useWeather()
   const net = useNet()
+  const purse = usePurse()
   useLightingSettings()
 
   // The lobby code and name are only ever typed into, so they are ordinary
@@ -352,6 +354,38 @@ export function DebugPanel() {
         <div style={{ opacity: 0.45, marginTop: 2 }}>
           footsteps, jumps and strokes{getCueEngine().ready ? '' : ' - click the world to start'}
         </div>
+      </Section>
+
+      <Section id="wallet" title="WALLET">
+        {/* Nothing earns these yet - fishing, beachcombing and vines are each
+            their own feature. These are here so the ledger can be checked. */}
+        {CURRENCIES.map((c) => (
+          <div key={c.id} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <span style={{ width: 54, color: c.colour }}>{c.label}</span>
+            <span style={{ width: 46, textAlign: 'right', opacity: 0.75 }}>{purse[c.id]}</span>
+            <button type="button" onClick={() => earn(c.id, 1)} style={flat} title="earn one">
+              +
+            </button>
+            <button
+              type="button"
+              onClick={() => trySpend({ [c.id]: 1 })}
+              style={{ ...flat, opacity: purse[c.id] > 0 ? 1 : 0.35 }}
+              title="spend one"
+            >
+              -
+            </button>
+            <button type="button" onClick={() => earn(c.id, 10)} style={{ ...flat, opacity: 0.6 }}>
+              +10
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={clearPurse}
+          style={{ ...flat, marginTop: 4, opacity: 0.5 }}
+        >
+          empty it
+        </button>
       </Section>
 
       <Section id="view" title="VIEW">
