@@ -53,6 +53,10 @@ Open `http://localhost:5173` in two different browsers, press **new** for a
 code in one, type it into the other, and press **join** in both. Both ducks
 walk about the same island.
 
+Everyone in a lobby shares the host's time of day and weather, hears each
+other's footsteps nearby, and leaves prints in the same sand. The host is
+whoever joined first, and it hands over on its own when they leave.
+
 **[DEPLOY.md](DEPLOY.md)** has the rest: running it as one process, and putting
 it on a free host.
 

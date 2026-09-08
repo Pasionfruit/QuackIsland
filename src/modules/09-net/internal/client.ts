@@ -11,15 +11,33 @@
  * does see is the connection status and who is in the room, which changes
  * rarely.
  */
-import { createStore, useStore } from '../../00-core'
+import {
+  WEATHER_KINDS,
+  createStore,
+  getDayTime,
+  getTimeScale,
+  getWeather,
+  isCycleRunning,
+  setCycleRunning,
+  setDayTime,
+  setTimeScale,
+  setWeather,
+  useStore,
+  type WeatherKind,
+} from '../../00-core'
 import { createTrack, record, sampleTrack, stale, type Track } from './interpolate'
 import {
   NET,
   cleanName,
+  dayCorrection,
   decodeMessage,
+  decodeWorld,
   encodeState,
+  encodeWorld,
+  isHost,
   normaliseCode,
   type DuckState,
+  type WorldState,
 } from './protocol'
 
 export type NetStatus = 'offline' | 'connecting' | 'joined' | 'error'
@@ -32,6 +50,13 @@ export interface NetInfo {
   id: string | null
   /** How many other people are here. */
   peers: number
+  /**
+   * Whether you are the one driving the clock and the weather.
+   *
+   * The lowest id in the room, worked out locally - see `isHost`. Alone in a
+   * lobby you are the host, so nothing is taken away by joining.
+   */
+  host: boolean
   /** Set when the status is 'error'. */
   why: string | null
 }
@@ -41,6 +66,7 @@ const info = createStore<NetInfo>({
   room: null,
   id: null,
   peers: 0,
+  host: true,
   why: null,
 })
 
@@ -67,9 +93,21 @@ export function peerAt(id: string, now: number): DuckState | null {
 
 let socket: WebSocket | null = null
 let sending: ReturnType<typeof setInterval> | null = null
+let worldTimer: ReturnType<typeof setInterval> | null = null
 let myName = 'duck'
 /** What to send. Set by the player each frame; read by the send timer. */
 let outgoing: DuckState | null = null
+/** The host's clock and weather, as last heard. Null when you are the host. */
+let world: WorldState | null = null
+
+/** Recomputed whenever the room changes; nobody has to be told who is host. */
+function electHost(): void {
+  const me = info.get().id
+  const host = isHost(me, [me ?? '', ...tracks.keys()].filter(Boolean))
+  if (host !== info.get().host) set({ host })
+  // Stepping up means your own clock is the clock again.
+  if (host) world = null
+}
 
 /**
  * Where the relay is.
@@ -138,18 +176,30 @@ export function joinLobby(rawCode: string, rawName: string): void {
         peers: tracks.size,
         why: null,
       })
+      electHost()
       return
     }
 
     if (message.t === 'peer' && typeof message.id === 'string') {
       if (!tracks.has(message.id)) tracks.set(message.id, createTrack('duck'))
       set({ peers: tracks.size })
+      electHost()
       return
     }
 
     if (message.t === 'gone' && typeof message.id === 'string') {
       tracks.delete(message.id)
       set({ peers: tracks.size })
+      electHost()
+      return
+    }
+
+    if (message.t === 'world') {
+      // Only from the host, and only when you are not it. Two clients both
+      // believing they are host would otherwise fight over the sun.
+      if (info.get().host) return
+      const heard = decodeWorld(String(event.data), WEATHER_KINDS)
+      if (heard) world = heard
       return
     }
 
@@ -189,6 +239,20 @@ export function joinLobby(rawCode: string, rawName: string): void {
     if (ws.readyState !== WebSocket.OPEN || !outgoing) return
     ws.send(encodeState(myName, outgoing))
   }, 1000 / NET.sendRate)
+
+  // The host publishes the world. Once a second is plenty: guests run the same
+  // clock at the same speed and only need correcting for drift.
+  worldTimer = setInterval(() => {
+    if (ws.readyState !== WebSocket.OPEN || !info.get().host) return
+    ws.send(
+      encodeWorld({
+        day: getDayTime(),
+        scale: getTimeScale(),
+        running: isCycleRunning(),
+        weather: getWeather(),
+      }),
+    )
+  }, 1000 / NET.worldRate)
 }
 
 export function leaveLobby(): void {
@@ -196,6 +260,11 @@ export function leaveLobby(): void {
     clearInterval(sending)
     sending = null
   }
+  if (worldTimer) {
+    clearInterval(worldTimer)
+    worldTimer = null
+  }
+  world = null
   const ws = socket
   socket = null
   tracks.clear()
@@ -204,7 +273,29 @@ export function leaveLobby(): void {
     ws.onerror = null
     ws.close()
   }
-  set({ status: 'offline', id: null, peers: 0, why: null })
+  // Alone again, so the clock is yours.
+  set({ status: 'offline', id: null, peers: 0, host: true, why: null })
+}
+
+/**
+ * Brings this client's clock and weather towards the host's.
+ *
+ * Called every frame. The host does nothing here; a guest adopts the host's
+ * speed and weather outright - those are not worth easing - and eases the time
+ * of day, because a snap is visible as a jump in the light.
+ */
+export function followWorld(dt: number): void {
+  if (!world || info.get().host) return
+
+  if (getTimeScale() !== world.scale) setTimeScale(world.scale)
+  if (isCycleRunning() !== world.running) setCycleRunning(world.running)
+  if (getWeather() !== world.weather) setWeather(world.weather as WeatherKind)
+
+  const correction = dayCorrection(getDayTime(), world.day, dt)
+  if (correction !== 0) setDayTime(getDayTime() + correction)
+  // The host's own clock keeps running between updates, so move the target on
+  // with it rather than pulling the guest back to a second ago.
+  if (world.running) world.day += (dt * world.scale) / 3600
 }
 
 /** Called by the renderer each frame with the local duck's state. */
@@ -218,4 +309,5 @@ export function sweep(now: number): void {
   if (gone.length === 0) return
   for (const id of gone) tracks.delete(id)
   set({ peers: tracks.size })
+  electHost()
 }

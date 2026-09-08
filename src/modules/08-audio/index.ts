@@ -22,7 +22,15 @@ export {
   SOUNDS,
   clampVolume,
   pitchFor,
+  spatialFor,
   type CueSound,
 } from './internal/engine'
 
-export { AudioCues, getCueEngine, readStoredVolume, setEffectsVolume } from './internal/AudioCues'
+export {
+  AudioCues,
+  addWalker,
+  getCueEngine,
+  readStoredVolume,
+  removeWalker,
+  setEffectsVolume,
+} from './internal/AudioCues'

@@ -25,6 +25,9 @@ listening for a while.
 | `pitchFor(wobble, random)` | The playback rate for one play. Pure |
 | `clampVolume(v)` | `0`–`1`, or the default if handed nonsense |
 | `getCueEngine()` / `setEffectsVolume(v)` / `readStoredVolume()` | For the panel |
+| `addWalker(id, source)` / `removeWalker(id)` | Register somebody else to hear |
+| `spatialFor(listener, forward, source)` | How loud and which ear. Pure |
+| `CueEngine.playAt(name, gain, pan)` | One cue, placed |
 | `CueName`, `CueState`, `Walker`, `CueSound` | The shapes above |
 
 `Walker` is a subset of the player's state — position, `vy`, `grounded`,
@@ -51,9 +54,9 @@ the player.
 
 ## Deliberate non-goals
 
-- **No positional audio.** These are the player's own sounds; they do not pan
-  or fall off with distance. Other players' footsteps would need to, and would
-  be a different thing.
+- **No positional audio for your own sounds.** Yours play centred and at full
+  volume, because they are your own feet. Other people's are placed - see
+  below - but that is a stereo pan and a distance curve, not a real 3D panner.
 - **No ambience.** Wind, surf and birds are a soundscape, not a cue, and want
   looping and crossfading this does not have.
 - **No sounds for anything but the body.** Nothing for the water surface, the
@@ -79,6 +82,31 @@ for nothing.
 Web Audio also gets pitch variation, which is most of what stops four identical
 footsteps in a row sounding like a machine.
 
+## Hearing other people
+
+`09-net` registers each peer through `addWalker`, and this module runs a
+separate cue machine for each of them off their interpolated position. It never
+learns that a network exists: a walker is a walker.
+
+Placing the sound is `spatialFor`, which is pure and therefore tested, because
+"is the duck on my left actually in my left ear" is one sign away from being
+wrong and very annoying once heard. **Screen-right is `cross(forward, up)`,
+which is `(-forward.z, forward.x)`** - the same derivation the movement basis
+uses, which has been wrong in this project once already, so it is checked
+against that basis at every angle rather than reasoned about again.
+
+The listener is the **camera**, not the body. In first person they are the same
+thing; in third person you hear what you are looking at, which is what people
+expect.
+
+`AUDIO.hearing` is short on purpose. Footsteps carry a few metres in life, and
+a lobby where everyone hears everyone sounds like a stampede.
+
+A gain node and a stereo panner rather than a full `PannerNode`: a panner wants
+the listener's orientation maintained in the audio graph every frame, and for
+footsteps on a flat beach the extra realism is not detectable. A browser
+without `createStereoPanner` loses the panning and keeps the sound.
+
 ## The hard part is not playing three
 
 Every rule in `cues.ts` exists because some state change fires twice otherwise:
@@ -96,7 +124,10 @@ Every rule in `cues.ts` exists because some state change fires twice otherwise:
 
 ## Known limitations
 
-- Sounds are only for the local player. Remote players in a lobby are silent.
+- Remote players' sounds are stereo-placed, not truly spatial: no height, no
+  occlusion, and no difference between someone behind you and someone in front.
+- A remote player's cues are driven from their interpolated position, so their
+  footsteps are as far behind live as their duck is - about 120 ms.
 - One footstep sound for every surface. Sand, wet sand and dune are the same.
 - The stroke is on a fixed beat rather than tied to any animation, because
   there is no swimming animation to tie it to.
@@ -123,6 +154,10 @@ Every rule in `cues.ts` exists because some state change fires twice otherwise:
   silent, and the music should be unaffected either way.
 - **Load the page and listen before clicking anything.** Silence is correct;
   browsers will not make noise before a gesture. The panel says so.
+- **Walk near another player in a lobby.** Their footsteps should be quiet,
+  and in the right ear: walk a circle round them and the sound should cross
+  from one side to the other.
+- **Walk away from them.** It should fade out smoothly rather than stopping.
 - **Switch the module off in the panel.** Everything else carries on.
 
 ## Gate record

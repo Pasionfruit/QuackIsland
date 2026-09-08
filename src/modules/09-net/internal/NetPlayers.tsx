@@ -13,13 +13,35 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Group } from 'three'
 import { PRIORITY, useGameFrame } from '../../00-core'
 import { PLAYER, bodyPose, getPlayerState, loadDuck } from '../../02-player'
-import { peerAt, peerTracks, publish, sweep } from './client'
+import { addWalker as addPrintWalker, removeWalker as removePrintWalker } from '../../03-footprints'
+import { addWalker as addSoundWalker, removeWalker as removeSoundWalker } from '../../08-audio'
+import { followWorld, peerAt, peerTracks, publish, sweep } from './client'
 
 /** One remote duck: an outer group that faces, an inner one that tips. */
 interface Rig {
   root: Group
   tilt: Group
 }
+
+/**
+ * Where each peer is *this frame*, so the footprint and sound modules can read
+ * it without either of them knowing a network exists.
+ *
+ * Written once a frame here and read by both registries through a closure.
+ * They ask for a walker; they get whatever was last interpolated.
+ */
+interface PeerWalker {
+  x: number
+  y: number
+  z: number
+  vy: number
+  facing: number
+  grounded: boolean
+  swimming: boolean
+  speed: number
+}
+
+const peerWalkers = new Map<string, PeerWalker>()
 
 export function NetPlayers() {
   const [model, setModel] = useState<Group | null>(null)
@@ -50,11 +72,21 @@ export function NetPlayers() {
       if (!parent) return
       for (const rig of rigs.values()) parent.remove(rig.root)
       rigs.clear()
+      // The registries outlive this component, so they have to be cleared or a
+      // switched-off net module leaves ghosts leaving footprints.
+      for (const id of peerWalkers.keys()) {
+        removePrintWalker(id)
+        removeSoundWalker(id)
+      }
+      peerWalkers.clear()
     }
   }, [rigs])
 
-  useGameFrame(() => {
+  useGameFrame((_frame, delta) => {
     const now = performance.now() / 1000
+
+    // A guest follows the host's clock and weather; the host does nothing here.
+    followWorld(delta)
 
     // Send ours.
     const me = getPlayerState()
@@ -77,16 +109,43 @@ export function NetPlayers() {
 
     const seen = peerTracks()
 
-    // Retire anyone who has gone.
+    // Retire anyone who has gone, from all three places they are known.
     for (const [id, rig] of rigs) {
       if (seen.has(id)) continue
       parent.remove(rig.root)
       rigs.delete(id)
     }
+    for (const id of peerWalkers.keys()) {
+      if (seen.has(id)) continue
+      peerWalkers.delete(id)
+      removePrintWalker(id)
+      removeSoundWalker(id)
+    }
 
     for (const id of seen.keys()) {
       const state = peerAt(id, now)
       if (!state) continue
+
+      // A peer with an interpolated position walks, leaves prints and makes a
+      // noise. Registered once, on the frame they first have a position.
+      let there = peerWalkers.get(id)
+      if (!there) {
+        there = { x: 0, y: 0, z: 0, vy: 0, facing: 0, grounded: true, swimming: false, speed: 0 }
+        peerWalkers.set(id, there)
+        addPrintWalker(id, () => peerWalkers.get(id) ?? null)
+        addSoundWalker(id, () => peerWalkers.get(id) ?? null)
+      }
+      there.x = state.x
+      there.y = state.y
+      there.z = state.z
+      there.facing = state.facing
+      there.speed = state.speed
+      there.swimming = state.swimming
+      // Remote ducks are not simulated, so there is no fall to report. A peer
+      // is on the ground whenever they are not swimming, which is what makes
+      // their footsteps fire and stops a phantom landing thud on arrival.
+      there.grounded = !state.swimming
+      there.vy = 0
 
       let rig = rigs.get(id)
       if (!rig) {

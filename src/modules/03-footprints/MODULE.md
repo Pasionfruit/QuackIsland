@@ -15,7 +15,11 @@ in `internal/foot.ts`. Neither imports three.js, so both are tested in Node.
 | Export | Meaning |
 | --- | --- |
 | `Footprints` | The R3F component. Registered in `src/app/scene.ts` |
-| `stepTrail(state, walker, dt, groundAt, config?)` | Ages prints and lays new ones. Pure |
+| `stepTrail(state, walker, dt, groundAt, config?, id?)` | One walker. Pure |
+| `stepTrails(state, walkers, dt, groundAt, config?)` | Everybody at once. Pure |
+| `forgetWalker(state, id)` | Drops a walker's stride bookkeeping |
+| `addWalker(id, source)` / `removeWalker(id)` | Register somebody else who walks |
+| `SELF` | The id used when nobody says who is walking |
 | `createTrail(config?)` | A trail with every slot free |
 | `fadeOf(print, config?)` | `1` when fresh, `0` once gone |
 | `strideFor(speed, config?)` | Spacing at that pace. Running lengthens it |
@@ -47,7 +51,15 @@ player. `facing` is only a fallback; see below.
 - **Nothing is left below the waterline**, and the waterline moves with the
   tide rather than sitting at the datum.
 - **The trail never grows.** It is a fixed ring of `TRAIL.capacity` slots and
-  the oldest is overwritten.
+  the oldest is overwritten - **shared by everybody**, so the whole beach is
+  one draw call however many people are on it.
+- **Everyone has their own stride**, their own last position and their own foot
+  to put down next. Only the prints are shared; a print in the sand does not
+  care who made it.
+- **Prints age once a frame, not once per walker.** That is the whole reason
+  `stepTrails` takes everyone at once rather than being called in a loop: a
+  full lobby would otherwise fade the beach eight times too fast. There is a
+  test that fails if the ageing moves inside the walker loop.
 - Each print sits at the ground height where it was left, so a print on a dune
   stays on the dune.
 - Losing the walker (the player module switched off) and getting it back does
@@ -55,8 +67,8 @@ player. `facing` is only a fallback; see below.
 
 ## Deliberate non-goals
 
-- **No prints from anything but the player.** The `Walker` shape is general, but
-  only one is wired up.
+- **No prints from anything but people.** The `Walker` shape is general, and
+  `09-net` registers everyone in the lobby through it, but nothing else does.
 - No prints below the waterline — no seabed trail, and nothing while swimming,
   since the walker is not grounded.
 - **Nothing washes prints away.** A print left below the high-water line stays
@@ -148,8 +160,8 @@ and two triangles do that exactly, with no corner clipping a toe.
 
 ## Known limitations
 
-- One trail, one capacity, shared by whoever walks. Two walkers would fight
-  over the same 220 slots.
+- One capacity shared by whoever walks, so a full lobby gets a shorter trail
+  each. At 420 slots that is about fifty paces each with eight people.
 - A very large single frame step lays one print rather than filling in the
   path behind it, because only the end position is known.
 - The foot is a stylised duck's foot, not a scan of one: three toes and a web,

@@ -15,13 +15,18 @@ export {
   CODE_LENGTH,
   NET,
   cleanName,
+  dayCorrection,
   decodeMessage,
+  decodeWorld,
   encodeState,
+  encodeWorld,
+  isHost,
   makeCode,
   normaliseCode,
   type DuckMessage,
   type DuckState,
   type Peer,
+  type WorldState,
 } from './internal/protocol'
 
 export {
@@ -35,6 +40,7 @@ export {
 } from './internal/interpolate'
 
 export {
+  followWorld,
   getNet,
   joinLobby,
   leaveLobby,

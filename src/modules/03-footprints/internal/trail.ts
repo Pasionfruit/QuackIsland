@@ -37,7 +37,7 @@ export interface TrailConfig {
 }
 
 export const TRAIL: TrailConfig = {
-  capacity: 220,
+  capacity: 420,
   stride: 1.25,
   life: 26,
   spread: 0.34,
@@ -45,16 +45,46 @@ export const TRAIL: TrailConfig = {
   strideMax: 1.75,
 }
 
-export interface TrailState {
-  prints: Footprint[]
-  /** Where the next print will be written. */
-  cursor: number
+/**
+ * The stride bookkeeping for one walker.
+ *
+ * Separate from the prints because everyone shares one ring of prints - a
+ * footprint in the sand does not care who made it, and one ring is one draw
+ * call however many people are walking - but each walker has their own pace,
+ * their own last position, and their own foot to put down next.
+ */
+export interface WalkerTrack {
   /** Metres walked since the last print. */
   sinceLast: number
   nextSide: -1 | 1
   lastX: number
   lastZ: number
   started: boolean
+}
+
+export interface TrailState {
+  prints: Footprint[]
+  /** Where the next print will be written. */
+  cursor: number
+  /** One per walker, keyed by whatever the caller calls them. */
+  walkers: Map<string, WalkerTrack>
+}
+
+/** The id used when nobody says who is walking. */
+export const SELF = 'self'
+
+function trackFor(state: TrailState, id: string): WalkerTrack {
+  let track = state.walkers.get(id)
+  if (!track) {
+    track = { sinceLast: 0, nextSide: 1, lastX: 0, lastZ: 0, started: false }
+    state.walkers.set(id, track)
+  }
+  return track
+}
+
+/** Drops a walker's bookkeeping. Called when somebody leaves the lobby. */
+export function forgetWalker(state: TrailState, id: string): void {
+  state.walkers.delete(id)
 }
 
 export function createTrail(config: TrailConfig = TRAIL): TrailState {
@@ -69,11 +99,7 @@ export function createTrail(config: TrailConfig = TRAIL): TrailState {
       used: false,
     })),
     cursor: 0,
-    sinceLast: 0,
-    nextSide: 1,
-    lastX: 0,
-    lastZ: 0,
-    started: false,
+    walkers: new Map(),
   }
 }
 
@@ -98,9 +124,32 @@ export interface Walker {
  * Spacing is by distance rather than time on purpose: standing still should
  * leave nothing, and the prints should not bunch up when the walker slows.
  */
+/**
+ * Advances the trail with one walker. The common case, and the whole API
+ * before there was anybody else on the island.
+ */
 export function stepTrail(
   state: TrailState,
   walker: Walker | null,
+  dt: number,
+  groundAt: (x: number, z: number) => number,
+  config: TrailConfig = TRAIL,
+  id: string = SELF,
+): TrailState {
+  return stepTrails(state, [[id, walker]], dt, groundAt, config)
+}
+
+/**
+ * Advances the trail with everybody walking.
+ *
+ * Ageing happens once, here, rather than once per walker - which is the bug
+ * this shape exists to make impossible. Calling the single-walker version in a
+ * loop would age every print once per person in the lobby, so a busy beach
+ * would fade eight times too fast.
+ */
+export function stepTrails(
+  state: TrailState,
+  walkers: Iterable<readonly [string, Walker | null]>,
   dt: number,
   groundAt: (x: number, z: number) => number,
   config: TrailConfig = TRAIL,
@@ -113,23 +162,38 @@ export function stepTrail(
     if (p.age >= config.life) p.used = false
   }
 
+  for (const [id, walker] of walkers) {
+    layFor(state, id, walker, groundAt, config)
+  }
+  return state
+}
+
+function layFor(
+  state: TrailState,
+  id: string,
+  walker: Walker | null,
+  groundAt: (x: number, z: number) => number,
+  config: TrailConfig,
+): void {
+  const track = trackFor(state, id)
+
   if (!walker) {
-    state.started = false
-    return state
+    track.started = false
+    return
   }
 
-  if (!state.started) {
-    state.lastX = walker.x
-    state.lastZ = walker.z
-    state.started = true
-    return state
+  if (!track.started) {
+    track.lastX = walker.x
+    track.lastZ = walker.z
+    track.started = true
+    return
   }
 
-  const dx = walker.x - state.lastX
-  const dz = walker.z - state.lastZ
+  const dx = walker.x - track.lastX
+  const dz = walker.z - track.lastZ
   const moved = Math.hypot(dx, dz)
-  state.lastX = walker.x
-  state.lastZ = walker.z
+  track.lastX = walker.x
+  track.lastZ = walker.z
 
   // Lay the print along the way the foot actually went. With a body that
   // strafes, that is not the way it is facing - side-stepping while facing
@@ -138,19 +202,19 @@ export function stepTrail(
   const heading = moved > 1e-4 ? Math.atan2(dx, dz) : walker.facing
 
   // Nothing is left while airborne - you are not touching the sand.
-  if (!walker.grounded) return state
+  if (!walker.grounded) return
 
   // Carry the remainder rather than zeroing it. Zeroing throws away whatever
   // was left over, so the spacing quietly becomes a function of how far the
   // walker happens to move per frame - prints every two metres at one frame
   // rate and every one and a quarter at another.
   const stride = strideFor(walker.speed, config)
-  state.sinceLast = Math.min(state.sinceLast + moved, stride * 3)
-  if (state.sinceLast < stride) return state
-  state.sinceLast -= stride
+  track.sinceLast = Math.min(track.sinceLast + moved, stride * 3)
+  if (track.sinceLast < stride) return
+  track.sinceLast -= stride
 
   // Offset to the side of the line of travel, so the pair reads as a stride.
-  const side = state.nextSide
+  const side = track.nextSide
   // Offset along the body's right, so side +1 really is the right foot.
   const ox = -Math.cos(heading) * config.spread * side
   const oz = Math.sin(heading) * config.spread * side
@@ -167,8 +231,7 @@ export function stepTrail(
   print.used = true
 
   state.cursor = (state.cursor + 1) % config.capacity
-  state.nextSide = side === 1 ? -1 : 1
-  return state
+  track.nextSide = side === 1 ? -1 : 1
 }
 
 /**

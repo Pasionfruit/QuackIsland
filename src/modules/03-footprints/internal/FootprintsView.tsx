@@ -25,7 +25,28 @@ import { PRIORITY, getDayTime, tideAt, useGameFrame } from '../../00-core'
 import { SEA_LEVEL, heightAt, sampleAt } from '../../01-terrain'
 import { getPlayerState } from '../../02-player'
 import { duckFootGlsl } from './foot'
-import { TRAIL, createTrail, fadeOf, stepTrail } from './trail'
+import { SELF, TRAIL, createTrail, fadeOf, forgetWalker, stepTrails, type Walker } from './trail'
+
+/**
+ * Anybody else who leaves prints.
+ *
+ * A registry rather than this module reaching for the network: footprints know
+ * about walkers, and a walker is `{ x, z, facing, grounded, speed }` whether it
+ * is being driven by a keyboard or arriving over a socket. `09-net` registers
+ * each peer as they join and drops them when they go.
+ *
+ * Everyone shares one ring of prints, so however many people are on the beach
+ * it stays a single draw call. A print in the sand does not care who made it.
+ */
+const sources = new Map<string, () => Walker | null>()
+
+export function addWalker(id: string, source: () => Walker | null): void {
+  sources.set(id, source)
+}
+
+export function removeWalker(id: string): void {
+  sources.delete(id)
+}
 
 const UP = new Vector3(0, 1, 0)
 
@@ -130,6 +151,9 @@ export function Footprints() {
   }, [])
 
   const fades = useMemo(() => new Float32Array(TRAIL.capacity), [])
+  // Rebuilt in place each frame rather than allocated, since this runs at sixty
+  // hertz and holds one entry per person on the island.
+  const walking = useMemo<Array<readonly [string, Walker | null]>>(() => [], [])
   const dummy = useMemo(() => new Object3D(), [])
   const normal = useMemo(() => new Vector3(), [])
   const quat = useMemo(() => new Quaternion(), [])
@@ -149,17 +173,38 @@ export function Footprints() {
     const m = mesh.current
     if (!m) return
 
-    const player = getPlayerState()
     // Only print on land, and where the waterline is *now* - the tide moves it
     // several metres up and down the beach, and prints under water would wash
-    // out rather than sit there.
+    // out rather than sit there. The same rule for everybody.
     const waterline = SEA_LEVEL + tideAt(getDayTime())
-    const walker =
-      player && heightAt(player.x, player.z) > waterline
-        ? { x: player.x, z: player.z, facing: player.facing, grounded: player.grounded, speed: player.speed }
-        : null
+    const onSand = (w: Walker | null): Walker | null =>
+      w && heightAt(w.x, w.z) > waterline ? w : null
 
-    stepTrail(trail, walker, delta, heightAt, TRAIL)
+    const player = getPlayerState()
+    walking.length = 0
+    walking.push([
+      SELF,
+      onSand(
+        player
+          ? {
+              x: player.x,
+              z: player.z,
+              facing: player.facing,
+              grounded: player.grounded,
+              speed: player.speed,
+            }
+          : null,
+      ),
+    ])
+    for (const [id, source] of sources) walking.push([id, onSand(source())])
+
+    // Anyone who has gone takes their stride bookkeeping with them; the prints
+    // they left stay until they fade, which is what should happen.
+    for (const id of trail.walkers.keys()) {
+      if (id !== SELF && !sources.has(id)) forgetWalker(trail, id)
+    }
+
+    stepTrails(trail, walking, delta, heightAt, TRAIL)
 
     const attr = m.geometry.getAttribute('aFade') as InstancedBufferAttribute | undefined
     for (let i = 0; i < TRAIL.capacity; i++) {

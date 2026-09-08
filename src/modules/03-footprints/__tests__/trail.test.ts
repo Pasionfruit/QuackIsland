@@ -1,6 +1,17 @@
 import { PlaneGeometry } from 'three'
 import { describe, expect, it } from 'vitest'
-import { TRAIL, createTrail, fadeOf, stepTrail, strideFor, type TrailState, type Walker } from '../internal/trail'
+import {
+  SELF,
+  TRAIL,
+  createTrail,
+  fadeOf,
+  forgetWalker,
+  stepTrail,
+  stepTrails,
+  strideFor,
+  type TrailState,
+  type Walker,
+} from '../internal/trail'
 
 const flat = () => 0
 const walker = (x: number, z: number, over: Partial<Walker> = {}): Walker => ({
@@ -211,5 +222,109 @@ describe('which way a print points', () => {
     for (let i = 1; i <= 40; i++) stepTrail(trail, walker(0, -i / 2, { facing: 1.2 }), 1 / 60, flat)
     // Moving along -Z is a heading of PI, not the body's 1.2.
     for (const p of live(trail)) expect(Math.abs(p.facing)).toBeCloseTo(Math.PI, 3)
+  })
+})
+
+describe('more than one person on the beach', () => {
+  const walkers = (n: number, step: number) =>
+    Array.from({ length: n }, (_, i) => [`p${i}`, walker(i * 20, -step)] as const)
+
+  it('gives everyone their own stride', () => {
+    // One ring of prints, but a pace each: two people walking at different
+    // speeds must not share a step counter.
+    const trail = createTrail()
+    stepTrails(trail, [['a', walker(0, 0)], ['b', walker(50, 0)]], 1 / 60, flat)
+    for (let i = 1; i <= 20; i++) {
+      stepTrails(
+        trail,
+        [
+          ['a', walker(0, -i)],
+          ['b', walker(50, -i / 4)],
+        ],
+        1 / 60,
+        flat,
+      )
+    }
+    const mine = live(trail).filter((p) => p.x < 25)
+    const theirs = live(trail).filter((p) => p.x > 25)
+    expect(mine.length).toBeGreaterThan(theirs.length)
+    expect(theirs.length).toBeGreaterThan(0)
+  })
+
+  it('ages every print once a frame, not once per walker', () => {
+    // The bug this shape exists to prevent: calling the single-walker step in
+    // a loop would age the beach once per person, so a full lobby's prints
+    // would fade eight times too fast.
+    const alone = createTrail()
+    stepTrail(alone, walker(0, 0), 1 / 60, flat)
+    for (let i = 1; i <= 4; i++) stepTrail(alone, walker(0, -i), 1 / 60, flat)
+
+    const crowd = createTrail()
+    const many = (z: number) => walkers(6, z)
+    stepTrails(crowd, many(0), 1 / 60, flat)
+    for (let i = 1; i <= 4; i++) stepTrails(crowd, many(i), 1 / 60, flat)
+
+    for (let i = 0; i < 60; i++) {
+      stepTrail(alone, null, 0.1, flat)
+      stepTrails(crowd, many(4), 0.1, flat)
+    }
+    const oldest = (t: TrailState) => Math.max(...live(t).map((p) => p.age), 0)
+    expect(oldest(crowd)).toBeCloseTo(oldest(alone), 6)
+  })
+
+  it('shares one ring, so the beach is still one draw call', () => {
+    const trail = createTrail()
+    const many = (z: number) => walkers(8, z)
+    stepTrails(trail, many(0), 1 / 60, flat)
+    for (let i = 1; i <= 200; i++) stepTrails(trail, many(i), 1 / 60, flat)
+    expect(trail.prints).toHaveLength(TRAIL.capacity)
+    expect(live(trail).length).toBeLessThanOrEqual(TRAIL.capacity)
+  })
+
+  it('holds enough prints for a lobby, not just for one walker', () => {
+    // Everyone shares the ring, so a capacity sized for one person would mean
+    // eight people each get a couple of paces of trail.
+    expect(TRAIL.capacity).toBeGreaterThan(300)
+  })
+
+  it('lets somebody leave without disturbing anyone else', () => {
+    const trail = createTrail()
+    stepTrails(trail, [['a', walker(0, 0)], ['b', walker(60, 0)]], 1 / 60, flat)
+    for (let i = 1; i <= 10; i++) {
+      stepTrails(trail, [['a', walker(0, -i)], ['b', walker(60, -i)]], 1 / 60, flat)
+    }
+    const before = live(trail).length
+    forgetWalker(trail, 'b')
+    expect(trail.walkers.has('b')).toBe(false)
+    // Their prints stay until they fade, which is what should happen.
+    expect(live(trail).length).toBe(before)
+    // And the one still walking carries on.
+    for (let i = 11; i <= 20; i++) stepTrails(trail, [['a', walker(0, -i)]], 1 / 60, flat)
+    expect(live(trail).length).toBeGreaterThan(before)
+  })
+
+  it('picks a walker up cleanly after they go quiet and come back', () => {
+    // Somebody whose connection hiccups must not leave one print stretching
+    // across the island.
+    const trail = createTrail()
+    stepTrails(trail, [['a', walker(0, 0)]], 1 / 60, flat)
+    for (let i = 1; i <= 6; i++) stepTrails(trail, [['a', walker(0, -i)]], 1 / 60, flat)
+    const before = live(trail).length
+    stepTrails(trail, [['a', null]], 1 / 60, flat)
+    stepTrails(trail, [['a', walker(200, 200)]], 1 / 60, flat)
+    expect(live(trail).length).toBe(before)
+  })
+
+  it('keeps the single-walker call working exactly as it did', () => {
+    // The old signature is the common case and most of the tests above.
+    const one = createTrail()
+    stepTrail(one, walker(0, 0), 1 / 60, flat)
+    for (let i = 1; i <= 10; i++) stepTrail(one, walker(0, -i), 1 / 60, flat)
+
+    const same = createTrail()
+    stepTrails(same, [[SELF, walker(0, 0)]], 1 / 60, flat)
+    for (let i = 1; i <= 10; i++) stepTrails(same, [[SELF, walker(0, -i)]], 1 / 60, flat)
+
+    expect(live(one).map((p) => [p.x, p.z])).toEqual(live(same).map((p) => [p.x, p.z]))
   })
 })

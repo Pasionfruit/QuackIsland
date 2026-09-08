@@ -157,6 +157,11 @@ export function DebugPanel() {
     return () => clearInterval(id)
   }, [])
 
+  // In a lobby the host drives the clock and the weather. A guest's controls
+  // are disabled rather than left to fight the sync: a slider that snaps back
+  // once a second is worse than one that plainly cannot be moved.
+  const guest = net.status === 'joined' && !net.host
+
   const t = getDayTime()
   const scale = getTimeScale()
   const running = isCycleRunning()
@@ -166,22 +171,32 @@ export function DebugPanel() {
   return (
     <div style={panel}>
       <Section id="time" title="TIME OF DAY" first>
+        {guest ? (
+          <div style={{ opacity: 0.6, marginBottom: 4, color: '#ffcf8a' }}>
+            set by the host of {net.room}
+          </div>
+        ) : null}
         <input
           type="range"
           min={0}
           max={0.999}
           step={0.001}
           value={t}
+          disabled={guest}
           onChange={(e) => setDayTime(Number(e.target.value))}
-          style={{ width: '100%', accentColor: '#e0a05a' }}
+          style={{ width: '100%', accentColor: '#e0a05a', opacity: guest ? 0.4 : 1 }}
         />
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
           {TIMES_OF_DAY.map((name) => (
             <button
               key={name}
               type="button"
+              disabled={guest}
               onClick={() => setTimeOfDay(name)}
-              style={{ ...flat, color: name === now ? '#ffcf8a' : '#8d8a84' }}
+              style={{
+                ...flat,
+                color: guest ? '#5f5c58' : name === now ? '#ffcf8a' : '#8d8a84',
+              }}
             >
               {TIME_LABELS[name]}
             </button>
@@ -214,6 +229,7 @@ export function DebugPanel() {
         <div style={{ display: 'flex', gap: 8, marginTop: 6, alignItems: 'center' }}>
           <button
             type="button"
+            disabled={guest}
             onClick={() => setCycleRunning(!running)}
             style={{
               ...flat,
@@ -230,8 +246,12 @@ export function DebugPanel() {
             <button
               key={s}
               type="button"
+              disabled={guest}
               onClick={() => setTimeScale(s)}
-              style={{ ...flat, color: scale === s ? '#ffcf8a' : '#8d8a84' }}
+              style={{
+                ...flat,
+                color: guest ? '#5f5c58' : scale === s ? '#ffcf8a' : '#8d8a84',
+              }}
             >
               {s}x
             </button>
@@ -250,14 +270,15 @@ export function DebugPanel() {
             <button
               key={kind}
               type="button"
+              disabled={guest}
               onClick={() => setWeather(kind)}
               style={{
                 ...flat,
                 border: '1px solid #6b6862',
                 borderRadius: 4,
                 padding: '2px 6px',
-                background: kind === weather ? '#e0a05a' : 'none',
-                color: kind === weather ? '#20222a' : '#c8c3ba',
+                background: kind === weather && !guest ? '#e0a05a' : 'none',
+                color: guest ? '#8d8a84' : kind === weather ? '#20222a' : '#c8c3ba',
               }}
             >
               {WEATHER_LABELS[kind]}
@@ -272,7 +293,9 @@ export function DebugPanel() {
             ? ''
             : `, ${WEATHER[weather].precipitation}`}
         </div>
-        <div style={{ opacity: 0.45 }}>takes a few seconds to come over</div>
+        <div style={{ opacity: 0.45 }}>
+          {guest ? `set by the host of ${net.room}` : 'takes a few seconds to come over'}
+        </div>
       </Section>
 
       <Section id="lobby" title="LOBBY">
@@ -326,7 +349,7 @@ export function DebugPanel() {
           </button>
           <span style={{ opacity: 0.6 }}>
             {net.status === 'joined'
-              ? `${net.room} - ${net.peers} other${net.peers === 1 ? '' : 's'}`
+              ? `${net.room} - ${net.peers} other${net.peers === 1 ? '' : 's'}${net.host ? ' - you host' : ''}`
               : net.status === 'connecting'
                 ? 'connecting...'
                 : net.status === 'error'
@@ -335,7 +358,11 @@ export function DebugPanel() {
           </span>
         </div>
         <div style={{ opacity: 0.45, marginTop: 3 }}>
-          share the code; anyone who types it is in the same world
+          {net.status === 'joined'
+            ? net.host
+              ? 'your clock and weather are everyone’s'
+              : 'the host sets the time and the weather'
+            : 'share the code; anyone who types it is in the same world'}
         </div>
       </Section>
 

@@ -32,6 +32,15 @@ export const SOUNDS: Record<CueName, CueSound> = {
 export const AUDIO = {
   /** Where the effects volume is remembered. */
   storageKey: 'localrot.audio.volume',
+  /**
+   * How far away another player can still be heard, in metres.
+   *
+   * Short on purpose. Footsteps carry a few metres in life, and a lobby where
+   * everyone hears everyone is a lobby that sounds like a stampede.
+   */
+  hearing: 26,
+  /** Inside this, another player is as loud as you are. */
+  intimate: 3,
   defaultVolume: 0.7,
   /**
    * Never more than this many of the same cue at once. A frame that somehow
@@ -44,6 +53,45 @@ export const AUDIO = {
 export function clampVolume(volume: number): number {
   if (!Number.isFinite(volume)) return AUDIO.defaultVolume
   return Math.min(1, Math.max(0, volume))
+}
+
+/**
+ * How loud and how far to one side another player's sound is.
+ *
+ * Pure, and worth being pure: "is the duck on my left actually on my left" is
+ * a sign error away from being wrong, and a sign error in panning is very hard
+ * to notice deliberately and very annoying once heard.
+ *
+ * `forward` is the way the listener is looking, flattened - height does not
+ * change which ear a thing is in.
+ */
+export function spatialFor(
+  listener: { x: number; z: number },
+  forward: { x: number; z: number },
+  source: { x: number; z: number },
+): { gain: number; pan: number } {
+  const dx = source.x - listener.x
+  const dz = source.z - listener.z
+  const distance = Math.hypot(dx, dz)
+  if (distance > AUDIO.hearing) return { gain: 0, pan: 0 }
+
+  // Flat inside the intimate radius, then falling to nothing at the edge of
+  // hearing. Squared, so it fades the way distance actually sounds rather than
+  // staying loud and then stopping.
+  const reach = Math.max(1e-6, AUDIO.hearing - AUDIO.intimate)
+  const out = Math.min(1, Math.max(0, (distance - AUDIO.intimate) / reach))
+  const gain = (1 - out) * (1 - out)
+
+  if (distance < 1e-4) return { gain, pan: 0 }
+
+  // Screen-right is cross(forward, up), which for a +Y-up right-handed world
+  // is (-forward.z, forward.x). The same derivation as the movement basis, and
+  // it was wrong there once, so it is stated rather than re-derived.
+  const length = Math.hypot(forward.x, forward.z) || 1
+  const rightX = -forward.z / length
+  const rightZ = forward.x / length
+  const pan = (dx * rightX + dz * rightZ) / distance
+  return { gain, pan: Math.min(1, Math.max(-1, pan)) }
 }
 
 /** A pitch near 1, so repeats of one sound do not sound identical. */
@@ -141,9 +189,22 @@ export class CueEngine {
   }
 
   play(name: CueName, random = Math.random()): void {
+    this.playAt(name, 1, 0, random)
+  }
+
+  /**
+   * Plays a cue at a volume and a stereo position.
+   *
+   * A gain node and a stereo panner rather than a full `PannerNode`: a panner
+   * wants the listener's orientation kept up to date every frame in the audio
+   * graph, and for footsteps on a flat beach the extra realism is not
+   * detectable. `spatialFor` works out both numbers.
+   */
+  playAt(name: CueName, volume: number, pan: number, random = Math.random()): void {
     const context = this.context
     const buffer = this.buffers[name]
     if (!context || !this.master || !buffer || context.state !== 'running') return
+    if (!(volume > 0.001)) return
 
     const live = this.playing[name] ?? 0
     if (live >= AUDIO.maxVoices) return
@@ -154,15 +215,26 @@ export class CueEngine {
     source.playbackRate.value = pitchFor(sound.wobble, random)
 
     const gain = context.createGain()
-    gain.gain.value = sound.gain
+    gain.gain.value = sound.gain * Math.min(1, Math.max(0, volume))
     source.connect(gain)
-    gain.connect(this.master)
+
+    // Not every browser has a stereo panner; going straight to the master
+    // costs the panning and keeps the sound.
+    let tail: AudioNode = gain
+    if (typeof context.createStereoPanner === 'function' && Math.abs(pan) > 0.001) {
+      const panner = context.createStereoPanner()
+      panner.pan.value = Math.min(1, Math.max(-1, pan))
+      gain.connect(panner)
+      tail = panner
+    }
+    tail.connect(this.master)
 
     this.playing[name] = live + 1
     source.onended = () => {
       this.playing[name] = Math.max(0, (this.playing[name] ?? 1) - 1)
       source.disconnect()
       gain.disconnect()
+      if (tail !== gain) tail.disconnect()
     }
     source.start()
   }

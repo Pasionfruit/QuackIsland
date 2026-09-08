@@ -19,6 +19,11 @@ syncing, that is the moment to split them.
 | Export | Meaning |
 | --- | --- |
 | `NetPlayers` | The scene entry: sends yours, draws everyone else's |
+| `followWorld(dt)` | Brings a guest's clock and weather towards the host's |
+| `isHost(myId, peerIds)` | Who drives the world. Pure |
+| `encodeWorld` / `decodeWorld` | The clock and weather on the wire. Pure, validating |
+| `dayCorrection(mine, theirs, dt)` | How far to move a guest's clock. Pure |
+| `WorldState` | `{ day, scale, running, weather }` |
 | `joinLobby(code, name)` / `leaveLobby()` | What the panel calls |
 | `useNet()` / `getNet()` | Status, room, peer count. React-safe |
 | `makeCode()` | A fresh lobby code |
@@ -64,23 +69,44 @@ syncing, that is the moment to split them.
   anywhere, ever.
 - **No accounts, no matchmaking, no lobby list.** You share a code.
 - **No voice or chat.**
-- **No shared world state.** Everyone runs their own time of day, weather and
-  tide. Two people in a lobby can be in different weather — see below.
-- **No sound from remote players**, and no name labels above them yet.
+- **No authority over the *world* either.** The host is trusted with the clock
+  and the weather in the same way everyone is trusted with their own position.
+- **No name labels above remote players** yet.
+- **No shared anything else.** The shore, the footprints already on the beach
+  when you join, and whose duck is whose colour are all still local.
 - **No reconnection.** Drop out and you press join again.
 
-## Everyone has their own weather
+## The host owns the clock and the weather
 
-Only the duck is synced. The clock, the tide and the weather are each client's
-own, so two people in a lobby can genuinely be standing in different weather at
-different times of day.
+Everyone in a lobby is in the same hour and the same weather. The tide follows
+for free, because it is a function of the day.
 
-That is deliberate for now rather than an oversight. Syncing them means
-deciding who is in charge of the clock, what happens when they leave, and how a
-joiner catches up — which is a real design with real failure modes, and none of
-it is needed to see two ducks walk about. When it is wanted, the relay does not
-change: the host sends its clock as another opaque message, and this module
-learns one more message type.
+**The host is the lowest id in the room.** That needs no election, no messages
+and no tie-breaking: every client has the same list of who is here, so every
+client reaches the same answer, and when the host leaves the next one takes
+over on its own. Alone in a lobby you are the host, so joining takes nothing
+away from you.
+
+Ids are `p1`, `p2`, ... and are compared **as numbers**. Sorted as text, `p10`
+comes before `p2` and the room would be handed to whoever happened to be tenth.
+
+The host sends `{ day, scale, running, weather }` once a second. A guest adopts
+the speed and the weather outright - neither is worth easing - and *eases* the
+time of day, because a snap in the clock is visible as a jump in the light.
+Guests run the same clock at the same speed, so there is only drift to correct.
+
+Two things that are easy to get wrong and are therefore tested:
+
+- **The day wraps.** A host at 0.99 and a guest at 0.01 are two hundredths
+  apart, not ninety-eight. Correcting the long way round runs the guest
+  backwards through a whole day every midnight.
+- **A big difference snaps rather than eases.** Somebody who has just joined
+  should arrive in the right hour, not watch a slow sunrise going the wrong
+  way for half a minute.
+
+A guest's time and weather controls are **disabled** in the panel rather than
+left to fight the sync. A slider that snaps back once a second is worse than
+one that plainly cannot be moved.
 
 ## Why the relay is dumb
 
@@ -107,6 +133,11 @@ nobody notices, in exchange for movement that is never wrong.
 - **120 ms behind.** Fine for walking; it would not be for anything competitive.
 - **Sixteen to a lobby**, and everyone gets everyone's updates — traffic grows
   with the square of the room. Fine at this size.
+- **Joining does not catch you up on the beach.** You see prints made from the
+  moment you arrive, not the ones already there.
+- **The host handing over is not seamless.** The new host keeps its own clock,
+  which is within a fraction of a second of the old one, so the change is
+  invisible - but it is not coordinated.
 - **No interest management.** A duck on the far side of the island is still sent.
 - Names are carried but not yet drawn.
 - A lost connection is not retried; the status goes to `offline`.
@@ -117,7 +148,22 @@ nobody notices, in exchange for movement that is never wrong.
 
 Two browsers, two lobbies, and `DEPLOY.md` has the commands.
 
-- **Join with the same code in two browsers.** Both should say `1 other`.
+- **Join with the same code in two browsers.** Both should say `1 other`, and
+  exactly one of them should say `you host`.
+- **Change the time and the weather on the host.** The guest should follow
+  within a second or so, easing rather than snapping, and its own time and
+  weather controls should be greyed out.
+- **Scrub the host's day slider hard.** The guest should arrive in the right
+  hour quickly rather than crawling there.
+- **Take the host through midnight** at 600x. The guest must follow forwards
+  through the wrap, never run backwards through a day.
+- **Close the host's browser.** The remaining player should become the host
+  within a few seconds and get its controls back.
+- **Walk near another player.** You should hear their footsteps, quietly, and
+  in the correct ear - walk a circle round them and the sound should cross
+  over. Walk away and it should fade out rather than stop.
+- **Look at the sand behind another player.** Their footprints should be there,
+  same as yours, fading at the same rate.
 - **Walk in one and watch the other.** The duck should move *smoothly*, not in
   fifteen visible steps a second, and it should face the way it is going.
 - **Run in circles.** The remote duck should turn the short way, never spinning

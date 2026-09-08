@@ -9,15 +9,19 @@
 export { DUCK_FOOT, duckFootAt, duckFootGlsl, type Toe } from './internal/foot'
 
 export {
+  SELF,
   TRAIL,
   createTrail,
+  forgetWalker,
   stepTrail,
+  stepTrails,
   fadeOf,
   strideFor,
   type Footprint,
   type TrailConfig,
   type TrailState,
   type Walker,
+  type WalkerTrack,
 } from './internal/trail'
 
-export { Footprints } from './internal/FootprintsView'
+export { Footprints, addWalker, removeWalker } from './internal/FootprintsView'

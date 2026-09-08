@@ -160,7 +160,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T00:02:44.598Z"
+          "at": "2026-09-08T00:27:29.262Z"
         },
         "human": {
           "status": "pending"
@@ -243,7 +243,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T00:02:52.909Z"
+          "at": "2026-09-08T00:27:37.531Z"
         },
         "human": {
           "status": "pending"
@@ -317,7 +317,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T00:03:01.328Z"
+          "at": "2026-09-08T00:27:45.802Z"
         },
         "human": {
           "status": "pending"
@@ -348,7 +348,9 @@
         "01-terrain",
         "02-player"
       ],
-      "dependents": [],
+      "dependents": [
+        "09-net"
+      ],
       "generation": 1,
       "contract": {
         "version": "0.1.0",
@@ -375,7 +377,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T00:03:09.577Z"
+          "at": "2026-09-08T00:27:54.047Z"
         },
         "human": {
           "status": "pending"
@@ -436,7 +438,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T00:03:17.863Z"
+          "at": "2026-09-08T00:28:02.229Z"
         },
         "human": {
           "status": "pending"
@@ -499,7 +501,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T00:03:26.162Z"
+          "at": "2026-09-08T00:28:10.479Z"
         },
         "human": {
           "status": "pending"
@@ -563,7 +565,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T00:03:34.369Z"
+          "at": "2026-09-08T00:28:18.741Z"
         },
         "human": {
           "status": "pending"
@@ -628,7 +630,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T00:03:42.571Z"
+          "at": "2026-09-08T00:28:27.070Z"
         },
         "human": {
           "status": "pending"
@@ -660,7 +662,9 @@
         "00-core",
         "02-player"
       ],
-      "dependents": [],
+      "dependents": [
+        "09-net"
+      ],
       "generation": 1,
       "contract": {
         "version": "0.1.0",
@@ -692,7 +696,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T00:03:50.783Z"
+          "at": "2026-09-08T00:28:35.458Z"
         },
         "human": {
           "status": "pending"
@@ -701,10 +705,9 @@
       },
       "freeze": null,
       "nonGoals": [
-        "No positional audio - these are the player own sounds and do not pan",
+        "No true 3D audio; other players are a stereo pan and a distance curve",
         "No ambience: wind, surf and birds are a soundscape, not a cue",
         "No sounds for the water, the weather, the shore or the UI",
-        "No sound for remote players in a lobby",
         "No variation packs; one file per cue, pitched about",
         "No ducking against the music"
       ],
@@ -722,7 +725,9 @@
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
-        "02-player"
+        "02-player",
+        "03-footprints",
+        "08-audio"
       ],
       "dependents": [],
       "generation": 1,
@@ -756,12 +761,17 @@
           "id": "09.5",
           "title": "Contract, tests, MODULE.md, DEPLOY.md",
           "status": "done"
+        },
+        {
+          "id": "09.6",
+          "title": "Host election, shared clock and weather, remote prints and footsteps",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T00:03:58.952Z"
+          "at": "2026-09-08T00:28:43.673Z"
         },
         "human": {
           "status": "pending"
@@ -774,9 +784,10 @@
         "No persistence; rooms exist only while somebody is in them",
         "No accounts, matchmaking or lobby list - you share a code",
         "No voice and no chat",
-        "No shared clock, tide or weather; everyone runs their own",
-        "No sound or name labels for remote players",
-        "No reconnection after a dropped connection"
+        "No reconnection after a dropped connection",
+        "No authority over the world either; the host is trusted with the clock",
+        "No name labels above remote players",
+        "No catching a joiner up on footprints already on the beach"
       ],
       "budgets": {
         "drawCallsMax": 96,
