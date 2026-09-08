@@ -27,6 +27,11 @@ three.js in it, so how the player moves is tested in Node rather than by eye.
 | --- | --- |
 | `Player` | The R3F component. Registered in `src/app/scene.ts` |
 | `PlayerProps` | `{ spawnX?, spawnZ?, surfaceAt? }` |
+| `toggleViewMode()` / `setViewMode(m)` / `useViewMode()` | First or third person |
+| `placeCamera(mode, rig, player, eyeHeight, groundAt?)` | Where the camera goes. Pure |
+| `lookDirection(yaw, pitch)` | The way it looks. Pure, shared by both views |
+| `clampPitch(mode, pitch)` | Keeps the pitch inside what a view can cope with |
+| `VIEW`, `VIEW_MODES`, `RigState`, `Placement`, `ViewMode` | The shapes above |
 | `DUCK` | The model: asset id, which way it is authored, how far it tips |
 | `fitToHeight(bounds, height)` | The scale and lift that stand a model on the ground. Pure |
 | `stepPlayer(state, input, dt, groundAt, opts?)` | One step of movement. Pure |
@@ -120,6 +125,8 @@ reason — see **Why the water module does not own swimming** below.
 - **No animation.** The duck is one rigid piece: no waddle, no wing beat, no
   head turn, no paddling feet. The model carries no skeleton, so animating it
   at all means a different asset, not more code here.
+- **No first-person body.** The whole duck is hidden in first person rather
+  than a separate pair of hands being drawn — see the limitation below.
 - No first person, and no aiming beyond turning the camera.
 - **No repair of the model beyond the feet.** `repairFeet` closes one specific,
   very visible defect. It is not a general asset-fixing pass and should not
@@ -214,6 +221,34 @@ way, upright the moment it stops.
 Set it to `1` and the duck swims flat, exactly as the capsule did. The
 controller is untouched either way.
 
+## First and third person
+
+**V**, or the buttons in the panel's VIEW section. Third person to start.
+
+Both views are built from **one** `lookDirection`, which is the point of
+`camera.ts` being a pure module: if the two disagreed about which way `yaw`
+pointed, swapping would feel exactly like the controls inverting, and that is
+a thing that has already happened once in this module. A test builds a real
+`PerspectiveCamera` for each view at seven yaws and four pitches and checks
+they point the same way to within half a degree.
+
+Writing that test found a real inconsistency straight away. Third person used
+to *place* the camera relative to a focus 2.6 m up and *aim* it at eye height
+— two different points, so the actual view ran five degrees below the rig at
+normal zoom and thirteen at close zoom. Swapping to first person jumped the
+horizon. It now orbits and aims at the same point, the eyes, so the two views
+are exactly parallel.
+
+What changes between them:
+
+- **First person** puts the camera at the eyes and ignores panning and zoom —
+  there is nothing to zoom out from and sliding your own head sideways is not
+  a thing. It can look nearly straight up, because there is a sky.
+- **Third person** keeps the ground clearance and the tighter pitch limit; it
+  cannot look far up without burying the camera behind the player.
+- The pitch is re-clamped on the way in, so looking at the sky in first person
+  and swapping does not leave the camera underground.
+
 ## Why the water module does not own swimming
 
 `seaLevel` comes from `01-terrain`, not from `04-water`, and the decision is
@@ -248,6 +283,11 @@ that the seam is the right way round, and it is in both modules' review lists.
   a steeper world would want one.
 - `groundSnap` is a fixed distance rather than one scaled to how fast you are
   going, so a much faster body would start skipping off slopes again.
+- **You cast no shadow in first person.** The body is hidden, and three skips
+  invisible objects in the shadow pass too. Keeping the shadow means putting
+  the duck on its own layer and enabling that layer on the light, which is a
+  reach into `00-core` for a detail you only notice if you look for it.
+- Other players still see your duck normally; the view is yours alone.
 - The controller uses a fixed capsule and no ground friction, so stopping is
   instant. Fine for inspection, worth revisiting for game feel.
 
@@ -265,6 +305,14 @@ that the seam is the right way round, and it is in both modules' review lists.
   **F or the button** snaps back to the player.
 - **Look around while walking.** Walking forward must keep going away from the
   camera as it turns - steering, not stuttering or reversing.
+- **Press V, or the buttons in the panel.** The horizon must not jump and the
+  controls must not invert: walking forward before and after the swap should
+  go the same way.
+- **In first person, look up at the sky and down at your feet.** Both should
+  be reachable. Then swap to third person - the camera must not end up in the
+  ground.
+- **In first person, try to pan and zoom.** Neither should do anything.
+- **Swap while swimming, and while jumping.** Nothing should lurch.
 - **WASD walks relative to the camera**, and the duck turns to face where it
   is going. Walking while turning should feel like steering, not like the world
   spinning — and holding forward must go in a straight line, not a spiral.

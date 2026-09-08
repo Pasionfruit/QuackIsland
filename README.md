@@ -9,8 +9,9 @@ npm install
 npm run dev
 ```
 
-Third person: **WASD** to move, **shift** to run, **space** to jump. Movement
-is relative to the camera and the duck turns to face wherever it is going. Walk into the sea and you swim - the body tips flat and turns to
+**WASD** to move, **shift** to run, **space** to jump. Movement is relative to
+the camera and the duck turns to face wherever it is going. **V** swaps between
+first and third person, or use the buttons in the panel's VIEW section. Walk into the sea and you swim - the body tips flat and turns to
 face where it is going. Stop and it stands upright, treading water; walk back
 out and it stands up on the sand.
 
@@ -28,6 +29,8 @@ takes a couple of seconds to come over rather than cutting, and it dims the sun
 and thickens the fog as well as filling the sky — the weather lives in
 `00-core` next to the tide, so the sky and the ground can never disagree about
 what it is doing. Every panel section folds away.
+
+Every panel section starts folded and remembers whether you opened it.
 
 The panel on the right runs the day: an hour a full cycle, fifteen minutes each
 in dawn, daylight, dusk and night. The **tide** runs off the same clock — two

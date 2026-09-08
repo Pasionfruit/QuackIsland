@@ -17,6 +17,21 @@ export {
 } from './internal/controller'
 
 export { DUCK, bodyPose, fitToHeight, type Bounds } from './internal/duck'
+
+export {
+  VIEW,
+  VIEW_MODES,
+  clampPitch,
+  getViewMode,
+  lookDirection,
+  placeCamera,
+  setViewMode,
+  toggleViewMode,
+  useViewMode,
+  type Placement,
+  type RigState,
+  type ViewMode,
+} from './internal/camera'
 export { loadDuck, normaliseDuck, repairFeet } from './internal/DuckModel'
 
 export {

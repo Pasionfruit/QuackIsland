@@ -34,7 +34,7 @@ import {
   useLightingSettings,
   useWeather,
 } from '../modules/00-core'
-import { isCameraOffPlayer, refocusCamera } from '../modules/02-player'
+import { isCameraOffPlayer, refocusCamera, toggleViewMode, useViewMode } from '../modules/02-player'
 import { AUDIO, getCueEngine, readStoredVolume, setEffectsVolume } from '../modules/08-audio'
 import { joinLobby, leaveLobby, makeCode, useNet } from '../modules/09-net'
 import { SCENE, setModuleEnabled } from './scene'
@@ -42,14 +42,23 @@ import { SCENE, setModuleEnabled } from './scene'
 /**
  * Whether a section is folded, remembered between reloads.
  *
+ * Everything starts folded: the panel has grown enough that opening the game
+ * to all of it is more wall than tool, and what you actually want is the world
+ * with one section open over it.
+ *
+ * The key is versioned because the default changed. Without the bump, anyone
+ * who had already opened a section would keep it open forever and never see
+ * the new behaviour - a remembered choice made under a different default is
+ * not really a choice.
+ *
  * Wrapped because every storage call can throw - a private window and blocked
  * site data both do - and a panel that will not render because it could not
  * remember a boolean would be a silly way to lose the game.
  */
-function useFolded(key: string, initial = false): [boolean, () => void] {
+function useFolded(key: string, initial = true): [boolean, () => void] {
   const [folded, setFolded] = useState(() => {
     try {
-      const raw = window.localStorage.getItem(`localrot.fold.${key}`)
+      const raw = window.localStorage.getItem(`localrot.fold2.${key}`)
       return raw === null ? initial : raw === '1'
     } catch {
       return initial
@@ -59,7 +68,7 @@ function useFolded(key: string, initial = false): [boolean, () => void] {
     setFolded((was) => {
       const next = !was
       try {
-        window.localStorage.setItem(`localrot.fold.${key}`, next ? '1' : '0')
+        window.localStorage.setItem(`localrot.fold2.${key}`, next ? '1' : '0')
       } catch {
         // Not worth caring about.
       }
@@ -123,6 +132,7 @@ function clockLabel(t: number, scale: number): string {
 
 export function DebugPanel() {
   const camera = useCameraMode()
+  const view = useViewMode()
   const weather = useWeather()
   const net = useNet()
   useLightingSettings()
@@ -356,11 +366,44 @@ export function DebugPanel() {
       </Section>
 
       <Section id="view" title="VIEW">
-        <div style={{ color: camera === 'player' ? '#ffcf8a' : '#8d8a84' }}>
-          {camera === 'player' ? 'third person' : 'free orbit'}
+        <div style={{ display: 'flex', gap: 4 }}>
+          {(['first', 'third'] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => {
+                if (mode !== view) toggleViewMode()
+              }}
+              disabled={camera !== 'player'}
+              style={{
+                ...flat,
+                flex: 1,
+                border: '1px solid #6b6862',
+                borderRadius: 4,
+                padding: '2px 6px',
+                background: mode === view && camera === 'player' ? '#e0a05a' : 'none',
+                color:
+                  camera !== 'player'
+                    ? '#6b6862'
+                    : mode === view
+                      ? '#20222a'
+                      : '#c8c3ba',
+                cursor: camera === 'player' ? 'pointer' : 'default',
+              }}
+            >
+              {mode === 'first' ? '1st person' : '3rd person'}
+            </button>
+          ))}
+        </div>
+        <div style={{ color: camera === 'player' ? '#8d8a84' : '#ffcf8a', marginTop: 3 }}>
+          {camera === 'player' ? 'V to swap' : 'free orbit - player module is off'}
         </div>
         <div style={{ opacity: 0.5 }}>WASD walk, space jump</div>
-        <div style={{ opacity: 0.5 }}>drag to look, right-drag to pan, wheel to zoom</div>
+        <div style={{ opacity: 0.5 }}>
+          {view === 'first'
+            ? 'drag to look'
+            : 'drag to look, right-drag to pan, wheel to zoom'}
+        </div>
         <button
           type="button"
           onClick={() => {

@@ -42,9 +42,12 @@ function readStoredVolume(): number {
  */
 function readFolded(): boolean {
   try {
-    return window.localStorage.getItem(MUSIC.foldKey) === '1'
+    const raw = window.localStorage.getItem(MUSIC.foldKey)
+    // Folded until told otherwise, like every other panel section. The track
+    // name stays visible folded, which is the part worth having on screen.
+    return raw === null ? true : raw === '1'
   } catch {
-    return false
+    return true
   }
 }
 

@@ -15,17 +15,23 @@ import { Group, Vector3 } from 'three'
 import { PRIORITY, getDayTime, setCameraMode, tideAt, useGameFrame } from '../../00-core'
 import { SEA_LEVEL, heightAt, worldBounds } from '../../01-terrain'
 import { IDLE_INPUT, PLAYER, createPlayer, stepPlayer, type PlayerInput, type PlayerState } from './controller'
+import { clampPitch, getViewMode, placeCamera, toggleViewMode } from './camera'
 import { bodyPose } from './duck'
 import { useDuck } from './DuckModel'
 
-const CAM_HEIGHT = 2.6
 const CAM_EASE = 12
+/**
+ * How fast the camera catches up in first person.
+ *
+ * Much faster than third person, and close enough to instant to feel it: the
+ * camera is the head, and a head that lags behind the body reads as seasickness
+ * rather than as smoothing.
+ */
+const CAM_EASE_FIRST = 60
 /** Radians per pixel dragged. */
 const SENSITIVITY = 0.0042
 /** Metres per pixel dragged, at the closest zoom. Scaled up as you pull back. */
 const PAN_SENSITIVITY = 0.016
-const PITCH_MIN = -0.5
-const PITCH_MAX = 1.05
 export const CAM_DISTANCE_MIN = 4
 export const CAM_DISTANCE_MAX = 260
 const CAM_DISTANCE_DEFAULT = 9
@@ -120,8 +126,10 @@ export function Player({ spawnX = 0, spawnZ = 0, surfaceAt }: PlayerProps) {
     const onMove = (e: MouseEvent) => {
       if (button === 0) {
         rig.yaw -= e.movementX * SENSITIVITY
-        rig.pitch = Math.min(PITCH_MAX, Math.max(PITCH_MIN, rig.pitch + e.movementY * SENSITIVITY))
-      } else if (button === 2) {
+        // Clamped to whichever view is running: first person can look nearly
+        // straight up, third person cannot without burying the camera.
+        rig.pitch = clampPitch(getViewMode(), rig.pitch + e.movementY * SENSITIVITY)
+      } else if (button === 2 && getViewMode() === 'third') {
         // Slide the view across the ground, in the camera's own directions, so
         // dragging right always moves the view right whichever way you face.
         const scale = PAN_SENSITIVITY * (rig.distance / CAM_DISTANCE_DEFAULT)
@@ -145,6 +153,8 @@ export function Player({ spawnX = 0, spawnZ = 0, surfaceAt }: PlayerProps) {
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
+      // Nothing to zoom out from when the camera is the head.
+      if (getViewMode() === 'first') return
       // Proportional, so a notch feels the same close in and far out.
       const next = rig.distance * Math.exp(e.deltaY * 0.0012)
       rig.distance = Math.min(CAM_DISTANCE_MAX, Math.max(CAM_DISTANCE_MIN, next))
@@ -201,6 +211,14 @@ export function Player({ spawnX = 0, spawnZ = 0, surfaceAt }: PlayerProps) {
         case 'KeyF':
           if (down) refocusCamera()
           break
+        case 'KeyV':
+          if (down) {
+            toggleViewMode()
+            // Third person can be pitched further than first person allows and
+            // the other way round, so bring it back into range on the way in.
+            rig.pitch = clampPitch(getViewMode(), rig.pitch)
+          }
+          break
         default:
           return
       }
@@ -248,33 +266,29 @@ export function Player({ spawnX = 0, spawnZ = 0, surfaceAt }: PlayerProps) {
     // Shared with every remote duck, so they cannot sit at different heights.
     const { rise, tip } = bodyPose(state.lean, PLAYER.height, PLAYER.radius)
 
+    const view = getViewMode()
+
     if (body.current) {
       body.current.position.set(state.x, state.y + rise, state.z)
       body.current.rotation.y = state.facing
+      // In first person the camera is inside the head, so the body is hidden
+      // rather than turned inside out. It stops casting a shadow with it -
+      // three skips invisible objects in the shadow pass too - which is the
+      // known cost of doing this the simple way.
+      body.current.visible = view === 'third'
     }
     if (tilt.current) {
       tilt.current.rotation.x = tip * (Math.PI / 2)
     }
 
-    // What the camera is pointed at: the player, plus however far the view has
-    // been slid off them.
-    const focusX = state.x + rig.panX
-    const focusZ = state.z + rig.panZ
-    const focusY = state.y + CAM_HEIGHT
+    // Both views come out of one function, so they cannot end up disagreeing
+    // about which way `yaw` points.
+    const place = placeCamera(view, rig, state, PLAYER.eyeHeight, heightAt)
+    camWant.set(place.x, place.y, place.z)
+    camLook.set(place.lookX, place.lookY, place.lookZ)
 
-    // Camera sits behind the focus along the look direction, so forward in the
-    // controller is always away from the camera.
-    const flat = Math.cos(rig.pitch) * rig.distance
-    camWant.set(
-      focusX - Math.sin(rig.yaw) * flat,
-      focusY + Math.sin(rig.pitch) * rig.distance,
-      focusZ - Math.cos(rig.yaw) * flat,
-    )
-    const floor = heightAt(camWant.x, camWant.z) + 1.2
-    if (camWant.y < floor) camWant.y = floor
-
-    camera.position.lerp(camWant, 1 - Math.exp(-delta * CAM_EASE))
-    camLook.set(focusX, focusY - CAM_HEIGHT + PLAYER.eyeHeight, focusZ)
+    const ease = view === 'first' ? CAM_EASE_FIRST : CAM_EASE
+    camera.position.lerp(camWant, 1 - Math.exp(-delta * ease))
     camera.lookAt(camLook)
   }, PRIORITY.camera)
 
