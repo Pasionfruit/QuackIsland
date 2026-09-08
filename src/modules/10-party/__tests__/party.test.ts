@@ -1,0 +1,194 @@
+import { describe, expect, it } from 'vitest'
+import {
+  PARTY,
+  allReady,
+  arenaHeightAt,
+  canStart,
+  decodeParty,
+  encodeParty,
+  spawnFor,
+  waitingFor,
+} from '../internal/party'
+
+const island = (x: number, z: number) => 12 - Math.hypot(x, z) * 0.02
+const readySet = (...ids: string[]) => new Set(ids)
+
+describe('everybody being ready', () => {
+  it('needs every single person', () => {
+    expect(allReady(['a', 'b', 'c'], readySet('a', 'b', 'c'))).toBe(true)
+    expect(allReady(['a', 'b', 'c'], readySet('a', 'b'))).toBe(false)
+  })
+
+  it('counts the host too', () => {
+    // A host who could start without readying up would be starting a game
+    // they were not in.
+    expect(allReady(['host', 'guest'], readySet('guest'))).toBe(false)
+  })
+
+  it('is not satisfied by an empty lobby', () => {
+    // "Nobody is unready" is true of nothing at all, and starting a game with
+    // no players is not a thing anybody meant to ask for.
+    expect(allReady([], readySet())).toBe(false)
+  })
+
+  it('ignores people who have readied up and left', () => {
+    // The ready set is only ever consulted against who is actually here.
+    expect(allReady(['a'], readySet('a', 'ghost'))).toBe(true)
+  })
+
+  it('counts who is still being waited on', () => {
+    expect(waitingFor(['a', 'b', 'c'], readySet('a'))).toBe(2)
+    expect(waitingFor(['a'], readySet('a'))).toBe(0)
+    expect(waitingFor([], readySet())).toBe(0)
+  })
+})
+
+describe('whether start can be pressed', () => {
+  const everyone = ['host', 'guest']
+  const all = readySet('host', 'guest')
+
+  it('needs to be the host, in the gathering, with everybody ready', () => {
+    expect(canStart('gathering', true, everyone, all)).toBe(true)
+  })
+
+  it('is never a guest’s to press', () => {
+    // A guest pressing start would move nobody but themselves.
+    expect(canStart('gathering', false, everyone, all)).toBe(false)
+  })
+
+  it('is not offered before a game has been opened', () => {
+    expect(canStart('off', true, everyone, all)).toBe(false)
+  })
+
+  it('is not offered again once it is running', () => {
+    expect(canStart('playing', true, everyone, all)).toBe(false)
+  })
+
+  it('waits for the last person', () => {
+    expect(canStart('gathering', true, everyone, readySet('host'))).toBe(false)
+  })
+
+  it('still needs the host to be ready when alone', () => {
+    expect(canStart('gathering', true, ['host'], readySet())).toBe(false)
+    expect(canStart('gathering', true, ['host'], readySet('host'))).toBe(true)
+  })
+})
+
+describe('the board in the sky', () => {
+  it('is flat on top, at one height', () => {
+    for (const [x, z] of [[0, 0], [10, 0], [0, -20], [18, 18]] as const) {
+      if (Math.hypot(x, z) > PARTY.radius) continue
+      expect(arenaHeightAt(x, z, island)).toBe(PARTY.height)
+    }
+  })
+
+  it('drops you back onto the island past the edge', () => {
+    // Falling forever is a much worse accident than landing at home, and this
+    // saves the board needing a railing.
+    const out = PARTY.radius + 5
+    expect(arenaHeightAt(out, 0, island)).toBeCloseTo(island(out, 0), 9)
+    expect(arenaHeightAt(0, -out, island)).toBeCloseTo(island(0, -out), 9)
+  })
+
+  it('has an edge to fall off, not a slope to walk down', () => {
+    const inside = arenaHeightAt(PARTY.radius - 0.01, 0, island)
+    const outside = arenaHeightAt(PARTY.radius + 0.01, 0, island)
+    expect(inside - outside).toBeGreaterThan(50)
+  })
+
+  it('floats well clear of anything on the island', () => {
+    // Standing on the board you should be looking down at the world, not
+    // through a dune.
+    expect(PARTY.height).toBeGreaterThan(50)
+  })
+
+  it('is big enough to stand a lobby on and small enough to see across', () => {
+    expect(PARTY.radius).toBeGreaterThan(12)
+    expect(PARTY.radius).toBeLessThan(60)
+  })
+})
+
+describe('where everyone arrives', () => {
+  it('puts everybody on the board, well inside the edge', () => {
+    // Spawning on the rim means somebody holding a key walks straight off it.
+    for (const count of [1, 2, 4, 8, 16]) {
+      for (let i = 0; i < count; i++) {
+        const spot = spawnFor(i, count)
+        const reach = Math.hypot(spot.x, spot.z)
+        expect(reach).toBeLessThanOrEqual(PARTY.radius - PARTY.spawnInset + 1e-9)
+        expect(arenaHeightAt(spot.x, spot.z, island)).toBe(PARTY.height)
+      }
+    }
+  })
+
+  it('never puts two people in the same place', () => {
+    for (const count of [2, 4, 8, 16]) {
+      const spots = Array.from({ length: count }, (_, i) => spawnFor(i, count))
+      for (let i = 0; i < spots.length; i++) {
+        for (let j = i + 1; j < spots.length; j++) {
+          const apart = Math.hypot(spots[i].x - spots[j].x, spots[i].z - spots[j].z)
+          // Further apart than a duck is wide, at the fullest lobby.
+          expect(apart).toBeGreaterThan(1.5)
+        }
+      }
+    }
+  })
+
+  it('spreads them evenly rather than bunching them up', () => {
+    const spots = Array.from({ length: 8 }, (_, i) => spawnFor(i, 8))
+    const gaps = spots.map((s, i) => {
+      const next = spots[(i + 1) % spots.length]
+      return Math.hypot(s.x - next.x, s.z - next.z)
+    })
+    expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThan(0.01)
+  })
+
+  it('copes with an index or a count that makes no sense', () => {
+    for (const [index, count] of [[0, 0], [5, 1], [-3, 4], [99, 4]] as const) {
+      const spot = spawnFor(index, count)
+      expect(Number.isFinite(spot.x)).toBe(true)
+      expect(Number.isFinite(spot.z)).toBe(true)
+      expect(Math.hypot(spot.x, spot.z)).toBeLessThanOrEqual(PARTY.radius)
+    }
+  })
+})
+
+describe('party messages', () => {
+  it('survive a round trip', () => {
+    expect(decodeParty(encodeParty({ phase: 'gathering' }))).toEqual({ phase: 'gathering' })
+    expect(decodeParty(encodeParty({ ready: true }))).toEqual({ ready: true })
+    expect(decodeParty(encodeParty({ phase: 'playing', ready: false }))).toEqual({
+      phase: 'playing',
+      ready: false,
+    })
+  })
+
+  it('ignore anything that is not a party message', () => {
+    expect(decodeParty({ t: 'duck' })).toBeNull()
+    expect(decodeParty({})).toBeNull()
+  })
+
+  it('refuse a phase nobody has heard of, whatever shape it is', () => {
+    // A phase with no case in the dashboard leaves it in a state with no way
+    // out, and this arrives from somebody else's browser. A phase of 7 and a
+    // phase of "chaos" are the same kind of wrong.
+    expect(decodeParty({ t: 'party', phase: 'chaos' })).toBeNull()
+    expect(decodeParty({ t: 'party', phase: 7 })).toBeNull()
+    expect(decodeParty({ t: 'party', phase: null })).toBeNull()
+  })
+
+  it('refuse a ready flag that is not a flag', () => {
+    expect(decodeParty({ t: 'party', ready: 'yes' })).toBeNull()
+    expect(decodeParty({ t: 'party', ready: 1 })).toBeNull()
+  })
+
+  it('do not half-trust a message with one good field and one bad', () => {
+    expect(decodeParty({ t: 'party', ready: true, phase: 'chaos' })).toBeNull()
+  })
+
+  it('carry only what was set', () => {
+    // A message saying nothing about the phase must not be read as saying the
+    // phase is off, or a guest's ready packet would end everyone's game.
+    expect(decodeParty(encodeParty({ ready: true }))?.phase).toBeUndefined()
+  })
+})

@@ -30,6 +30,7 @@ import {
   NET,
   cleanName,
   dayCorrection,
+  smoothPing,
   decodeMessage,
   decodeWorld,
   encodeState,
@@ -61,6 +62,14 @@ export interface NetInfo {
   why: string | null
 }
 
+/** One other person in the lobby, for a scoreboard. */
+export interface PeerInfo {
+  id: string
+  name: string
+  /** Round trip in milliseconds, or null until one has come back. */
+  ping: number | null
+}
+
 const info = createStore<NetInfo>({
   status: 'offline',
   room: null,
@@ -81,6 +90,60 @@ export function getNet(): NetInfo {
 /** Live peer tracks, read by the renderer every frame. Never in React state. */
 const tracks = new Map<string, Track>()
 
+/**
+ * Everyone in the room, for the DOM.
+ *
+ * Separate from `tracks` on purpose: that is read sixty times a second by the
+ * renderer and must never touch React, while this changes when somebody joins,
+ * leaves, or a ping comes back, and is what a scoreboard renders.
+ */
+const roster = createStore<PeerInfo[]>([])
+
+export function usePeers(): PeerInfo[] {
+  return useStore(roster)
+}
+
+export function getPeers(): PeerInfo[] {
+  return roster.get()
+}
+
+/** Rebuilt whenever the room changes, so React sees a new array. */
+function publishRoster(): void {
+  const list: PeerInfo[] = []
+  for (const [id, track] of tracks) {
+    list.push({ id, name: track.name, ping: pings.get(id) ?? null })
+  }
+  list.sort((a, b) => a.id.localeCompare(b.id, 'en', { numeric: true }))
+  roster.set(list)
+}
+
+const pings = new Map<string, number>()
+/** When each outstanding ping went out, keyed by the token it carried. */
+const sentAt = new Map<number, number>()
+let pingToken = 1
+
+/**
+ * Anything the transport does not understand itself.
+ *
+ * `10-party` uses this rather than this module learning what a board game is:
+ * the relay passes opaque messages, so the only thing that has to be shared is
+ * how to send one and how to hear one.
+ */
+type RoomHandler = (from: string, message: Record<string, unknown>) => void
+const roomHandlers = new Set<RoomHandler>()
+
+export function subscribeRoom(handler: RoomHandler): () => void {
+  roomHandlers.add(handler)
+  return () => roomHandlers.delete(handler)
+}
+
+/** Sends an arbitrary object to everyone else in the room. */
+export function sendToRoom(payload: Record<string, unknown>): void {
+  const ws = socket
+  if (!ws || ws.readyState !== WebSocket.OPEN) return
+  ws.send(JSON.stringify(payload))
+}
+
 export function peerTracks(): ReadonlyMap<string, Track> {
   return tracks
 }
@@ -94,6 +157,7 @@ export function peerAt(id: string, now: number): DuckState | null {
 let socket: WebSocket | null = null
 let sending: ReturnType<typeof setInterval> | null = null
 let worldTimer: ReturnType<typeof setInterval> | null = null
+let pinging: ReturnType<typeof setInterval> | null = null
 let myName = 'duck'
 /** What to send. Set by the player each frame; read by the send timer. */
 let outgoing: DuckState | null = null
@@ -177,20 +241,41 @@ export function joinLobby(rawCode: string, rawName: string): void {
         why: null,
       })
       electHost()
+      publishRoster()
       return
     }
 
     if (message.t === 'peer' && typeof message.id === 'string') {
-      if (!tracks.has(message.id)) tracks.set(message.id, createTrack('duck'))
+      if (!tracks.has(message.id)) {
+        tracks.set(message.id, createTrack(typeof message.name === 'string' ? message.name : 'duck'))
+      }
       set({ peers: tracks.size })
       electHost()
+      publishRoster()
       return
     }
 
     if (message.t === 'gone' && typeof message.id === 'string') {
       tracks.delete(message.id)
+      pings.delete(message.id)
       set({ peers: tracks.size })
       electHost()
+      publishRoster()
+      return
+    }
+
+    // A round trip. Anybody who hears a ping answers it; the sender times it.
+    if (message.t === 'ping' && typeof message.n === 'number') {
+      sendToRoom({ t: 'pong', n: message.n, to: message.from })
+      return
+    }
+    if (message.t === 'pong' && typeof message.n === 'number' && message.to === info.get().id) {
+      const out = sentAt.get(message.n)
+      const from = typeof message.from === 'string' ? message.from : null
+      if (out !== undefined && from) {
+        pings.set(from, smoothPing(pings.get(from) ?? null, performance.now() - out))
+        publishRoster()
+      }
       return
     }
 
@@ -211,23 +296,34 @@ export function joinLobby(rawCode: string, rawName: string): void {
     // Anything else is a relayed game message, stamped with who sent it.
     const from = typeof message.from === 'string' ? message.from : null
     if (!from) return
+
     const duck = decodeMessage(String(event.data))
-    if (!duck) return
+    if (!duck) {
+      // Not a duck, so it belongs to whoever asked for it - the party module,
+      // or anything else that grows later.
+      for (const handler of roomHandlers) handler(from, message)
+      return
+    }
 
     let track = tracks.get(from)
     if (!track) {
       track = createTrack(duck.name)
       tracks.set(from, track)
       set({ peers: tracks.size })
+      electHost()
     }
+    const renamed = track.name !== duck.name
     track.name = duck.name
     record(track, performance.now() / 1000, duck.state)
+    if (renamed) publishRoster()
   }
 
   ws.onclose = () => {
     if (socket === ws) {
       tracks.clear()
-      set({ status: 'offline', id: null, peers: 0 })
+      pings.clear()
+      roster.set([])
+      set({ status: 'offline', id: null, peers: 0, host: true })
     }
   }
 
@@ -253,6 +349,17 @@ export function joinLobby(rawCode: string, rawName: string): void {
       }),
     )
   }, 1000 / NET.worldRate)
+
+  pinging = setInterval(() => {
+    if (ws.readyState !== WebSocket.OPEN || tracks.size === 0) return
+    const token = pingToken++
+    sentAt.set(token, performance.now())
+    // Anything still outstanding after a few seconds is never coming back.
+    for (const [old, when] of sentAt) {
+      if (performance.now() - when > 6000) sentAt.delete(old)
+    }
+    ws.send(JSON.stringify({ t: 'ping', n: token }))
+  }, 1000 / NET.pingRate)
 }
 
 export function leaveLobby(): void {
@@ -264,7 +371,14 @@ export function leaveLobby(): void {
     clearInterval(worldTimer)
     worldTimer = null
   }
+  if (pinging) {
+    clearInterval(pinging)
+    pinging = null
+  }
   world = null
+  pings.clear()
+  sentAt.clear()
+  roster.set([])
   const ws = socket
   socket = null
   tracks.clear()
@@ -307,7 +421,11 @@ export function publish(state: DuckState): void {
 export function sweep(now: number): void {
   const gone = stale(tracks, now)
   if (gone.length === 0) return
-  for (const id of gone) tracks.delete(id)
+  for (const id of gone) {
+    tracks.delete(id)
+    pings.delete(id)
+  }
   set({ peers: tracks.size })
   electHost()
+  publishRoster()
 }

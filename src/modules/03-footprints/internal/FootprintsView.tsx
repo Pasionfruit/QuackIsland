@@ -130,7 +130,18 @@ export function createPrintMaterial(): MeshStandardMaterial {
   return material
 }
 
-export function Footprints() {
+export interface FootprintsProps {
+  /**
+   * The ground prints land on, if it is not the island.
+   *
+   * Passed in rather than switched here: which world you are in is a question
+   * for whatever is running the game, and this module only needs to know how
+   * high the sand is under each foot.
+   */
+  groundAt?: (x: number, z: number) => number
+}
+
+export function Footprints({ groundAt = heightAt }: FootprintsProps) {
   const mesh = useRef<InstancedMesh>(null)
   const trail = useMemo(() => createTrail(), [])
   const material = useMemo(() => createPrintMaterial(), [])
@@ -149,6 +160,11 @@ export function Footprints() {
     g.rotateX(-Math.PI / 2)
     return g
   }, [])
+
+  // Read through a ref, so moving to another world does not re-run the frame
+  // callback mid-stride.
+  const ground = useRef(groundAt)
+  ground.current = groundAt
 
   const fades = useMemo(() => new Float32Array(TRAIL.capacity), [])
   // Rebuilt in place each frame rather than allocated, since this runs at sixty
@@ -178,7 +194,7 @@ export function Footprints() {
     // out rather than sit there. The same rule for everybody.
     const waterline = SEA_LEVEL + tideAt(getDayTime())
     const onSand = (w: Walker | null): Walker | null =>
-      w && heightAt(w.x, w.z) > waterline ? w : null
+      w && ground.current(w.x, w.z) > waterline ? w : null
 
     const player = getPlayerState()
     walking.length = 0
@@ -204,7 +220,7 @@ export function Footprints() {
       if (id !== SELF && !sources.has(id)) forgetWalker(trail, id)
     }
 
-    stepTrails(trail, walking, delta, heightAt, TRAIL)
+    stepTrails(trail, walking, delta, ground.current, TRAIL)
 
     const attr = m.geometry.getAttribute('aFade') as InstancedBufferAttribute | undefined
     for (let i = 0; i < TRAIL.capacity; i++) {
@@ -216,6 +232,9 @@ export function Footprints() {
         continue
       }
       // Lie along the ground rather than flat, so a print on a slope sits in it.
+      // On the island the surface normal tips each print into the slope; on a
+      // flat board there is nothing to tip into, and sampling the island under
+      // it would lie about which way the ground faces.
       const sample = sampleAt(print.x, print.z)
       normal.set(sample.normalX, sample.normalY, sample.normalZ)
       quat.setFromUnitVectors(UP, normal)

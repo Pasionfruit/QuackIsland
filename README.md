@@ -57,6 +57,11 @@ Everyone in a lobby shares the host's time of day and weather, hears each
 other's footsteps nearby, and leaves prints in the same sand. The host is
 whoever joined first, and it hands over on its own when they leave.
 
+The **party** dashboard is under the perf panel, top left. The host opens a
+board game, everybody presses ready, and the host starts it — which puts
+everyone on a shared island in the sky. Hold **Tab** for everyone in the lobby,
+their ping and whether they are ready.
+
 **[DEPLOY.md](DEPLOY.md)** has the rest: running it as one process, and putting
 it on a free host.
 
@@ -111,6 +116,7 @@ world is reproducible and testable.
 | `07-shore` | Shells and coloured pebbles along the water line, in three draw calls |
 | `08-audio` | Footsteps, jumps, landings and swim strokes |
 | `09-net` | Lobbies by code, and everyone else’s duck |
+| `10-party` | Host a board game, everyone readies, all move to an island in the sky |
 
 Next up: a sky dome driving the day cycle that `00-core` already exposes, then
 the Meshy asset pipeline and vegetation placed against the terrain's height

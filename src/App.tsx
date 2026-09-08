@@ -2,6 +2,8 @@ import { GameCanvas, PerfHUD } from './modules/00-core'
 import { MusicPlayer } from './modules/05-music'
 import { World } from './app/World'
 import { DebugPanel } from './app/DebugPanel'
+import { PartyPanel } from './app/PartyPanel'
+import { Scoreboard } from './app/Scoreboard'
 
 export default function App() {
   return (
@@ -9,24 +11,28 @@ export default function App() {
       <GameCanvas>
         <World />
       </GameCanvas>
-      <PerfHUD />
-      {/* One fixed column down the top right, so the two panels stack instead
-          of each pinning itself to the same corner and overlapping. */}
-      <div
-        style={{
-          position: 'fixed',
-          top: 10,
-          right: 10,
-          zIndex: 10,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-end',
-          gap: 8,
-        }}
-      >
+
+      {/* Two fixed columns, so panels stack instead of each pinning itself to
+          the same corner and overlapping. */}
+      <div style={{ ...column, top: 10, left: 10, alignItems: 'flex-start' }}>
+        <PerfHUD />
+        <PartyPanel />
+      </div>
+
+      <div style={{ ...column, top: 10, right: 10, alignItems: 'flex-end' }}>
         <MusicPlayer />
         <DebugPanel />
       </div>
+
+      <Scoreboard />
     </>
   )
+}
+
+const column: React.CSSProperties = {
+  position: 'fixed',
+  zIndex: 10,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 8,
 }

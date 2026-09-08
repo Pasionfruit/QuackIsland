@@ -11,7 +11,7 @@
  * six-megabyte file rather than decoding all of it up front.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { assetUrl } from '../../00-core'
+import { assetUrl, readFolded, writeFolded } from '../../00-core'
 import {
   MUSIC,
   clampVolume,
@@ -35,30 +35,6 @@ function readStoredVolume(): number {
   }
 }
 
-/**
- * Whether the panel is folded, remembered between reloads. Every storage call
- * can throw, and a panel that will not render because it could not remember a
- * boolean would be a silly way to lose the game.
- */
-function readFolded(): boolean {
-  try {
-    const raw = window.localStorage.getItem(MUSIC.foldKey)
-    // Folded until told otherwise, like every other panel section. The track
-    // name stays visible folded, which is the part worth having on screen.
-    return raw === null ? true : raw === '1'
-  } catch {
-    return true
-  }
-}
-
-function storeFolded(folded: boolean): void {
-  try {
-    window.localStorage.setItem(MUSIC.foldKey, folded ? '1' : '0')
-  } catch {
-    // Not worth caring about.
-  }
-}
-
 function storeVolume(volume: number): void {
   try {
     window.localStorage.setItem(MUSIC.storageKey, String(volume))
@@ -79,7 +55,7 @@ export function MusicPlayer() {
   const [blocked, setBlocked] = useState(false)
   /** Tracks that failed in a row, so a broken playlist stops rather than spins. */
   const failures = useRef(0)
-  const [folded, setFolded] = useState(readFolded)
+  const [folded, setFolded] = useState(() => readFolded('music'))
 
   const track = tracks[index] ?? null
 
@@ -272,7 +248,7 @@ export function MusicPlayer() {
         onClick={() => {
           const next = !folded
           setFolded(next)
-          storeFolded(next)
+          writeFolded('music', next)
         }}
         style={foldHeader}
         title={folded ? 'Show' : 'Hide'}

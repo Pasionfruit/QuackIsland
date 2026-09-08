@@ -31,6 +31,7 @@ import {
   setTimeScale,
   setWeather,
   useCameraMode,
+  useFolded,
   useLightingSettings,
   useWeather,
 } from '../modules/00-core'
@@ -38,45 +39,6 @@ import { isCameraOffPlayer, refocusCamera, toggleViewMode, useViewMode } from '.
 import { AUDIO, getCueEngine, readStoredVolume, setEffectsVolume } from '../modules/08-audio'
 import { joinLobby, leaveLobby, makeCode, useNet } from '../modules/09-net'
 import { SCENE, setModuleEnabled } from './scene'
-
-/**
- * Whether a section is folded, remembered between reloads.
- *
- * Everything starts folded: the panel has grown enough that opening the game
- * to all of it is more wall than tool, and what you actually want is the world
- * with one section open over it.
- *
- * The key is versioned because the default changed. Without the bump, anyone
- * who had already opened a section would keep it open forever and never see
- * the new behaviour - a remembered choice made under a different default is
- * not really a choice.
- *
- * Wrapped because every storage call can throw - a private window and blocked
- * site data both do - and a panel that will not render because it could not
- * remember a boolean would be a silly way to lose the game.
- */
-function useFolded(key: string, initial = true): [boolean, () => void] {
-  const [folded, setFolded] = useState(() => {
-    try {
-      const raw = window.localStorage.getItem(`localrot.fold2.${key}`)
-      return raw === null ? initial : raw === '1'
-    } catch {
-      return initial
-    }
-  })
-  const toggle = () => {
-    setFolded((was) => {
-      const next = !was
-      try {
-        window.localStorage.setItem(`localrot.fold2.${key}`, next ? '1' : '0')
-      } catch {
-        // Not worth caring about.
-      }
-      return next
-    })
-  }
-  return [folded, toggle]
-}
 
 function Section({
   id,

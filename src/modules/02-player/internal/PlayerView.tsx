@@ -51,6 +51,22 @@ export function getPlayerState(): Readonly<PlayerState> | null {
   return live
 }
 
+/**
+ * Puts the player somewhere else, now.
+ *
+ * Vertical speed is cleared and the feet are lifted off the ground, so the
+ * body falls the last few centimetres onto wherever it has arrived rather
+ * than being counted as already standing on ground it has not reached.
+ */
+export function movePlayerTo(x: number, y: number, z: number): void {
+  if (!live) return
+  live.x = x
+  live.y = y
+  live.z = z
+  live.vy = 0
+  live.grounded = false
+}
+
 /** Camera state, kept outside React so dragging costs no re-renders. */
 const rig = {
   yaw: Math.PI,
@@ -84,9 +100,17 @@ export interface PlayerProps {
    * missing surface changes how they float and never whether they float.
    */
   surfaceAt?: (x: number, z: number, time: number) => number
+  /**
+   * The ground to walk on, if it is not the island.
+   *
+   * Passed in rather than switched here, because which world you are in is a
+   * question for whatever is running the game - see `10-party`, which puts
+   * everybody on a board in the sky and hands over its own height function.
+   */
+  groundAt?: (x: number, z: number) => number
 }
 
-export function Player({ spawnX = 0, spawnZ = 0, surfaceAt }: PlayerProps) {
+export function Player({ spawnX = 0, spawnZ = 0, surfaceAt, groundAt = heightAt }: PlayerProps) {
   const camera = useThree((s) => s.camera)
   const domElement = useThree((s) => s.gl.domElement)
   const body = useRef<Group>(null)
@@ -234,6 +258,11 @@ export function Player({ spawnX = 0, spawnZ = 0, surfaceAt }: PlayerProps) {
     }
   }, [])
 
+  // Read through a ref so changing worlds does not have to re-run the frame
+  // callback, which would drop a frame at exactly the wrong moment.
+  const ground = useRef(groundAt)
+  ground.current = groundAt
+
   const camWant = useMemo(() => new Vector3(), [])
   const camLook = useMemo(() => new Vector3(), [])
 
@@ -257,7 +286,7 @@ export function Player({ spawnX = 0, spawnZ = 0, surfaceAt }: PlayerProps) {
 
     clock.current = frame.clock.elapsedTime
     still.current = SEA_LEVEL + tideAt(getDayTime())
-    stepPlayer(state, input, delta, heightAt, {
+    stepPlayer(state, input, delta, ground.current, {
       bounds,
       seaLevel: still.current,
       surfaceAt: surface,
@@ -283,7 +312,7 @@ export function Player({ spawnX = 0, spawnZ = 0, surfaceAt }: PlayerProps) {
 
     // Both views come out of one function, so they cannot end up disagreeing
     // about which way `yaw` points.
-    const place = placeCamera(view, rig, state, PLAYER.eyeHeight, heightAt)
+    const place = placeCamera(view, rig, state, PLAYER.eyeHeight, ground.current)
     camWant.set(place.x, place.y, place.z)
     camLook.set(place.lookX, place.lookY, place.lookZ)
 

@@ -10,7 +10,7 @@
  */
 import { createElement } from 'react'
 import type { SceneEntry } from '../modules/00-core'
-import { Terrain } from '../modules/01-terrain'
+import { Terrain, heightAt } from '../modules/01-terrain'
 import { Player } from '../modules/02-player'
 import { Footprints } from '../modules/03-footprints'
 import { Water, swellAt } from '../modules/04-water'
@@ -18,6 +18,7 @@ import { Sky } from '../modules/06-sky'
 import { Shore } from '../modules/07-shore'
 import { AudioCues } from '../modules/08-audio'
 import { NetPlayers } from '../modules/09-net'
+import { Party, arenaHeightAt, getParty } from '../modules/10-party'
 
 /**
  * The player, floating on the actual swell rather than on a flat mean level -
@@ -37,22 +38,43 @@ import { NetPlayers } from '../modules/09-net'
 const PlayerOnSea = () =>
   createElement(Player, {
     surfaceAt: (x: number, z: number, time: number) => (waterVisible() ? swellAt(x, z, time) : 0),
+    groundAt: currentGround,
   })
+
+/** Prints land on whatever the ground currently is, for the same reason. */
+const PrintsOnGround = () => createElement(Footprints, { groundAt: currentGround })
 
 /** Whether the sea is currently being drawn. Read per frame; it is a toggle. */
 function waterVisible(): boolean {
   return SCENE.find((e) => e.id === '04-water')?.enabled ?? false
 }
 
+/**
+ * The ground everybody is standing on.
+ *
+ * While a board game is running that is the arena in the sky; otherwise it is
+ * the island. Deciding it here rather than in either module is the point: the
+ * player does not know a board game exists, and the party module does not know
+ * how footprints are drawn. The composition root is the one place allowed to
+ * know both.
+ *
+ * Outside the board it falls back to the island, so walking off the edge drops
+ * you home rather than into nothing.
+ */
+function currentGround(x: number, z: number): number {
+  return getParty().phase === 'playing' ? arenaHeightAt(x, z, heightAt) : heightAt(x, z)
+}
+
 export const SCENE: SceneEntry[] = [
   { id: '01-terrain', order: 10, enabled: true, Component: Terrain },
   { id: '02-player', order: 20, enabled: true, Component: PlayerOnSea },
-  { id: '03-footprints', order: 30, enabled: true, Component: Footprints },
+  { id: '03-footprints', order: 30, enabled: true, Component: PrintsOnGround },
   { id: '04-water', order: 40, enabled: true, Component: Water },
   { id: '06-sky', order: 60, enabled: true, Component: Sky },
   { id: '07-shore', order: 70, enabled: true, Component: Shore },
   { id: '08-audio', order: 80, enabled: true, Component: AudioCues },
   { id: '09-net', order: 90, enabled: true, Component: NetPlayers },
+  { id: '10-party', order: 100, enabled: true, Component: Party },
 ]
 
 // Toggling a module on or off has to reach the canvas, which is a different

@@ -23,6 +23,7 @@ export {
   isHost,
   makeCode,
   normaliseCode,
+  smoothPing,
   type DuckMessage,
   type DuckState,
   type Peer,
@@ -42,16 +43,21 @@ export {
 export {
   followWorld,
   getNet,
+  getPeers,
   joinLobby,
   leaveLobby,
   peerAt,
   peerTracks,
   publish,
   relayUrl,
+  sendToRoom,
+  subscribeRoom,
   sweep,
   useNet,
+  usePeers,
   type NetInfo,
   type NetStatus,
+  type PeerInfo,
 } from './internal/client'
 
 export { NetPlayers } from './internal/NetPlayers'

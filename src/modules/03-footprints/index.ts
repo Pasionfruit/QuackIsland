@@ -24,4 +24,4 @@ export {
   type WalkerTrack,
 } from './internal/trail'
 
-export { Footprints, addWalker, removeWalker } from './internal/FootprintsView'
+export { Footprints, addWalker, removeWalker, type FootprintsProps } from './internal/FootprintsView'

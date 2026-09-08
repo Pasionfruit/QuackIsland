@@ -38,6 +38,7 @@ export {
   CAM_DISTANCE_MAX,
   CAM_DISTANCE_MIN,
   Player,
+  movePlayerTo,
   type PlayerProps,
   getPlayerState,
   isCameraOffPlayer,
