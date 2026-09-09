@@ -139,9 +139,20 @@ export interface FootprintsProps {
    * high the sand is under each foot.
    */
   groundAt?: (x: number, z: number) => number
+  /**
+   * Whether ground at a point can hold a print at all.
+   *
+   * Sand takes a footprint; the top of a boulder does not. Passed in rather
+   * than worked out here for the usual reason - this module has never heard of
+   * a rock - and it is a *veto*, not a height: somewhere unprintable leaves no
+   * print, rather than leaving one at some other height.
+   *
+   * Left out, everything prints, which is what a bare beach should do.
+   */
+  printableAt?: (x: number, z: number) => boolean
 }
 
-export function Footprints({ groundAt = heightAt }: FootprintsProps) {
+export function Footprints({ groundAt = heightAt, printableAt }: FootprintsProps) {
   const mesh = useRef<InstancedMesh>(null)
   const trail = useMemo(() => createTrail(), [])
   const material = useMemo(() => createPrintMaterial(), [])
@@ -165,6 +176,9 @@ export function Footprints({ groundAt = heightAt }: FootprintsProps) {
   // callback mid-stride.
   const ground = useRef(groundAt)
   ground.current = groundAt
+
+  const printable = useRef(printableAt)
+  printable.current = printableAt
 
   const fades = useMemo(() => new Float32Array(TRAIL.capacity), [])
   // Rebuilt in place each frame rather than allocated, since this runs at sixty
@@ -192,9 +206,18 @@ export function Footprints({ groundAt = heightAt }: FootprintsProps) {
     // Only print on land, and where the waterline is *now* - the tide moves it
     // several metres up and down the beach, and prints under water would wash
     // out rather than sit there. The same rule for everybody.
+    // Nor on anything that is not sand. Standing on a boulder, the ground
+    // under the walker *is* the top of the boulder, so a print left there would
+    // sit on the rock - and it would sit flat, because the tilt comes from the
+    // island's normal, which knows nothing about what is piled on top of it.
     const waterline = SEA_LEVEL + tideAt(getDayTime())
-    const onSand = (w: Walker | null): Walker | null =>
-      w && ground.current(w.x, w.z) > waterline ? w : null
+    const veto = printable.current
+    const onSand = (w: Walker | null): Walker | null => {
+      if (!w) return null
+      if (ground.current(w.x, w.z) <= waterline) return null
+      if (veto && !veto(w.x, w.z)) return null
+      return w
+    }
 
     const player = getPlayerState()
     walking.length = 0

@@ -42,9 +42,9 @@ export interface SwellWave {
  * visibly repeats within sight of the island.
  */
 export const SWELL: readonly SwellWave[] = [
-  { amplitude: 0.42, wavelength: 118, dirX: 1, dirZ: 0.24 },
-  { amplitude: 0.24, wavelength: 76, dirX: 0.72, dirZ: 0.69 },
-  { amplitude: 0.12, wavelength: 43, dirX: -0.38, dirZ: 1 },
+  { amplitude: 0.46, wavelength: 150, dirX: 1, dirZ: 0.24 },
+  { amplitude: 0.26, wavelength: 98, dirX: 0.72, dirZ: 0.69 },
+  { amplitude: 0.15, wavelength: 70, dirX: -0.38, dirZ: 1 },
 ]
 
 /** The most the surface can ever rise above the mean. Crest to trough is twice this. */

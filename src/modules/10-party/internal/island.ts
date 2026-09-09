@@ -18,25 +18,35 @@
  */
 
 export const ISLAND = {
-  /** Where the middle of it sits in the world. */
-  centreX: 700,
+  /**
+   * Where the middle of it sits in the world.
+   *
+   * Two things pin this down and it sits between them. The island's own foot
+   * reaches 380 m, and the mainland's coast reaches about 200, so anything
+   * closer than about 580 would have the two run into each other. The sea is
+   * 1500 m to its rim, so anything past 1120 would stand in open nothing.
+   *
+   * Nine hundred leaves a good three hundred metres of open water between the
+   * beaches and two hundred more of sea beyond the far side.
+   */
+  centreX: 900,
   centreZ: 0,
 
   /** The flat top of the volcano, where the treasure is. */
-  summit: 31,
+  summit: 125,
   /** How wide that flat top is. */
-  crater: 3.6,
+  crater: 15,
   /** The foot of the cone. The board runs up to here. */
-  volcano: 15,
+  volcano: 62,
 
   /** The board sits on this, and it is flat, because a board should be. */
-  plateau: 5,
+  plateau: 9,
   /** How far the flat part reaches before the beach starts. */
-  plateauOuter: 56,
+  plateauOuter: 235,
   /** Where the sand meets the water. */
-  shore: 70,
+  shore: 290,
   /** Where it has finished sinking to the sea bed. */
-  foot: 92,
+  foot: 380,
   /** How deep the sea bed is around it. Matches the mainland's. */
   seaBed: -22,
 } as const

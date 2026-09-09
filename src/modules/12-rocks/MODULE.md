@@ -25,6 +25,7 @@ different rules for good reasons.
 | `getRocks()` | Every rock on *this* island. Cached; the one answer |
 | `getSolidRocks()` | The same rocks with collision shapes worked out. Cached |
 | `standHeightAt(x, z, rocks, below)` | Ground, raised to a rock top. Pure |
+| `onRockAt(x, z, rocks, ground)` | Whether stone is underfoot, not sand. Pure |
 | `resolveRocks(x, z, feetY, radius, rocks)` | Pushed out of anything solid. Pure |
 | `halfExtents(rock)` / `topOf` / `girthOf` | How big a tumbled rock is. Pure |
 | `solidify(rocks)` | Collision shapes, once. Pure |

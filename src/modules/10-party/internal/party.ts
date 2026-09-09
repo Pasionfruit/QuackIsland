@@ -22,9 +22,9 @@ export const PARTY = {
    * Behind rather than on it: arriving standing on the start of a race is
    * fine, arriving inside the tile you are about to run from is not.
    */
-  startBack: 4,
+  startBack: 14,
   /** How far apart the starting line is spread, in metres. */
-  startSpread: 2.6,
+  startSpread: 9,
   /** How far above the ground players arrive, so they land rather than clip. */
   spawnLift: 0.6,
 } as const

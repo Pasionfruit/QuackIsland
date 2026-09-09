@@ -72,20 +72,33 @@ everybody arriving on the same line at the same moment.
 - **No authority beyond the host's word.** Same trade as the rest of the
   networking: this is for playing with friends.
 
-## Where the island is
+## Where the island is, and how big
 
-Seven hundred metres out across the water from the spawn island — far enough
-to be somewhere else, close enough to see home from.
+Nine hundred metres out across the water from the spawn island — far enough to
+be somewhere else, close enough to see home from.
 
-It has to sit **inside the sea plane**. The water is 1800 m across and its
-depth is baked once from a height function, so anything beyond its edge would
-stand in open nothing. Seven hundred metres is past the mainland's beach and
-past the edge of its mesh — which stops at 288 m, already below the waterline,
-so there is no visible edge to see — and still comfortably inside the water.
+It is **580 m across at the waterline**, with a **125 m volcano** in the
+middle. That makes it, by land area, about two and a half times the spawn
+island: 0.26 km² against 0.10. The volcano is more than four times the height
+of anything on the mainland, which is the point — it is the thing you can see
+from home, across three hundred metres of open water.
+
+Two things pin down where it sits, and it lives between them:
+
+| | |
+| --- | --- |
+| Its own foot reaches 380 m, the mainland's coast about 200 | so nearer than ~580 and the two islands run into each other |
+| The sea reaches 1500 m | so further than 1120 and it stands in open nothing |
+
+Nine hundred leaves three hundred metres of open water between the beaches and
+two hundred more of sea beyond its far side. **The sea had to grow with it**:
+the water plane went from 1800 m across to 3000, because its depth is baked
+once from a height function and an island past its rim would have nothing under
+it. That change is what made the swell longer — see `04-water`.
 
 An earlier version of this was a slab floating in the sky, put there to dodge
-exactly those two edges. An actual island turned out to be both nicer and
-easier once the sea was told about it.
+those edges. An actual island turned out to be both nicer and easier once the
+sea was told about it.
 
 **The island is always there.** It is a place, not something conjured when a
 game starts: you can see it across the water, and you can swim to it. A board
@@ -93,7 +106,15 @@ that appeared out of nothing would read as a bug.
 
 ## The spiral
 
-A hundred and twenty tiles, three turns, from the beach in to the volcano.
+A hundred and twenty tiles, three turns, from the beach in to the volcano — a
+**2.58 km** run, with tiles 16 m across and 21.7 m apart.
+
+Those numbers are all one decision. Three turns is what keeps the tiles close
+enough together to read as a road: at four the gaps stretch to thirteen metres
+and the spiral becomes a dotted line, and at two the tiles overlap. Tile size
+is set against the *track*, not against the duck — a tile a duck's width across
+would be a speck on an island this size. The spiral's arms end up 48.8 m apart,
+so there is 32.8 m of clear plateau between one lap of the track and the next.
 
 The one thing that is easy to get subtly wrong is the spacing. An Archimedean
 spiral walked at a constant *angle* bunches its tiles up as the radius

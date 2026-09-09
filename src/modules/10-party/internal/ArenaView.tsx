@@ -25,7 +25,14 @@ import { ISLAND, partyHeightLocal } from './island'
 
 /** How finely the island is meshed. */
 const RINGS = 72
-const SEGMENTS = 96
+/**
+ * How many segments go round.
+ *
+ * At the rim this is what decides whether the coastline is a circle or a
+ * polygon, and the rim is now 2.4 km round - so where 96 segments gave a 4 m
+ * facet on the old island, they would give a 25 m one here.
+ */
+const SEGMENTS = 144
 
 /**
  * The land, as a radial disc.

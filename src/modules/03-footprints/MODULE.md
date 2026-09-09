@@ -15,6 +15,7 @@ in `internal/foot.ts`. Neither imports three.js, so both are tested in Node.
 | Export | Meaning |
 | --- | --- |
 | `Footprints` | The R3F component. Registered in `src/app/scene.ts` |
+| `FootprintsProps` | `{ groundAt?, printableAt? }`. Both optional |
 | `stepTrail(state, walker, dt, groundAt, config?, id?)` | One walker. Pure |
 | `stepTrails(state, walkers, dt, groundAt, config?)` | Everybody at once. Pure |
 | `forgetWalker(state, id)` | Drops a walker's stride bookkeeping |
@@ -32,6 +33,24 @@ in `internal/foot.ts`. Neither imports three.js, so both are tested in Node.
 `Walker` is `{ x, z, facing, grounded, speed? }` — deliberately narrower than
 the player's state, so anything that walks can leave prints, not just the
 player. `facing` is only a fallback; see below.
+
+## What ground takes a print
+
+Sand, and only sand.
+
+Two things can veto a print, and both are decided per step rather than once:
+
+- **Under the waterline.** The tide moves the edge of the sea several metres up
+  and down the beach, and a print under water would wash out rather than sit
+  there. So the test is against where the water is *now*, not against y=0.
+- **On a rock.** Passed in as `printableAt`, because this module has never
+  heard of a rock and should not start now.
+
+The second one matters more than it sounds. A print is tilted by the
+**island's** surface normal, and the island knows nothing about what is piled
+on top of it — so a print left on a boulder would lie flat on something that is
+not flat, at a height decided by ground it is not touching. Vetoing is the only
+right answer: not moving the print, not flattening it, just not leaving one.
 
 ## Invariants you may rely on
 

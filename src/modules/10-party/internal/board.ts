@@ -18,15 +18,21 @@ export const BOARD = {
   /** How many tiles. A hundred and twenty, as asked for. */
   tiles: 120,
   /** Where the race starts: out by the beach. */
-  outer: 48,
+  outer: 210,
   /** Where it finishes: at the foot of the volcano. */
   inner: ISLAND.volcano + 1.5,
   /** How many times round. Three reads as a spiral without being a maze. */
   turns: 3,
-  /** How wide a tile is, in metres. Comfortably wider than a duck. */
-  tileRadius: 1.6,
+  /**
+   * How wide a tile is, in metres.
+   *
+   * Sized against the *track*, not against the duck. On an island this size a
+   * tile a duck's width across would be a speck two dozen metres from the next
+   * one, and the spiral would read as a dotted line rather than a road.
+   */
+  tileRadius: 8,
   /** How far a tile sits above the board, so it reads as laid on it. */
-  tileLift: 0.06,
+  tileLift: 0.2,
   /** Every nth tile is marked, so progress is countable at a glance. */
   markEvery: 10,
 } as const

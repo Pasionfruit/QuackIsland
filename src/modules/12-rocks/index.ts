@@ -14,6 +14,7 @@ export {
   COLLISION,
   girthOf,
   halfExtents,
+  onRockAt,
   resolveRocks,
   rotationXYZ,
   solidify,

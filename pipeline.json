@@ -390,12 +390,17 @@
           "id": "03.3",
           "title": "Contract, tests, MODULE.md",
           "status": "done"
+        },
+        {
+          "id": "03.6",
+          "title": "printableAt veto, so prints stay on sand and off rocks",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T02:38:29.063Z"
+          "at": "2026-09-09T03:16:43.154Z"
         },
         "human": {
           "status": "pending"
@@ -456,12 +461,17 @@
           "id": "04.5",
           "title": "Depth baked from a supplied height function, so it knows both islands",
           "status": "done"
+        },
+        {
+          "id": "04.6",
+          "title": "A 3 km sea to fit the party island, and a longer swell to pave it",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T02:38:37.597Z"
+          "at": "2026-09-09T03:16:52.102Z"
         },
         "human": {
           "status": "pending"
@@ -829,7 +839,7 @@
     {
       "id": "10-party",
       "phase": "P4",
-      "title": "Party island: a 120-tile spiral race to a volcano with treasure on top",
+      "title": "Party island: a 580 m island with a 125 m volcano and a 120-tile spiral race",
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
@@ -873,12 +883,17 @@
           "id": "10.6",
           "title": "A real island, a 120-tile arc-length spiral, volcano and treasure",
           "status": "done"
+        },
+        {
+          "id": "10.7",
+          "title": "Four times the island: 580 m across, a 125 m volcano, a 2.6 km track",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T02:39:30.230Z"
+          "at": "2026-09-09T03:17:00.967Z"
         },
         "human": {
           "status": "pending"
@@ -998,12 +1013,17 @@
           "id": "12.4",
           "title": "Solid rocks: bump into, step over, jump onto",
           "status": "done"
+        },
+        {
+          "id": "12.5",
+          "title": "onRockAt, so footprints know stone from sand",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T02:54:20.866Z"
+          "at": "2026-09-09T03:17:09.829Z"
         },
         "human": {
           "status": "pending"

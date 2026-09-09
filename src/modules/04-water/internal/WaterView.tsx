@@ -31,16 +31,27 @@ interface CompiledShader {
   uniforms: Record<string, { value: unknown }>
 }
 
-/** Half the width of the sea, in metres. Fog swallows the edge long before it. */
-export const WATER_HALF = 900
+/**
+ * Half the width of the sea, in metres. Fog swallows the edge long before it.
+ *
+ * It has to clear the party island, which now reaches 1280 m from the middle
+ * of the world - an island standing past the edge of the sea would stand in
+ * open nothing.
+ */
+export const WATER_HALF = 1500
 /**
  * Grid resolution.
  *
  * The normals are worked out per fragment, so this only has to carry the
- * *shape* of the swell - but it does have to carry it. A quad here is 5 m, and
- * the shortest wave in the table is 43 m, so the shortest swell gets about
+ * *shape* of the swell - but it does have to carry it. A quad here is 8.3 m
+ * and the shortest wave in the table is 70 m, so the shortest swell gets about
  * eight vertices per wavelength. Below that the crests start to alias into
  * moving facets, so there is a test tying this to `SWELL`.
+ *
+ * The sea got two thirds wider to fit the party island and this did not grow
+ * at all, which is a deliberate trade: paving a sea that wide at 5 m costs a
+ * million vertices. The *swell* got longer instead - which is what a wider sea
+ * has anyway, since wavelength grows with fetch.
  */
 export const WATER_SEGMENTS = 360
 /** Past this depth the water is as dark as it gets. */

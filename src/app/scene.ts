@@ -16,7 +16,7 @@ import { Footprints } from '../modules/03-footprints'
 import { Water, swellAt } from '../modules/04-water'
 import { Sky } from '../modules/06-sky'
 import { Shore } from '../modules/07-shore'
-import { Rocks, getSolidRocks, resolveRocks, standHeightAt } from '../modules/12-rocks'
+import { Rocks, getSolidRocks, onRockAt, resolveRocks, standHeightAt } from '../modules/12-rocks'
 import { AudioCues } from '../modules/08-audio'
 import { NetPlayers } from '../modules/09-net'
 import { ISLAND, Party, groundWithIsland } from '../modules/10-party'
@@ -45,7 +45,8 @@ const PlayerOnSea = () =>
   })
 
 /** Prints land on whatever the ground currently is, for the same reason. */
-const PrintsOnGround = () => createElement(Footprints, { groundAt: standOn })
+const PrintsOnGround = () =>
+  createElement(Footprints, { groundAt: standOn, printableAt: printableGround })
 
 /** The sea knows about both islands, or it is drawn over one of them. */
 const SeaOverBoth = () => createElement(Water, { depthAt: currentGround })
@@ -103,6 +104,18 @@ function standOn(x: number, z: number): number {
  */
 function pushOutOfRocks(x: number, z: number, feetY: number, radius: number) {
   return resolveRocks(x, z, feetY, radius, getSolidRocks())
+}
+
+/**
+ * Whether a footprint may be left here.
+ *
+ * Sand takes a print and stone does not. It matters more than it sounds,
+ * because footprints are tilted by the *island's* normal - so a print left on
+ * top of a boulder would lie flat on a rock that is not flat, at a height
+ * decided by something it is not touching.
+ */
+function printableGround(x: number, z: number): boolean {
+  return !onRockAt(x, z, getSolidRocks(), currentGround(x, z))
 }
 
 /**

@@ -164,6 +164,26 @@ export function standHeightAt(
 }
 
 /**
+ * Whether what you are standing on is a rock rather than the island.
+ *
+ * One line, because it is exactly the question `standHeightAt` already answers,
+ * asked the other way round - and asking it that way, rather than comparing two
+ * separately computed heights, means the two can never disagree about which
+ * rocks count.
+ *
+ * It needs the ground as well as the rocks, because a rock sunk below the
+ * ground is buried, and standing over a buried rock is standing on the island.
+ */
+export function onRockAt(
+  x: number,
+  z: number,
+  rocks: readonly SolidRock[],
+  ground: number,
+): boolean {
+  return standHeightAt(x, z, rocks, ground) > ground
+}
+
+/**
  * Pushes a body out of any rock it is inside.
  *
  * Pushes rather than stops: sliding along a boulder is what a body does, and

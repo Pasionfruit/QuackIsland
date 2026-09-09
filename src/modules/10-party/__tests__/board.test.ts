@@ -61,7 +61,7 @@ describe('the island the board is on', () => {
     // The water is a plane 1800 m across baked once. An island beyond its edge
     // would stand in open nothing.
     const reach = Math.hypot(ISLAND.centreX, ISLAND.centreZ) + ISLAND.foot
-    expect(reach).toBeLessThan(900)
+    expect(reach).toBeLessThan(1500)
   })
 })
 
@@ -168,9 +168,15 @@ describe('the spiral', () => {
   })
 
   it('is a track worth racing along', () => {
-    expect(trackLength()).toBeGreaterThan(400)
-    expect(tileSpacing()).toBeGreaterThan(3)
-    expect(tileSpacing()).toBeLessThan(9)
+    // Stated against the tile rather than in bare metres, because the tile is
+    // what decides whether a gap reads as a road or as a dotted line - and an
+    // absolute bound here is a bound that quietly becomes wrong the next time
+    // the island is resized, which is exactly what happened to the last one.
+    const diameter = BOARD.tileRadius * 2
+    expect(tileSpacing()).toBeGreaterThan(diameter)
+    expect(tileSpacing()).toBeLessThan(diameter * 2)
+    // And long enough to be a race rather than a lap of a table.
+    expect(trackLength()).toBeGreaterThan(BOARD.outer * 8)
   })
 
   it('gives the same board every time', () => {
