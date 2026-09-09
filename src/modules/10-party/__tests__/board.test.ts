@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { BOARD, buildBoard, tileSpacing, trackLength } from '../internal/board'
+import { BOARD, buildBoard, tileSpacing, trackLength, trackPointAt } from '../internal/board'
 import { PLAYER } from '../../02-player'
-import { ISLAND, distanceFromIsland, groundWithIsland, onPartyIsland, partyHeightLocal } from '../internal/island'
+import {
+  ISLAND,
+  distanceFromIsland,
+  groundWithIsland,
+  islandReach,
+  onPartyIsland,
+  partyHeightLocal,
+} from '../internal/island'
 import { PARTY, spawnFor } from '../internal/party'
 
 const mainland = (x: number, z: number) => 12 - Math.hypot(x, z) * 0.05
@@ -63,6 +70,9 @@ describe('the island the board is on', () => {
     // would stand in open nothing.
     const reach = Math.hypot(ISLAND.centreX, ISLAND.centreZ) + ISLAND.foot
     expect(reach).toBeLessThan(1500)
+    // And the same again allowing for the out-of-round outline, which is the
+    // number that actually has to clear the sea.
+    expect(Math.hypot(ISLAND.centreX, ISLAND.centreZ) + islandReach()).toBeLessThan(1500)
   })
 })
 
@@ -108,55 +118,69 @@ describe('the spiral', () => {
     expect(tiles[tiles.length - 1].radius).toBeCloseTo(BOARD.inner, 6)
   })
 
-  it('spirals inwards the whole way, never back out', () => {
+  it('always goes round the same way, and works its way in', () => {
+    // The angle is strictly one way - it has to be, or the track would double
+    // back on itself. The radius is not, and that is the wave: it leans out
+    // and in on its way down, which is the whole point of it.
     for (let i = 1; i < tiles.length; i++) {
-      expect(tiles[i].radius).toBeLessThan(tiles[i - 1].radius)
       expect(tiles[i].angle).toBeGreaterThan(tiles[i - 1].angle)
     }
+    // Every lap is inside the one before it, even though tiles within a lap
+    // are not.
+    const laps = [0, 1, 2].map((lap) => {
+      const of = tiles.filter(
+        (t) => t.angle >= lap * Math.PI * 2 && t.angle < (lap + 1) * Math.PI * 2,
+      )
+      return of.reduce((sum, t) => sum + t.radius, 0) / Math.max(1, of.length)
+    })
+    expect(laps[1]).toBeLessThan(laps[0])
+    expect(laps[2]).toBeLessThan(laps[1])
   })
 
-  it('spaces every tile the same distance from the last, along the ground', () => {
-    // The whole difficulty of this file. Stepping by angle instead of by arc
-    // length crams the tiles together as the spiral tightens, so the last
-    // stretch would be a jam and the first a hike.
-    //
-    // Measured in three dimensions, because the track climbs a cone: a metre
-    // of map is more than a metre of walking on the steep middle of it, and
-    // walking is what the spacing is for.
-    const gaps: number[] = []
+  it('leans out of a true spiral, and back in again', () => {
+    // Without this the "wave" is a constant nobody set. Some tiles must sit
+    // further out than the one before them, and none by more than the wave.
+    const outward = tiles.filter((t, i) => i > 0 && t.radius > tiles[i - 1].radius)
+    expect(outward.length).toBeGreaterThan(tiles.length * 0.15)
     for (let i = 1; i < tiles.length; i++) {
-      const a = tiles[i - 1]
-      const b = tiles[i]
-      gaps.push(Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z))
+      expect(tiles[i].radius - tiles[i - 1].radius).toBeLessThan(BOARD.wave)
     }
-    // Chords across a curve, so they are a hair shorter than the arc; the
-    // check is that they are all the *same*, not that they equal the arc.
-    expect(Math.max(...gaps) / Math.min(...gaps)).toBeLessThan(1.01)
   })
 
-  it('is more even in three dimensions than it would be flat', () => {
-    // Which is the entire reason the arc table carries the climb. Were this
-    // the other way round, the 3D stepping would be pointless work.
-    const of = (climb: boolean) => {
-      const gaps = tiles.slice(1).map((b, i) => {
-        const a = tiles[i]
-        return climb
-          ? Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z)
-          : Math.hypot(b.x - a.x, b.z - a.z)
-      })
-      return Math.max(...gaps) / Math.min(...gaps)
+  it('puts the same distance of walking between every pair of tiles', () => {
+    // The whole difficulty of this file, and it has to be measured **along the
+    // track**, not across it. Straight lines between tiles are shorter than
+    // the road wherever the road bends, and it bends hardest at the top, where
+    // it is climbing a 58-degree wall in a tight turn - so a chord measure
+    // says the last few tiles are half as far apart as the first few, while
+    // the walk between them is identical.
+    const walk = (from: number, to: number) => {
+      const steps = 80
+      let run = 0
+      let previous = trackPointAt(from)
+      for (let k = 1; k <= steps; k++) {
+        const here = trackPointAt(from + ((to - from) * k) / steps)
+        run += Math.hypot(here.x - previous.x, here.y - previous.y, here.z - previous.z)
+        previous = here
+      }
+      return run
     }
-    expect(of(true)).toBeLessThan(of(false))
+    const gaps: number[] = []
+    for (let i = 1; i < tiles.length; i++) gaps.push(walk(tiles[i - 1].angle, tiles[i].angle))
+    expect(Math.max(...gaps) / Math.min(...gaps)).toBeLessThan(1.005)
   })
 
   it('spaces them far enough apart to be separate tiles', () => {
     expect(tileSpacing()).toBeGreaterThan(BOARD.tileRadius * 2)
   })
 
-  it('keeps the turns of the spiral clear of each other', () => {
-    // Neighbouring turns closer than a tile is wide would merge into a ramp.
+  it('keeps the turns of the spiral clear of each other, wave and all', () => {
+    // Neighbouring laps closer than a tile is wide would merge into a ramp -
+    // and the wave leans the track towards its neighbours from both sides at
+    // once, so it has to be worth well under half the gap between them.
     const turnGap = (BOARD.outer - BOARD.inner) / BOARD.turns
     expect(turnGap).toBeGreaterThan(BOARD.tileRadius * 2)
+    expect(BOARD.wave * 2).toBeLessThan(turnGap * 0.75)
   })
 
   it('never puts two tiles on top of each other, anywhere on the board', () => {
@@ -168,24 +192,48 @@ describe('the spiral', () => {
     }
   })
 
-  it('lays every tile on the volcano, and climbs the whole way', () => {
-    for (const tile of tiles) {
-      expect(tile.radius).toBeGreaterThanOrEqual(ISLAND.crater)
-      expect(tile.radius).toBeLessThanOrEqual(ISLAND.volcano)
-    }
-    // Never flat, never downhill, from the first tile to the last.
-    for (let i = 1; i < tiles.length; i++) {
-      expect(tiles[i].y).toBeGreaterThan(tiles[i - 1].y)
+  it('starts at the edge of the island and finishes in the crater', () => {
+    const first = tiles[0]
+    const last = tiles[tiles.length - 1]
+    // Out past the volcano's foot, on the flat, with the beach behind it.
+    expect(first.radius).toBeGreaterThan(ISLAND.volcano)
+    expect(first.radius).toBeLessThan(ISLAND.plateauOuter)
+    expect(first.y).toBeCloseTo(ISLAND.plateau, 6)
+    // And in on the crater floor, level with the treasure.
+    expect(last.radius).toBeLessThan(ISLAND.crater)
+    expect(last.y).toBeCloseTo(ISLAND.summit, 6)
+    for (const tile of tiles) expect(tile.radius).toBeLessThanOrEqual(BOARD.outer + 1e-6)
+  })
+
+  it('climbs the volcano overall, rolling as it goes', () => {
+    // A wave in the radius is a wave in the height: leaning out on a cone is
+    // going downhill. So this does not climb every single step, and should not
+    // - but no single step may drop more than a stride, or the road has a
+    // cliff in it rather than a roll.
+    const climb = tiles[tiles.length - 1].y - tiles[0].y
+    expect(climb).toBeGreaterThan(ISLAND.summit * 0.9)
+    let worst = 0
+    for (let i = 1; i < tiles.length; i++) worst = Math.max(worst, tiles[i - 1].y - tiles[i].y)
+    expect(worst).toBeLessThan(tileSpacing() * 0.35)
+    // And over any fifteen tiles it never loses height at all.
+    //
+    // Fifteen is measured, not chosen: it is exactly how long the roll is.
+    // Over ten the track can still be nine metres down inside a lean-out, and
+    // over fifteen it has always come back. If the wave is ever retuned this
+    // is the test that says by how much the road's rhythm changed.
+    const roll = 15
+    for (let i = roll; i < tiles.length; i++) {
+      expect(tiles[i].y).toBeGreaterThanOrEqual(tiles[i - roll].y - 1e-9)
     }
   })
 
   it('climbs at a gradient somebody could walk up', () => {
-    // The cone is 61 degrees, and it does not matter, because the road wraps
-    // it three times. This is the number that decides whether the track is a
-    // road or a climbing wall, and it is the reason the cone is the size it is.
+    // The cone runs to 58 degrees at the crater, and it does not matter,
+    // because the road wraps it three times. This is the number that decides
+    // whether the track is a road or a climbing wall.
     const climb = tiles[tiles.length - 1].y - tiles[0].y
     const gradient = climb / trackLength()
-    expect(gradient).toBeGreaterThan(0.05)
+    expect(gradient).toBeGreaterThan(0.03)
     expect(gradient).toBeLessThan(0.2)
   })
 
@@ -197,12 +245,11 @@ describe('the spiral', () => {
     expect(BOARD.turns).toBeGreaterThanOrEqual(3)
   })
 
-  it('finishes at the crater rim, a step below the treasure', () => {
+  it('finishes on the crater floor, beside the treasure', () => {
     const last = tiles[tiles.length - 1]
-    expect(last.radius).toBeGreaterThan(ISLAND.crater)
-    expect(last.radius).toBeLessThan(ISLAND.crater + 4)
-    // Up against the top rather than far below it: the race ends at the
-    // treasure, so the last tile has to be within a stride of the summit.
+    expect(last.radius).toBeLessThan(ISLAND.crater)
+    // Level with the treasure rather than below it: the race ends where the
+    // prize is, not on a wall looking up at it.
     expect(ISLAND.summit - last.y).toBeLessThan(1)
     expect(ISLAND.summit).toBeGreaterThanOrEqual(last.y)
   })
@@ -228,9 +275,13 @@ describe('the spiral', () => {
     // board-game spaces, not paving: tiles that nearly touch read as a road,
     // and a road is not something you count your way along. A gap of about one
     // tile between them is what makes them separate places to stand.
-    const diameter = BOARD.tileRadius * 2
-    expect(tileSpacing()).toBeGreaterThan(diameter)
-    expect(tileSpacing()).toBeLessThan(diameter * 3)
+    // Not stated in bare metres, and not as a multiple of the tile either -
+    // both of those have already gone quietly wrong once when the island was
+    // resized under them. What actually has to hold is that tiles are separate
+    // places to stand, and that there are enough of them per lap to read as a
+    // curve rather than a polygon.
+    expect(tileSpacing()).toBeGreaterThan(BOARD.tileRadius * 2)
+    expect(BOARD.tiles / BOARD.turns).toBeGreaterThan(20)
     // And long enough to be a race rather than a lap of a table.
     expect(trackLength()).toBeGreaterThan(BOARD.outer * 8)
   })

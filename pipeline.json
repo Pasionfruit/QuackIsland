@@ -754,7 +754,7 @@
     {
       "id": "09-net",
       "phase": "P4",
-      "title": "Lobbies by code, with everyone else’s duck drawn from a relay",
+      "title": "Lobbies by code, with everyone else\u2019s duck drawn from a relay",
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
@@ -839,7 +839,7 @@
     {
       "id": "10-party",
       "phase": "P4",
-      "title": "Party island: a 120-tile spiral road winding up a volcano to the treasure",
+      "title": "Party island: an out-of-round 150 m volcano with a horseshoe crater and a rolling spiral road",
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
@@ -892,6 +892,11 @@
         {
           "id": "10.8",
           "title": "The road climbs the volcano: duck-sized tiles, 3D arc length, and the mesh turned right way out",
+          "status": "done"
+        },
+        {
+          "id": "10.9",
+          "title": "Horseshoe crater, out-of-round island, rounded tiles on their own layer, wave spiral to the summit",
           "status": "done"
         }
       ],

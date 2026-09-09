@@ -24,15 +24,33 @@ export {
 } from './internal/party'
 
 export {
+  BREACH,
   ISLAND,
+  OUTLINE,
+  angleFromIsland,
+  breachDepthAt,
   distanceFromIsland,
   groundWithIsland,
+  islandReach,
+  localRadius,
   onPartyIsland,
+  outlineAt,
   partyHeightAt,
   partyHeightLocal,
+  partyHeightLocalAt,
 } from './internal/island'
 
-export { BOARD, buildBoard, tileSpacing, trackLength, type Tile } from './internal/board'
+export {
+  BOARD,
+  buildBoard,
+  radiusAt,
+  tileSpacing,
+  trackLength,
+  trackPointAt,
+  type Tile,
+} from './internal/board'
+
+export { RINGS, SEGMENTS, buildIslandMesh, ringRadius, type IslandMesh } from './internal/mesh'
 
 export {
   ME,
@@ -50,5 +68,5 @@ export {
   type PartyState,
 } from './internal/state'
 
-export { Arena } from './internal/ArenaView'
+export { Arena, BOARD_LAYER } from './internal/ArenaView'
 export { Party } from './internal/PartyView'

@@ -1,61 +1,98 @@
 /**
- * The board: a hundred and twenty tiles spiralling **up the volcano**, from
- * its foot to the crater rim.
+ * The board: a hundred and twenty tiles winding from the island's edge up to
+ * the crater at the top of the volcano.
  *
- * Pure, and the one thing in here that is easy to get subtly wrong is the
- * spacing. An Archimedean spiral walked at a constant *angle* puts its tiles
- * further and further apart the further out you are - or in this case bunches
- * them into a jam at the middle, since the track runs inwards. Tiles have to
- * be stepped along by **arc length** instead, which needs the length of the
- * curve, which needs integrating it.
+ * It is a spiral with a **wave** in it, not a clean one. The radius carries a
+ * sine wave on top of the steady march inwards, so the track leans out and in
+ * as it climbs rather than tightening at a constant rate - which is the
+ * difference between a road somebody laid and a curve somebody plotted.
  *
- * Now that the track climbs, that arc length is measured **in three
- * dimensions**. Stepping by the distance over the ground would bunch the tiles
- * wherever the cone is steepest, because a metre of map is more than a metre
- * of walking there - and the steepest part is the middle of the climb, so the
- * error would sit right where it shows.
+ * Three things make the geometry awkward, and one decision deals with all of
+ * them:
  *
- * That is the whole difficulty, and it is entirely testable: the gaps between
- * consecutive tiles should all be the same to within a hair.
+ * - the track **climbs**, so a metre of map is more than a metre of walking,
+ *   and it is walking that the spacing is for;
+ * - the island is **not round**, so a given angle is a different distance out
+ *   than the one before it;
+ * - the wave means the radius is not even monotonic.
+ *
+ * So rather than integrating a speed function - which would need the
+ * derivative of all three - the curve is **walked**: sample it finely in three
+ * dimensions, add up the actual straight-line hops, and step tiles along the
+ * total. Fewer moving parts, nothing to keep in step with the island, and it
+ * stays right no matter what shape the island becomes next.
  */
 import { PLAYER } from '../../02-player'
-import { ISLAND, partyHeightLocal } from './island'
+import { ISLAND, outlineAt, partyHeightLocalAt } from './island'
 
 export const BOARD = {
   /** How many tiles. A hundred and twenty, as asked for. */
   tiles: 120,
-  /** Where the race starts: on the cone, just inside its foot. */
-  outer: ISLAND.volcano - 2,
-  /** Where it finishes: at the crater rim, with the treasure a step away. */
-  inner: ISLAND.crater + 1,
-  /** How many times round. Three reads as a spiral without being a maze. */
+  /**
+   * Where the race starts: out at the edge of the island.
+   *
+   * On the plateau just outside the volcano's foot, so the first tile is on
+   * flat ground with the beach behind it and the whole mountain ahead.
+   */
+  outer: ISLAND.volcano + 18,
+  /**
+   * Where it finishes: on the crater floor, beside the treasure.
+   *
+   * Inside the rim rather than on it. The rim is a 58-degree crease, so a tile
+   * three metres outside it sits five metres down a wall - which is a strange
+   * place to finish a race whose prize is on the flat ground just past it.
+   */
+  inner: ISLAND.crater * 0.8,
+  /** How many times round. */
   turns: 3,
+  /**
+   * How far the track leans in and out of a true spiral, in metres.
+   *
+   * This is the "not perfectly" part. It has to stay well under half the gap
+   * between one lap and the next or the track would touch itself - there is a
+   * test - and it is worth a good fraction of that, because a wave you have to
+   * look for is not worth having.
+   */
+  wave: 17,
+  /** How many times it leans out and back over the whole climb. */
+  waveCycles: 7,
+  /** Where in the wave the track starts, so tile one is not on a crest. */
+  wavePhase: 0.6,
   /**
    * How wide a tile is: **half again as wide as the duck standing on it**.
    *
    * Written against the duck rather than as a number, because that is the
    * actual requirement - a tile you can stand on with a little room, and no
-   * more. Everything else about the track is then sized to suit it: the cone
-   * is as big as 120 tiles this size can wrap three times.
+   * more.
    */
   tileRadius: PLAYER.radius * 1.5,
-  /** How far a tile sits above the board, so it reads as laid on it. */
-  tileLift: 0.05,
+  /**
+   * How far a tile sits above the ground, in metres.
+   *
+   * Enough to read as a board laid *on* the island rather than painted into
+   * it. Tiles are also tilted to the slope they sit on, which is what stops
+   * the uphill corner burying itself on a cone this steep.
+   */
+  tileLift: 0.34,
+  /** How thick a tile is. */
+  tileThickness: 0.22,
+  /** How round the corners of a tile are, as a fraction of its half-width. */
+  tileRound: 0.34,
   /** Every nth tile is marked, so progress is countable at a glance. */
   markEvery: 10,
 } as const
 
 export interface Tile {
-  /** 0 at the start, out by the beach; the last one is at the volcano. */
+  /** 0 at the start, out by the beach; the last one is at the crater. */
   index: number
-  /** World-space, relative to the island's middle. */
+  /** Island-local, relative to the middle; the view puts them in the world. */
   x: number
   z: number
-  /** The height of the board under it. */
+  /** The height of the ground under it. */
   y: number
-  /** How far round the spiral, for anything that wants to face along it. */
+  /** How far round the track, for anything that wants to face along it. */
   angle: number
-  /** Distance from the middle of the island. */
+  /** Local radius, before the island's outline warp. */
   radius: number
   /** Every tenth one, for counting. */
   marked: boolean
@@ -63,66 +100,60 @@ export interface Tile {
 
 const TURN = Math.PI * 2
 
-/** How far out the spiral is at a given angle. Straight line in, by design. */
-function radiusAt(theta: number): number {
+/**
+ * How far out the track is at a given angle: a steady march inwards, plus the
+ * wave that stops it being a plain spiral.
+ */
+export function radiusAt(theta: number): number {
   const total = BOARD.turns * TURN
   const t = Math.min(1, Math.max(0, theta / total))
-  return BOARD.outer + (BOARD.inner - BOARD.outer) * t
+  const straight = BOARD.outer + (BOARD.inner - BOARD.outer) * t
+  // The wave is eased out at both ends, so the track starts exactly at the
+  // island's edge and finishes exactly on the crater rim rather than wherever
+  // the sine happened to be.
+  const ends = Math.sin(Math.PI * t)
+  return straight + BOARD.wave * ends * Math.sin(t * BOARD.waveCycles * TURN + BOARD.wavePhase)
 }
 
-/**
- * How steeply the ground climbs where the track is, per metre of radius.
- *
- * A central difference on the island's own height function rather than a
- * formula of its own, so the road cannot disagree with the hill it is on.
- */
-function groundSlopeAt(radius: number): number {
-  const d = 0.05
-  return (partyHeightLocal(radius + d) - partyHeightLocal(radius - d)) / (2 * d)
-}
-
-/**
- * The length of the spiral up to an angle, and in total - along the ground it
- * actually climbs.
- *
- * `ds = sqrt(r^2 + (dr/dtheta)^2 * (1 + (dh/dr)^2)) dtheta`, integrated
- * numerically. The `dh/dr` term is what makes this a road up a cone rather
- * than a drawing of one seen from above: on the steep middle of the climb a
- * metre of map is more than a metre of walking, and stepping tiles by the map
- * would bunch them exactly there.
- *
- * There is a closed form for the flat case and it is horrible; there is none
- * for this one. Two thousand steps of the trapezium rule is accurate to well
- * under a millimetre here and is obviously right.
- */
-function arcTable(steps = 2000): { theta: number[]; arc: number[] } {
-  const total = BOARD.turns * TURN
-  const dr = (BOARD.inner - BOARD.outer) / total
-  const speedAt = (t: number) => {
-    const r = radiusAt(t)
-    const climb = groundSlopeAt(r) * dr
-    return Math.sqrt(r * r + dr * dr + climb * climb)
+/** A point on the track, in island-local space, on the ground it climbs. */
+export function trackPointAt(theta: number): { x: number; y: number; z: number; radius: number } {
+  const radius = radiusAt(theta)
+  const out = radius * outlineAt(theta)
+  return {
+    x: Math.cos(theta) * out,
+    y: partyHeightLocalAt(radius, theta),
+    z: Math.sin(theta) * out,
+    radius,
   }
+}
 
-  const theta: number[] = []
-  const arc: number[] = []
+/**
+ * The track walked from end to end, as a table of angle against distance.
+ *
+ * Straight-line hops between closely spaced samples. Chords rather than arcs,
+ * so it reads a hair short - four thousand steps over two kilometres puts that
+ * error far below a millimetre, and it is the *even spacing* that matters here
+ * rather than the absolute length.
+ */
+function arcTable(steps = 4000): { theta: number[]; arc: number[] } {
+  const total = BOARD.turns * TURN
+  const theta: number[] = [0]
+  const arc: number[] = [0]
+
+  let previous = trackPointAt(0)
   let running = 0
-  let previous = speedAt(0)
-
-  theta.push(0)
-  arc.push(0)
   for (let i = 1; i <= steps; i++) {
     const t = (i / steps) * total
-    const speed = speedAt(t)
-    running += ((previous + speed) / 2) * (total / steps)
-    previous = speed
+    const here = trackPointAt(t)
+    running += Math.hypot(here.x - previous.x, here.y - previous.y, here.z - previous.z)
+    previous = here
     theta.push(t)
     arc.push(running)
   }
   return { theta, arc }
 }
 
-/** The angle at which the spiral has run a given distance. */
+/** The angle at which the track has run a given distance. */
 function angleAtLength(table: { theta: number[]; arc: number[] }, target: number): number {
   const { theta, arc } = table
   if (target <= 0) return theta[0]
@@ -143,37 +174,36 @@ function angleAtLength(table: { theta: number[]; arc: number[] }, target: number
 }
 
 /**
- * Every tile, from the start out by the beach to the finish at the volcano.
+ * Every tile, from the start at the island's edge to the finish at the crater.
  *
- * Positions are relative to the middle of the island; the view puts them in
- * the world. Kept that way so the maths can be checked without knowing where
- * the island happens to be.
+ * Positions are island-local; the view puts them in the world. Kept that way
+ * so the maths can be checked without knowing where the island happens to be.
  */
 export function buildBoard(count: number = BOARD.tiles): Tile[] {
   const table = arcTable()
   const total = table.arc[table.arc.length - 1]
   const tiles: Tile[] = []
   // `count - 1` gaps between `count` tiles, so the last one lands exactly on
-  // the end of the spiral rather than one gap short of it.
+  // the end of the track rather than one gap short of it.
   const gaps = Math.max(1, count - 1)
 
   for (let i = 0; i < count; i++) {
     const angle = angleAtLength(table, (i / gaps) * total)
-    const radius = radiusAt(angle)
+    const point = trackPointAt(angle)
     tiles.push({
       index: i,
-      x: Math.cos(angle) * radius,
-      z: Math.sin(angle) * radius,
-      y: partyHeightLocal(radius),
+      x: point.x,
+      z: point.z,
+      y: point.y,
       angle,
-      radius,
+      radius: point.radius,
       marked: i > 0 && i < count - 1 && (i + 1) % BOARD.markEvery === 0,
     })
   }
   return tiles
 }
 
-/** How long the whole track is, in metres. */
+/** How long the whole track is, in metres, along the ground it climbs. */
 export function trackLength(): number {
   const table = arcTable()
   return table.arc[table.arc.length - 1]

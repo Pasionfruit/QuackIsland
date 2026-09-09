@@ -5,10 +5,14 @@
 Getting a board game started, and the island it is played on.
 
 The host opens a game, everybody readies up, the host starts it, and everyone
-is put on the starting line of a **hundred-and-twenty-tile spiral race** on a
-separate island out across the water. The track winds **up the volcano** — three
-turns round the cone, climbing 36 m from its foot to the crater rim, where the
-treasure is.
+is put on the starting line of a **hundred-and-twenty-tile race** on a separate
+island out across the water.
+
+The island is a **150 m volcano with a horseshoe crater**, and it is not round:
+its coast runs between 230 and 356 m from the middle, so it is half again as
+wide one way as the other. The track starts out on the flat at the island's
+edge and winds three times up the cone to the treasure on the crater floor,
+leaning in and out of a true spiral as it climbs.
 
 **The game itself does not exist yet**: no turns, no dice, no movement along
 the tiles. What does exist is everything that has to be right before it can —
@@ -19,6 +23,15 @@ everybody arriving on the same line at the same moment.
 
 | Export | Meaning |
 | --- | --- |
+| `outlineAt(angle)` | How far out of round the island is here. Pure |
+| `localRadius(x, z)` | World point to island-local radius. Pure |
+| `islandReach()` | The furthest it reaches in any direction. Pure |
+| `breachDepthAt(d, angle)` | How deep the horseshoe cuts here. Pure |
+| `partyHeightLocalAt(d, angle)` | The ground, breach and all. Pure |
+| `trackPointAt(theta)` | A point on the road, on the ground it climbs. Pure |
+| `buildIslandMesh()` | The island's shape as plain arrays. Pure |
+| `BOARD_LAYER` | The three.js layer the tiles are on |
+| `OUTLINE`, `BREACH` | The out-of-round waves, and the horseshoe |
 | `Party` | The scene entry: the board, and moving people onto it |
 | `Arena` | Just the board, if something ever wants it alone |
 | `useParty()` / `getParty()` | `{ phase, ready }` |
@@ -107,40 +120,84 @@ that appeared out of nothing would read as a bug.
 
 ## The spiral
 
-A hundred and twenty tiles, three turns round the volcano, climbing the whole
-way: **333 m** of track from the cone's foot to the crater rim.
+A hundred and twenty tiles, three turns round the volcano: **2.42 km** of road
+from the island's edge to the treasure.
 
 | | |
 | --- | --- |
-| Tile | 1.2 m across — **half again the duck's 0.8 m**, and nothing more |
-| Spacing | 2.8 m, so a 1.6 m gap: a stride between one space and the next |
-| Climb | 9.7 m up to 45.8 m, at a **10.8% gradient** |
-| Cone | 57°, 60 m across, 46 m tall |
-| Evenness | every gap within **0.6%** of every other |
+| Tile | a **rounded square**, 1.2 m across — half again the duck's 0.8 m |
+| Spacing | 20.3 m of walking between one and the next, 40 tiles a lap |
+| Climb | 9 m up to 150 m — the whole mountain — at a **5.8% gradient** |
+| Cone | 58° at the crater, easing to flat at its foot; 150 m tall |
+| Wave | ±17 m of lean, seven times over the climb |
+| Evenness | every gap within **0.02%** of every other |
 
-**The cone is shaped around the road, not the road around the cone.** That is
-the whole design. A hundred and twenty tiles a duck and a half wide make a
-track about 330 m long whatever else is true — that length is fixed the moment
-the tile size is. Three turns of it wraps a cone of about this radius, and a
-cone of that radius can be as tall as a 330 m road can climb at a gradient
-somebody would walk up. Every number above follows from the first one.
+### It is a spiral with a wave in it
 
-It is a *steep* cone, and that is the point of wrapping: the road is a gentle
-10.8% because it goes round three times, so the thing it goes round is free to
-be dramatic. At 46 m it is half again the height of anything on the mainland.
+The radius carries a sine wave on top of the steady march inwards, eased out at
+both ends so the track still starts and finishes exactly where it should. That
+is the "not perfectly" part: the road leans out and back in as it climbs
+instead of tightening at a constant rate.
 
-### Why the arc length is measured in three dimensions
+A wave in the radius is a wave in the *height* as well — leaning out on a cone
+is going downhill — so the road rolls rather than climbing every single step.
+It gives back at most 5 m at a time, and **over any fifteen tiles it never
+loses height at all**. Fifteen is measured, not chosen: it is exactly how long
+the roll is, and the test says so, so retuning the wave reports what it did to
+the road's rhythm.
 
-Stepping tiles by equal distance **over the map** would bunch them wherever the
-cone is steepest, because a metre of map is more than a metre of walking there
-— and the steepest stretch is the middle of the climb, so the error would sit
-exactly where it shows. The arc table carries `dh/dr` for that reason, taken as
-a central difference on the island's own height function so the road cannot
-disagree with the hill it is on.
+The wave has to stay well under half the gap between one lap and the next, or
+the track would touch itself; it leans towards its neighbours from both sides
+at once. There is a test.
 
-Measured: gaps along the ground vary by 0.6%, where the flat measure would let
-them vary by 1.9%. A test asserts the three-dimensional spacing is the more
-even of the two, so this cannot quietly become pointless work.
+### Why the spacing is walked rather than integrated
+
+Three things make the geometry awkward, and one decision deals with all of
+them: the track **climbs**, so a metre of map is more than a metre of walking;
+the island is **not round**, so the same angle is a different distance out each
+lap; and the wave means the radius is not even monotonic. Integrating a speed
+function would need the derivative of all three and would have to be redone
+every time the island changed shape.
+
+So the curve is **walked** instead — sampled finely in three dimensions, actual
+hops added up, tiles stepped along the total. Fewer moving parts, nothing to
+keep in step with the island, and it stays right whatever the island becomes
+next.
+
+Measured: the walking distance between consecutive tiles is even to 0.02%. The
+**straight-line** distance is not, and should not be — near the crater the road
+climbs a 58° wall in a tight turn, so the last few tiles are 10.7 m apart in a
+straight line and 20.3 m apart along the road. The test measures the road,
+because the road is what you walk.
+
+### The horseshoe
+
+A wedge cut out of one side, deepest at the crater and gone by about two crater
+radii out. From above the summit reads as a horseshoe; from the side, as a
+breached wall with a notch running out of it.
+
+It is kept **short** on purpose, and the reason is the road. The track wraps the
+cone three times, so it crosses the breach once a lap whatever else is true —
+and a valley running a third of the way down the mountain turned two of those
+crossings into nineteen-metre plunges between one tile and the next, which is a
+cliff rather than a road. Confined to the crater, the two lower crossings miss
+it and the last dips a few metres: a road going through a gap in a wall, which
+is what the gap is for.
+
+One thing had to be handled for it to work at all. At the exact centre of the
+crater every angle is the same point, so a notch with depth there asks one
+point to be at several heights at once — which came out of the mesh as a fan of
+vertical slivers and out of the ground function as a cliff with no width. The
+breach fades out of the middle, and the crater keeps its floor.
+
+### The cone profile
+
+Not a smoothstep. A smoothstep eases at *both* ends, and what that gives you is
+a dome with a dent in it: the first fifty metres out from the rim fell barely
+five, so there was no rim to breach and no cone to wrap. `1 - (1 - t)²` is
+steepest exactly where a volcano should be — 58° at the crater's edge, easing
+to flat as it meets the plateau. The crease it leaves at the rim is not a flaw,
+it is the rim.
 
 The one thing that is easy to get subtly wrong is the spacing. An Archimedean
 spiral walked at a constant *angle* bunches its tiles up as the radius
@@ -186,6 +243,22 @@ transport never learns what a board game is, and this module never learns what
 a WebSocket is. Adding a dice roll later is a new message shape here and no
 change at all to the relay or to `09-net`.
 
+## The tiles
+
+Rounded squares, built as a flat shape with real arcs at the corners and
+extruded — a bevel would round them in section rather than in plan, and plan is
+the angle almost everybody sees a tile from.
+
+They sit on **their own layer**, `BOARD_LAYER`, and on their own plane. Layer 0
+stays enabled so the ordinary camera still draws them; the point of the extra
+one is that anything wanting the track without the island — a map, a minimap, a
+camera that looks only at the board — gets it by enabling a single layer.
+
+Each tile is **tilted into the slope** it sits on and lifted along that slope's
+own normal rather than straight up. On a cone that runs to 58° a flat tile
+buries half its uphill corner, and a tile lifted vertically on a steep slope has
+a different clearance on each side.
+
 ## The island was invisible
 
 Worth writing down, because nothing about it looked like a bug.
@@ -213,9 +286,11 @@ test walks every triangle and checks it faces the sky.
   the two yet.
 - **Nothing stops you walking straight up the cone** beside the track. The road
   is the scenic route, not the only one.
-- **The plateau is now empty.** The track used to cross it and now climbs the
-  volcano instead, so 235 m of flat sand has nothing on it but the walk to the
-  start.
+- **The last few tiles are close together on the ground** even though they are
+  the same walk apart as every other pair. That is the crater wall: 58° of
+  climb in a tight turn eats the distance vertically.
+- **The road crosses the breach once a lap.** Twice it misses the notch
+  entirely and once it dips a few metres through it.
 - **The teleport lays one stray footprint** and fires one footstep, because
   both systems see a very large step. Harmless, and cheaper to live with than
   to plumb a "do not count this" flag through two modules.
@@ -240,9 +315,14 @@ Two browsers in one lobby; `DEPLOY.md` has the commands.
 - **Look at the island from the water.** You should see *ground* — sand, lit
   from above. If the island is a floating ring of tiles over open sea, the mesh
   is inside out again.
-- **Walk the spiral from the first tile.** Three turns up the cone, climbing
-  every step, tiles evenly spaced the whole way — no bunching where it steepens
-  and none where it tightens.
+- **Walk the track from the first tile.** It starts on the flat at the island's
+  edge, reaches the volcano's foot, and winds three times to the top. It should
+  lean out and back in as it goes rather than tightening evenly — and it should
+  roll a little without ever really losing ground.
+- **Look at the crater from above, or from across the water.** A horseshoe: a
+  rim with one side bitten out of it, not a ring and not a bowl.
+- **Sail round the island.** The coast should be visibly longer one way than the
+  other — never an arc you could have drawn with a compass.
 - **Stand on a tile.** It should be about half again your own width: room to
   stand, and no more.
 - **Look up from halfway.** You should be able to see the track above you

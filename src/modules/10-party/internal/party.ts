@@ -10,7 +10,7 @@
  * Where it is and what shape it is live in `island.ts`; the spiral of tiles
  * lives in `board.ts`.
  */
-import { ISLAND, distanceFromIsland, partyHeightLocal } from './island'
+import { ISLAND, distanceFromIsland, partyHeightLocalAt } from './island'
 import { BOARD, buildBoard } from './board'
 
 export type PartyPhase = 'off' | 'gathering' | 'playing'
@@ -68,7 +68,9 @@ export function spawnFor(index: number, count: number): { x: number; y: number; 
 
   return {
     x: ISLAND.centreX + localX,
-    y: partyHeightLocal(Math.hypot(localX, localZ)) + PARTY.spawnLift,
+    y:
+      partyHeightLocalAt(Math.hypot(localX, localZ), Math.atan2(localZ, localX)) +
+      PARTY.spawnLift,
     z: ISLAND.centreZ + localZ,
   }
 }

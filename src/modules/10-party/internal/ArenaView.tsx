@@ -15,14 +15,80 @@ import {
   BufferAttribute,
   BufferGeometry,
   Color,
-  CylinderGeometry,
+  ExtrudeGeometry,
   InstancedMesh,
   MeshStandardMaterial,
   Object3D,
+  Shape,
+  Vector3,
 } from 'three'
 import { BOARD, buildBoard } from './board'
-import { ISLAND } from './island'
+import { ISLAND, partyHeightLocalAt } from './island'
 import { buildIslandMesh } from './mesh'
+
+/**
+ * The layer the board lives on.
+ *
+ * Kept off the ground on a layer of its own so anything that wants the track
+ * without the island - a map, a minimap, a camera that looks only at the
+ * board - can have it by enabling one layer. Layer 0 stays on as well, or the
+ * default camera would stop drawing it.
+ */
+export const BOARD_LAYER = 1
+
+/**
+ * One tile: a rounded square, lying flat.
+ *
+ * Built as a flat shape and extruded, then tipped into the ground plane. The
+ * corners are real arcs rather than a bevel, so a tile reads as rounded from
+ * directly above - which is the angle almost every player sees it from.
+ */
+function buildTile(): ExtrudeGeometry {
+  const half = BOARD.tileRadius
+  const round = Math.min(half * 0.98, half * BOARD.tileRound * 2)
+  const straight = half - round
+
+  const shape = new Shape()
+  shape.moveTo(-straight, -half)
+  shape.lineTo(straight, -half)
+  shape.absarc(straight, -straight, round, -Math.PI / 2, 0, false)
+  shape.lineTo(half, straight)
+  shape.absarc(straight, straight, round, 0, Math.PI / 2, false)
+  shape.lineTo(-straight, half)
+  shape.absarc(-straight, straight, round, Math.PI / 2, Math.PI, false)
+  shape.lineTo(-half, -straight)
+  shape.absarc(-straight, -straight, round, Math.PI, Math.PI * 1.5, false)
+
+  const geometry = new ExtrudeGeometry(shape, {
+    depth: BOARD.tileThickness,
+    bevelEnabled: false,
+    curveSegments: 6,
+  })
+  // Drawn in the XY plane and pushed along Z; the world wants it flat in XZ
+  // with its face up, and centred on its own thickness so the lift means what
+  // it says.
+  geometry.rotateX(-Math.PI / 2)
+  geometry.translate(0, BOARD.tileThickness / 2, 0)
+  geometry.computeVertexNormals()
+  return geometry
+}
+
+/**
+ * Which way is up where a tile sits.
+ *
+ * Central differences on the island's own height function, so a tile lies in
+ * the slope rather than hovering over it. It matters here far more than it
+ * would on flat ground: the cone runs to nearly forty degrees, and a flat tile
+ * on that buries half a metre of its uphill corner.
+ */
+function groundNormalAt(x: number, z: number, out: Vector3): Vector3 {
+  const step = 0.35
+  const at = (px: number, pz: number) =>
+    partyHeightLocalAt(Math.hypot(px, pz), Math.atan2(pz, px))
+  const dx = (at(x + step, z) - at(x - step, z)) / (2 * step)
+  const dz = (at(x, z + step) - at(x, z - step)) / (2 * step)
+  return out.set(-dx, 1, -dz).normalize()
+}
 
 /** Wraps the island's arrays into a geometry. The shape itself is in `mesh.ts`. */
 function buildIsland(): BufferGeometry {
@@ -47,10 +113,7 @@ export function Arena() {
   const tilesMesh = useRef<InstancedMesh>(null)
 
   const land = useMemo(() => buildIsland(), [])
-  const tileGeometry = useMemo(
-    () => new CylinderGeometry(BOARD.tileRadius, BOARD.tileRadius * 0.92, 0.18, 14),
-    [],
-  )
+  const tileGeometry = useMemo(() => buildTile(), [])
   const tiles = useMemo(() => buildBoard(), [])
 
   const sand = useMemo(
@@ -83,11 +146,22 @@ export function Arena() {
 
     const dummy = new Object3D()
     const colour = new Color()
+    const normal = new Vector3()
+    const up = new Vector3(0, 1, 0)
 
     for (let i = 0; i < tiles.length; i++) {
       const tile = tiles[i]
-      dummy.position.set(tile.x, tile.y + BOARD.tileLift, tile.z)
-      dummy.rotation.set(0, -tile.angle, 0)
+      // Lifted along the slope's own normal rather than straight up, so the
+      // clearance is the same all the way round the tile on ground this steep.
+      groundNormalAt(tile.x, tile.z, normal)
+      dummy.position.set(
+        tile.x + normal.x * BOARD.tileLift,
+        tile.y + normal.y * BOARD.tileLift,
+        tile.z + normal.z * BOARD.tileLift,
+      )
+      // Lie in the slope, then turn to face along the track.
+      dummy.quaternion.setFromUnitVectors(up, normal)
+      dummy.rotateY(-tile.angle)
       dummy.scale.setScalar(1)
       dummy.updateMatrix()
       mesh.setMatrixAt(i, dummy.matrix)
@@ -99,6 +173,7 @@ export function Arena() {
     }
 
     mesh.count = tiles.length
+    mesh.layers.enable(BOARD_LAYER)
     mesh.instanceMatrix.needsUpdate = true
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
     mesh.computeBoundingSphere()
@@ -131,17 +206,17 @@ export function Arena() {
           that the road runs up that cone - a rock shell at exactly the ground's
           height would z-fight the island and bury the last third of the track.
           A rim sits above everything instead, and reads more like a crater. */}
-      <mesh material={rock} position={[0, ISLAND.summit + 1.3, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[ISLAND.crater, ISLAND.crater * 1.06, 2.6, 32, 1, true]} />
+      <mesh material={rock} position={[0, ISLAND.summit + 2.2, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[ISLAND.crater, ISLAND.crater * 1.04, 4.4, 48, 1, true]} />
       </mesh>
 
-      {/* The treasure, on the flat top. */}
+      {/* The treasure, in the middle of the crater floor. */}
       <group position={[0, ISLAND.summit + 0.05, 0]}>
         <mesh material={gold} castShadow>
-          <boxGeometry args={[1.5, 0.9, 1]} />
+          <boxGeometry args={[3, 1.8, 2]} />
         </mesh>
-        <mesh material={gold} position={[0, 0.62, 0]} castShadow>
-          <cylinderGeometry args={[0.5, 0.5, 1.5, 12, 1, false, 0, Math.PI]} />
+        <mesh material={gold} position={[0, 1.24, 0]} castShadow>
+          <cylinderGeometry args={[1, 1, 3, 16, 1, false, 0, Math.PI]} />
         </mesh>
       </group>
     </group>

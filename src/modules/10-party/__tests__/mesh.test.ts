@@ -8,7 +8,14 @@
  * them asked about heights and positions rather than about surfaces.
  */
 import { describe, expect, it } from 'vitest'
-import { ISLAND, partyHeightLocal } from '../internal/island'
+import {
+  ISLAND,
+  angleFromIsland,
+  islandReach,
+  localRadius,
+  outlineAt,
+  partyHeightLocalAt,
+} from '../internal/island'
 import { RINGS, SEGMENTS, buildIslandMesh, ringRadius } from '../internal/mesh'
 
 const { positions, indices } = buildIslandMesh()
@@ -51,7 +58,7 @@ describe('the island mesh', () => {
 
   it('is steepest on the volcano and flattest on the plateau', () => {
     // A sanity check on the same normals: the cone should tip them well over
-    // and the board should leave them straight up.
+    // and the ring of flat round its foot should leave them straight up.
     const upAt = (radius: number) => {
       const ring = Math.round(Math.sqrt(radius / ISLAND.foot) * RINGS)
       const stride = SEGMENTS + 1
@@ -60,36 +67,87 @@ describe('the island mesh', () => {
       const length = Math.hypot(n[0], n[1], n[2])
       return n[1] / length
     }
-    expect(upAt(ISLAND.plateauOuter * 0.7)).toBeCloseTo(1, 3)
-    expect(upAt((ISLAND.crater + ISLAND.volcano) / 2)).toBeLessThan(0.75)
+    const onPlateau = (ISLAND.volcano + ISLAND.plateauOuter) / 2
+    expect(upAt(onPlateau)).toBeCloseTo(1, 2)
+    expect(upAt((ISLAND.crater + ISLAND.volcano) / 2)).toBeLessThan(0.85)
   })
 
-  it('covers the island out to its foot, and no further', () => {
+  it('reaches exactly as far as the warped outline says, and no further', () => {
+    // The rings are laid out in *local* radius, so the outermost is `foot`
+    // everywhere - but the world distance it lands at is `foot` times the
+    // outline warp, which is what `islandReach` promises. Anything sizing the
+    // world around this island trusts that number.
     expect(ringRadius(0)).toBe(0)
     expect(ringRadius(RINGS)).toBeCloseTo(ISLAND.foot, 9)
     let furthest = 0
-    for (let i = 0; i < positions.length; i += 3) {
-      furthest = Math.max(furthest, Math.hypot(positions[i], positions[i + 2]))
+    let nearest = Infinity
+    const stride = SEGMENTS + 1
+    for (let seg = 0; seg < SEGMENTS; seg++) {
+      const i = (RINGS * stride + seg) * 3
+      const out = Math.hypot(positions[i], positions[i + 2])
+      furthest = Math.max(furthest, out)
+      nearest = Math.min(nearest, out)
     }
-    expect(furthest).toBeCloseTo(ISLAND.foot, 4)
+    expect(furthest).toBeLessThanOrEqual(islandReach() + 1e-6)
+    // And it is genuinely out of round: the long side is a good deal longer
+    // than the short one, or the warp is doing nothing.
+    expect(furthest / nearest).toBeGreaterThan(1.3)
   })
 
-  it('puts every vertex at the height the island function says', () => {
+  it('puts every vertex at the height the ground function says', () => {
     // The mesh and the ground the player walks on are the same island, or a
-    // duck stands in the air.
+    // duck stands in the air. Checked through the *world* conversion rather
+    // than against a local radius, because that conversion is exactly where
+    // the two could drift apart: the mesh warps the outline outwards and the
+    // ground function divides it back out again.
     for (let i = 0; i < positions.length; i += 3) {
-      const radius = Math.hypot(positions[i], positions[i + 2])
-      expect(positions[i + 1]).toBeCloseTo(partyHeightLocal(radius), 4)
+      const x = positions[i]
+      const z = positions[i + 2]
+      const local = localRadius(x + ISLAND.centreX, z + ISLAND.centreZ)
+      const angle = angleFromIsland(x + ISLAND.centreX, z + ISLAND.centreZ)
+      if (Math.hypot(x, z) < 1e-6) continue
+      expect(positions[i + 1]).toBeCloseTo(partyHeightLocalAt(local, angle), 3)
     }
   })
 
-  it('crowds its rings onto the volcano rather than spreading them evenly', () => {
-    // Squared spacing: the cone is a third of the rings and a twelfth of the
-    // radius, which is what keeps it smooth without paving the beach.
-    const onCone = Array.from({ length: RINGS + 1 }, (_, r) => ringRadius(r)).filter(
-      (r) => r <= ISLAND.volcano,
-    ).length
-    expect(onCone).toBeGreaterThan(RINGS * 0.2)
-    expect(ISLAND.volcano / ISLAND.foot).toBeLessThan(0.15)
+  it('crowds its rings towards the middle rather than spreading them evenly', () => {
+    // Squared spacing, so the crater and the steep upper cone - where all the
+    // shape is - get far more rings than the beach, which is nearly a plane.
+    const radii = Array.from({ length: RINGS + 1 }, (_, r) => ringRadius(r))
+    const innerHalf = radii.filter((r) => r <= ISLAND.foot / 2).length
+    expect(innerHalf / RINGS).toBeGreaterThan(0.6)
+    // The first ring out from the middle is a stride, and the last is a street.
+    expect(radii[1] - radii[0]).toBeLessThan(0.5)
+    expect(radii[RINGS] - radii[RINGS - 1]).toBeGreaterThan(5)
+  })
+
+  it('carves the horseshoe out of one side of the crater only', () => {
+    // Round the rim, one stretch should be well below the rest and the rest
+    // should be level. That is what makes it a horseshoe rather than a bowl.
+    const rim = ISLAND.crater * 1.1
+    const heights: number[] = []
+    for (let i = 0; i < 360; i++) {
+      const angle = (i / 360) * Math.PI * 2
+      heights.push(partyHeightLocalAt(rim, angle))
+    }
+    const high = Math.max(...heights)
+    const low = Math.min(...heights)
+    expect(high - low).toBeGreaterThan(20)
+    // And most of the rim is untouched: a bite, not a bowl.
+    const cut = heights.filter((h) => h < high - 1).length
+    expect(cut).toBeGreaterThan(20)
+    expect(cut).toBeLessThan(heights.length / 2)
+  })
+
+  it('is out of round everywhere, not just at the coast', () => {
+    let lo = Infinity
+    let hi = 0
+    for (let i = 0; i < 720; i++) {
+      const s = outlineAt((i / 720) * Math.PI * 2)
+      lo = Math.min(lo, s)
+      hi = Math.max(hi, s)
+    }
+    expect(lo).toBeGreaterThan(0.5)
+    expect(hi / lo).toBeGreaterThan(1.3)
   })
 })
