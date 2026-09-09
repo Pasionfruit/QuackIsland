@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { BOARD, buildBoard, tileSpacing, trackLength } from '../internal/board'
+import { PLAYER } from '../../02-player'
 import { ISLAND, distanceFromIsland, groundWithIsland, onPartyIsland, partyHeightLocal } from '../internal/island'
 import { PARTY, spawnFor } from '../internal/party'
 
@@ -98,6 +99,10 @@ describe('the spiral', () => {
     expect(BOARD.tiles).toBe(120)
   })
 
+  it('makes each tile half again as wide as the duck standing on it', () => {
+    expect(BOARD.tileRadius).toBeCloseTo(PLAYER.radius * 1.5, 9)
+  })
+
   it('starts at the outside and finishes in the middle', () => {
     expect(tiles[0].radius).toBeCloseTo(BOARD.outer, 6)
     expect(tiles[tiles.length - 1].radius).toBeCloseTo(BOARD.inner, 6)
@@ -110,19 +115,38 @@ describe('the spiral', () => {
     }
   })
 
-  it('spaces every tile the same distance from the last', () => {
+  it('spaces every tile the same distance from the last, along the ground', () => {
     // The whole difficulty of this file. Stepping by angle instead of by arc
     // length crams the tiles together as the spiral tightens, so the last
     // stretch would be a jam and the first a hike.
+    //
+    // Measured in three dimensions, because the track climbs a cone: a metre
+    // of map is more than a metre of walking on the steep middle of it, and
+    // walking is what the spacing is for.
     const gaps: number[] = []
     for (let i = 1; i < tiles.length; i++) {
-      gaps.push(Math.hypot(tiles[i].x - tiles[i - 1].x, tiles[i].z - tiles[i - 1].z))
+      const a = tiles[i - 1]
+      const b = tiles[i]
+      gaps.push(Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z))
     }
-    const smallest = Math.min(...gaps)
-    const largest = Math.max(...gaps)
     // Chords across a curve, so they are a hair shorter than the arc; the
     // check is that they are all the *same*, not that they equal the arc.
-    expect(largest / smallest).toBeLessThan(1.02)
+    expect(Math.max(...gaps) / Math.min(...gaps)).toBeLessThan(1.01)
+  })
+
+  it('is more even in three dimensions than it would be flat', () => {
+    // Which is the entire reason the arc table carries the climb. Were this
+    // the other way round, the 3D stepping would be pointless work.
+    const of = (climb: boolean) => {
+      const gaps = tiles.slice(1).map((b, i) => {
+        const a = tiles[i]
+        return climb
+          ? Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z)
+          : Math.hypot(b.x - a.x, b.z - a.z)
+      })
+      return Math.max(...gaps) / Math.min(...gaps)
+    }
+    expect(of(true)).toBeLessThan(of(false))
   })
 
   it('spaces them far enough apart to be separate tiles', () => {
@@ -144,20 +168,43 @@ describe('the spiral', () => {
     }
   })
 
-  it('lays every tile on the flat part of the island', () => {
+  it('lays every tile on the volcano, and climbs the whole way', () => {
     for (const tile of tiles) {
-      expect(tile.radius).toBeGreaterThanOrEqual(ISLAND.volcano)
-      expect(tile.radius).toBeLessThanOrEqual(ISLAND.plateauOuter)
-      expect(tile.y).toBeCloseTo(ISLAND.plateau, 9)
+      expect(tile.radius).toBeGreaterThanOrEqual(ISLAND.crater)
+      expect(tile.radius).toBeLessThanOrEqual(ISLAND.volcano)
+    }
+    // Never flat, never downhill, from the first tile to the last.
+    for (let i = 1; i < tiles.length; i++) {
+      expect(tiles[i].y).toBeGreaterThan(tiles[i - 1].y)
     }
   })
 
-  it('finishes at the foot of the volcano, with the treasure above it', () => {
+  it('climbs at a gradient somebody could walk up', () => {
+    // The cone is 61 degrees, and it does not matter, because the road wraps
+    // it three times. This is the number that decides whether the track is a
+    // road or a climbing wall, and it is the reason the cone is the size it is.
+    const climb = tiles[tiles.length - 1].y - tiles[0].y
+    const gradient = climb / trackLength()
+    expect(gradient).toBeGreaterThan(0.05)
+    expect(gradient).toBeLessThan(0.2)
+  })
+
+  it('wraps the volcano rather than running straight up it', () => {
+    // Three full turns. One would be a ramp, and the tiles would have to be
+    // metres apart to make the distance.
+    const swept = tiles[tiles.length - 1].angle - tiles[0].angle
+    expect(swept).toBeCloseTo(BOARD.turns * Math.PI * 2, 6)
+    expect(BOARD.turns).toBeGreaterThanOrEqual(3)
+  })
+
+  it('finishes at the crater rim, a step below the treasure', () => {
     const last = tiles[tiles.length - 1]
-    expect(last.radius).toBeGreaterThan(ISLAND.volcano)
-    expect(last.radius).toBeLessThan(ISLAND.volcano + 4)
-    // And the treasure really is up from there.
-    expect(ISLAND.summit).toBeGreaterThan(last.y + 20)
+    expect(last.radius).toBeGreaterThan(ISLAND.crater)
+    expect(last.radius).toBeLessThan(ISLAND.crater + 4)
+    // Up against the top rather than far below it: the race ends at the
+    // treasure, so the last tile has to be within a stride of the summit.
+    expect(ISLAND.summit - last.y).toBeLessThan(1)
+    expect(ISLAND.summit).toBeGreaterThanOrEqual(last.y)
   })
 
   it('marks every tenth tile, and neither end', () => {
@@ -172,9 +219,18 @@ describe('the spiral', () => {
     // what decides whether a gap reads as a road or as a dotted line - and an
     // absolute bound here is a bound that quietly becomes wrong the next time
     // the island is resized, which is exactly what happened to the last one.
+    // Stated against the tile, because the tile is what decides whether a gap
+    // reads as a track or as scattered dots - a bare metre count here is a
+    // bound that quietly goes wrong the next time the island is resized, which
+    // is exactly what happened to the one this replaced.
+    //
+    // The upper bound is three tiles rather than two on purpose. These are
+    // board-game spaces, not paving: tiles that nearly touch read as a road,
+    // and a road is not something you count your way along. A gap of about one
+    // tile between them is what makes them separate places to stand.
     const diameter = BOARD.tileRadius * 2
     expect(tileSpacing()).toBeGreaterThan(diameter)
-    expect(tileSpacing()).toBeLessThan(diameter * 2)
+    expect(tileSpacing()).toBeLessThan(diameter * 3)
     // And long enough to be a race rather than a lap of a table.
     expect(trackLength()).toBeGreaterThan(BOARD.outer * 8)
   })

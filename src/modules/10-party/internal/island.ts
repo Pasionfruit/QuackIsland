@@ -32,12 +32,24 @@ export const ISLAND = {
   centreX: 900,
   centreZ: 0,
 
-  /** The flat top of the volcano, where the treasure is. */
-  summit: 125,
-  /** How wide that flat top is. */
-  crater: 15,
-  /** The foot of the cone. The board runs up to here. */
-  volcano: 62,
+  /**
+   * The flat top of the volcano, where the treasure is.
+   *
+   * The cone is shaped around the **road**, not the other way round. A hundred
+   * and twenty tiles a duck and a half wide make a track about 330 m long, and
+   * three times round a cone of this size is what that length buys - so the
+   * cone is as tall as a road of that length can climb at a walkable gradient,
+   * which works out at a little under 13%.
+   *
+   * It is a steep cone - 57 degrees - and that is deliberate. The *road* is
+   * gentle because it wraps; the cone it wraps can be as dramatic as it likes,
+   * and at 46 m it is still half again the height of anything on the mainland.
+   */
+  summit: 46,
+  /** How wide that flat top is. Big enough for the treasure and a rim. */
+  crater: 6,
+  /** The foot of the cone. The board starts just inside it and climbs. */
+  volcano: 30,
 
   /** The board sits on this, and it is flat, because a board should be. */
   plateau: 9,

@@ -839,7 +839,7 @@
     {
       "id": "10-party",
       "phase": "P4",
-      "title": "Party island: a 580 m island with a 125 m volcano and a 120-tile spiral race",
+      "title": "Party island: a 120-tile spiral road winding up a volcano to the treasure",
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
@@ -888,12 +888,17 @@
           "id": "10.7",
           "title": "Four times the island: 580 m across, a 125 m volcano, a 2.6 km track",
           "status": "done"
+        },
+        {
+          "id": "10.8",
+          "title": "The road climbs the volcano: duck-sized tiles, 3D arc length, and the mesh turned right way out",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T03:17:00.967Z"
+          "at": "2026-09-09T03:27:39.146Z"
         },
         "human": {
           "status": "pending"

@@ -6,7 +6,7 @@
  * not anybody is playing on it - and a board that appeared out of nothing
  * would read as a bug rather than as a place.
  *
- * Four draw calls: the land, the tiles, the volcano's cap, and the treasure.
+ * Four draw calls: the land, the tiles, the crater rim, and the treasure.
  * The tiles are one instanced mesh, so a hundred and twenty of them cost the
  * same as one.
  */
@@ -21,59 +21,17 @@ import {
   Object3D,
 } from 'three'
 import { BOARD, buildBoard } from './board'
-import { ISLAND, partyHeightLocal } from './island'
+import { ISLAND } from './island'
+import { buildIslandMesh } from './mesh'
 
-/** How finely the island is meshed. */
-const RINGS = 72
-/**
- * How many segments go round.
- *
- * At the rim this is what decides whether the coastline is a circle or a
- * polygon, and the rim is now 2.4 km round - so where 96 segments gave a 4 m
- * facet on the old island, they would give a 25 m one here.
- */
-const SEGMENTS = 144
-
-/**
- * The land, as a radial disc.
- *
- * Radial rather than a grid because the island is radial: rings of vertices
- * follow the contours exactly, so the volcano's cone and the beach both come
- * out smooth with far fewer triangles than a grid fine enough to do the same.
- */
+/** Wraps the island's arrays into a geometry. The shape itself is in `mesh.ts`. */
 function buildIsland(): BufferGeometry {
-  const positions: number[] = []
-  const indices: number[] = []
-
-  // Rings are spaced closer together where the shape changes fastest - across
-  // the volcano and the beach - by walking a curve rather than the radius.
-  const radiusAtRing = (i: number) => {
-    const t = i / RINGS
-    return ISLAND.foot * t * t
-  }
-
-  for (let ring = 0; ring <= RINGS; ring++) {
-    const radius = radiusAtRing(ring)
-    const height = partyHeightLocal(radius)
-    for (let seg = 0; seg <= SEGMENTS; seg++) {
-      const angle = (seg / SEGMENTS) * Math.PI * 2
-      positions.push(Math.cos(angle) * radius, height, Math.sin(angle) * radius)
-    }
-  }
-
-  const stride = SEGMENTS + 1
-  for (let ring = 0; ring < RINGS; ring++) {
-    for (let seg = 0; seg < SEGMENTS; seg++) {
-      const a = ring * stride + seg
-      const b = a + stride
-      indices.push(a, b, a + 1, a + 1, b, b + 1)
-    }
-  }
-
+  const { positions, indices } = buildIslandMesh()
   const geometry = new BufferGeometry()
-  geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
-  geometry.setIndex(indices)
+  geometry.setAttribute('position', new BufferAttribute(positions, 3))
+  geometry.setIndex(new BufferAttribute(indices, 1))
   geometry.computeVertexNormals()
+  geometry.computeBoundingSphere()
   return geometry
 }
 
@@ -167,10 +125,14 @@ export function Arena() {
         receiveShadow
       />
 
-      {/* The volcano's bare cap. The land mesh already has the cone; this is
-          the rock showing through above the sand line, and the crater rim. */}
-      <mesh material={rock} position={[0, ISLAND.summit - 0.4, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[ISLAND.crater * 1.25, ISLAND.volcano * 0.62, 9, 24, 1, true]} />
+      {/* The crater rim: a low wall of rock round the flat top.
+
+          It used to be a bare cap over the upper cone, which cannot stay now
+          that the road runs up that cone - a rock shell at exactly the ground's
+          height would z-fight the island and bury the last third of the track.
+          A rim sits above everything instead, and reads more like a crater. */}
+      <mesh material={rock} position={[0, ISLAND.summit + 1.3, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[ISLAND.crater, ISLAND.crater * 1.06, 2.6, 32, 1, true]} />
       </mesh>
 
       {/* The treasure, on the flat top. */}

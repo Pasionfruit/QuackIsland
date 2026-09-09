@@ -6,8 +6,9 @@ Getting a board game started, and the island it is played on.
 
 The host opens a game, everybody readies up, the host starts it, and everyone
 is put on the starting line of a **hundred-and-twenty-tile spiral race** on a
-separate island out across the water — the track runs from the beach inwards,
-three turns, finishing at the foot of a volcano with treasure on top.
+separate island out across the water. The track winds **up the volcano** — three
+turns round the cone, climbing 36 m from its foot to the crater rim, where the
+treasure is.
 
 **The game itself does not exist yet**: no turns, no dice, no movement along
 the tiles. What does exist is everything that has to be right before it can —
@@ -106,15 +107,40 @@ that appeared out of nothing would read as a bug.
 
 ## The spiral
 
-A hundred and twenty tiles, three turns, from the beach in to the volcano — a
-**2.58 km** run, with tiles 16 m across and 21.7 m apart.
+A hundred and twenty tiles, three turns round the volcano, climbing the whole
+way: **333 m** of track from the cone's foot to the crater rim.
 
-Those numbers are all one decision. Three turns is what keeps the tiles close
-enough together to read as a road: at four the gaps stretch to thirteen metres
-and the spiral becomes a dotted line, and at two the tiles overlap. Tile size
-is set against the *track*, not against the duck — a tile a duck's width across
-would be a speck on an island this size. The spiral's arms end up 48.8 m apart,
-so there is 32.8 m of clear plateau between one lap of the track and the next.
+| | |
+| --- | --- |
+| Tile | 1.2 m across — **half again the duck's 0.8 m**, and nothing more |
+| Spacing | 2.8 m, so a 1.6 m gap: a stride between one space and the next |
+| Climb | 9.7 m up to 45.8 m, at a **10.8% gradient** |
+| Cone | 57°, 60 m across, 46 m tall |
+| Evenness | every gap within **0.6%** of every other |
+
+**The cone is shaped around the road, not the road around the cone.** That is
+the whole design. A hundred and twenty tiles a duck and a half wide make a
+track about 330 m long whatever else is true — that length is fixed the moment
+the tile size is. Three turns of it wraps a cone of about this radius, and a
+cone of that radius can be as tall as a 330 m road can climb at a gradient
+somebody would walk up. Every number above follows from the first one.
+
+It is a *steep* cone, and that is the point of wrapping: the road is a gentle
+10.8% because it goes round three times, so the thing it goes round is free to
+be dramatic. At 46 m it is half again the height of anything on the mainland.
+
+### Why the arc length is measured in three dimensions
+
+Stepping tiles by equal distance **over the map** would bunch them wherever the
+cone is steepest, because a metre of map is more than a metre of walking there
+— and the steepest stretch is the middle of the climb, so the error would sit
+exactly where it shows. The arc table carries `dh/dr` for that reason, taken as
+a central difference on the island's own height function so the road cannot
+disagree with the hill it is on.
+
+Measured: gaps along the ground vary by 0.6%, where the flat measure would let
+them vary by 1.9%. A test asserts the three-dimensional spacing is the more
+even of the two, so this cannot quietly become pointless work.
 
 The one thing that is easy to get subtly wrong is the spacing. An Archimedean
 spiral walked at a constant *angle* bunches its tiles up as the radius
@@ -160,6 +186,22 @@ transport never learns what a board game is, and this module never learns what
 a WebSocket is. Adding a dice roll later is a new message shape here and no
 change at all to the relay or to `09-net`.
 
+## The island was invisible
+
+Worth writing down, because nothing about it looked like a bug.
+
+The land mesh was **wound inside out**. three.js draws front faces only, front
+means anticlockwise seen from outside, and `computeVertexNormals` takes its
+normals from the same winding — so every triangle of the island faced the sea
+bed. From anywhere a player could stand the ground was not dark, it was *not
+there*: you looked straight through the island at the water, and only the
+tiles, the rim and the treasure were left hanging in the air.
+
+No other test in this module noticed, and none of them could have: they all
+asked about heights and positions, which were right the whole time. The shape
+now lives in `internal/mesh.ts` as plain arrays, with no three.js in it, and a
+test walks every triangle and checks it faces the sky.
+
 ## Known limitations
 
 - **Arriving is a teleport**, with no transition. You are on one beach and then
@@ -169,6 +211,11 @@ change at all to the relay or to `09-net`.
 - **The volcano is scenery.** It does not erupt, and the treasure cannot be
   picked up — there is a currency module waiting for it, and nothing connects
   the two yet.
+- **Nothing stops you walking straight up the cone** beside the track. The road
+  is the scenic route, not the only one.
+- **The plateau is now empty.** The track used to cross it and now climbs the
+  volcano instead, so 235 m of flat sand has nothing on it but the walk to the
+  start.
 - **The teleport lays one stray footprint** and fires one footstep, because
   both systems see a very large step. Harmless, and cheaper to live with than
   to plumb a "do not count this" flag through two modules.
@@ -190,10 +237,18 @@ Two browsers in one lobby; `DEPLOY.md` has the commands.
 - **Ready up on both, then press start.** Both ducks should arrive on the
   starting line, side by side, facing along the track, and both should be able
   to walk.
-- **Run the whole spiral.** Three turns, tiles evenly spaced the whole way —
-  no bunching as it tightens, no gaps at the start. It should finish at the
-  foot of the volcano.
-- **Look up from the last tile.** The treasure should be on top.
+- **Look at the island from the water.** You should see *ground* — sand, lit
+  from above. If the island is a floating ring of tiles over open sea, the mesh
+  is inside out again.
+- **Walk the spiral from the first tile.** Three turns up the cone, climbing
+  every step, tiles evenly spaced the whole way — no bunching where it steepens
+  and none where it tightens.
+- **Stand on a tile.** It should be about half again your own width: room to
+  stand, and no more.
+- **Look up from halfway.** You should be able to see the track above you
+  wrapping the cone, and the treasure over the rim.
+- **Step off the last tile.** The treasure should be right there, inside the
+  crater rim.
 - **Walk into the sea off the party island.** You should swim, in water that
   shallows properly at its beach — if the sea is drawn over the island, the
   height function has not reached it.

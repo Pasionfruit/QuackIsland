@@ -60,8 +60,8 @@ whoever joined first, and it hands over on its own when they leave.
 The **party** dashboard is under the perf panel, top left. The host opens a
 board game, everybody presses ready, and the host starts it — which puts
 everyone on the starting line of a 120-tile spiral race on a second island
-across the water — 580 m of it, running in from the beach to a 125 m volcano
-with treasure on top.
+across the water — 580 m of it, the track winding three times up a 46 m volcano
+to the treasure in its crater.
 Hold **Tab** for everyone in the lobby, their ping and whether they are ready.
 
 That island is always there. You can swim to it without joining anything.

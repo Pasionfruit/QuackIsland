@@ -1,6 +1,6 @@
 /**
- * The board: a hundred and twenty tiles spiralling in from the shore to the
- * foot of the volcano.
+ * The board: a hundred and twenty tiles spiralling **up the volcano**, from
+ * its foot to the crater rim.
  *
  * Pure, and the one thing in here that is easy to get subtly wrong is the
  * spacing. An Archimedean spiral walked at a constant *angle* puts its tiles
@@ -9,30 +9,38 @@
  * be stepped along by **arc length** instead, which needs the length of the
  * curve, which needs integrating it.
  *
+ * Now that the track climbs, that arc length is measured **in three
+ * dimensions**. Stepping by the distance over the ground would bunch the tiles
+ * wherever the cone is steepest, because a metre of map is more than a metre
+ * of walking there - and the steepest part is the middle of the climb, so the
+ * error would sit right where it shows.
+ *
  * That is the whole difficulty, and it is entirely testable: the gaps between
  * consecutive tiles should all be the same to within a hair.
  */
+import { PLAYER } from '../../02-player'
 import { ISLAND, partyHeightLocal } from './island'
 
 export const BOARD = {
   /** How many tiles. A hundred and twenty, as asked for. */
   tiles: 120,
-  /** Where the race starts: out by the beach. */
-  outer: 210,
-  /** Where it finishes: at the foot of the volcano. */
-  inner: ISLAND.volcano + 1.5,
+  /** Where the race starts: on the cone, just inside its foot. */
+  outer: ISLAND.volcano - 2,
+  /** Where it finishes: at the crater rim, with the treasure a step away. */
+  inner: ISLAND.crater + 1,
   /** How many times round. Three reads as a spiral without being a maze. */
   turns: 3,
   /**
-   * How wide a tile is, in metres.
+   * How wide a tile is: **half again as wide as the duck standing on it**.
    *
-   * Sized against the *track*, not against the duck. On an island this size a
-   * tile a duck's width across would be a speck two dozen metres from the next
-   * one, and the spiral would read as a dotted line rather than a road.
+   * Written against the duck rather than as a number, because that is the
+   * actual requirement - a tile you can stand on with a little room, and no
+   * more. Everything else about the track is then sized to suit it: the cone
+   * is as big as 120 tiles this size can wrap three times.
    */
-  tileRadius: 8,
+  tileRadius: PLAYER.radius * 1.5,
   /** How far a tile sits above the board, so it reads as laid on it. */
-  tileLift: 0.2,
+  tileLift: 0.05,
   /** Every nth tile is marked, so progress is countable at a glance. */
   markEvery: 10,
 } as const
@@ -63,25 +71,49 @@ function radiusAt(theta: number): number {
 }
 
 /**
- * The length of the spiral up to an angle, and in total.
+ * How steeply the ground climbs where the track is, per metre of radius.
  *
- * `ds = sqrt(r^2 + (dr/dtheta)^2) dtheta`, integrated numerically. There is a
- * closed form and it is horrible; a thousand steps of the trapezium rule is
- * accurate to well under a millimetre here and is obviously right.
+ * A central difference on the island's own height function rather than a
+ * formula of its own, so the road cannot disagree with the hill it is on.
+ */
+function groundSlopeAt(radius: number): number {
+  const d = 0.05
+  return (partyHeightLocal(radius + d) - partyHeightLocal(radius - d)) / (2 * d)
+}
+
+/**
+ * The length of the spiral up to an angle, and in total - along the ground it
+ * actually climbs.
+ *
+ * `ds = sqrt(r^2 + (dr/dtheta)^2 * (1 + (dh/dr)^2)) dtheta`, integrated
+ * numerically. The `dh/dr` term is what makes this a road up a cone rather
+ * than a drawing of one seen from above: on the steep middle of the climb a
+ * metre of map is more than a metre of walking, and stepping tiles by the map
+ * would bunch them exactly there.
+ *
+ * There is a closed form for the flat case and it is horrible; there is none
+ * for this one. Two thousand steps of the trapezium rule is accurate to well
+ * under a millimetre here and is obviously right.
  */
 function arcTable(steps = 2000): { theta: number[]; arc: number[] } {
   const total = BOARD.turns * TURN
   const dr = (BOARD.inner - BOARD.outer) / total
+  const speedAt = (t: number) => {
+    const r = radiusAt(t)
+    const climb = groundSlopeAt(r) * dr
+    return Math.sqrt(r * r + dr * dr + climb * climb)
+  }
+
   const theta: number[] = []
   const arc: number[] = []
   let running = 0
-  let previous = Math.hypot(radiusAt(0), dr)
+  let previous = speedAt(0)
 
   theta.push(0)
   arc.push(0)
   for (let i = 1; i <= steps; i++) {
     const t = (i / steps) * total
-    const speed = Math.hypot(radiusAt(t), dr)
+    const speed = speedAt(t)
     running += ((previous + speed) / 2) * (total / steps)
     previous = speed
     theta.push(t)
