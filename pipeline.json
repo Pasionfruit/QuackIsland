@@ -325,12 +325,17 @@
           "id": "02.8",
           "title": "Swappable ground and a teleport, for worlds other than the island",
           "status": "done"
+        },
+        {
+          "id": "02.9",
+          "title": "Optional collide callback, so the scene can supply solid things",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T02:38:20.516Z"
+          "at": "2026-09-09T02:52:34.208Z"
         },
         "human": {
           "status": "pending"
@@ -955,7 +960,7 @@
     {
       "id": "12-rocks",
       "phase": "P2",
-      "title": "Rocks of every size around the island, settled onto the ground they sit on",
+      "title": "Rocks of every size around the island, solid enough to bump into and stand on",
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
@@ -988,12 +993,17 @@
           "id": "12.4",
           "title": "Contract, tests, MODULE.md",
           "status": "done"
+        },
+        {
+          "id": "12.4",
+          "title": "Solid rocks: bump into, step over, jump onto",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T02:39:47.658Z"
+          "at": "2026-09-09T02:54:20.866Z"
         },
         "human": {
           "status": "pending"
@@ -1002,9 +1012,10 @@
       },
       "freeze": null,
       "nonGoals": [
-        "No collision - you walk through them, boulders included",
-        "No picking up, climbing, pushing or breaking",
-        "No rock faces, cliffs or outcrops; changing the island shape belongs to 01-terrain",
+        "No physics: rocks are cylinders to walk into and discs to stand on; nothing rolls or tips",
+        "No removing rocks and nothing to do with shells; the seam is documented, the buying is not built",
+        "No picking up, pushing or breaking",
+        "No rock faces, cliffs or outcrops; changing the shape of the island belongs to 01-terrain",
         "No moss, lichen, cracks or texture",
         "No rocks on the sea bed beyond the shallows"
       ],

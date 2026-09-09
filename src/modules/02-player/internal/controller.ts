@@ -127,6 +127,18 @@ export interface StepOptions {
    * whether the player swims, only how they sit while swimming.
    */
   surfaceAt?: (x: number, z: number) => number
+  /**
+   * Anything solid to be pushed out of, given where the body is trying to be.
+   *
+   * Returns a corrected position, so it can slide the body round an obstacle
+   * rather than stopping it dead. Passed in for the same reason as the ground:
+   * this file has no idea what a rock is, and does not need one.
+   *
+   * It is handed the feet rather than the middle, because how far up something
+   * is compared with your feet is the whole question - below a step it is a
+   * kerb, above it a wall, and past your feet entirely it is a floor.
+   */
+  collide?: (x: number, z: number, feetY: number, radius: number) => { x: number; z: number }
 }
 
 function shortestAngle(from: number, to: number): number {
@@ -190,6 +202,14 @@ export function stepPlayer(
   if (bounds) {
     state.x = Math.min(Math.max(state.x, bounds.minX), bounds.maxX)
     state.z = Math.min(Math.max(state.z, bounds.minZ), bounds.maxZ)
+  }
+
+  // Pushed out of anything solid before the ground is sampled, or the ground
+  // under the body would be the top of the thing it is standing inside.
+  if (opts.collide) {
+    const pushed = opts.collide(state.x, state.z, state.y, PLAYER.radius)
+    state.x = pushed.x
+    state.z = pushed.z
   }
 
   const ground = groundAt(state.x, state.z)

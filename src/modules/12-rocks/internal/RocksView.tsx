@@ -19,8 +19,9 @@ import {
   type BufferGeometry,
 } from 'three'
 import { CONVENTIONS, createRng, hashSeed } from '../../00-core'
-import { heightAt, slopeAt, worldBounds } from '../../01-terrain'
-import { ROCKS, ROCK_COLOURS, scatterRocks, type Rock, type RockClass } from './rocks'
+import { halfExtents } from './collide'
+import { getRocks } from './field'
+import { ROCKS, ROCK_COLOURS, type Rock, type RockClass } from './rocks'
 
 /** An icosahedron with its vertices knocked about, so it reads as stone. */
 function buildRock(rockClass: RockClass): BufferGeometry {
@@ -75,9 +76,12 @@ function Scattered({ rocks, rockClass }: { rocks: Rock[]; rockClass: RockClass }
 
     for (let i = 0; i < rocks.length; i++) {
       const rock = rocks[i]
-      // `y` is where the bottom rests, and the geometry is centred, so the
-      // middle sits half a rock above it.
-      dummy.position.set(rock.x, rock.y + rock.scaleY, rock.z)
+      // `y` is where the bottom rests and the geometry is centred, so the
+      // middle sits half a rock above it - where "half a rock" is the height
+      // of the *tumbled* ellipsoid, not its `scaleY`. Using `scaleY` is only
+      // right for a rock that has not been turned, and every other one was
+      // floating or buried by the difference.
+      dummy.position.set(rock.x, rock.y + halfExtents(rock).y, rock.z)
       dummy.rotation.set(rock.turnX, rock.turnY, rock.turnZ)
       dummy.scale.set(rock.scaleX, rock.scaleY, rock.scaleZ)
       dummy.updateMatrix()
@@ -107,18 +111,9 @@ function Scattered({ rocks, rockClass }: { rocks: Rock[]; rockClass: RockClass }
 }
 
 export function Rocks() {
-  // One scatter for every class at once, so the boulders get the pick of the
-  // ground and nothing is placed on top of anything else.
-  const all = useMemo(() => {
-    const bounds = worldBounds()
-    return scatterRocks(
-      { heightAt, slopeAt },
-      {
-        reach: Math.min(bounds.maxX, bounds.maxZ),
-        random: createRng(hashSeed(CONVENTIONS.worldSeed, 'rocks')),
-      },
-    )
-  }, [])
+  // The same list the collision uses. One scatter, one answer about where the
+  // rocks are - two would be two islands that looked identical and were not.
+  const all = useMemo(() => getRocks(), [])
 
   return (
     <>

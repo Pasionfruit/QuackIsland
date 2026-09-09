@@ -11,6 +11,20 @@
  */
 
 export {
+  COLLISION,
+  girthOf,
+  halfExtents,
+  resolveRocks,
+  rotationXYZ,
+  solidify,
+  standHeightAt,
+  topOf,
+  type SolidRock,
+} from './internal/collide'
+
+export { getRocks, getSolidRocks } from './internal/field'
+
+export {
   ROCKS,
   ROCK_COLOURS,
   scatterClass,

@@ -121,7 +121,7 @@ world is reproducible and testable.
 | `09-net` | Lobbies by code, and everyone else’s duck |
 | `10-party` | Party island: a 120-tile spiral race to a volcano with treasure |
 | `11-currency` | Fish, shells and grapes: the wallet and the readout |
-| `12-rocks` | Rocks of every size around the island, in three draw calls |
+| `12-rocks` | Rocks of every size, solid enough to bump into and stand on |
 
 Next up: a sky dome driving the day cycle that `00-core` already exposes, then
 the Meshy asset pipeline and vegetation placed against the terrain's height

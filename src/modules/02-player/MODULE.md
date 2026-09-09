@@ -26,7 +26,7 @@ three.js in it, so how the player moves is tested in Node rather than by eye.
 | Export | Meaning |
 | --- | --- |
 | `Player` | The R3F component. Registered in `src/app/scene.ts` |
-| `PlayerProps` | `{ spawnX?, spawnZ?, surfaceAt? }` |
+| `PlayerProps` | `{ spawnX?, spawnZ?, surfaceAt?, groundAt?, bounds?, collide? }` |
 | `toggleViewMode()` / `setViewMode(m)` / `useViewMode()` | First or third person |
 | `placeCamera(mode, rig, player, eyeHeight, groundAt?)` | Where the camera goes. Pure |
 | `lookDirection(yaw, pitch)` | The way it looks. Pure, shared by both views |
@@ -36,7 +36,7 @@ three.js in it, so how the player moves is tested in Node rather than by eye.
 | `fitToHeight(bounds, height)` | The scale and lift that stand a model on the ground. Pure |
 | `stepPlayer(state, input, dt, groundAt, opts?)` | One step of movement. Pure |
 | `createPlayer(x, z, groundAt)` | A player standing on the ground at that spot |
-| `StepOptions` | `{ bounds?, seaLevel?, surfaceAt? }`. All optional |
+| `StepOptions` | `{ bounds?, seaLevel?, surfaceAt?, collide? }`. All optional |
 | `PlayerState` | `{ x, y, z, vy, facing, grounded, speed, swimming, lean }`. `y` is at the feet |
 | `PlayerInput` | `{ forward, back, left, right, jump, run, cameraYaw }` |
 | `PLAYER` | Speeds (walk, run, swim), gravity, capsule size, eye height, depths |
@@ -47,6 +47,17 @@ three.js in it, so how the player moves is tested in Node rather than by eye.
 
 `groundAt` is passed in rather than imported, so a test can hand it flat ground
 or a slope. The component passes `heightAt` from `01-terrain`.
+
+`collide` is passed in for the same reason, and it is the sharpest example:
+this module has never heard of a rock, and rocks have never heard of a player.
+It is handed where the body is trying to be and returns where it may actually
+be, so an obstacle can slide the body round itself rather than stopping it
+dead. It gets the **feet**, not the middle, because how high something is
+compared with your feet is the whole question — below them it is floor, just
+above them a step, well above them a wall.
+
+It runs after the bounds clamp and **before the ground is sampled**, or the
+ground under the body would be the top of the thing it is standing inside.
 
 `seaLevel` and `surfaceAt` are passed in the same way, and for a stronger
 reason — see **Why the water module does not own swimming** below.

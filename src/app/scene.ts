@@ -16,7 +16,7 @@ import { Footprints } from '../modules/03-footprints'
 import { Water, swellAt } from '../modules/04-water'
 import { Sky } from '../modules/06-sky'
 import { Shore } from '../modules/07-shore'
-import { Rocks } from '../modules/12-rocks'
+import { Rocks, getSolidRocks, resolveRocks, standHeightAt } from '../modules/12-rocks'
 import { AudioCues } from '../modules/08-audio'
 import { NetPlayers } from '../modules/09-net'
 import { ISLAND, Party, groundWithIsland } from '../modules/10-party'
@@ -39,12 +39,13 @@ import { ISLAND, Party, groundWithIsland } from '../modules/10-party'
 const PlayerOnSea = () =>
   createElement(Player, {
     surfaceAt: (x: number, z: number, time: number) => (waterVisible() ? swellAt(x, z, time) : 0),
-    groundAt: currentGround,
+    groundAt: standOn,
     bounds: currentBounds(),
+    collide: pushOutOfRocks,
   })
 
 /** Prints land on whatever the ground currently is, for the same reason. */
-const PrintsOnGround = () => createElement(Footprints, { groundAt: currentGround })
+const PrintsOnGround = () => createElement(Footprints, { groundAt: standOn })
 
 /** The sea knows about both islands, or it is drawn over one of them. */
 const SeaOverBoth = () => createElement(Water, { depthAt: currentGround })
@@ -72,6 +73,36 @@ function waterVisible(): boolean {
  */
 function currentGround(x: number, z: number): number {
   return groundWithIsland(x, z, heightAt)
+}
+
+/**
+ * The ground, plus the tops of any rocks you are standing over.
+ *
+ * What the player and the footprints walk on. Standing on a rock is nothing
+ * more than this: the ground reports the top of the rock, and everything the
+ * player already does - falling, landing, the ground snap - works on a boulder
+ * without knowing a boulder exists.
+ *
+ * The **sea** deliberately does not get this one. Its depth is baked once over
+ * a hundred and thirty thousand vertices, and asking each of them about four
+ * hundred rocks would be sixty million checks to make the water very slightly
+ * shallower beside some boulders.
+ */
+function standOn(x: number, z: number): number {
+  return standHeightAt(x, z, getSolidRocks(), currentGround(x, z))
+}
+
+/**
+ * Pushes the body out of any rock it has walked into.
+ *
+ * This has to exist *because* of `standOn`: a ground function that reports the
+ * top of a three-metre boulder will teleport you up it the moment you touch
+ * its edge, because the controller snaps up to the ground whenever it finds
+ * itself below it. Anything worth climbing has to be solid enough to stop you
+ * walking through.
+ */
+function pushOutOfRocks(x: number, z: number, feetY: number, radius: number) {
+  return resolveRocks(x, z, feetY, radius, getSolidRocks())
 }
 
 /**

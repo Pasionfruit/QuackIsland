@@ -115,9 +115,24 @@ export interface PlayerProps {
    * on what is in it, and this module only needs to know where the edge is.
    */
   bounds?: { minX: number; maxX: number; minZ: number; maxZ: number }
+  /**
+   * Anything solid in the way, if there is any.
+   *
+   * Passed in for the same reason as the ground: this module has never heard
+   * of a rock, and the thing composing the scene is the only place that knows
+   * both that rocks exist and that a player does.
+   */
+  collide?: (x: number, z: number, feetY: number, radius: number) => { x: number; z: number }
 }
 
-export function Player({ spawnX = 0, spawnZ = 0, surfaceAt, groundAt = heightAt, bounds: given }: PlayerProps) {
+export function Player({
+  spawnX = 0,
+  spawnZ = 0,
+  surfaceAt,
+  groundAt = heightAt,
+  bounds: given,
+  collide,
+}: PlayerProps) {
   const camera = useThree((s) => s.camera)
   const domElement = useThree((s) => s.gl.domElement)
   const body = useRef<Group>(null)
@@ -270,6 +285,12 @@ export function Player({ spawnX = 0, spawnZ = 0, surfaceAt, groundAt = heightAt,
   const ground = useRef(groundAt)
   ground.current = groundAt
 
+  // Held in a ref for the same reason as the ground: read every frame, and
+  // re-running the movement effect because a callback identity changed would
+  // reset the player.
+  const solid = useRef(collide)
+  solid.current = collide
+
   const camWant = useMemo(() => new Vector3(), [])
   const camLook = useMemo(() => new Vector3(), [])
 
@@ -297,6 +318,7 @@ export function Player({ spawnX = 0, spawnZ = 0, surfaceAt, groundAt = heightAt,
       bounds,
       seaLevel: still.current,
       surfaceAt: surface,
+      collide: solid.current,
     })
 
     // Shared with every remote duck, so they cannot sit at different heights.
