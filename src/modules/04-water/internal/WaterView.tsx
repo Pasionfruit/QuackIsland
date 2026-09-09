@@ -53,7 +53,7 @@ const DEEP = new Color('#1f4f63')
  * A plane lying flat at sea level, carrying how deep the water is at each
  * vertex.
  */
-function buildWater(): PlaneGeometry {
+function buildWater(depthAt: (x: number, z: number) => number): PlaneGeometry {
   const g = new PlaneGeometry(WATER_HALF * 2, WATER_HALF * 2, WATER_SEGMENTS, WATER_SEGMENTS)
   g.rotateX(-Math.PI / 2)
 
@@ -64,7 +64,7 @@ function buildWater(): PlaneGeometry {
     // Deliberately not clamped at zero: the tide has to be able to put ground
     // that stands above the mean line under water, and a clamped value has
     // already thrown away how far above it was.
-    depth[i] = SEA_LEVEL - heightAt(pos.getX(i), pos.getZ(i))
+    depth[i] = SEA_LEVEL - depthAt(pos.getX(i), pos.getZ(i))
   }
   g.setAttribute('aDepth', new BufferAttribute(depth, 1))
   return g
@@ -152,9 +152,20 @@ function createWaterMaterial(): MeshStandardMaterial {
   return material
 }
 
-export function Water() {
+export interface WaterProps {
+  /**
+   * The sea bed, if it is not the island's.
+   *
+   * Depth is baked into the mesh once, so this is the only chance the sea gets
+   * to hear about anything else in the world - and a sea that had not heard of
+   * an island would be drawn straight over the top of it.
+   */
+  depthAt?: (x: number, z: number) => number
+}
+
+export function Water({ depthAt = heightAt }: WaterProps) {
   const mesh = useRef<Mesh>(null)
-  const geometry = useMemo(() => buildWater(), [])
+  const geometry = useMemo(() => buildWater(depthAt), [depthAt])
   const material = useMemo(() => createWaterMaterial(), [])
 
   useEffect(() => {

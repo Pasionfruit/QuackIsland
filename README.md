@@ -59,8 +59,11 @@ whoever joined first, and it hands over on its own when they leave.
 
 The **party** dashboard is under the perf panel, top left. The host opens a
 board game, everybody presses ready, and the host starts it — which puts
-everyone on a shared island in the sky. Hold **Tab** for everyone in the lobby,
-their ping and whether they are ready.
+everyone on the starting line of a 120-tile spiral race on a second island
+across the water, running in from the beach to a volcano with treasure on top.
+Hold **Tab** for everyone in the lobby, their ping and whether they are ready.
+
+That island is always there. You can swim to it without joining anything.
 
 **[DEPLOY.md](DEPLOY.md)** has the rest: running it as one process, and putting
 it on a free host.
@@ -116,7 +119,7 @@ world is reproducible and testable.
 | `07-shore` | Shells and coloured pebbles along the water line, in three draw calls |
 | `08-audio` | Footsteps, jumps, landings and swim strokes |
 | `09-net` | Lobbies by code, and everyone else’s duck |
-| `10-party` | Host a board game, everyone readies, all move to an island in the sky |
+| `10-party` | Party island: a 120-tile spiral race to a volcano with treasure |
 | `11-currency` | Fish, shells and grapes: the wallet and the readout |
 | `12-rocks` | Rocks of every size around the island, in three draw calls |
 

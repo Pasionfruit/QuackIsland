@@ -10,7 +10,7 @@
  */
 import { createElement } from 'react'
 import type { SceneEntry } from '../modules/00-core'
-import { Terrain, heightAt } from '../modules/01-terrain'
+import { Terrain, heightAt, worldBounds } from '../modules/01-terrain'
 import { Player } from '../modules/02-player'
 import { Footprints } from '../modules/03-footprints'
 import { Water, swellAt } from '../modules/04-water'
@@ -19,7 +19,7 @@ import { Shore } from '../modules/07-shore'
 import { Rocks } from '../modules/12-rocks'
 import { AudioCues } from '../modules/08-audio'
 import { NetPlayers } from '../modules/09-net'
-import { Party, arenaHeightAt, getParty } from '../modules/10-party'
+import { ISLAND, Party, groundWithIsland } from '../modules/10-party'
 
 /**
  * The player, floating on the actual swell rather than on a flat mean level -
@@ -40,10 +40,14 @@ const PlayerOnSea = () =>
   createElement(Player, {
     surfaceAt: (x: number, z: number, time: number) => (waterVisible() ? swellAt(x, z, time) : 0),
     groundAt: currentGround,
+    bounds: currentBounds(),
   })
 
 /** Prints land on whatever the ground currently is, for the same reason. */
 const PrintsOnGround = () => createElement(Footprints, { groundAt: currentGround })
+
+/** The sea knows about both islands, or it is drawn over one of them. */
+const SeaOverBoth = () => createElement(Water, { depthAt: currentGround })
 
 /** Whether the sea is currently being drawn. Read per frame; it is a toggle. */
 function waterVisible(): boolean {
@@ -51,26 +55,48 @@ function waterVisible(): boolean {
 }
 
 /**
- * The ground everybody is standing on.
+ * The ground, everywhere, all the time.
  *
- * While a board game is running that is the arena in the sky; otherwise it is
- * the island. Deciding it here rather than in either module is the point: the
- * player does not know a board game exists, and the party module does not know
- * how footprints are drawn. The composition root is the one place allowed to
- * know both.
+ * Two islands in one sea: the spawn island at the origin and the party island
+ * out across the water. Not switched by whether a game is running - the party
+ * island is a place that exists, and you can swim to it.
  *
- * Outside the board it falls back to the island, so walking off the edge drops
- * you home rather than into nothing.
+ * Deciding it here rather than in either module is the point: the player does
+ * not know a board game exists, and the party module does not know how
+ * footprints are drawn. The composition root is the one place allowed to know
+ * both.
+ *
+ * The **sea** is given this too, and has to be: its depth is baked once from a
+ * height function, and a sea that had never heard of the party island would be
+ * drawn straight over the top of it.
  */
 function currentGround(x: number, z: number): number {
-  return getParty().phase === 'playing' ? arenaHeightAt(x, z, heightAt) : heightAt(x, z)
+  return groundWithIsland(x, z, heightAt)
+}
+
+/**
+ * How far you may wander.
+ *
+ * Wide enough to reach the party island and swim back, and no wider - past
+ * this there is nothing but the edge of the sea plane, which is not a thing
+ * anybody should be able to walk up to.
+ */
+function currentBounds(): { minX: number; maxX: number; minZ: number; maxZ: number } {
+  const island = worldBounds()
+  const margin = ISLAND.foot + 30
+  return {
+    minX: Math.min(island.minX, ISLAND.centreX - margin),
+    maxX: Math.max(island.maxX, ISLAND.centreX + margin),
+    minZ: Math.min(island.minZ, ISLAND.centreZ - margin),
+    maxZ: Math.max(island.maxZ, ISLAND.centreZ + margin),
+  }
 }
 
 export const SCENE: SceneEntry[] = [
   { id: '01-terrain', order: 10, enabled: true, Component: Terrain },
   { id: '02-player', order: 20, enabled: true, Component: PlayerOnSea },
   { id: '03-footprints', order: 30, enabled: true, Component: PrintsOnGround },
-  { id: '04-water', order: 40, enabled: true, Component: Water },
+  { id: '04-water', order: 40, enabled: true, Component: SeaOverBoth },
   { id: '06-sky', order: 60, enabled: true, Component: Sky },
   { id: '07-shore', order: 70, enabled: true, Component: Shore },
   { id: '12-rocks', order: 75, enabled: true, Component: Rocks },

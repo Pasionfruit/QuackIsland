@@ -108,9 +108,16 @@ export interface PlayerProps {
    * everybody on a board in the sky and hands over its own height function.
    */
   groundAt?: (x: number, z: number) => number
+  /**
+   * How far the player may wander, if it is not the meshed island.
+   *
+   * Passed in for the same reason as the ground: how big the world is depends
+   * on what is in it, and this module only needs to know where the edge is.
+   */
+  bounds?: { minX: number; maxX: number; minZ: number; maxZ: number }
 }
 
-export function Player({ spawnX = 0, spawnZ = 0, surfaceAt, groundAt = heightAt }: PlayerProps) {
+export function Player({ spawnX = 0, spawnZ = 0, surfaceAt, groundAt = heightAt, bounds: given }: PlayerProps) {
   const camera = useThree((s) => s.camera)
   const domElement = useThree((s) => s.gl.domElement)
   const body = useRef<Group>(null)
@@ -122,9 +129,9 @@ export function Player({ spawnX = 0, spawnZ = 0, surfaceAt, groundAt = heightAt 
   const jumpEdge = useRef(false)
 
   const bounds = useMemo(() => {
-    const b = worldBounds()
+    const b = given ?? worldBounds()
     return { minX: b.minX + 2, maxX: b.maxX - 2, minZ: b.minZ + 2, maxZ: b.maxZ - 2 }
-  }, [])
+  }, [given])
 
   useEffect(() => {
     live = state

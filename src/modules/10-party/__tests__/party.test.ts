@@ -1,16 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import {
-  PARTY,
-  allReady,
-  arenaHeightAt,
-  canStart,
-  decodeParty,
-  encodeParty,
-  spawnFor,
-  waitingFor,
-} from '../internal/party'
+import { allReady, canStart, decodeParty, encodeParty, waitingFor } from '../internal/party'
 
-const island = (x: number, z: number) => 12 - Math.hypot(x, z) * 0.02
 const readySet = (...ids: string[]) => new Set(ids)
 
 describe('everybody being ready', () => {
@@ -71,85 +61,6 @@ describe('whether start can be pressed', () => {
   it('still needs the host to be ready when alone', () => {
     expect(canStart('gathering', true, ['host'], readySet())).toBe(false)
     expect(canStart('gathering', true, ['host'], readySet('host'))).toBe(true)
-  })
-})
-
-describe('the board in the sky', () => {
-  it('is flat on top, at one height', () => {
-    for (const [x, z] of [[0, 0], [10, 0], [0, -20], [18, 18]] as const) {
-      if (Math.hypot(x, z) > PARTY.radius) continue
-      expect(arenaHeightAt(x, z, island)).toBe(PARTY.height)
-    }
-  })
-
-  it('drops you back onto the island past the edge', () => {
-    // Falling forever is a much worse accident than landing at home, and this
-    // saves the board needing a railing.
-    const out = PARTY.radius + 5
-    expect(arenaHeightAt(out, 0, island)).toBeCloseTo(island(out, 0), 9)
-    expect(arenaHeightAt(0, -out, island)).toBeCloseTo(island(0, -out), 9)
-  })
-
-  it('has an edge to fall off, not a slope to walk down', () => {
-    const inside = arenaHeightAt(PARTY.radius - 0.01, 0, island)
-    const outside = arenaHeightAt(PARTY.radius + 0.01, 0, island)
-    expect(inside - outside).toBeGreaterThan(50)
-  })
-
-  it('floats well clear of anything on the island', () => {
-    // Standing on the board you should be looking down at the world, not
-    // through a dune.
-    expect(PARTY.height).toBeGreaterThan(50)
-  })
-
-  it('is big enough to stand a lobby on and small enough to see across', () => {
-    expect(PARTY.radius).toBeGreaterThan(12)
-    expect(PARTY.radius).toBeLessThan(60)
-  })
-})
-
-describe('where everyone arrives', () => {
-  it('puts everybody on the board, well inside the edge', () => {
-    // Spawning on the rim means somebody holding a key walks straight off it.
-    for (const count of [1, 2, 4, 8, 16]) {
-      for (let i = 0; i < count; i++) {
-        const spot = spawnFor(i, count)
-        const reach = Math.hypot(spot.x, spot.z)
-        expect(reach).toBeLessThanOrEqual(PARTY.radius - PARTY.spawnInset + 1e-9)
-        expect(arenaHeightAt(spot.x, spot.z, island)).toBe(PARTY.height)
-      }
-    }
-  })
-
-  it('never puts two people in the same place', () => {
-    for (const count of [2, 4, 8, 16]) {
-      const spots = Array.from({ length: count }, (_, i) => spawnFor(i, count))
-      for (let i = 0; i < spots.length; i++) {
-        for (let j = i + 1; j < spots.length; j++) {
-          const apart = Math.hypot(spots[i].x - spots[j].x, spots[i].z - spots[j].z)
-          // Further apart than a duck is wide, at the fullest lobby.
-          expect(apart).toBeGreaterThan(1.5)
-        }
-      }
-    }
-  })
-
-  it('spreads them evenly rather than bunching them up', () => {
-    const spots = Array.from({ length: 8 }, (_, i) => spawnFor(i, 8))
-    const gaps = spots.map((s, i) => {
-      const next = spots[(i + 1) % spots.length]
-      return Math.hypot(s.x - next.x, s.z - next.z)
-    })
-    expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThan(0.01)
-  })
-
-  it('copes with an index or a count that makes no sense', () => {
-    for (const [index, count] of [[0, 0], [5, 1], [-3, 4], [99, 4]] as const) {
-      const spot = spawnFor(index, count)
-      expect(Number.isFinite(spot.x)).toBe(true)
-      expect(Number.isFinite(spot.z)).toBe(true)
-      expect(Math.hypot(spot.x, spot.z)).toBeLessThanOrEqual(PARTY.radius)
-    }
   })
 })
 

@@ -6,57 +6,81 @@
  * either strands people on the beach or drops somebody onto the board who was
  * not looking.
  *
- * The arena is a separate island in the sky above the main one. Above rather
- * than beside because everything else in this world is centred on the origin -
- * the sea is a plane 1800 m across and the terrain mesh stops at 288 m - so a
- * second island out to the side would sit next to two visible edges. Straight
- * up there is nothing but sky.
+ * The board is on its own island, out across the water from the spawn island.
+ * Where it is and what shape it is live in `island.ts`; the spiral of tiles
+ * lives in `board.ts`.
  */
+import { ISLAND, distanceFromIsland, partyHeightLocal } from './island'
+import { BOARD, buildBoard } from './board'
 
 export type PartyPhase = 'off' | 'gathering' | 'playing'
 
 export const PARTY = {
-  /** How high above the sea the board floats. */
-  height: 96,
-  /** How far across the board is, in metres. */
-  radius: 26,
-  /** How thick the slab is. Only ever seen from below or from the edge. */
-  depth: 3.2,
   /**
-   * How far in from the edge players are placed.
+   * How far behind the first tile players line up, in metres.
    *
-   * Not on the rim: somebody spawned exactly on the edge and holding a key
-   * walks straight off it.
+   * Behind rather than on it: arriving standing on the start of a race is
+   * fine, arriving inside the tile you are about to run from is not.
    */
-  spawnInset: 6,
-  /** How far above the board players arrive, so they land rather than clip. */
-  spawnLift: 0.5,
+  startBack: 4,
+  /** How far apart the starting line is spread, in metres. */
+  startSpread: 2.6,
+  /** How far above the ground players arrive, so they land rather than clip. */
+  spawnLift: 0.6,
 } as const
 
 /**
- * The height of the world while a party is running.
+ * Where the nth of `count` players lines up when the race starts.
  *
- * Inside the board it is the board. Outside it falls back to whatever the
- * ground was before, so walking off the edge drops you back onto the island
- * rather than into nothing - which is a much better accident than falling
- * forever, and needs no railing.
+ * On the starting line, which is just outside the first tile, spread sideways
+ * across the track. World coordinates, because that is what the teleport
+ * wants.
+ *
+ * Sideways rather than in a ring: this is the start of a race, everybody
+ * should be facing the same way with the same distance to run, and a ring
+ * would give whoever spawned nearest the second tile a free head start.
  */
-export function arenaHeightAt(
-  x: number,
-  z: number,
-  below: (x: number, z: number) => number,
-): number {
-  return Math.hypot(x, z) <= PARTY.radius ? PARTY.height : below(x, z)
-}
-
-/** Where the nth of `count` players stands when the board opens. */
-export function spawnFor(index: number, count: number): { x: number; z: number } {
+export function spawnFor(index: number, count: number): { x: number; y: number; z: number } {
   const total = Math.max(1, count)
   const nth = ((index % total) + total) % total
-  const ring = PARTY.radius - PARTY.spawnInset
-  // Spread evenly round a ring, so nobody arrives inside anybody else.
-  const angle = (nth / total) * Math.PI * 2
-  return { x: Math.sin(angle) * ring, z: Math.cos(angle) * ring }
+
+  const tiles = buildBoard()
+  const start = tiles[0]
+  const next = tiles[1] ?? start
+
+  // Along the track, pointing from the second tile back to the first, which is
+  // the direction the runners face.
+  const alongX = start.x - next.x
+  const alongZ = start.z - next.z
+  const alongLength = Math.hypot(alongX, alongZ) || 1
+  const backX = alongX / alongLength
+  const backZ = alongZ / alongLength
+  // And across it.
+  const sideX = -backZ
+  const sideZ = backX
+
+  // Centred on the track: one player is on the middle, and the rest fan out
+  // either side rather than everybody being pushed to one edge.
+  const offset = (nth - (total - 1) / 2) * PARTY.startSpread
+
+  const localX = start.x + backX * PARTY.startBack + sideX * offset
+  const localZ = start.z + backZ * PARTY.startBack + sideZ * offset
+
+  return {
+    x: ISLAND.centreX + localX,
+    y: partyHeightLocal(Math.hypot(localX, localZ)) + PARTY.spawnLift,
+    z: ISLAND.centreZ + localZ,
+  }
+}
+
+/** How many tiles there are to race along. */
+export function boardSize(): number {
+  return BOARD.tiles
+}
+
+/** Whether a world position is standing on the party island at all. */
+export function onBoardIsland(x: number, z: number): boolean {
+  return distanceFromIsland(x, z) <= ISLAND.foot
 }
 
 /**

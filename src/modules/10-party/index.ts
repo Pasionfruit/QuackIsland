@@ -12,15 +12,27 @@
 export {
   PARTY,
   allReady,
-  arenaHeightAt,
+  boardSize,
   canStart,
   decodeParty,
   encodeParty,
+  onBoardIsland,
   spawnFor,
   waitingFor,
   type PartyMessage,
   type PartyPhase,
 } from './internal/party'
+
+export {
+  ISLAND,
+  distanceFromIsland,
+  groundWithIsland,
+  onPartyIsland,
+  partyHeightAt,
+  partyHeightLocal,
+} from './internal/island'
+
+export { BOARD, buildBoard, tileSpacing, trackLength, type Tile } from './internal/board'
 
 export {
   ME,

@@ -11,7 +11,7 @@ import { PRIORITY, useGameFrame } from '../../00-core'
 import { getPlayerState, movePlayerTo } from '../../02-player'
 import { getNet, getPeers } from '../../09-net'
 import { Arena } from './ArenaView'
-import { PARTY, spawnFor } from './party'
+import { spawnFor } from './party'
 import { forgetPlayer, getParty, listenForParty, resetParty } from './state'
 
 export function Party() {
@@ -50,11 +50,13 @@ export function Party() {
       a.localeCompare(b, 'en', { numeric: true }),
     )
     const index = Math.max(0, ids.indexOf(net.id ?? 'self'))
+    // World coordinates: the board is on its own island, a long way from the
+    // spawn island, so there is nothing local about them.
     const spot = spawnFor(index, ids.length)
-
-    const me = getPlayerState()
-    if (me) movePlayerTo(spot.x, PARTY.height + PARTY.spawnLift, spot.z)
+    if (getPlayerState()) movePlayerTo(spot.x, spot.y, spot.z)
   }, PRIORITY.simulation)
 
+  // The island is always there - it is a place, not something conjured when a
+  // game starts - so this renders whatever the phase.
   return <Arena />
 }

@@ -17,4 +17,4 @@ export {
   waveSpeed,
   type SwellWave,
 } from './internal/swell'
-export { DEEP_AT, WATER_HALF, WATER_SEGMENTS, Water } from './internal/WaterView'
+export { DEEP_AT, WATER_HALF, WATER_SEGMENTS, Water, type WaterProps } from './internal/WaterView'

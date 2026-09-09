@@ -166,7 +166,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T02:21:43.576Z"
+          "at": "2026-09-09T02:38:02.988Z"
         },
         "human": {
           "status": "pending"
@@ -250,7 +250,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T02:21:52.643Z"
+          "at": "2026-09-09T02:38:11.728Z"
         },
         "human": {
           "status": "pending"
@@ -330,7 +330,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T02:22:01.716Z"
+          "at": "2026-09-09T02:38:20.516Z"
         },
         "human": {
           "status": "pending"
@@ -390,7 +390,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T02:22:10.730Z"
+          "at": "2026-09-09T02:38:29.063Z"
         },
         "human": {
           "status": "pending"
@@ -446,12 +446,17 @@
           "id": "04.4",
           "title": "Contract, tests, MODULE.md",
           "status": "done"
+        },
+        {
+          "id": "04.5",
+          "title": "Depth baked from a supplied height function, so it knows both islands",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T02:22:19.681Z"
+          "at": "2026-09-09T02:38:37.597Z"
         },
         "human": {
           "status": "pending"
@@ -514,7 +519,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T02:22:28.658Z"
+          "at": "2026-09-09T02:38:46.292Z"
         },
         "human": {
           "status": "pending"
@@ -578,7 +583,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T02:22:37.647Z"
+          "at": "2026-09-09T02:38:55.218Z"
         },
         "human": {
           "status": "pending"
@@ -643,7 +648,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T02:22:46.647Z"
+          "at": "2026-09-09T02:39:03.979Z"
         },
         "human": {
           "status": "pending"
@@ -709,7 +714,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T02:22:55.667Z"
+          "at": "2026-09-09T02:39:12.722Z"
         },
         "human": {
           "status": "pending"
@@ -791,7 +796,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T02:23:04.644Z"
+          "at": "2026-09-09T02:39:21.434Z"
         },
         "human": {
           "status": "pending"
@@ -819,7 +824,7 @@
     {
       "id": "10-party",
       "phase": "P4",
-      "title": "Party lobby: host a board game, everyone readies, all move to an island in the sky",
+      "title": "Party island: a 120-tile spiral race to a volcano with treasure on top",
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
@@ -858,12 +863,17 @@
           "id": "10.5",
           "title": "Contract, tests, MODULE.md",
           "status": "done"
+        },
+        {
+          "id": "10.6",
+          "title": "A real island, a 120-tile arc-length spiral, volcano and treasure",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T02:23:13.701Z"
+          "at": "2026-09-09T02:39:30.230Z"
         },
         "human": {
           "status": "pending"
@@ -872,15 +882,15 @@
       },
       "freeze": null,
       "nonGoals": [
-        "No board game: no turns, dice, squares, rules or scoring",
-        "No second terrain; the arena is a slab, with no water, shore or weather",
+        "No board game: no turns, dice, or moving along the tiles",
+        "No collision with the volcano or the treasure",
         "No spectators, teams, kicking or lobby chat",
         "No reconnection into a running game",
         "No authority beyond the host word, same trade as the rest of the networking"
       ],
       "budgets": {
-        "drawCallsMax": 2,
-        "trianglesMax": 4000
+        "drawCallsMax": 5,
+        "trianglesMax": 40000
       },
       "measured": null,
       "blockers": []
@@ -920,7 +930,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T02:23:22.743Z"
+          "at": "2026-09-09T02:39:38.938Z"
         },
         "human": {
           "status": "pending"
@@ -983,7 +993,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T02:23:31.778Z"
+          "at": "2026-09-09T02:39:47.658Z"
         },
         "human": {
           "status": "pending"
