@@ -69,7 +69,8 @@
         "05-vegetation",
         "06-rocks",
         "08-audio",
-        "11-currency"
+        "11-currency",
+        "12-rocks"
       ]
     },
     {
@@ -116,7 +117,8 @@
         "08-audio",
         "09-net",
         "10-party",
-        "11-currency"
+        "11-currency",
+        "12-rocks"
       ],
       "generation": 1,
       "contract": {
@@ -164,7 +166,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T01:49:17.771Z"
+          "at": "2026-09-09T02:21:43.576Z"
         },
         "human": {
           "status": "pending"
@@ -199,7 +201,8 @@
         "02-player",
         "03-footprints",
         "04-water",
-        "07-shore"
+        "07-shore",
+        "12-rocks"
       ],
       "generation": 1,
       "contract": {
@@ -247,7 +250,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T01:49:26.689Z"
+          "at": "2026-09-09T02:21:52.643Z"
         },
         "human": {
           "status": "pending"
@@ -327,7 +330,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T01:49:35.561Z"
+          "at": "2026-09-09T02:22:01.716Z"
         },
         "human": {
           "status": "pending"
@@ -387,7 +390,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T01:49:44.482Z"
+          "at": "2026-09-09T02:22:10.730Z"
         },
         "human": {
           "status": "pending"
@@ -448,7 +451,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T01:49:53.369Z"
+          "at": "2026-09-09T02:22:19.681Z"
         },
         "human": {
           "status": "pending"
@@ -511,7 +514,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T01:50:02.293Z"
+          "at": "2026-09-09T02:22:28.658Z"
         },
         "human": {
           "status": "pending"
@@ -575,7 +578,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T01:50:11.132Z"
+          "at": "2026-09-09T02:22:37.647Z"
         },
         "human": {
           "status": "pending"
@@ -640,7 +643,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T01:50:19.516Z"
+          "at": "2026-09-09T02:22:46.647Z"
         },
         "human": {
           "status": "pending"
@@ -706,7 +709,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T01:50:27.893Z"
+          "at": "2026-09-09T02:22:55.667Z"
         },
         "human": {
           "status": "pending"
@@ -788,7 +791,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T01:50:36.318Z"
+          "at": "2026-09-09T02:23:04.644Z"
         },
         "human": {
           "status": "pending"
@@ -860,7 +863,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T01:50:44.683Z"
+          "at": "2026-09-09T02:23:13.701Z"
         },
         "human": {
           "status": "pending"
@@ -917,7 +920,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-08T01:50:53.061Z"
+          "at": "2026-09-09T02:23:22.743Z"
         },
         "human": {
           "status": "pending"
@@ -935,6 +938,69 @@
       "budgets": {
         "drawCallsMax": 0,
         "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "12-rocks",
+      "phase": "P2",
+      "title": "Rocks of every size around the island, settled onto the ground they sit on",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "01-terrain"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "12.1",
+          "title": "Size classes and a seeded rejection scatter",
+          "status": "done"
+        },
+        {
+          "id": "12.2",
+          "title": "settleHeight: resting on the lowest edge, not the middle",
+          "status": "done"
+        },
+        {
+          "id": "12.3",
+          "title": "Knocked-about icosahedra, one instanced mesh per class",
+          "status": "done"
+        },
+        {
+          "id": "12.4",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-09T02:23:31.778Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No collision - you walk through them, boulders included",
+        "No picking up, climbing, pushing or breaking",
+        "No rock faces, cliffs or outcrops; changing the island shape belongs to 01-terrain",
+        "No moss, lichen, cracks or texture",
+        "No rocks on the sea bed beyond the shallows"
+      ],
+      "budgets": {
+        "drawCallsMax": 3,
+        "trianglesMax": 60000
       },
       "measured": null,
       "blockers": []

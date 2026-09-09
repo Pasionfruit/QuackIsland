@@ -118,6 +118,7 @@ world is reproducible and testable.
 | `09-net` | Lobbies by code, and everyone else’s duck |
 | `10-party` | Host a board game, everyone readies, all move to an island in the sky |
 | `11-currency` | Fish, shells and grapes: the wallet and the readout |
+| `12-rocks` | Rocks of every size around the island, in three draw calls |
 
 Next up: a sky dome driving the day cycle that `00-core` already exposes, then
 the Meshy asset pipeline and vegetation placed against the terrain's height
