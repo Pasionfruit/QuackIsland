@@ -14,9 +14,33 @@ import { Arena } from './ArenaView'
 import { spawnFor } from './party'
 import { forgetPlayer, getParty, listenForParty, resetParty } from './state'
 
-export function Party() {
+export interface PartyProps {
+  /**
+   * Whether the game this module plays is the one the party has chosen.
+   *
+   * This is one game among several, and only one of them is being played. A
+   * race up a volcano that moved everybody onto the island the moment any
+   * game started would be in the way of every other game there will ever be.
+   *
+   * Passed in rather than imported, for the same reason as the ground the
+   * player walks on: which game is running is a question for whatever is
+   * composing the scene, and this module has never heard of a catalogue.
+   * Left out, it is the only game there is.
+   *
+   * Read every frame, so it is a function and not a boolean - the choice can
+   * change between renders without this component being one of them.
+   */
+  active?: () => boolean
+}
+
+export function Party({ active }: PartyProps) {
   /** The phase the last teleport was done for. */
   const placed = useRef<string>('off')
+
+  // Read through a ref so a changed callback identity cannot re-run the frame
+  // callback, which would drop a frame at exactly the wrong moment.
+  const chosen = useRef(active)
+  chosen.current = active
 
   useEffect(() => listenForParty(), [])
 
@@ -42,6 +66,9 @@ export function Party() {
     if (party.phase === placed.current) return
     placed.current = party.phase
     if (party.phase !== 'playing') return
+    // Somebody else's game is starting. The island stays drawn - it is a place
+    // - but nobody is moved onto it.
+    if (chosen.current && !chosen.current()) return
 
     // Everybody works out their own place from the same list, in the same
     // order, so nobody has to be told where to stand and two people cannot be
@@ -57,6 +84,7 @@ export function Party() {
   }, PRIORITY.simulation)
 
   // The island is always there - it is a place, not something conjured when a
-  // game starts - so this renders whatever the phase.
+  // game starts - so this renders whatever the phase, and whatever game the
+  // party has chosen. You can swim out to it while other people play cards.
   return <Arena />
 }

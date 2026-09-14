@@ -4,6 +4,7 @@ import { WalletHUD } from './modules/11-currency'
 import { World } from './app/World'
 import { DebugPanel } from './app/DebugPanel'
 import { PartyPanel } from './app/PartyPanel'
+import { LobbyPopup } from './app/LobbyPopup'
 import { Scoreboard } from './app/Scoreboard'
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
       {/* Two fixed columns, so panels stack instead of each pinning itself to
           the same corner and overlapping. */}
       <div style={{ ...column, top: 10, left: 10, alignItems: 'flex-start' }}>
+        <LobbyPopup />
         <PerfHUD />
         <WalletHUD />
         <PartyPanel />

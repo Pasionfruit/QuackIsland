@@ -17,11 +17,11 @@ until you bring it forward.
 
 In each window:
 
-1. Open the **LOBBY** section of the panel.
-2. In the first, press **new** for a code, then **join**.
-3. In the second, type that same code and press **join**.
+1. Press **LOBBY** in the top left corner.
+2. In the first, press **new** for a code, then **create or join**.
+3. In the second, type that same code and press **create or join**.
 
-Both should say `CODE - 1 other`. Walk around and you will see the other duck.
+Both should say `1 other here`, and the LOBBY button should show the code. Walk around and you will see the other duck.
 
 Two people on your **home network** can do the same: run
 `npm run dev -- --host`, and the second machine opens

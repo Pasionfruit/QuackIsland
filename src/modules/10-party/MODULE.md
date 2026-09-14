@@ -33,6 +33,7 @@ everybody arriving on the same line at the same moment.
 | `BOARD_LAYER` | The three.js layer the tiles are on |
 | `OUTLINE`, `BREACH` | The out-of-round waves, and the horseshoe |
 | `Party` | The scene entry: the board, and moving people onto it |
+| `PartyProps` | `{ active? }` - whether this is the game the party has chosen |
 | `Arena` | Just the board, if something ever wants it alone |
 | `useParty()` / `getParty()` | `{ phase, ready }` |
 | `hostGame()` / `startGame()` / `endGame()` | Host only |
@@ -52,6 +53,27 @@ everybody arriving on the same line at the same moment.
 | `decodeParty` / `encodeParty` | The wire format. Pure, validating |
 | `ME` | The id used for yourself, since the relay only names other people |
 | `PartyPhase`, `PartyState`, `PartyMessage` | The shapes above |
+
+## This is one game among several
+
+The race up the volcano is a **game mode**, not the only thing a party can do.
+Which one is being played lives in `13-modes`, and the composition root hands
+the answer down as `active`:
+
+```tsx
+createElement(Party, { active: () => getGameMode() === 'island' })
+```
+
+Passed in rather than imported, for the same reason as the ground the player
+walks on: which game is running is a question for whatever is composing the
+scene, and this module has never heard of a catalogue of games. Left out, it is
+the only game there is, which is what it was.
+
+What `active` gates is **the teleport, and nothing else**. The island is still
+built, still drawn, and still walked on when another game is selected, because
+it is a place rather than a game - you can swim out to it while other people
+are playing something else. A game mode decides what happens when a game
+*starts*, not what the world contains.
 
 ## Invariants you may rely on
 

@@ -93,7 +93,7 @@ export function Scoreboard() {
 
         {net.status !== 'joined' ? (
           <div style={{ opacity: 0.4, marginTop: 6 }}>
-            join a lobby in the panel on the right
+            open the lobby, top left, to make one or join one
           </div>
         ) : null}
       </div>

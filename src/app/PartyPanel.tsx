@@ -1,9 +1,13 @@
 /**
  * The party dashboard, under the perf HUD.
  *
- * Lives in the app rather than in `10-party` because it reads across three
- * modules - who is in the lobby, who is ready, and whether you are the host -
- * and the composition root is the one place allowed to.
+ * Lives in the app rather than in `10-party` because it reads across four
+ * modules - who is in the lobby, who is ready, whether you are the host, and
+ * which game has been chosen - and the composition root is the one place
+ * allowed to.
+ *
+ * This is where a game is *started*. Which game that is belongs to the lobby
+ * popup, top left.
  */
 import { useNet, usePeers } from '../modules/09-net'
 import {
@@ -16,29 +20,49 @@ import {
   useParty,
   waitingFor,
 } from '../modules/10-party'
+import { modeById, useGameMode } from '../modules/13-modes'
 
 export function PartyPanel() {
   const net = useNet()
   const peers = usePeers()
   const party = useParty()
+  const game = modeById(useGameMode())
 
   // Everybody who has to be ready: the others, and you. The host readying up
   // is the same act as anybody else doing it.
   const everyone = [...peers.map((p) => p.id), ME]
   const ready = party.ready.has(ME)
   const waiting = waitingFor(everyone, party.ready)
-  const startable = canStart(party.phase, net.host, everyone, party.ready)
+  // A game nobody has built cannot be started, however ready everybody is.
+  // Without this the host presses start, everyone is moved somewhere, and the
+  // somewhere is the wrong game's island.
+  const startable = canStart(party.phase, net.host, everyone, party.ready) && game.built
 
   return (
     <div style={panel}>
       <div style={heading}>PARTY</div>
 
+      <div style={{ marginBottom: 5 }}>
+        <span style={{ color: '#9fd8e6' }}>{game.title}</span>
+        {game.built ? null : <span style={{ opacity: 0.5 }}> - not built yet</span>}
+      </div>
+
       {net.status !== 'joined' ? (
         <div style={{ opacity: 0.5 }}>join a lobby to play</div>
       ) : party.phase === 'off' ? (
         net.host ? (
-          <button type="button" onClick={hostGame} style={{ ...button, width: '100%' }}>
-            host a board game
+          <button
+            type="button"
+            onClick={hostGame}
+            disabled={!game.built}
+            style={{
+              ...button,
+              width: '100%',
+              opacity: game.built ? 1 : 0.45,
+              cursor: game.built ? 'pointer' : 'default',
+            }}
+          >
+            {game.built ? 'host a game' : 'pick a game that exists'}
           </button>
         ) : (
           <div style={{ opacity: 0.5 }}>waiting for the host</div>

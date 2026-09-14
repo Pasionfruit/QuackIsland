@@ -97,6 +97,13 @@
         "12-deploy",
         "13-perf-harness"
       ]
+    },
+    {
+      "id": "P6",
+      "title": "Games",
+      "modules": [
+        "13-modes"
+      ]
     }
   ],
   "modules": [
@@ -118,7 +125,8 @@
         "09-net",
         "10-party",
         "11-currency",
-        "12-rocks"
+        "12-rocks",
+        "13-modes"
       ],
       "generation": 1,
       "contract": {
@@ -768,7 +776,8 @@
         "08-audio"
       ],
       "dependents": [
-        "10-party"
+        "10-party",
+        "13-modes"
       ],
       "generation": 1,
       "contract": {
@@ -908,7 +917,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T03:27:39.146Z"
+          "at": "2026-09-14T21:30:10.545Z"
         },
         "human": {
           "status": "pending"
@@ -1057,6 +1066,70 @@
       "budgets": {
         "drawCallsMax": 3,
         "trianglesMax": 60000
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "13-modes",
+      "phase": "P6",
+      "title": "Which game the party is playing, and the lobby that chooses it",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "09-net"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "13.1",
+          "title": "The catalogue: two games, one of them built, as data rather than a switch",
+          "status": "done"
+        },
+        {
+          "id": "13.2",
+          "title": "One choice per lobby: host owns it, guests are told, joiners ask",
+          "status": "done"
+        },
+        {
+          "id": "13.3",
+          "title": "The lobby popup: make a lobby, share the code, pick the game",
+          "status": "done"
+        },
+        {
+          "id": "13.4",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-14T21:31:00.621Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No games. This module holds the names of two and plays neither",
+        "No per-game settings, rules, rounds or scoring",
+        "No voting - the host picks, the same as the clock and the weather",
+        "No starting a game; that stays the party dashboard’s button",
+        "No map, character or colour selection",
+        "No authority: a lying host can point the lobby anywhere, same trade as the rest of the networking"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
       },
       "measured": null,
       "blockers": []

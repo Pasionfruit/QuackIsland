@@ -49,22 +49,30 @@ npm run relay      # the lobby relay on :8791
 npm run dev        # the game on :5173
 ```
 
-Open `http://localhost:5173` in two different browsers, press **new** for a
-code in one, type it into the other, and press **join** in both. Both players
-walk about the same island.
+Open `http://localhost:5173` in two different browsers and press **LOBBY** in
+the top left corner of each. Press **new** for a code in one, type it into the
+other, and press **create or join** in both. Both players walk about the same
+island.
 
 Everyone in a lobby shares the host's time of day and weather, hears each
 other's footsteps nearby, and leaves prints in the same sand. The host is
 whoever joined first, and it hands over on its own when they leave.
 
-The **party** dashboard is under the perf panel, top left. The host opens a
-board game, everybody presses ready, and the host starts it — which puts
-everyone on the starting line of a 120-tile race on a second island across the
-water — an out-of-round island built round a 150 m volcano with a horseshoe
-crater, the track winding three times up it to the treasure at the top.
-Hold **Tab** for everyone in the lobby, their ping and whether they are ready.
+The same popup picks **which game** the party is playing. There are two:
+**Volcano Island**, which is built, and **Garden Defence**, a flat 2D lane
+defence that is not. Everyone in a lobby plays the same one, the host chooses,
+and a game that has not been built yet cannot be started.
 
-That island is always there. You can swim to it without joining anything.
+The **party** dashboard is under the perf panel, top left, and is where a game
+is started. The host opens one, everybody presses ready, and the host starts
+it — on Volcano Island that puts everyone on the starting line of a 120-tile
+race on a second island across the water — an out-of-round island built round a
+150 m volcano with a horseshoe crater, the track winding three times up it to
+the treasure at the top. Hold **Tab** for everyone in the lobby, their ping and
+whether they are ready.
+
+That island is always there whatever game is selected. It is a place, not a
+game: you can swim to it without joining anything.
 
 **[DEPLOY.md](DEPLOY.md)** has the rest: running it as one process, and putting
 it on a free host.
@@ -123,6 +131,7 @@ world is reproducible and testable.
 | `10-party` | Party island: a 120-tile spiral race to a volcano with treasure |
 | `11-currency` | Fish, shells and grapes: the wallet and the readout |
 | `12-rocks` | Rocks of every size, solid enough to bump into and stand on |
+| `13-modes` | Which game the party is playing, and the lobby popup that chooses it |
 
 Next up: a sky dome driving the day cycle that `00-core` already exposes, then
 the Meshy asset pipeline and vegetation placed against the terrain's height

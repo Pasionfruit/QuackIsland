@@ -69,4 +69,4 @@ export {
 } from './internal/state'
 
 export { Arena, BOARD_LAYER } from './internal/ArenaView'
-export { Party } from './internal/PartyView'
+export { Party, type PartyProps } from './internal/PartyView'

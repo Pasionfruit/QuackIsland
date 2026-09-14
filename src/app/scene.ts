@@ -20,6 +20,7 @@ import { Rocks, getSolidRocks, onRockAt, resolveRocks, standHeightAt } from '../
 import { AudioCues } from '../modules/08-audio'
 import { NetPlayers } from '../modules/09-net'
 import { ISLAND, Party, groundWithIsland } from '../modules/10-party'
+import { getGameMode } from '../modules/13-modes'
 
 /**
  * The player, floating on the actual swell rather than on a flat mean level -
@@ -43,6 +44,19 @@ const PlayerOnSea = () =>
     bounds: currentBounds(),
     collide: pushOutOfRocks,
   })
+
+/**
+ * The volcano race, when the volcano race is the game being played.
+ *
+ * The island itself is drawn either way - it is a place you can swim to, not
+ * something conjured when a game starts. What the choice gates is the part
+ * that takes over your body: being moved onto the starting line.
+ *
+ * Deciding it here is the same seam as the ground and the swell. `10-party`
+ * has never heard of a catalogue of games, `13-modes` has never heard of a
+ * volcano, and this file is the one place allowed to know both.
+ */
+const PartyIfChosen = () => createElement(Party, { active: () => getGameMode() === 'island' })
 
 /** Prints land on whatever the ground currently is, for the same reason. */
 const PrintsOnGround = () =>
@@ -146,7 +160,7 @@ export const SCENE: SceneEntry[] = [
   { id: '12-rocks', order: 75, enabled: true, Component: Rocks },
   { id: '08-audio', order: 80, enabled: true, Component: AudioCues },
   { id: '09-net', order: 90, enabled: true, Component: NetPlayers },
-  { id: '10-party', order: 100, enabled: true, Component: Party },
+  { id: '10-party', order: 100, enabled: true, Component: PartyIfChosen },
 ]
 
 // Toggling a module on or off has to reach the canvas, which is a different
