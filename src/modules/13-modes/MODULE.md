@@ -8,8 +8,9 @@ A catalogue of the games there are, one choice shared by everyone in a lobby,
 and the host's hand on it. The lobby popup in the top left corner is what
 points it at one: make a lobby, share the code, pick a game.
 
-**It holds no game.** `island` is played by `10-party`; nothing plays `garden`
-yet. This module knows the names of two games and how neither of them works.
+**It holds no game.** `island` is played by `10-party` and `garden` by
+`14-garden`. This module knows the names of two games and how neither of them
+works.
 
 That separation is the whole point. A game module mounts itself when
 `getGameMode()` names it, and knows nothing about the other games or about the
@@ -20,14 +21,16 @@ lobby that chose between them.
 | id | title | played by |
 | --- | --- | --- |
 | `island` | Volcano Island | `10-party` - a spiral race up the volcano |
-| `garden` | Garden Defence | nothing yet - a flat 2D lane defence |
+| `garden` | Garden Goofs | `14-garden` - a flat 2D lawn, and no game on it yet |
 
-`garden` is listed and selectable and **does not exist**. That is deliberate: a
-lobby is where you say what is coming, and a mode that only appeared the day
-its game was finished would be a mode nobody could plan around. `built: false`
-is how the interface knows — the party dashboard will not let a host start it,
-because starting a game that is not there drops everybody somewhere with
-nothing to do.
+Neither game is *finished*. `built` is not about that: it is whether pressing
+start takes everybody somewhere real. Both do — one to a volcano, one to a
+lawn — and both then leave you standing there, because the rules of neither
+have been written.
+
+A mode is listed from the moment it is decided on, long before it can be
+played, because the whole point of a lobby is to say what is coming. `built`
+is what stops a host starting one that would move nobody anywhere.
 
 Adding a third game is one entry in `MODES` and a module that mounts on its id.
 There is no switch statement to extend and nothing in the interface to change:
@@ -46,6 +49,9 @@ the lobby draws whatever the catalogue holds.
 | `isPlayable(id)` | Whether the game behind it exists yet. Pure |
 | `nextMode(id, step?)` | The next one along, wrapping both ways. Pure |
 | `decodeMode(raw)` / `encodeMode(m)` | The wire format, and its validation. Pure |
+| `hostChoice(tag, known, fallback)` | A setting the host decides and the lobby is told |
+| `Choice`, `ChoiceMessage` | What that returns, and what it sends |
+| `decodeChoice` / `encodeChoice` | The generic wire format underneath both. Pure |
 | `ModeMessage` | `{ mode?, ask? }` |
 | `useGameMode()` | The chosen id, for React |
 | `getGameMode()` | The chosen id, for anything outside React |
@@ -74,6 +80,35 @@ the lobby draws whatever the catalogue holds.
   for the whole message instead.
 - **The catalogue is frozen.** It is read every render; nothing may push onto
   it at runtime.
+
+## One setting the whole lobby agrees on
+
+Which game is being played is one of these. So is which variant of that game -
+see `14-garden` - and so will every lobby setting ever added be. They all want
+the same four things, and all four are easy to get subtly wrong:
+
+- **The host owns it.** A guest changing it locally is dragged back by the next
+  message and sees their choice flicker.
+- **A joiner asks.** Broadcasting only on change strands everybody who arrived
+  afterwards on the wrong answer.
+- **Leaving forgets**, or the last lobby's choice follows you home.
+- **A value nobody has heard of is refused**, whole message and all. Taken on
+  trust it leaves the interface pointing at something with no row to select
+  back out of.
+
+`hostChoice` is that, written once:
+
+```ts
+const mode = hostChoice<GardenMode>('garden', isGardenMode, 'endless')
+mode.use()      // in React
+mode.get()      // in a frame callback
+mode.set(id)    // host only
+mode.useSync()  // once, from something always mounted
+```
+
+The `tag` is the message type on the room channel and **must be unique across
+the build** - it is what stops two choices reading each other's messages. There
+is a test that one refuses the other's.
 
 ## How to use it from a new module
 
@@ -150,14 +185,20 @@ and the gate's review list should say so.
   on mouse-down and opening on click meant the button could not be pressed
   twice.
 - **Press escape, and click out on the world.** Both close it.
-- **Click the code field and type.** The player must not walk while you type,
+- **Click a code field and type.** The player must not walk while you type,
   and the camera must not turn when you click inside the popup.
-- **Press new, then create or join.** The status should go to connecting and
-  then to the code with `you host`.
-- **Pick Garden Defence.** It should take the highlight, the PARTY panel above
-  should name it and say it is not built yet, and the host button there should
-  refuse to be pressed.
-- **Pick Volcano Island again.** The PARTY panel goes back to offering a game.
+- **There are two code fields, and they are not the same field.** Yours comes
+  with a code in it and a **create** under it; theirs starts empty, says
+  `THEIRS`, and has **join**. Typing in one must not touch the other.
+- **Press create.** The status goes to connecting and then to the code with
+  `you host`.
+- **While in a lobby, type another code in the join field and press join.** You
+  should move to that lobby rather than being told you are already in one.
+- **Press join with a half-typed code.** The button should be unpressable
+  rather than reporting an error after the fact.
+- **Pick Garden Goofs.** It takes the highlight, three ways to play appear
+  under it, and the PARTY panel above names both the game and the way.
+- **Pick Volcano Island again.** The three ways to play go away.
 - **With two browsers in one lobby:** the host picks a game and the guest's
   popup should follow within a moment. The guest's rows must be unpressable
   and say *the host picks*.
@@ -166,8 +207,11 @@ and the gate's review list should say so.
 - **Start a game on Volcano Island.** Everybody is moved to the island, as
   before. While playing, the game rows say *settled for this round* and cannot
   be changed.
+- **Start one on Garden Goofs.** A 2D board opens over the world instead, and
+  the picking menu with it. Same mechanism, pointed somewhere else, which is
+  the whole point - one game moves your body, the other draws over it.
 - **Leave the lobby.** The choice goes back to Volcano Island.
-- **Swim out to the party island with Garden Defence selected.** The island is
+- **Swim out to the party island with Garden Goofs selected.** The island is
   still there. A mode is not a switch on the world.
 
 ## Gate record

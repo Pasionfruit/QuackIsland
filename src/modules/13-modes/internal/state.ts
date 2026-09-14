@@ -1,29 +1,24 @@
 /**
- * Which game this lobby is playing, and how that stays the same for everybody.
+ * Which game this lobby is playing.
  *
- * The rules are in `modes.ts` and are pure; this is the part that has to talk
- * to other browsers. It goes through `09-net`'s room channel, exactly as the
- * party phase does - so the transport never learns what a game mode is, and
- * this file never learns what a WebSocket is.
- *
- * **The host owns the choice**, the same way it owns the clock, the weather
- * and the party phase. Alone you are your own host, so picking a game on your
- * own works and nothing is taken away by joining a lobby of one.
+ * All of the mechanism is `hostChoice` - the host owns it, guests are told,
+ * joiners ask, leaving forgets. This file is the one line that says *which*
+ * setting it is, and the names it re-exports so callers say `useGameMode()`
+ * rather than `mode.use()`.
  */
-import { useEffect } from 'react'
-import { createStore, useStore } from '../../00-core'
-import { getNet, sendToRoom, subscribeRoom, useNet } from '../../09-net'
-import { DEFAULT_MODE, decodeMode, encodeMode, type ModeId } from './modes'
+import { hostChoice } from './choice'
+import { DEFAULT_MODE, isModeId, type ModeId } from './modes'
 
-const store = createStore<ModeId>(DEFAULT_MODE)
+const mode = hostChoice<ModeId>('mode', isModeId, DEFAULT_MODE)
 
+/** The chosen game, for React. */
 export function useGameMode(): ModeId {
-  return useStore(store)
+  return mode.use()
 }
 
-/** Read outside React - by the scene, every frame, to place a game or not. */
+/** The chosen game, for anything outside React - the scene, every frame. */
 export function getGameMode(): ModeId {
-  return store.get()
+  return mode.get()
 }
 
 /**
@@ -34,70 +29,34 @@ export function getGameMode(): ModeId {
  * than a button that plainly does not move.
  */
 export function chooseMode(id: ModeId): void {
-  if (!getNet().host) return
-  store.set(id)
-  sendToRoom(encodeMode({ mode: id }))
+  mode.set(id)
 }
 
 /** Tells everyone what is selected. The host's answer to a new arrival. */
 export function announceMode(): void {
-  if (!getNet().host) return
-  sendToRoom(encodeMode({ mode: store.get() }))
+  mode.announce()
 }
 
 /** Asks the host what everybody is playing. */
 export function askForMode(): void {
-  sendToRoom(encodeMode({ ask: true }))
+  mode.ask()
 }
 
 /** Back to the default, for leaving a lobby. */
 export function resetMode(): void {
-  store.set(DEFAULT_MODE)
+  mode.reset()
 }
 
-/**
- * Starts listening. One subscription for the page - see `useModeSync`.
- *
- * Two jobs: a guest takes the host's choice, and the host answers anybody who
- * asks. The answer is what makes joining half way through work - a lobby that
- * only broadcast on change would leave everyone who arrived afterwards looking
- * at the wrong game.
- */
+/** Starts listening. Returns the unsubscribe. */
 export function listenForModes(): () => void {
-  return subscribeRoom((_from, raw) => {
-    const message = decodeMode(raw)
-    if (!message) return
-
-    const host = getNet().host
-
-    // Only the host's copy counts. Two clients each believing they are host
-    // would otherwise take turns dragging the lobby between games.
-    if (message.mode !== undefined && !host) store.set(message.mode)
-
-    if (message.ask && host) announceMode()
-  })
+  return mode.listen()
 }
 
 /**
  * Keeps the choice in step with the lobby, for as long as the interface is up.
  *
- * Call it once, from something that is always mounted. It listens for the
- * whole session, asks what is being played each time you arrive somewhere new,
- * and forgets the answer when you leave - on your own again, the choice is
- * yours and it starts from the default rather than from whatever the last
- * lobby happened to be doing.
+ * Call it once, from something that is always mounted.
  */
 export function useModeSync(): void {
-  const net = useNet()
-  const joined = net.status === 'joined'
-  const room = net.room
-
-  useEffect(() => listenForModes(), [])
-
-  useEffect(() => {
-    if (joined) askForMode()
-    else resetMode()
-    // `room` is in here so that leaving one lobby and joining another asks
-    // again rather than keeping the first lobby's game.
-  }, [joined, room])
+  mode.useSync()
 }

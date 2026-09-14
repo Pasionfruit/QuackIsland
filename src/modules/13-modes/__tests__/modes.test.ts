@@ -82,8 +82,8 @@ describe('stepping through the list', () => {
 describe('the choice on the wire', () => {
   it('round-trips through the transport, which is JSON', () => {
     for (const game of MODES) {
-      const sent = JSON.parse(JSON.stringify(encodeMode({ mode: game.id })))
-      expect(decodeMode(sent)).toEqual({ mode: game.id })
+      const sent = JSON.parse(JSON.stringify(encodeMode({ value: game.id })))
+      expect(decodeMode(sent)).toEqual({ value: game.id })
     }
   })
 
@@ -95,6 +95,8 @@ describe('the choice on the wire', () => {
     // The room channel is shared: the party's own messages come through here
     // and must not be read as a change of game.
     expect(decodeMode({ t: 'party', phase: 'playing' })).toBeNull()
+    // And a different choice's messages, which share the channel with it.
+    expect(decodeMode({ t: 'garden', value: 'endless' })).toBeNull()
     expect(decodeMode({})).toBeNull()
     expect(decodeMode({ t: 'mode ' })).toBeNull()
   })
@@ -103,10 +105,10 @@ describe('the choice on the wire', () => {
     // The dangerous one. Taken on trust it would point the lobby at a game
     // that does not exist, with nothing in the interface to select back out
     // of it, so the whole message is rejected rather than half-read.
-    expect(decodeMode({ t: 'mode', mode: 'chess' })).toBeNull()
-    expect(decodeMode({ t: 'mode', mode: 7 })).toBeNull()
-    expect(decodeMode({ t: 'mode', mode: null })).toBeNull()
-    expect(decodeMode({ t: 'mode', mode: 'island', ask: 'yes' })).toBeNull()
+    expect(decodeMode({ t: 'mode', value: 'chess' })).toBeNull()
+    expect(decodeMode({ t: 'mode', value: 7 })).toBeNull()
+    expect(decodeMode({ t: 'mode', value: null })).toBeNull()
+    expect(decodeMode({ t: 'mode', value: 'island', ask: 'yes' })).toBeNull()
   })
 
   it('accepts a message that says nothing, because saying nothing is legal', () => {

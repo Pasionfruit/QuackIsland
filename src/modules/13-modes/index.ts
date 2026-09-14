@@ -24,6 +24,14 @@ export {
 } from './internal/modes'
 
 export {
+  decodeChoice,
+  encodeChoice,
+  hostChoice,
+  type Choice,
+  type ChoiceMessage,
+} from './internal/choice'
+
+export {
   announceMode,
   askForMode,
   chooseMode,

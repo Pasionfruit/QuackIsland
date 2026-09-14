@@ -34,10 +34,19 @@ syncing, that is the moment to split them.
 | `shortestAngle(from, to)` | The short way round. Pure |
 | `peerAt(id, now)` / `peerTracks()` | Where a peer is right now, for the renderer |
 | `relayUrl()` | Where the relay is |
+| `relayProblem()` | Why it could not be reached, in words worth reading |
+| `statusAfterClose(status)` | What a socket closing means. Pure |
 | `NET` | Send rate, interpolation delay, timeout, history size |
 | `DuckState`, `Peer`, `Track`, `Snapshot`, `NetInfo`, `NetStatus` | The shapes. `DuckState` is the wire name for a player's position and pose |
 
 ## Invariants you may rely on
+
+- **A refused connection says why, and the reason stays.** A socket that never
+  opens fires `error` and then `close`, in that order, and writing `offline`
+  over the top of the error threw away the only explanation there was - leaving
+  the panel saying exactly what it said before the button was pressed. Joining
+  a relay nobody had started looked like a dead button for that reason alone.
+  `statusAfterClose` is the rule, and it is tested.
 
 - **Nothing that arrives from the network is trusted.** `decodeMessage`
   validates every field and returns `null` rather than throwing. A peer cannot

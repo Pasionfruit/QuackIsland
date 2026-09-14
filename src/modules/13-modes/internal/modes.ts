@@ -11,6 +11,8 @@
  * and nothing whatever about how any of them work.
  */
 
+import { decodeChoice, encodeChoice, type ChoiceMessage } from './choice'
+
 export type ModeId = 'island' | 'garden'
 
 export interface GameMode {
@@ -20,13 +22,13 @@ export interface GameMode {
   /** One line under the title. */
   blurb: string
   /**
-   * Whether the game behind it exists.
+   * Whether pressing start takes you anywhere.
    *
-   * A mode is listed from the moment it is decided on and long before it can
-   * be played, because the whole point of the lobby is to say what is coming.
-   * The interface reads this to stop a host starting a game that is not there
-   * yet - which would otherwise drop everybody onto an empty island wondering
-   * what they were meant to do.
+   * Not whether the game is *finished* - neither of these is. It is whether
+   * there is a place built for it, so that starting it puts everybody
+   * somewhere real. A mode is listed from the moment it is decided on, because
+   * the whole point of a lobby is to say what is coming; this is what stops
+   * the host starting one that would move nobody anywhere.
    */
   built: boolean
 }
@@ -46,9 +48,9 @@ export const MODES: readonly GameMode[] = Object.freeze([
   }),
   Object.freeze({
     id: 'garden',
-    title: 'Garden Defence',
-    blurb: 'Flat 2D lanes: plant along a grid and hold back what walks in.',
-    built: false,
+    title: 'Garden Goofs',
+    blurb: 'A flat 2D lawn, six by nine. Animals hold it, pests come for it, seeds are shared.',
+    built: true,
   }),
 ]) as readonly GameMode[]
 
@@ -93,37 +95,26 @@ export function nextMode(id: ModeId, step = 1): ModeId {
   return MODES[to].id
 }
 
-/** A mode message, as it goes over the room channel. */
-export interface ModeMessage {
-  /** What the host has chosen. Only the host's copy counts. */
-  mode?: ModeId
-  /** A guest, newly arrived, asking what everybody is playing. */
-  ask?: boolean
-}
+/**
+ * A mode message, as it goes over the room channel.
+ *
+ * The generic shape every lobby choice uses - see `choice.ts`. Named here so
+ * callers of this module do not have to know that.
+ */
+export type ModeMessage = ChoiceMessage<ModeId>
 
 /**
  * Reads a mode message off the wire.
  *
- * As untrusted as everything else another browser sends. A mode nobody has
- * heard of is the dangerous one: taken on trust it would leave the lobby
- * pointing at a game that does not exist, with no way to select back out of
- * it, so present-but-wrong rejects the whole message rather than being
- * quietly dropped.
+ * Untrusted, like everything another browser sends. The dangerous value is a
+ * game this build has never heard of: taken on trust it would point the lobby
+ * at nothing, with no row in the interface to select back out of, so the whole
+ * message is rejected rather than half-read.
  */
 export function decodeMode(message: Record<string, unknown>): ModeMessage | null {
-  if (message.t !== 'mode') return null
-  const out: ModeMessage = {}
-  if (message.mode !== undefined) {
-    if (!isModeId(message.mode)) return null
-    out.mode = message.mode
-  }
-  if (message.ask !== undefined) {
-    if (typeof message.ask !== 'boolean') return null
-    out.ask = message.ask
-  }
-  return out
+  return decodeChoice('mode', isModeId, message)
 }
 
 export function encodeMode(message: ModeMessage): Record<string, unknown> {
-  return { t: 'mode', ...message }
+  return encodeChoice('mode', message)
 }

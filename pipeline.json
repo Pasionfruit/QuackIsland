@@ -102,7 +102,8 @@
       "id": "P6",
       "title": "Games",
       "modules": [
-        "13-modes"
+        "13-modes",
+        "14-garden"
       ]
     }
   ],
@@ -126,7 +127,8 @@
         "10-party",
         "11-currency",
         "12-rocks",
-        "13-modes"
+        "13-modes",
+        "14-garden"
       ],
       "generation": 1,
       "contract": {
@@ -777,7 +779,8 @@
       ],
       "dependents": [
         "10-party",
-        "13-modes"
+        "13-modes",
+        "14-garden"
       ],
       "generation": 1,
       "contract": {
@@ -825,7 +828,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-14T21:18:54.245Z"
+          "at": "2026-09-14T22:05:34.616Z"
         },
         "human": {
           "status": "pending"
@@ -860,7 +863,9 @@
         "02-player",
         "09-net"
       ],
-      "dependents": [],
+      "dependents": [
+        "14-garden"
+      ],
       "generation": 1,
       "contract": {
         "version": "0.1.0",
@@ -917,7 +922,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-14T21:30:10.545Z"
+          "at": "2026-09-14T21:59:24.267Z"
         },
         "human": {
           "status": "pending"
@@ -1079,7 +1084,9 @@
         "00-core",
         "09-net"
       ],
-      "dependents": [],
+      "dependents": [
+        "14-garden"
+      ],
       "generation": 1,
       "contract": {
         "version": "0.1.0",
@@ -1106,12 +1113,17 @@
           "id": "13.4",
           "title": "Contract, tests, MODULE.md",
           "status": "done"
+        },
+        {
+          "id": "13.5",
+          "title": "hostChoice: one tested way to hold a setting the whole lobby agrees on",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-14T21:31:00.621Z"
+          "at": "2026-09-14T22:19:16.506Z"
         },
         "human": {
           "status": "pending"
@@ -1126,6 +1138,86 @@
         "No starting a game; that stays the party dashboard’s button",
         "No map, character or colour selection",
         "No authority: a lying host can point the lobby anywhere, same trade as the rest of the networking"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "14-garden",
+      "phase": "P6",
+      "title": "Garden Goofs: the lobby, the picking menu, and the 2D 6x9 lawn",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "09-net",
+        "10-party",
+        "13-modes"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "14.1",
+          "title": "The grid: six lanes, nine columns, pure indices, no world in it",
+          "status": "done"
+        },
+        {
+          "id": "14.2",
+          "title": "Endless, co-op and versus, agreed across the lobby",
+          "status": "done"
+        },
+        {
+          "id": "14.3",
+          "title": "GardenPiece, and the two catalogues: four animals, eight pests",
+          "status": "done"
+        },
+        {
+          "id": "14.4",
+          "title": "The shared seed pot, and each player’s hand, synced",
+          "status": "done"
+        },
+        {
+          "id": "14.5",
+          "title": "The 2D screen: the picking menu on start, then the lawn",
+          "status": "done"
+        },
+        {
+          "id": "14.6",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "14.7",
+          "title": "The game itself: planting, walkers, waves, scoring",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-14T22:19:07.134Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No game yet: nothing is planted, nothing walks in, nothing is eaten or scored",
+        "No art and no animation - every creature is a coloured pill first",
+        "No spending: seeds are shared and counted, and nothing takes any",
+        "No per-mode rules yet - endless, co-op and versus differ in name only",
+        "Nothing in 3D. It is a 2D game drawn over the world, not a place in it"
       ],
       "budgets": {
         "drawCallsMax": 0,

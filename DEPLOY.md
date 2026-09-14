@@ -17,11 +17,12 @@ until you bring it forward.
 
 In each window:
 
-1. Press **LOBBY** in the top left corner.
-2. In the first, press **new** for a code, then **create or join**.
-3. In the second, type that same code and press **create or join**.
+1. Press **LOBBY** in the top left corner of each.
+2. In the first, press **create** under its own code.
+3. In the second, type that code into **or join someone** and press **join**.
 
-Both should say `1 other here`, and the LOBBY button should show the code. Walk around and you will see the other duck.
+Both LOBBY buttons should show the code, and the popup should say
+`1 other here`. Walk around and you will see the other duck.
 
 Two people on your **home network** can do the same: run
 `npm run dev -- --host`, and the second machine opens
@@ -132,13 +133,18 @@ last person leaves. Nothing is stored, anywhere.
 
 ## When it does not work
 
-- **`not in a lobby` and nothing happens** — the relay is not running, or is on
-  a different port. In development it is expected on `:8791`.
+- **`no relay at ws://localhost:8791 - run: npm run relay`** — exactly what it
+  says. The relay is a second process and `npm run dev` does not start it. The
+  popup used to drop silently back to `not in a lobby` here, which is what made
+  this hard to spot; now the reason stays on the screen until you try again.
+- **Two browsers on one machine is fine**, and so are two windows of the same
+  browser, or a normal window and a private one. Nothing about a lobby is tied
+  to a machine — the relay only knows about connections.
 - **It worked locally and not when deployed** — check the page is on `https`
   and the browser console for a mixed-content refusal. If the game and the
   relay are separate services, `VITE_RELAY_URL` has to be `wss://`.
-- **The other duck jumps rather than walks** — the other tab is in the
+- **The other player jumps rather than walks** — the other tab is in the
   background and throttled. Put the two windows side by side.
-- **The other duck stands still** — they have gone quiet. The duck holds its
+- **The other player stands still** — they have gone quiet. A body holds its
   last position rather than guessing, and disappears after eight seconds.
 - **First load takes a minute** — a sleeping free instance waking up.

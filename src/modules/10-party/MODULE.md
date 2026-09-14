@@ -39,6 +39,8 @@ everybody arriving on the same line at the same moment.
 | `hostGame()` / `startGame()` / `endGame()` | Host only |
 | `setReady(ready)` / `amReady()` | Yours |
 | `canStart(phase, isHost, ids, ready)` | Whether start may be pressed. Pure |
+| `lobbyAction(view)` | What the one lobby button does next. Pure |
+| `LobbyAction`, `LobbyView` | `'ready' \| 'unready' \| 'start' \| 'none'`, and what decides it |
 | `allReady(ids, ready)` / `waitingFor(ids, ready)` | Pure |
 | `spawnFor(index, count)` | Where the nth player lines up. World space. Pure |
 | `partyHeightLocal(d)` / `partyHeightAt(x, z)` | The island's shape. Pure |
@@ -75,8 +77,35 @@ it is a place rather than a game - you can swim out to it while other people
 are playing something else. A game mode decides what happens when a game
 *starts*, not what the world contains.
 
+## One button, not three
+
+`lobbyAction` answers a single question: what does the lobby button do right
+now? At any moment there is exactly one thing a player wants from it - say you
+are ready, take it back, or, as the host with everybody ready, start.
+
+```
+not ready                      -> 'ready'
+ready, somebody still waiting  -> 'unready'
+ready, everybody ready, host   -> 'start'
+ready, everybody ready, guest  -> 'unready'
+game running, or unplayable    -> 'none'
+```
+
+Readying up comes before everything else, host included: the start button is
+only reachable *through* it, so a host cannot start a game they are not in.
+
+`playable` is decided outside this module, because it is the one part that
+depends on which game was chosen - whether that game has anywhere to go, and
+whether enough people are here for the way it is being played. This module has
+never heard of a catalogue of games and must not learn.
+
 ## Invariants you may rely on
 
+- **The host answers anybody who speaks.** Receiving a ready flag makes the
+  host announce where things stand, which is how somebody who joined
+  mid-gathering finds out. The phase itself is only broadcast when it changes,
+  so without this a late arrival sits in `off` while everybody else is getting
+  ready. The interface announces each arrival by sending its own ready state.
 - **The host owns the phase**, the same way it owns the clock. A guest's copy
   is only ever set from the host's message; two clients each believing they
   are host would otherwise drag everybody on and off the board in turns.

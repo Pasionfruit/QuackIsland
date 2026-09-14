@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { allReady, canStart, decodeParty, encodeParty, waitingFor } from '../internal/party'
+import {
+  allReady,
+  canStart,
+  decodeParty,
+  encodeParty,
+  lobbyAction,
+  waitingFor,
+  type LobbyView,
+} from '../internal/party'
 
 const readySet = (...ids: string[]) => new Set(ids)
 
@@ -101,5 +109,58 @@ describe('party messages', () => {
     // A message saying nothing about the phase must not be read as saying the
     // phase is off, or a guest's ready packet would end everyone's game.
     expect(decodeParty(encodeParty({ ready: true }))?.phase).toBeUndefined()
+  })
+})
+
+
+describe('the one lobby button', () => {
+  const view = (over: Partial<LobbyView> = {}): LobbyView => ({
+    phase: 'gathering',
+    isHost: true,
+    ids: ['self'],
+    ready: new Set<string>(),
+    amReady: false,
+    playable: true,
+    ...over,
+  })
+
+  it('offers to ready you up first, host or not', () => {
+    expect(lobbyAction(view())).toBe('ready')
+    expect(lobbyAction(view({ isHost: false }))).toBe('ready')
+  })
+
+  it('lets you take it back', () => {
+    expect(lobbyAction(view({ amReady: true, isHost: false, ready: new Set(['self']) }))).toBe(
+      'unready',
+    )
+  })
+
+  it('becomes start for the host, once everybody has said it', () => {
+    const ids = ['self', 'a', 'b']
+    expect(lobbyAction(view({ ids, amReady: true, ready: new Set(ids) }))).toBe('start')
+  })
+
+  it('does not become start while anybody is still waiting', () => {
+    const ids = ['self', 'a', 'b']
+    expect(lobbyAction(view({ ids, amReady: true, ready: new Set(['self', 'a']) }))).toBe('unready')
+  })
+
+  it('never becomes start for a guest, however ready everyone is', () => {
+    const ids = ['self', 'a']
+    expect(
+      lobbyAction(view({ ids, isHost: false, amReady: true, ready: new Set(ids) })),
+    ).toBe('unready')
+  })
+
+  it('has nothing to do once the game is running', () => {
+    expect(lobbyAction(view({ phase: 'playing', amReady: true }))).toBe('none')
+  })
+
+  it('has nothing to do when the chosen game cannot be started', () => {
+    // A game that is not built, or one that needs more people than are here.
+    // Without this the host readies up, presses start, and everybody is moved
+    // somewhere there is nothing to do.
+    expect(lobbyAction(view({ playable: false }))).toBe('none')
+    expect(lobbyAction(view({ playable: false, amReady: true }))).toBe('none')
   })
 })

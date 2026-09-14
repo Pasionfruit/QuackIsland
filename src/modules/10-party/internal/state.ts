@@ -86,9 +86,9 @@ export function resetParty(): void {
 /**
  * Starts listening. Called once by the scene entry.
  *
- * The host re-announces the phase whenever it sends anything, so somebody who
- * joins mid-gathering finds out where everyone is rather than sitting in `off`
- * looking at a button nobody else can see.
+ * The host answers anybody who speaks with where things stand, so somebody who
+ * joins mid-gathering finds out rather than sitting in `off` looking at a
+ * button nobody else can see.
  */
 export function listenForParty(): () => void {
   return subscribeRoom((from, raw) => {
@@ -111,6 +111,13 @@ export function listenForParty(): () => void {
       if (message.ready) next.add(from)
       else next.delete(from)
       set({ ready: next })
+
+      // Somebody said something, so the host says where things stand. This is
+      // what a guest who arrived mid-gathering hears: the phase is only ever
+      // broadcast when it *changes*, so without an answer to somebody turning
+      // up, a late joiner sits in `off` while everybody else is getting ready.
+      // The interface announces each arrival by sending its own ready state.
+      if (getNet().host) announceParty()
     }
   })
 }

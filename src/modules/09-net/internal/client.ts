@@ -43,6 +43,38 @@ import {
 
 export type NetStatus = 'offline' | 'connecting' | 'joined' | 'error'
 
+/**
+ * What a socket closing means, given what the status already was.
+ *
+ * A connection that never opened fires `error` and then `close`, one after the
+ * other. Writing `offline` over the top of the error throws away the only
+ * explanation the player gets - and `offline` is exactly what the panel said
+ * before they pressed anything, so the whole attempt looks like a button that
+ * does nothing. That is what "I cannot join" looked like: the relay was not
+ * running, the game knew, and it said nothing.
+ *
+ * So an error survives the close that follows it. Anything else is a
+ * connection that was up and is not any more, which is plainly offline.
+ */
+export function statusAfterClose(status: NetStatus): NetStatus {
+  return status === 'error' ? 'error' : 'offline'
+}
+
+/**
+ * Why a connection could not be made, in words a player can act on.
+ *
+ * In development the relay is a second process that people forget to start -
+ * it is the first thing to check and the fix is one command, so the message is
+ * the command. In production the relay is whatever served the page, so there
+ * is nothing the player could start and the message only says what happened.
+ */
+export function relayProblem(): string {
+  const where = relayUrl()
+  return import.meta.env?.DEV
+    ? `no relay at ${where} - run: npm run relay`
+    : `the relay at ${where} is not answering`
+}
+
 export interface NetInfo {
   status: NetStatus
   /** The room you are in, or the last one tried. */
@@ -212,7 +244,7 @@ export function joinLobby(rawCode: string, rawName: string): void {
     ws = new WebSocket(relayUrl())
   } catch (error) {
     console.error('[09-net] could not open a connection', error)
-    set({ status: 'error', why: 'could not reach the relay' })
+    set({ status: 'error', why: relayProblem() })
     return
   }
   socket = ws
@@ -319,16 +351,18 @@ export function joinLobby(rawCode: string, rawName: string): void {
   }
 
   ws.onclose = () => {
-    if (socket === ws) {
-      tracks.clear()
-      pings.clear()
-      roster.set([])
-      set({ status: 'offline', id: null, peers: 0, host: true })
-    }
+    if (socket !== ws) return
+    tracks.clear()
+    pings.clear()
+    roster.set([])
+    // Alone again, so the clock is yours. The status is whatever the close
+    // actually means - see `statusAfterClose`; a refused connection has
+    // already said why and must not be talked over.
+    set({ status: statusAfterClose(info.get().status), id: null, peers: 0, host: true })
   }
 
   ws.onerror = () => {
-    set({ status: 'error', why: 'the relay is not answering' })
+    set({ status: 'error', why: relayProblem() })
   }
 
   sending = setInterval(() => {
