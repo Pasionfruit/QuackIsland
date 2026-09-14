@@ -18,7 +18,7 @@
  */
 import { useEffect } from 'react'
 import { useNet, usePeers } from '../../09-net'
-import { endGame, useParty } from '../../10-party'
+import { disbandParty, useParty } from '../../10-party'
 import { useGameMode } from '../../13-modes'
 import { GRID, everyCell, isLight } from './grid'
 import {
@@ -93,8 +93,8 @@ export function GardenScreen() {
           <span style={{ color: '#e8d98a' }}>{goofs.seeds}</span>
         </span>
         {net.host ? (
-          <button type="button" onClick={endGame} style={{ ...button, marginLeft: 10 }}>
-            end the round
+          <button type="button" onClick={disbandParty} style={{ ...button, marginLeft: 10 }}>
+            end the party
           </button>
         ) : null}
       </div>

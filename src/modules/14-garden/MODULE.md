@@ -200,8 +200,9 @@ works on your own - out of a lobby you are your own host.
 - **Then the lawn.** Six rows of nine, checkerboarded, with your chosen animals
   in a tray above it and the shared seed count in the bar.
 - **Watch the seed count in both browsers.** It is one pot: they must agree.
-- **Press end the round as the host.** Both go back to the world, and starting
-  again should open the menu fresh with nobody's hand in it.
+- **Press end the party as the host.** Everybody leaves the lobby, goes home
+  to the spawn island, and gets a note saying why. Starting a fresh party
+  should open the menu with nobody's hand in it.
 - **Have the guest leave mid-pick.** The host must stop waiting on them.
 - **Make the window narrow.** The board should stay square-ruled and on the
   screen rather than running off the side.

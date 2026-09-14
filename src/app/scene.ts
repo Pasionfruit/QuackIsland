@@ -56,7 +56,19 @@ const PlayerOnSea = () =>
  * has never heard of a catalogue of games, `13-modes` has never heard of a
  * volcano, and this file is the one place allowed to know both.
  */
-const PartyIfChosen = () => createElement(Party, { active: () => getGameMode() === 'island' })
+const PartyIfChosen = () =>
+  createElement(Party, { active: () => getGameMode() === 'island', home: spawnSpot })
+
+/**
+ * Home: the middle of the spawn island, where a player starts.
+ *
+ * Read when a party is called off, so it is worked out then rather than
+ * remembered from load - the tide moves, and a spot that was above the sand at
+ * dawn is under the sea by midday.
+ */
+function spawnSpot(): { x: number; y: number; z: number } {
+  return { x: 0, y: standOn(0, 0) + 0.6, z: 0 }
+}
 
 /** Prints land on whatever the ground currently is, for the same reason. */
 const PrintsOnGround = () =>

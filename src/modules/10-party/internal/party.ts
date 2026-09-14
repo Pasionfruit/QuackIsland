@@ -114,46 +114,6 @@ export function canStart(
   return isHost && phase === 'gathering' && allReady(ids, ready)
 }
 
-/**
- * Everything the one lobby button needs to decide what it is.
- *
- * `playable` is whether the chosen game can be started at all - whether it
- * exists, and whether enough people are here for the way it is being played.
- * Decided outside, because this module has never heard of a catalogue of games
- * and must not learn.
- */
-export interface LobbyView {
-  phase: PartyPhase
-  isHost: boolean
-  /** Everybody who counts, including you. */
-  ids: Iterable<string>
-  ready: ReadonlySet<string>
-  amReady: boolean
-  playable: boolean
-}
-
-/**
- * What the lobby button does next.
- *
- * One button rather than three, because at any moment there is exactly one
- * thing a player wants from it: say you are ready, take it back, or - if you
- * are the host and everybody has said it - start.
- *
- * `'none'` is a button with nothing to do: the game is already running, or the
- * chosen game cannot be started. It is a state and not an error, and the
- * interface says why rather than showing a button that does nothing.
- */
-export type LobbyAction = 'ready' | 'unready' | 'start' | 'none'
-
-export function lobbyAction(view: LobbyView): LobbyAction {
-  if (!view.playable || view.phase === 'playing') return 'none'
-  // Readying up comes before anything else: it is the one thing everybody can
-  // do, host or not, and the start button is only reachable through it.
-  if (!view.amReady) return 'ready'
-  if (view.isHost && allReady(view.ids, view.ready)) return 'start'
-  return 'unready'
-}
-
 /** What the dashboard says while waiting. */
 export function waitingFor(ids: Iterable<string>, ready: ReadonlySet<string>): number {
   let waiting = 0
@@ -167,6 +127,14 @@ export interface PartyMessage {
   phase?: PartyPhase
   /** Whether the sender is ready. */
   ready?: boolean
+  /**
+   * The host calling the whole party off.
+   *
+   * Not the same as the phase going back to `off`, which only ends a round.
+   * This ends the **party**: everybody leaves the lobby and goes home to their
+   * own island. It is the host's alone, and it is the last thing they send.
+   */
+  disband?: boolean
 }
 
 /**
@@ -191,6 +159,10 @@ export function decodeParty(message: Record<string, unknown>): PartyMessage | nu
   if (message.ready !== undefined) {
     if (typeof message.ready !== 'boolean') return null
     out.ready = message.ready
+  }
+  if (message.disband !== undefined) {
+    if (typeof message.disband !== 'boolean') return null
+    out.disband = message.disband
   }
   return out
 }

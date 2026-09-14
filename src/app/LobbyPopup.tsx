@@ -1,10 +1,15 @@
 /**
- * The lobby: make one, join somebody else's, and pick what the party plays.
+ * The lobby: who you are, whether you are ready, who with, what you are
+ * playing, and the host's way to start it.
  *
  * Top left, behind one button, because it is the first thing you do and the
- * last thing you want to hunt for. It was in the debug panel, which is the
- * wrong place for the one panel that is not for debugging - that section is
- * now a line of status and a way in here.
+ * last thing you want to hunt for.
+ *
+ * **The order on screen is the order you do things in**, which is not the
+ * order the code would naturally fall into: your name, then readying up if you
+ * are in a party, then the code that gets you into one, then the game, then
+ * start. Readying sits second because it is what you come back to the popup
+ * for; the code sits under it because you type it once and never again.
  *
  * **Making and joining are two different things and have two different spots.**
  * One field that was both was the joining bug: it opened holding a code of
@@ -23,8 +28,8 @@ import { useEffect, useRef, useState } from 'react'
 import { joinLobby, leaveLobby, makeCode, normaliseCode, useNet, usePeers } from '../modules/09-net'
 import {
   ME,
+  canStart,
   hostGame,
-  lobbyAction,
   setReady,
   startGame,
   useParty,
@@ -69,17 +74,11 @@ export function LobbyPopup() {
 
   const game = modeById(mode)
   const everyone = [...peers.map((p) => p.id), ME]
+  const ready = party.ready.has(ME)
+  const waiting = waitingFor(everyone, party.ready)
   const needed = mode === 'garden' ? needsPlayers(gardenMode) : 1
   const enough = everyone.length >= needed
-  const action = lobbyAction({
-    phase: party.phase,
-    isHost: net.host,
-    ids: everyone,
-    ready: party.ready,
-    amReady: party.ready.has(ME),
-    playable: joined && game.built && enough,
-  })
-  const waiting = waitingFor(everyone, party.ready)
+  const startable = canStart(party.phase, net.host, everyone, party.ready) && game.built && enough
 
   /**
    * Being in a lobby *is* gathering.
@@ -137,36 +136,19 @@ export function LobbyPopup() {
 
   const canJoinTheirs = normaliseCode(theirs) !== null
 
-  const press = () => {
-    if (action === 'start') startGame()
-    else if (action === 'ready') setReady(true)
-    else if (action === 'unready') setReady(false)
-  }
-
-  const label =
-    action === 'start'
-      ? 'start'
-      : action === 'ready'
-        ? 'ready'
-        : action === 'unready'
-          ? 'not ready'
-          : party.phase === 'playing'
-            ? 'playing'
-            : 'ready'
-
-  const note = !joined
-    ? 'join a lobby to play'
+  const startNote = !joined
+    ? 'create a lobby, or join one, to play with anybody'
     : party.phase === 'playing'
       ? 'the game is running'
       : !game.built
         ? 'that game has nowhere to go yet'
         : !enough
-          ? `${needed} players needed for this one`
+          ? `${needed} players needed for ${gardenMode}`
           : waiting > 0
-            ? `waiting on ${waiting}`
+            ? `waiting on ${waiting} to ready up`
             : net.host
               ? 'everybody is ready'
-              : 'waiting for the host to start'
+              : 'everybody is ready - the host starts it'
 
   return (
     <div ref={shell} style={{ position: 'relative' }}>
@@ -200,8 +182,9 @@ export function LobbyPopup() {
             </button>
           </div>
 
-          <label style={row}>
-            <span style={caption}>you are</span>
+          {/* 1. Who you are. */}
+          <div style={row}>
+            <span style={{ opacity: 0.5, width: 52 }}>you are</span>
             <input
               value={name}
               onChange={(e) => setName(e.target.value.slice(0, 16))}
@@ -209,11 +192,40 @@ export function LobbyPopup() {
               spellCheck={false}
               style={{ ...field, flex: 1, minWidth: 40 }}
             />
-          </label>
+          </div>
+
+          {/* 2. Ready. Only in a party: on your own there is nobody to be
+                 ready for, and a button that means nothing is worse than no
+                 button at all. */}
+          {joined ? (
+            <>
+              <div style={rule} />
+              <button
+                type="button"
+                onClick={() => setReady(!ready)}
+                style={{
+                  ...button,
+                  width: '100%',
+                  padding: '6px 8px',
+                  background: ready ? '#6fb6c8' : 'rgba(255,255,255,0.06)',
+                  color: ready ? '#16202a' : '#f2ece2',
+                }}
+              >
+                {ready ? 'ready' : 'ready up'}
+              </button>
+              <div style={{ opacity: 0.45, marginTop: 4 }}>
+                {waiting === 0
+                  ? 'everybody is ready'
+                  : `${waiting} of ${everyone.length} still to ready up`}
+              </div>
+            </>
+          ) : null}
 
           <div style={rule} />
 
-          {/* Your own lobby. The code is made for you; share it. */}
+          {/* 3. The code. Your own to share, or somebody else's to type. The
+                 relay only ever knows about rooms; what a game is stays
+                 entirely in the browser. */}
           <div style={caption}>start your own</div>
           <div style={row}>
             <input
@@ -292,6 +304,7 @@ export function LobbyPopup() {
 
           <div style={rule} />
 
+          {/* 4. The game. The host's to choose; everybody else is told. */}
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
             <span style={{ opacity: 0.55, letterSpacing: 0.6 }}>GAME</span>
             <span style={{ opacity: 0.4 }}>
@@ -351,32 +364,32 @@ export function LobbyPopup() {
 
           <div style={rule} />
 
-          {/* One button. At any moment there is exactly one thing you want from
-              it: say you are ready, take it back, or - as host, with everybody
-              ready - start. */}
-          <button
-            type="button"
-            onClick={press}
-            disabled={action === 'none'}
-            style={{
-              ...button,
-              width: '100%',
-              padding: '6px 8px',
-              cursor: action === 'none' ? 'default' : 'pointer',
-              opacity: action === 'none' ? 0.45 : 1,
-              background:
-                action === 'start'
-                  ? '#e0a05a'
-                  : action === 'unready'
-                    ? '#6fb6c8'
-                    : 'rgba(255,255,255,0.06)',
-              color: action === 'start' || action === 'unready' ? '#16202a' : '#f2ece2',
-            }}
-          >
-            {label}
-          </button>
+          {/* 5. Start. The host's alone: starting moves everybody, and that is
+                 not something to hand to whoever happens to be in the room. */}
+          {net.host ? (
+            <button
+              type="button"
+              onClick={startGame}
+              disabled={!startable}
+              style={{
+                ...button,
+                width: '100%',
+                padding: '6px 8px',
+                background: startable ? '#e0a05a' : 'rgba(255,255,255,0.06)',
+                color: startable ? '#20222a' : '#f2ece2',
+                opacity: startable ? 1 : 0.5,
+                cursor: startable ? 'pointer' : 'default',
+              }}
+            >
+              {party.phase === 'playing' ? 'playing' : 'start the party'}
+            </button>
+          ) : (
+            <div style={{ opacity: 0.5, textAlign: 'center' }}>
+              {party.phase === 'playing' ? 'the game is running' : 'the host starts the party'}
+            </div>
+          )}
 
-          <div style={{ opacity: 0.45, marginTop: 5 }}>{note}</div>
+          <div style={{ opacity: 0.45, marginTop: 5 }}>{startNote}</div>
         </div>
       ) : null}
     </div>

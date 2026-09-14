@@ -31,11 +31,28 @@ export interface PartyProps {
    * change between renders without this component being one of them.
    */
   active?: () => boolean
+
+  /**
+   * Where home is: the spot on the spawn island a player belongs when there is
+   * no party any more.
+   *
+   * Passed in for the same reason as everything else here - home is a place on
+   * the *terrain*, and this module has never heard of the terrain. Without it
+   * a disbanded party leaves everybody standing on an island nobody is playing
+   * on any more.
+   */
+  home?: () => { x: number; y: number; z: number }
 }
 
-export function Party({ active }: PartyProps) {
+export function Party({ active, home }: PartyProps) {
   /** The phase the last teleport was done for. */
   const placed = useRef<string>('off')
+
+  /** The disband this browser has already gone home for. */
+  const wentHome = useRef(getParty().disbanded)
+
+  const goingHome = useRef(home)
+  goingHome.current = home
 
   // Read through a ref so a changed callback identity cannot re-run the frame
   // callback, which would drop a frame at exactly the wrong moment.
@@ -47,6 +64,17 @@ export function Party({ active }: PartyProps) {
   useGameFrame(() => {
     const net = getNet()
     const party = getParty()
+
+    // The party was called off. Everybody goes home, wherever they were and
+    // whichever game they were in the middle of - that is what disbanding is,
+    // and it is the one teleport that does not care whose game was running.
+    if (party.disbanded !== wentHome.current) {
+      wentHome.current = party.disbanded
+      placed.current = 'off'
+      const spot = goingHome.current?.()
+      if (spot && getPlayerState()) movePlayerTo(spot.x, spot.y, spot.z)
+      return
+    }
 
     // Out of a lobby there is nobody to play with, so the board goes away
     // rather than stranding you on it.

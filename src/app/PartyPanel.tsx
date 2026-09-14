@@ -13,7 +13,7 @@
  * how - and the composition root is the one place allowed to.
  */
 import { useNet, usePeers } from '../modules/09-net'
-import { ME, endGame, useParty, waitingFor } from '../modules/10-party'
+import { ME, disbandParty, useParty, waitingFor } from '../modules/10-party'
 import { modeById, useGameMode } from '../modules/13-modes'
 import { gardenModeById, useGardenMode } from '../modules/14-garden'
 
@@ -52,15 +52,15 @@ export function PartyPanel() {
                 : `waiting on ${waiting}`}
           </div>
 
-          {/* The way out. The host's alone, because ending it moves everybody
-              and a guest ending everyone's game is not a thing to offer. */}
-          {net.host && party.phase !== 'off' ? (
+          {/* The way out. The host's alone, because it sends everybody home
+              and a guest ending everyone's party is not a thing to offer. */}
+          {net.host ? (
             <button
               type="button"
-              onClick={endGame}
+              onClick={disbandParty}
               style={{ ...button, width: '100%', opacity: 0.8 }}
             >
-              {party.phase === 'playing' ? 'end the game' : 'clear everyone’s ready'}
+              end the party
             </button>
           ) : null}
         </>

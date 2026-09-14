@@ -61,6 +61,32 @@ export function encodeChoice<T extends string>(
   return { t: tag, ...message }
 }
 
+/**
+ * What a choice message means to whoever received it.
+ *
+ * The whole rule, in one pure function, because getting it wrong is silent:
+ * a joiner that ignores the answer sits in a lobby playing a different game
+ * from everybody else and nothing anywhere says so.
+ *
+ * - **A guest takes the host's word.** That is how somebody arriving finds out
+ *   what the party is playing, and it is the only way they ever find out.
+ * - **The host takes nobody's.** Two clients each believing they are host
+ *   would otherwise take turns overruling each other.
+ * - **The host answers anybody who asks**, which is what makes the arriving
+ *   guest's question worth asking.
+ */
+export function applyChoice<T extends string>(
+  current: T,
+  message: ChoiceMessage<T>,
+  isHost: boolean,
+): { value: T; answer: boolean } {
+  const told = message.value !== undefined && !isHost
+  return {
+    value: told ? (message.value as T) : current,
+    answer: message.ask === true && isHost,
+  }
+}
+
 export interface Choice<T extends string> {
   /** The current value, for React. */
   use(): T
@@ -125,11 +151,11 @@ export function hostChoice<T extends string>(
       return subscribeRoom((_from, raw) => {
         const message = decodeChoice(tag, known, raw)
         if (!message) return
-        const host = getNet().host
-        // Only the host's copy counts. Two clients each believing they are
-        // host would otherwise take turns overruling each other.
-        if (message.value !== undefined && !host) store.set(message.value)
-        if (message.ask && host) announce()
+        // The rule itself is `applyChoice`, which is pure and tested. This is
+        // only the part that has to touch a store and a socket.
+        const { value, answer } = applyChoice(store.get(), message, getNet().host)
+        store.set(value)
+        if (answer) announce()
       })
     },
 

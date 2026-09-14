@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { applyChoice } from '../internal/choice'
 import {
   DEFAULT_MODE,
   MODES,
@@ -113,5 +114,31 @@ describe('the choice on the wire', () => {
 
   it('accepts a message that says nothing, because saying nothing is legal', () => {
     expect(decodeMode({ t: 'mode' })).toEqual({})
+  })
+})
+
+
+describe('what a joiner does with the host’s answer', () => {
+  it('takes the host’s game, whatever it was playing before', () => {
+    // The whole point of asking on arrival: you picked Garden Goofs on your
+    // own, you join somebody's lobby, and you are playing what they are.
+    const { value } = applyChoice('garden', { value: 'island' }, false)
+    expect(value).toBe('island')
+  })
+
+  it('never lets a guest move the host', () => {
+    const { value } = applyChoice('island', { value: 'garden' }, true)
+    expect(value).toBe('island')
+  })
+
+  it('answers a question, but only if it is the host being asked', () => {
+    expect(applyChoice('island', { ask: true }, true).answer).toBe(true)
+    expect(applyChoice('island', { ask: true }, false).answer).toBe(false)
+    expect(applyChoice('island', { value: 'garden' }, false).answer).toBe(false)
+  })
+
+  it('leaves the choice alone when the message says nothing about it', () => {
+    expect(applyChoice('garden', { ask: true }, false).value).toBe('garden')
+    expect(applyChoice('garden', {}, false).value).toBe('garden')
   })
 })

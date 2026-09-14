@@ -80,9 +80,16 @@ lobby plays the same one. The host chooses:
   Seeds are one pot shared by the whole party. Choose **Endless**, **Co-op** or
   **Versus**.
 
-Then **one button**: press *ready*, press it again for *not ready*, and once
-everybody has readied up it becomes *start* for the host. Starting moves
-everyone to whichever place the chosen game is played in.
+The popup runs top to bottom in the order you do things: **your name**, then
+**ready up** once you are in a party, then the **code** that got you there,
+then the **game**, then **start the party** — which only the host has, and only
+once everybody has readied up.
+
+A player leaving raises a note in the corner saying who left; you can dismiss
+it or leave it to fade. When the host **ends the party** it is disbanded: every
+player leaves the lobby and is put back on the spawn island, with a note saying
+why. And anybody joining a lobby is told what the host has chosen — your own
+selection is replaced by theirs the moment you arrive.
 
 Starting Garden Goofs opens a menu to choose three of the four animals with,
 and the round waits until everybody has chosen. Then the lawn.

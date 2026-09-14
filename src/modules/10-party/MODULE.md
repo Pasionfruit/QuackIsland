@@ -33,14 +33,13 @@ everybody arriving on the same line at the same moment.
 | `BOARD_LAYER` | The three.js layer the tiles are on |
 | `OUTLINE`, `BREACH` | The out-of-round waves, and the horseshoe |
 | `Party` | The scene entry: the board, and moving people onto it |
-| `PartyProps` | `{ active? }` - whether this is the game the party has chosen |
+| `PartyProps` | `{ active?, home? }` - which game this is, and where home is |
 | `Arena` | Just the board, if something ever wants it alone |
-| `useParty()` / `getParty()` | `{ phase, ready }` |
+| `useParty()` / `getParty()` | `{ phase, ready, disbanded }` |
 | `hostGame()` / `startGame()` / `endGame()` | Host only |
 | `setReady(ready)` / `amReady()` | Yours |
 | `canStart(phase, isHost, ids, ready)` | Whether start may be pressed. Pure |
-| `lobbyAction(view)` | What the one lobby button does next. Pure |
-| `LobbyAction`, `LobbyView` | `'ready' \| 'unready' \| 'start' \| 'none'`, and what decides it |
+| `disbandParty()` | Ends the party: everybody leaves and goes home. Host only |
 | `allReady(ids, ready)` / `waitingFor(ids, ready)` | Pure |
 | `spawnFor(index, count)` | Where the nth player lines up. World space. Pure |
 | `partyHeightLocal(d)` / `partyHeightAt(x, z)` | The island's shape. Pure |
@@ -77,30 +76,36 @@ it is a place rather than a game - you can swim out to it while other people
 are playing something else. A game mode decides what happens when a game
 *starts*, not what the world contains.
 
-## One button, not three
+## Ending a round, and ending the party
 
-`lobbyAction` answers a single question: what does the lobby button do right
-now? At any moment there is exactly one thing a player wants from it - say you
-are ready, take it back, or, as the host with everybody ready, start.
+Two different things, and reading one as the other either strands people or
+scatters them:
 
-```
-not ready                      -> 'ready'
-ready, somebody still waiting  -> 'unready'
-ready, everybody ready, host   -> 'start'
-ready, everybody ready, guest  -> 'unready'
-game running, or unplayable    -> 'none'
-```
+- **`endGame()`** puts the phase back to `off`. The round is over, everybody is
+  un-readied, and the lobby carries on. Nothing moves.
+- **`disbandParty()`** ends the **party**. Everybody leaves the lobby and goes
+  home to their own island. It is the host's alone, it is the last thing they
+  send, and the message goes out *before* the socket closes - closing flushes
+  what is already queued, so everybody hears it before the host is gone. The
+  other way round, a guest would only find out by noticing the host had
+  vanished.
 
-Readying up comes before everything else, host included: the start button is
-only reachable *through* it, so a host cannot start a game they are not in.
+`PartyState.disbanded` is a **count**, not a flag. What anybody watching wants
+is the event - go home, say so on screen - and an event has to be told apart
+from the last one: a flag that went true and true again is one thing that
+happened, and two parties were called off. `PartyView` takes the count as its
+cue to teleport, and the interface takes it as its cue to say so.
 
-`playable` is decided outside this module, because it is the one part that
-depends on which game was chosen - whether that game has anywhere to go, and
-whether enough people are here for the way it is being played. This module has
-never heard of a catalogue of games and must not learn.
+Going home needs a `home` callback, passed in from the composition root for the
+same reason as everything else here: home is a place on the *terrain*, and this
+module has never heard of the terrain.
 
 ## Invariants you may rely on
 
+- **Only the host can disband.** A guest claiming to be one could otherwise
+  send everybody home from inside somebody else's lobby, so a `disband` is
+  ignored unless you are not the host - which is exactly who should be acting
+  on it, and the host acts on its own call directly.
 - **The host answers anybody who speaks.** Receiving a ready flag makes the
   host announce where things stand, which is how somebody who joined
   mid-gathering finds out. The phase itself is only broadcast when it changes,

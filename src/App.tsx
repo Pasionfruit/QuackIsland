@@ -15,6 +15,7 @@ import { LobbyPopup } from './app/LobbyPopup'
 import { GardenScreen } from './modules/14-garden'
 import { Scoreboard } from './app/Scoreboard'
 import { Boundary } from './app/Boundary'
+import { Toasts } from './app/Toasts'
 
 export default function App() {
   return (
@@ -46,6 +47,10 @@ export default function App() {
             world rather than in it. It shows nothing at all until a round of
             it is actually running. */}
         <GardenScreen />
+
+        {/* Notes about things that happened to you rather than things you
+            did: somebody leaving, the host calling the party off. */}
+        <Toasts />
       </Boundary>
     </>
   )

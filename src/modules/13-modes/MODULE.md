@@ -50,6 +50,7 @@ the lobby draws whatever the catalogue holds.
 | `nextMode(id, step?)` | The next one along, wrapping both ways. Pure |
 | `decodeMode(raw)` / `encodeMode(m)` | The wire format, and its validation. Pure |
 | `hostChoice(tag, known, fallback)` | A setting the host decides and the lobby is told |
+| `applyChoice(current, message, isHost)` | What a message means to whoever got it. Pure |
 | `Choice`, `ChoiceMessage` | What that returns, and what it sends |
 | `decodeChoice` / `encodeChoice` | The generic wire format underneath both. Pure |
 | `ModeMessage` | `{ mode?, ask? }` |
@@ -67,9 +68,11 @@ the lobby draws whatever the catalogue holds.
 - **Alone, you are your own host.** `09-net` reports `host: true` when you are
   not in a lobby, so picking a game works before anybody has arrived and
   nothing is taken away by joining.
-- **A joiner asks.** `useModeSync` sends `ask` the moment you are in a room and
-  the host answers with what is selected. A lobby that only broadcast on change
-  would leave everyone who arrived afterwards looking at the wrong game.
+- **A joiner takes the host's game.** `useModeSync` sends `ask` the moment you
+  are in a room, the host answers, and the answer wins over whatever you had
+  picked on your own. That is the only way somebody arriving finds out what the
+  party is playing, so the rule is `applyChoice` - pure, and tested three ways:
+  a guest is told, a host is never told, and only a host answers.
 - **Leaving forgets.** On your own again the choice goes back to
   `DEFAULT_MODE`, rather than the last lobby's game following you home.
 - **The default is a game that exists.** There is a test. A lobby that opens

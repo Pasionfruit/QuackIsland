@@ -125,11 +125,30 @@ describe('the panels mount', () => {
     act(() => chooseMode('island'))
   })
 
-  it('offers one button for readying up', () => {
-    const host = openLobby()
-    const labels = [...host.querySelectorAll('button')].map((b) => b.textContent)
-    // One, not a ready button and a start button and a host button.
-    expect(labels.filter((l) => l === 'ready' || l === 'not ready' || l === 'start')).toHaveLength(1)
+  it('puts the steps in the order you do them in', () => {
+    // Name, then ready, then the code, then the game, then start. The order is
+    // the workflow, so it is worth a test: a lobby that asks you to pick a
+    // game before it has told you how to get into one reads backwards.
+    const html = openLobby().innerHTML
+    const at = (needle: string) => {
+      const i = html.indexOf(needle)
+      expect(i, `${needle} is missing`).toBeGreaterThan(-1)
+      return i
+    }
+    expect(at('you are')).toBeLessThan(at('start your own'))
+    expect(at('start your own')).toBeLessThan(at('or join someone'))
+    expect(at('or join someone')).toBeLessThan(at('GAME'))
+    expect(at('GAME')).toBeLessThan(at('start the party'))
+  })
+
+  it('hides the ready button until you are actually in a party', () => {
+    // On your own there is nobody to be ready for, and a button that means
+    // nothing is worse than no button at all.
+    const labels = [...openLobby().querySelectorAll('button')].map((b) => b.textContent)
+    expect(labels).not.toContain('ready up')
+    expect(labels).not.toContain('ready')
+    // The host's start button is there either way: alone, you are the host.
+    expect(labels).toContain('start the party')
   })
 
   it('renders all of them at once, which is what the page does', () => {

@@ -24,6 +24,7 @@ export {
 } from './internal/modes'
 
 export {
+  applyChoice,
   decodeChoice,
   encodeChoice,
   hostChoice,
