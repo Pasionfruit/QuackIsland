@@ -107,7 +107,7 @@ describe('walking', () => {
 
   it('turns to face the way it is stepping, not the camera', () => {
     // Movement stays camera-relative - D is still screen-right - but the body
-    // follows it round. A duck side-stepping while facing the camera walks
+    // follows it round. A body side-stepping while facing the camera walks
     // sideways with its beak pointing at you, which is why this changed.
     for (const cameraYaw of [0, 1.2, Math.PI]) {
       const right = createPlayer(0, 0, flat(0))
@@ -145,7 +145,7 @@ describe('walking', () => {
 
   it('still walks where the camera points, whichever way the body ends up', () => {
     // The turn is cosmetic: it must not feed back into the movement basis, or
-    // holding forward would send the duck spiralling.
+    // holding forward would send the body spiralling.
     for (const cameraYaw of [0.4, 2.2, 4.9]) {
       const p = createPlayer(0, 0, flat(0))
       run(p, press({ forward: true, cameraYaw }), 120)
@@ -410,7 +410,7 @@ describe('swimming', () => {
 
   it('points the same way swimming and walking, so wading ashore does not spin it', () => {
     // Body and water used to disagree about what `facing` meant, so leaving the
-    // sea swung the duck round for no reason the player could see.
+    // sea swung the body round for no reason the player could see.
     const deep = flat(-8)
     const cameraYaw = 2.2
     const p = createPlayer(0, 0, deep)

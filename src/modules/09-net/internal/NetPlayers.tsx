@@ -1,23 +1,23 @@
 /**
- * Sending your duck, and drawing everyone else's.
+ * Sending your body, and drawing everyone else's.
  *
  * Two jobs that both want to happen once a frame with no React in the way:
- * the local duck's state goes into the send buffer, and every peer's
- * interpolated state goes onto a cloned duck.
+ * the local player's state goes into the send buffer, and every peer's
+ * interpolated state goes onto a body of their own.
  *
- * The ducks are clones of the one `02-player` already loaded and normalised,
- * so a remote player is the same model, the same size and the same way up as
- * the local one, and repairing the feet or changing the scale fixes them all.
+ * The bodies come out of `02-player`'s own builder, so a remote player is the
+ * same shape, the same size and the same way up as the local one, and changing
+ * how a body looks changes all of them at once.
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { Group } from 'three'
 import { PRIORITY, useGameFrame } from '../../00-core'
-import { PLAYER, bodyPose, getPlayerState, loadDuck } from '../../02-player'
+import { PLAYER, bodyPose, createAvatar, getPlayerState } from '../../02-player'
 import { addWalker as addPrintWalker, removeWalker as removePrintWalker } from '../../03-footprints'
 import { addWalker as addSoundWalker, removeWalker as removeSoundWalker } from '../../08-audio'
 import { followWorld, peerAt, peerTracks, publish, sweep } from './client'
 
-/** One remote duck: an outer group that faces, an inner one that tips. */
+/** One remote body: an outer group that faces, an inner one that tips. */
 interface Rig {
   root: Group
   tilt: Group
@@ -44,24 +44,9 @@ interface PeerWalker {
 const peerWalkers = new Map<string, PeerWalker>()
 
 export function NetPlayers() {
-  const [model, setModel] = useState<Group | null>(null)
   const holder = useRef<Group>(null)
   /** A rig per peer id, made when they first appear and thrown away when gone. */
   const rigs = useMemo(() => new Map<string, Rig>(), [])
-
-  useEffect(() => {
-    let live = true
-    loadDuck()
-      .then((duck) => {
-        if (live) setModel(duck)
-      })
-      .catch((error) => {
-        console.error('[09-net] no duck to draw other players with', error)
-      })
-    return () => {
-      live = false
-    }
-  }, [])
 
   // Rigs are three.js objects, not React children: peers come and go on the
   // network's schedule, and rebuilding a React tree for that would be a
@@ -105,7 +90,7 @@ export function NetPlayers() {
     sweep(now)
 
     const parent = holder.current
-    if (!parent || !model) return
+    if (!parent) return
 
     const seen = peerTracks()
 
@@ -141,7 +126,7 @@ export function NetPlayers() {
       there.facing = state.facing
       there.speed = state.speed
       there.swimming = state.swimming
-      // Remote ducks are not simulated, so there is no fall to report. A peer
+      // Remote players are not simulated, so there is no fall to report. A peer
       // is on the ground whenever they are not swimming, which is what makes
       // their footsteps fire and stops a phantom landing thud on arrival.
       there.grounded = !state.swimming
@@ -151,11 +136,11 @@ export function NetPlayers() {
       if (!rig) {
         const root = new Group()
         const tilt = new Group()
-        // The same offset the local duck uses: the model's origin is its feet,
-        // and the middle of the body is what should pivot.
+        // The same offset the local player uses: a body's origin is its feet,
+        // and the middle of it is what should pivot.
         const feet = new Group()
         feet.position.y = -PLAYER.height / 2
-        feet.add(model.clone())
+        feet.add(createAvatar())
         tilt.add(feet)
         root.add(tilt)
         parent.add(root)

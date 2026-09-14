@@ -18,7 +18,7 @@ export interface PlayerState {
   vy: number
   /**
    * Which way the body faces, radians. Follows the direction of travel, so the
-   * duck always points where it is going.
+   * body always points where it is going.
    */
   facing: number
   grounded: boolean
@@ -273,7 +273,7 @@ export function stepPlayer(
   // pressing A turns and walks left rather than side-stepping left while still
   // facing forwards. A creature with a beak has to point where it is going;
   // the earlier model, where the body faced the camera, was built for a
-  // featureless capsule and left the duck walking sideways and backwards.
+  // featureless capsule and left the body walking sideways and backwards.
   //
   // Only while moving, so looking around while stood still or treading water
   // does not spin the body on the spot.

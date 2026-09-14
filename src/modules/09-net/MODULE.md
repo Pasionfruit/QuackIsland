@@ -3,14 +3,14 @@
 ## What this is
 
 Lobbies. Type a code, and everyone with the same code is on the same island and
-can see each other's ducks move.
+can see each other's bodies move.
 
 One WebSocket to a relay that knows about **rooms and nothing else**. The
-server has never heard of a duck. See `server/relay.mjs`, and `DEPLOY.md` for
+server has never heard of a player. See `server/relay.mjs`, and `DEPLOY.md` for
 how to run and host it.
 
 This covers what the plan called `10-transport` and `11-world-sync`. They are
-one module because the only thing being synced is a duck, and two gates for
+one module because the only thing being synced is a player, and two gates for
 that would be ceremony rather than safety. If a second kind of thing ever needs
 syncing, that is the moment to split them.
 
@@ -35,35 +35,36 @@ syncing, that is the moment to split them.
 | `peerAt(id, now)` / `peerTracks()` | Where a peer is right now, for the renderer |
 | `relayUrl()` | Where the relay is |
 | `NET` | Send rate, interpolation delay, timeout, history size |
-| `DuckState`, `Peer`, `Track`, `Snapshot`, `NetInfo`, `NetStatus` | The shapes |
+| `DuckState`, `Peer`, `Track`, `Snapshot`, `NetInfo`, `NetStatus` | The shapes. `DuckState` is the wire name for a player's position and pose |
 
 ## Invariants you may rely on
 
 - **Nothing that arrives from the network is trusted.** `decodeMessage`
   validates every field and returns `null` rather than throwing. A peer cannot
-  put a duck at `NaN`, at infinity, or a million metres away, and cannot put a
+  put a player at `NaN`, at infinity, or a million metres away, and cannot put a
   control character into a name that ends up in the DOM.
-- **Remote ducks never extrapolate.** They are drawn `NET.delay` behind live,
+- **Remote players never extrapolate.** They are drawn `NET.delay` behind live,
   so every position is between two snapshots that really happened. A peer who
   goes quiet stands still and then disappears; they never walk into the sea.
-- **Turning takes the short way round**, so a duck crossing the seam at π does
+- **Turning takes the short way round**, so a body crossing the seam at π does
   not spin all the way back through zero.
 - **Peer positions are never in React state.** They arrive fifteen times a
   second per player and are read every frame; React sees only the connection
   status and the peer count, which change rarely.
-- **Remote ducks are clones of the local one.** Same model, same size, same way
-  up, positioned by the same `bodyPose` — so they cannot drift from the duck
-  you are driving.
+- **Remote bodies are built by `02-player`, same as yours.** Same shape, same
+  size, same way up, positioned by the same `bodyPose` — so they cannot drift
+  from the body you are driving, and changing how a body looks changes all of
+  them at once.
 - **The history is bounded.** `NET.history` snapshots per peer, oldest dropped.
 - **Late packets are dropped, not sorted in.** A snapshot older than the newest
-  would rewind the duck.
+  would rewind the player.
 - **Being offline changes nothing.** Not joining a lobby is the normal case and
   the world plays exactly the same.
 
 ## Deliberate non-goals
 
 - **No authority.** The relay passes on what it is told, so a modified client
-  can put its duck anywhere. For walking about an island with friends that is
+  can put its player anywhere. For walking about an island with friends that is
   the right trade; it would not be if there were anything to win.
 - **No persistence.** Rooms exist while someone is in them. Nothing is stored,
   anywhere, ever.
@@ -73,7 +74,7 @@ syncing, that is the moment to split them.
   and the weather in the same way everyone is trusted with their own position.
 - **No name labels above remote players** yet.
 - **No shared anything else.** The shore, the footprints already on the beach
-  when you join, and whose duck is whose colour are all still local.
+  when you join, and whose body is whose colour are all still local.
 - **No reconnection.** Drop out and you press join again.
 
 ## The host owns the clock and the weather
@@ -116,10 +117,10 @@ lines that will not need touching when the game grows a chat box, a scoreboard
 or a thrown coconut — and it is why the protocol lives here rather than being
 shared with the server.
 
-## Why remote ducks are drawn in the past
+## Why remote players are drawn in the past
 
 Updates arrive fifteen times a second and the screen redraws sixty. Something
-has to fill the gaps, and there are two options: guess where the duck is going,
+has to fill the gaps, and there are two options: guess where the player is going,
 or draw where it definitely was.
 
 Guessing — extrapolation — is what makes other players skate past corners and
@@ -138,11 +139,11 @@ nobody notices, in exchange for movement that is never wrong.
 - **The host handing over is not seamless.** The new host keeps its own clock,
   which is within a fraction of a second of the old one, so the change is
   invisible - but it is not coordinated.
-- **No interest management.** A duck on the far side of the island is still sent.
+- **No interest management.** A player on the far side of the island is still sent.
 - Names are carried but not yet drawn.
 - A lost connection is not retried; the status goes to `offline`.
 - Positions are absolute, so a client with a different terrain seed would see
-  ducks walking through the ground. There is one seed, so this is theoretical.
+  players walking through the ground. There is one seed, so this is theoretical.
 
 ## How to review
 
@@ -164,20 +165,20 @@ Two browsers, two lobbies, and `DEPLOY.md` has the commands.
   over. Walk away and it should fade out rather than stop.
 - **Look at the sand behind another player.** Their footprints should be there,
   same as yours, fading at the same rate.
-- **Walk in one and watch the other.** The duck should move *smoothly*, not in
+- **Walk in one and watch the other.** The other body should move *smoothly*, not in
   fifteen visible steps a second, and it should face the way it is going.
-- **Run in circles.** The remote duck should turn the short way, never spinning
+- **Run in circles.** The remote body should turn the short way, never spinning
   round the long way as it crosses due north.
 - **Swim in one.** The other should see it tip and float, at the same height.
 - **Join with the wrong code**, or a code with an O or an I in it — it should
   say so rather than sitting on "connecting".
-- **Close one browser.** The duck should stand still and then vanish within
+- **Close one browser.** The body should stand still and then vanish within
   about eight seconds, not walk off.
 - **Press leave, then join again.** It should reconnect cleanly.
 - **Have a third browser join a different code.** It must see nobody.
 - **Stop the relay while joined.** The status should go offline and the game
   should carry on.
-- **Check the perf HUD with several peers.** Each duck is six draw calls, the
+- **Check the perf HUD with several peers.** Each body is two draw calls, the
   same as yours.
 - **Play without joining anything at all.** Everything should be exactly as it
   was.

@@ -1,7 +1,7 @@
 /**
  * 02-player - the public contract.
  *
- * A duck that walks the island with WASD and jumps with space, in third
+ * A body that walks the island with WASD and jumps with space, in third
  * person, with the mouse aiming the camera. Movement resolves against the terrain module's height
  * contract, so the player stands on exactly the ground that is drawn.
  */
@@ -16,7 +16,7 @@ export {
   type StepOptions,
 } from './internal/controller'
 
-export { DUCK, bodyPose, fitToHeight, type Bounds } from './internal/duck'
+export { AVATAR, bodyPose, createAvatar, facePoints } from './internal/avatar'
 
 export {
   VIEW,
@@ -32,7 +32,6 @@ export {
   type RigState,
   type ViewMode,
 } from './internal/camera'
-export { loadDuck, normaliseDuck, repairFeet } from './internal/DuckModel'
 
 export {
   CAM_DISTANCE_MAX,

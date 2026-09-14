@@ -330,12 +330,17 @@
           "id": "02.9",
           "title": "Optional collide callback, so the scene can supply solid things",
           "status": "done"
+        },
+        {
+          "id": "02.10",
+          "title": "Drop the duck model: a red pill with a smiley face for the front",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T02:52:34.208Z"
+          "at": "2026-09-14T21:19:49.473Z"
         },
         "human": {
           "status": "pending"
@@ -754,7 +759,7 @@
     {
       "id": "09-net",
       "phase": "P4",
-      "title": "Lobbies by code, with everyone else\u2019s duck drawn from a relay",
+      "title": "Lobbies by code, with everyone else’s body drawn from a relay",
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
@@ -789,7 +794,7 @@
         },
         {
           "id": "09.4",
-          "title": "Remote ducks cloned from the local model",
+          "title": "Remote bodies built by the player module",
           "status": "done"
         },
         {
@@ -811,7 +816,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T02:39:21.434Z"
+          "at": "2026-09-14T21:18:54.245Z"
         },
         "human": {
           "status": "pending"

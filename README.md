@@ -10,7 +10,7 @@ npm run dev
 ```
 
 **WASD** to move, **shift** to run, **space** to jump. Movement is relative to
-the camera and the duck turns to face wherever it is going. **V** swaps between
+the camera and the body turns to face wherever it is going. **V** swaps between
 first and third person, or use the buttons in the panel's VIEW section. Walk into the sea and you swim - the body tips flat and turns to
 face where it is going. Stop and it stands upright, treading water; walk back
 out and it stands up on the sand.
@@ -50,7 +50,7 @@ npm run dev        # the game on :5173
 ```
 
 Open `http://localhost:5173` in two different browsers, press **new** for a
-code in one, type it into the other, and press **join** in both. Both ducks
+code in one, type it into the other, and press **join** in both. Both players
 walk about the same island.
 
 Everyone in a lobby shares the host's time of day and weather, hears each
@@ -112,14 +112,14 @@ world is reproducible and testable.
 | --- | --- |
 | `00-core` | The canvas, render loop, lights, day cycle, tide, frame ordering, seeded RNG, perf HUD |
 | `01-terrain` | The sandy island: height function, chunked LOD mesh, sand shading |
-| `02-player` | Third-person duck: walks, runs, jumps, swims, mouse-aimed camera |
+| `02-player` | Third-person body: walks, runs, jumps, swims, mouse-aimed camera |
 | `03-footprints` | Webbed duck prints in the sand, fading, in one draw call |
 | `04-water` | The sea at `y = 0`: an ocean swell, lit per fragment, one draw call |
 | `05-music` | Background playlist, with a panel to skip, rewind, pause and set the volume |
 | `06-sky` | Sky dome with sun, stars and cloud, and the rain and snow falling out of it |
 | `07-shore` | Shells and coloured pebbles along the water line, in three draw calls |
 | `08-audio` | Footsteps, jumps, landings and swim strokes |
-| `09-net` | Lobbies by code, and everyone else’s duck |
+| `09-net` | Lobbies by code, and everyone else’s body |
 | `10-party` | Party island: a 120-tile spiral race to a volcano with treasure |
 | `11-currency` | Fish, shells and grapes: the wallet and the readout |
 | `12-rocks` | Rocks of every size, solid enough to bump into and stand on |

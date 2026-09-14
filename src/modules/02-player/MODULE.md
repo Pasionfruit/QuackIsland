@@ -32,8 +32,10 @@ three.js in it, so how the player moves is tested in Node rather than by eye.
 | `lookDirection(yaw, pitch)` | The way it looks. Pure, shared by both views |
 | `clampPitch(mode, pitch)` | Keeps the pitch inside what a view can cope with |
 | `VIEW`, `VIEW_MODES`, `RigState`, `Placement`, `ViewMode` | The shapes above |
-| `DUCK` | The model: asset id, which way it is authored, how far it tips |
-| `fitToHeight(bounds, height)` | The scale and lift that stand a model on the ground. Pure |
+| `AVATAR` | The body's look: colours, where the face sits, how far it tips |
+| `createAvatar()` | One body, feet on `y = 0`, facing +Z, over shared geometry |
+| `facePoints()` | Where each piece of the face sits on the body. Pure |
+| `bodyPose(lean, height, radius)` | How high the middle rides and how far it tips. Pure |
 | `stepPlayer(state, input, dt, groundAt, opts?)` | One step of movement. Pure |
 | `createPlayer(x, z, groundAt)` | A player standing on the ground at that spot |
 | `StepOptions` | `{ bounds?, seaLevel?, surfaceAt?, collide? }`. All optional |
@@ -75,12 +77,12 @@ reason — see **Why the water module does not own swimming** below.
   backing up turns around instead of moon-walking.
 
   This replaced a strafe model, where the body faced the camera. That suited a
-  featureless capsule and does not suit a duck: anything with a beak has to
-  point where it is going, or it walks sideways and reverses with its face to
-  you.
+  featureless capsule and does not suit one with a face: anything with a front
+  has to point where it is going, or it walks sideways and reverses with its
+  face to you.
 
   The turn is **cosmetic** — it must never feed back into the movement basis,
-  or holding forward would send the duck spiralling. There is a test for that.
+  or holding forward would send the body spiralling. There is a test for that.
   The body only turns while there is movement input, so looking around while
   stood still does not spin it on the spot.
 - **Forward is always away from the camera, and D is always screen-right.**
@@ -108,7 +110,7 @@ reason — see **Why the water module does not own swimming** below.
   water, and it is what makes stopping in deep water look deliberate rather
   than like a body face down in the sea.
 - **Swimming and walking agree about which way the body points**, so wading
-  ashore does not swing the duck round for no visible reason.
+  ashore does not swing the body round for no visible reason.
 - **The swell never decides anything.** `surfaceAt` changes how the body sits
   while floating and nothing else. Whether you swim comes from the bed and
   `seaLevel`, so a heaving surface cannot make wading flicker into swimming.
@@ -133,15 +135,14 @@ reason — see **Why the water module does not own swimming** below.
 - **No diving and no treading water.** Swimming is horizontal only: you are held
   at the surface and cannot go under or climb out onto anything but the beach.
 - **No drowning, stamina, or any other state that could kill you.**
-- **No animation.** The duck is one rigid piece: no waddle, no wing beat, no
-  head turn, no paddling feet. The model carries no skeleton, so animating it
-  at all means a different asset, not more code here.
-- **No first-person body.** The whole duck is hidden in first person rather
+- **No animation.** The body is one rigid piece: no walk cycle, no limbs, no
+  blink. The face is baked into its geometry, so anything that moves it means
+  a different way of building the body, not more code here.
+- **No first-person body.** The whole body is hidden in first person rather
   than a separate pair of hands being drawn — see the limitation below.
 - No first person, and no aiming beyond turning the camera.
-- **No repair of the model beyond the feet.** `repairFeet` closes one specific,
-  very visible defect. It is not a general asset-fixing pass and should not
-  grow into one — the right place to fix a model is the model.
+- **No model, and no loader.** The body is primitives. That is the point: there
+  is no download to fail, no axis convention to get wrong, and no asset to fix.
 - No physics engine — gravity and a ground snap, nothing more.
 
 ## How to use it from a new module
@@ -171,66 +172,57 @@ Every option may be left out. Without `bounds` the body walks off the meshed
 world; without `seaLevel` it never swims and simply walks the sea bed; without
 `surfaceAt` it floats at a flat sea level instead of riding the swell.
 
-## The duck
+## The body
 
-The body is `cute_duck_avatar_base.glb`, resolved through `assetUrl` so the
-assets can move to a CDN without unfreezing anything.
+A capsule the colour of a red pill, `PLAYER.height` tall and `PLAYER.radius`
+across, with a face on the front. It is built out of primitives in
+`internal/avatar.ts` — there is no model and no loader.
 
-**Its axes are stated, not detected.** The model is authored Z-up and facing
--Y — it came out of trimesh, and its beak sits at negative Y while its tail
-sits at positive. This world is Y-up with a heading of zero pointing down +Z,
-so `DUCK.rotationX` is a quarter turn about X and that is the whole conversion.
+That is a deliberate step back from a glTF duck that used to stand here. A
+model is a whole category of silent failure: upside down, backwards, a hundred
+times too big, feet that ship detached, a download that never arrives. All of
+it still renders something, so only looking catches it. None of that can happen
+to a capsule and four numbers.
 
-Guessing the up axis from a bounding box works right until it does not, and the
-failure is a duck lying on its back that passes every numeric check and still
-renders. So only the *size* is measured: `fitToHeight` reads the model's own
-height and returns the scale that makes it `PLAYER.height` tall along with the
-lift that puts its feet on `y = 0`, which is where the controller keeps them.
+**The face is what says which way is forward.** A featureless pill cannot show
+its heading, and the heading is the one thing you must be able to read — a body
+that walks sideways looks like a controls bug. So it gets two eyes and a smile,
+on +Z, which is where a heading of zero looks.
 
-There are tests that load the actual GLB off disk and check the duck comes out
-the right way up, facing forward, standing on the ground and the right height.
-They are worth having because every way this goes wrong still draws something.
+**The face sits on the body, not in front of it.** Every piece is placed
+against the curve of the capsule at its own sideways offset and then pushed in
+by half its own radius, so each one reads as a dome on the surface whatever
+size it is — an eye and a dot of the smile stand equally proud without either
+being given its own number. All of the face is kept on the straight part of the
+capsule, between the two rounded ends, which is what makes that placement exact
+arithmetic rather than a guess. There is a test for each of those.
 
-**Twenty-four parts become six.** The model arrives as separate meshes — body,
-head, each eye, each toe — sharing six materials. Merging the ones that share a
-material takes the player from twenty-four draw calls to six. That is only safe
-because the parts cannot move relative to each other: there is no skeleton and
-no animation in the file, and a test asserts both.
+**The smile is drawn as overlapping dots** on the bottom of a circle, rather
+than as a ring or a flat decal. A flat shape in front of a round body either
+cuts into it or hangs off it at the ends; dots follow the curve. A test checks
+that consecutive dots overlap, so it reads as one line and not as a dotted one.
 
-**Its feet are wrong in the file, and are repaired on the way in.** Every toe
-ships floating in front of its foot with a visible gap, hovering at shin height
-rather than resting on the sole. That is a defect in the asset rather than in
-anything here, but it is the first thing you see, so `repairFeet` measures the
-gap and closes it.
+**A whole body is two draw calls**, and every body in the world shares one set
+of geometry and materials. The face is merged into a single geometry when the
+first body is built, so eyes and smile cost one call between them however many
+pieces they are made of. `createAvatar` hands out a fresh `Group` over that
+shared geometry — a local player and a remote one must never share a transform.
 
-It is measured rather than hardcoded and it is idempotent: fix the model and it
-quietly becomes a no-op, and a duck whose part names it does not recognise
-passes through untouched. There are tests for both, and a test that records the
-defect as it ships — that one starts failing the day the model is fixed, which
-is the point.
+The face is left out of the shadow pass on purpose. It is a few centimetres of
+detail pressed against a body that is already casting, and nothing it could add
+would be visible.
 
-**It is shaded round, not flat.** The file carries no normals at all, so glTF
-says to shade it flat and the loader duly does. On a duck built from low-poly
-spheres that is what "looks flat" actually is: a bundle of facets. Every part
-is a subdivided icosahedron with its vertices shared between faces, so
-averaging the face normals at each vertex rounds them all off. Nothing in this
-model is meant to have a hard edge.
+## How far it tips when it swims
 
-**It loads imperatively, not through `useLoader`.** `useLoader` suspends, and
-there is no Suspense boundary above the canvas. A slow or missing asset leaves
-the old capsule on screen rather than blanking the scene; a failure logs and
-keeps the capsule. An invisible player is a worse failure than a plain one.
+`lean` in the controller means *lie flat*, and `AVATAR.swimTip` is the fraction
+of that quarter turn the body actually takes. It is `1`: a pill swims the way
+it always did, flat out with its long axis along the way it is going.
 
-## How far a duck tips when it swims
-
-`lean` in the controller means *lie flat*, which is right for a body that swims
-horizontally and wrong for a duck — ducks float upright and lean into the
-paddle. Rather than change the swim mechanic, `DUCK.swimTip` is the fraction of
-that quarter turn a duck actually takes: about fifteen degrees nose-down under
-way, upright the moment it stops.
-
-Set it to `1` and the duck swims flat, exactly as the capsule did. The
-controller is untouched either way.
+The cost of that is that the face points at the sea bed while you swim. Turn
+`swimTip` down — 0.2 or so — to float upright and lean into the stroke instead,
+keeping the face out of the water. The controller is untouched either way, and
+`bodyPose` is what both the local body and every remote one are placed with, so
+they cannot end up floating at different heights.
 
 ## First and third person
 
@@ -296,9 +288,13 @@ that the seam is the right way round, and it is in both modules' review lists.
   going, so a much faster body would start skipping off slopes again.
 - **You cast no shadow in first person.** The body is hidden, and three skips
   invisible objects in the shadow pass too. Keeping the shadow means putting
-  the duck on its own layer and enabling that layer on the light, which is a
+  the body on its own layer and enabling that layer on the light, which is a
   reach into `00-core` for a detail you only notice if you look for it.
-- Other players still see your duck normally; the view is yours alone.
+- Other players still see your body normally; the view is yours alone.
+- **The face points down while you swim**, because the body lies flat. See
+  `AVATAR.swimTip` above for the knob that changes it.
+- **The face is flat colour and does not move.** No blink, no expression, and
+  nothing that reacts to what you are doing.
 - The controller uses a fixed capsule and no ground friction, so stopping is
   instant. Fine for inspection, worth revisiting for game feel.
 
@@ -309,7 +305,7 @@ that the seam is the right way round, and it is in both modules' review lists.
 - **Hold shift to run.** Nearly twice walking pace, and it must not punch
   through the ground on a slope or make diagonals faster.
 - **Hold A, then D.** You should move left and right relative to the camera,
-  with the duck turning to face the way it is going, at any camera angle.
+  with the body turning to face the way it is going, at any camera angle.
 - **Hold left and drag** to look, left and right and a little up and down.
 - **Hold right and drag** to slide the view off the player; the world should
   follow the cursor. **Wheel** to pull back far enough to see the whole island.
@@ -324,11 +320,11 @@ that the seam is the right way round, and it is in both modules' review lists.
   ground.
 - **In first person, try to pan and zoom.** Neither should do anything.
 - **Swap while swimming, and while jumping.** Nothing should lurch.
-- **WASD walks relative to the camera**, and the duck turns to face where it
+- **WASD walks relative to the camera**, and the body turns to face where it
   is going. Walking while turning should feel like steering, not like the world
   spinning — and holding forward must go in a straight line, not a spiral.
-- **Hold S.** The duck should turn around and walk towards the camera, not
-  reverse with its beak still pointing away.
+- **Hold S.** The body should turn around and walk towards the camera, not
+  reverse with its face still pointing away.
 - **Space jumps**, once, from the ground. Holding it does not hover or repeat.
 - **The feet stay on the sand** over every slope, and across chunk and
   level-of-detail borders. This is the same check as the terrain probe, but
@@ -365,15 +361,18 @@ that the seam is the right way round, and it is in both modules' review lists.
   still swim.
 - Walking to the edge of the world stops you rather than dropping you off it.
 - The camera does not clip into the ground when you walk downhill.
-- **Look at the duck itself.** Right way up, facing where it walks, standing on
-  the sand rather than sunk into it or hovering. About as tall as you would
-  expect a character to be against the dunes.
-- **Walk in a circle and watch the beak.** It should lead. A model imported
-  backwards looks like a controls bug, not an import bug.
-- **Swim.** The duck should sit in the water leaning slightly forward, not lying
-  on its face. Stop and it should come upright.
-- **Check the draw calls in the perf HUD** with the player on and off. The duck
-  should cost six, not twenty-four.
+- **Look at the body itself.** Standing on the sand rather than sunk into it or
+  hovering, and about as tall as you would expect a character to be against the
+  dunes.
+- **Look at the face.** Two eyes and a smile, sitting *on* the front of the
+  body — not floating in front of it, not half swallowed by it, and not sliding
+  off the curve at the ends of the smile. Orbit right round: it should go
+  behind the body from the back rather than showing through it.
+- **Walk in a circle and watch the face.** It should lead, at every angle.
+- **Swim.** The body should lie flat, long axis along the way it is going, and
+  stand back up when you stop.
+- **Check the draw calls in the perf HUD** with the player on and off. A body
+  should cost two.
 - Try it at **night** as well as daylight — the body should still read against
   the sand.
 

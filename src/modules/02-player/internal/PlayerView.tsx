@@ -16,8 +16,7 @@ import { PRIORITY, getDayTime, setCameraMode, tideAt, useGameFrame } from '../..
 import { SEA_LEVEL, heightAt, worldBounds } from '../../01-terrain'
 import { IDLE_INPUT, PLAYER, createPlayer, stepPlayer, type PlayerInput, type PlayerState } from './controller'
 import { clampPitch, getViewMode, placeCamera, toggleViewMode } from './camera'
-import { bodyPose } from './duck'
-import { useDuck } from './DuckModel'
+import { bodyPose, createAvatar } from './avatar'
 
 const CAM_EASE = 12
 /**
@@ -137,7 +136,9 @@ export function Player({
   const domElement = useThree((s) => s.gl.domElement)
   const body = useRef<Group>(null)
   const tilt = useRef<Group>(null)
-  const duck = useDuck()
+  // Built once: it is the same two meshes for the life of the component, and
+  // nothing about it depends on React state.
+  const avatar = useMemo(() => createAvatar(), [])
 
   const state = useMemo(() => createPlayer(spawnX, spawnZ, heightAt), [spawnX, spawnZ])
   const keys = useRef<PlayerInput>({ ...IDLE_INPUT })
@@ -321,7 +322,7 @@ export function Player({
       collide: solid.current,
     })
 
-    // Shared with every remote duck, so they cannot sit at different heights.
+    // Shared with every remote body, so they cannot sit at different heights.
     const { rise, tip } = bodyPose(state.lean, PLAYER.height, PLAYER.radius)
 
     const view = getViewMode()
@@ -355,26 +356,11 @@ export function Player({
       {/* The outer group owns which way the body faces; this one owns the tip
           from standing to swimming, so the two never fight over one rotation. */}
       <group ref={tilt}>
-        {/* Both bodies hang half a height below the tilt, because that is the
-            middle of the body and the middle is what should pivot. The duck's
-            own origin is at its feet, so this puts them on the ground. */}
+        {/* The body hangs half a height below the tilt, because that is the
+            middle of it and the middle is what should pivot. Its own origin is
+            at its feet, so this puts them on the ground. */}
         <group position={[0, -PLAYER.height / 2, 0]}>
-          {duck ? (
-            <primitive object={duck} />
-          ) : (
-            // Shown only until the model arrives, and left in place if it never
-            // does - an invisible player is a worse failure than a plain one.
-            <group position={[0, PLAYER.height / 2, 0]}>
-              <mesh castShadow>
-                <capsuleGeometry args={[PLAYER.radius, PLAYER.height - PLAYER.radius * 2, 6, 12]} />
-                <meshStandardMaterial color="#e0563f" roughness={0.55} />
-              </mesh>
-              <mesh castShadow position={[0, 0.25, PLAYER.radius + 0.16]}>
-                <boxGeometry args={[0.22, 0.22, 0.34]} />
-                <meshStandardMaterial color="#f2e9d8" roughness={0.6} />
-              </mesh>
-            </group>
-          )}
+          <primitive object={avatar} />
         </group>
       </group>
     </group>
