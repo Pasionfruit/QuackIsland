@@ -1,6 +1,6 @@
 /**
- * Everything that stands on the lawn: fifty animals and plants that defend it,
- * and twenty-five pests that come for it.
+ * Everything that stands on the lawn: forty-nine animals and plants that
+ * defend it, and twenty-five pests that come for it.
  *
  * Two halves, deliberately kept apart:
  *
@@ -12,11 +12,16 @@
  *   species, sits somewhere, and can be hurt. `Defender` and `Pest` are the two
  *   sides of it.
  *
- * **The roster is a table on purpose.** Seventy-five species and not one branch
- * anywhere that switches on an id: adding the seventy-sixth is a line here and
- * nothing else in the build. Balancing is editing numbers in a column rather
- * than hunting through code, which is the only way a roster this size is ever
- * going to be balanced at all.
+ * **The roster is a table on purpose.** Seventy-four species and not one
+ * branch anywhere that switches on an id: adding the seventy-fifth is a line
+ * here and nothing else in the build. Balancing is editing numbers in a column
+ * rather than hunting through code, which is the only way a roster this size
+ * is ever going to be balanced at all.
+ *
+ * **The defenders are exactly forty-nine, on purpose.** The picking shelf is
+ * laid out as a 7x7 grid - one screen, no scrolling, every square filled - so
+ * the roster is sized to fit it exactly rather than the grid being sized to
+ * fit the roster.
  *
  * The numbers are **first numbers**. They are ordered sensibly against each
  * other - a Watermelon Mortar costs more and hits harder than a Pea Shooter -
@@ -156,7 +161,6 @@ const DEFENDER_LIST = [
   { id: 'mushroom-bouncer', name: 'Mushroom Bouncer', role: 'guards', cost: 75, recharge: 14, health: 150, reach: 1, shape: 'round', colour: '#d96a6a', blurb: 'Springy. Sends whatever walks into it back a square.' },
   { id: 'vine-trap', name: 'Vine Trap', role: 'guards', cost: 75, recharge: 15, health: 120, reach: 1, shape: 'long', colour: '#3f7d38', blurb: 'Grabs an ankle and holds on until somebody deals with it.' },
   { id: 'thorn-bush', name: 'Thorn Bush', role: 'guards', cost: 100, recharge: 12, health: 200, reach: 1, shape: 'spiky', colour: '#4a6b39', blurb: 'Chewing on it is a bad idea, and they try anyway.' },
-  { id: 'sneezy-flower', name: 'Sneezy Flower', role: 'guards', cost: 100, recharge: 14, health: 90, reach: 2, shape: 'tall', colour: '#f0c14b', blurb: 'One enormous sneeze and everything nearby is further away.' },
   { id: 'cactus-guard', name: 'Cactus Guard', role: 'guards', cost: 125, recharge: 16, health: 250, reach: 1, shape: 'spiky', colour: '#4c8c5a', blurb: 'All spines, no manners. Even the ones that fly think twice.' },
   { id: 'pumpkin-shield', name: 'Pumpkin Shield', role: 'guards', cost: 125, recharge: 25, health: 600, reach: 0, shape: 'round', colour: '#d9741a', blurb: 'A pumpkin around whatever you put it on. Nothing gets through it quickly.' },
 

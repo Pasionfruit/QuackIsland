@@ -8,7 +8,7 @@
  *
  * **The loadout belongs to the party, not to a player.** Everybody picks from
  * one shelf into one set of packets, because it is one lawn and one pot of
- * seeds: two people bringing their own six animals to a shared board is two
+ * seeds: two people bringing their own eight animals to a shared board is two
  * people playing next to each other rather than together.
  */
 import { GRID } from './grid'
@@ -20,10 +20,11 @@ export const GOOFS = {
    * How many kinds of animal the party takes into a round.
    *
    * Fewer than there are and fewer than the party would like, which is the
-   * whole point of a loadout: with fifty animals to choose between, the round
-   * is decided as much by what you left on the shelf as by what you brought.
+   * whole point of a loadout: with forty-nine animals to choose between, the
+   * round is decided as much by what you left on the shelf as by what you
+   * brought.
    */
-  handSize: 6,
+  handSize: 8,
 
   /**
    * What the shared pot starts at.
@@ -119,31 +120,6 @@ export function gardenPhase(
 ): GardenPhase {
   if (!playing) return 'off'
   return canBegin(ids, picked, hand) ? 'planting' : 'picking'
-}
-
-/**
- * The animals, in the order the shelf lists them.
- *
- * Grouped by what they are for rather than left in catalogue order, because
- * there are fifty of them and fifty in one flat column is not a choice, it is
- * a scroll. Within a group they stay in catalogue order, so a party that has
- * learned where the duck is keeps being right.
- */
-export function shelf(): { role: string; animals: typeof DEFENDERS }[] {
-  // The order a party reads them in: what shoots, what stands in the way, what
-  // pays for it, and what walks about eating things.
-  const roles = ['shoots', 'guards', 'grows', 'eats'] as const
-  const groups: { role: string; animals: typeof DEFENDERS }[] = []
-  for (const role of roles) {
-    const animals = DEFENDERS.filter((animal) => animal.role === role)
-    if (animals.length) groups.push({ role, animals })
-  }
-  // Anything whose role nobody thought of still has to appear somewhere, or
-  // adding a new kind of animal quietly loses it.
-  const placed = new Set(groups.flatMap((g) => g.animals.map((a) => a.id)))
-  const rest = DEFENDERS.filter((animal) => !placed.has(animal.id))
-  if (rest.length) groups.push({ role: 'other', animals: rest })
-  return groups
 }
 
 /** A Garden Goofs message, as it goes over the room channel. */

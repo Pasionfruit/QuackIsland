@@ -14,17 +14,22 @@
  *   they go; the shared pot pays for animals, which anybody drags out of the
  *   tray into any square.
  *
+ * **Escape pauses.** It covers the board with a card offering to resume or to
+ * leave, and stops this browser's own contribution to the round clock while
+ * it is up - see `useRoundClock` below for what that does and does not mean
+ * for everybody else.
+ *
  * What is still not here is anything to defend against: no pests walk in, so
  * nothing is eaten, nothing fights and nothing is scored.
  */
 import { useEffect, useRef, useState } from 'react'
-import { useNet, usePeers } from '../../09-net'
+import { leaveLobby, useNet, usePeers } from '../../09-net'
 import { disbandParty, useParty } from '../../10-party'
 import { useGameMode } from '../../13-modes'
 import { GRID, everyCell, isLight } from './grid'
-import { GOOFS, gardenPhase, handIsFull, shelf, waitingToPick, type Picked } from './goofs'
+import { GOOFS, gardenPhase, handIsFull, waitingToPick, type Picked } from './goofs'
 import { gardenModeById } from './modes'
-import { defenderById, silhouette, type DefenderId, type Shape } from './pieces'
+import { DEFENDERS, defenderById, silhouette, type DefenderId, type Shape } from './pieces'
 import { SEED, plantAt, refusePlant, type Round } from './round'
 import {
   ME,
@@ -53,9 +58,39 @@ export function GardenScreen() {
   const everyone = [...peers.map((p) => p.id), ME]
   const phase = gardenPhase(playing, everyone, goofs.picked, goofs.hand)
 
-  // The round runs while the lawn is up, and stops when it is not. Everybody
-  // runs it; only the host's copy decides anything.
-  useRoundClock(phase === 'planting')
+  /**
+   * Escape opens this. Reset the moment the round is no longer up, so leaving
+   * and coming back never finds the pause card still open.
+   */
+  const [paused, setPaused] = useState(false)
+  useEffect(() => {
+    if (!playing) setPaused(false)
+  }, [playing])
+
+  useEffect(() => {
+    if (!playing) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== 'Escape') return
+      setPaused((was) => !was)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [playing])
+
+  /**
+   * The round runs while the lawn is up and this browser is not paused, and
+   * stops otherwise. Everybody runs their own copy of it; only the host's
+   * decides anything.
+   *
+   * **Pausing is personal, not shared** - there is no message for it, and that
+   * is deliberate. A guest who pauses just stops advancing their own clock;
+   * the round carries on without them and the next thing the host broadcasts
+   * catches them straight back up. A host who pauses stops the one clock that
+   * spawns and ages seeds at all, which is the honest consequence of being
+   * the one running the round - not a special case, just what "the host runs
+   * the clock" already meant.
+   */
+  useRoundClock(phase === 'planting' && !paused)
 
   // Between rounds the table is clear. Doing it on the way *out* means a round
   // always starts from nothing, however the last one ended.
@@ -98,15 +133,46 @@ export function GardenScreen() {
       ) : (
         <Planting round={goofs.round} hand={goofs.hand} />
       )}
+
+      {paused ? <Paused onResume={() => setPaused(false)} /> : null}
+    </div>
+  )
+}
+
+/** What Escape opens: a way back in, and a way out. */
+function Paused({ onResume }: { onResume: () => void }) {
+  return (
+    <div style={pauseBackdrop}>
+      <div style={pauseCard}>
+        <div style={{ fontSize: 16, marginBottom: 6 }}>Paused</div>
+        <div style={{ opacity: 0.55, marginBottom: 14 }}>
+          The party carries on without you. Press escape again, or resume, to
+          come back.
+        </div>
+        <button
+          type="button"
+          onClick={onResume}
+          style={{ ...button, width: '100%', marginBottom: 8 }}
+        >
+          resume
+        </button>
+        <button
+          type="button"
+          onClick={() => leaveLobby()}
+          style={{ ...button, width: '100%', opacity: 0.85 }}
+        >
+          leave the party
+        </button>
+      </div>
     </div>
   )
 }
 
 /**
- * The shelf: everything there is, and the packets the party is taking in.
- *
- * Grouped by what an animal is for, because this is meant to hold fifty of
- * them one day and fifty in a flat list is a scroll rather than a choice.
+ * The shelf: everything there is, laid out as one 7x7 grid - forty-nine
+ * squares, forty-nine animals, no scrolling and no grouping to read through
+ * first. Each card is an icon and a name; everything else - what it costs,
+ * what it does - is a hover away, in the title.
  */
 function Picking({
   hand,
@@ -128,7 +194,7 @@ function Picking({
       </div>
       <div style={{ opacity: 0.5, marginBottom: 10 }}>
         One lawn, one pot of seeds, one loadout - anybody can add to it or take
-        something out again.
+        something out again. Hover a card to read what it does.
       </div>
 
       {/* The loadout, always in the same place, so a party can see what it has
@@ -144,53 +210,42 @@ function Picking({
               type="button"
               onClick={() => toggleAnimal(id)}
               disabled={done}
-              title="Take it out again"
+              title={describe(animal)}
               style={{ ...packet, borderColor: '#6fb6c8', background: 'rgba(111,182,200,0.16)' }}
             >
-              <span style={shapeOf(animal.shape, animal.colour, 22)} />
+              <span style={shapeOf(animal.shape, animal.colour, 20)} />
               <span>{animal.name}</span>
-              <span style={{ color: '#e8d98a' }}>{animal.cost}</span>
             </button>
           )
         })}
       </div>
 
-      <div style={shelfBox}>
-        {shelf().map((group) => (
-          <div key={group.role} style={{ marginBottom: 8 }}>
-            <div style={{ opacity: 0.4, marginBottom: 4 }}>{group.role}</div>
-            <div style={grid}>
-              {group.animals.map((animal) => {
-                const chosen = hand.includes(animal.id)
-                const spare = !chosen && full
-                return (
-                  <button
-                    key={animal.id}
-                    type="button"
-                    onClick={() => toggleAnimal(animal.id)}
-                    disabled={done || spare}
-                    style={{
-                      ...shelfCard,
-                      borderColor: chosen ? '#6fb6c8' : 'rgba(255,255,255,0.14)',
-                      background: chosen ? 'rgba(111,182,200,0.16)' : 'rgba(255,255,255,0.04)',
-                      opacity: spare ? 0.35 : 1,
-                      cursor: done || spare ? 'default' : 'pointer',
-                    }}
-                  >
-                    <span style={shapeOf(animal.shape, animal.colour, 22)} />
-                    <span style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                      <span>{animal.name}</span>
-                      <span style={{ color: '#e8d98a' }}>{animal.cost}</span>
-                    </span>
-                    <span style={{ display: 'block', opacity: 0.55, marginTop: 3 }}>
-                      {animal.blurb}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        ))}
+      <div style={shelfGrid}>
+        {DEFENDERS.map((animal) => {
+          const chosen = hand.includes(animal.id)
+          const spare = !chosen && full
+          return (
+            <button
+              key={animal.id}
+              type="button"
+              onClick={() => toggleAnimal(animal.id)}
+              disabled={done || spare}
+              title={describe(animal)}
+              style={{
+                ...tile,
+                borderColor: chosen ? '#6fb6c8' : 'rgba(255,255,255,0.14)',
+                background: chosen ? 'rgba(111,182,200,0.16)' : 'rgba(255,255,255,0.04)',
+                opacity: spare ? 0.35 : 1,
+                cursor: done || spare ? 'default' : 'pointer',
+              }}
+            >
+              <span style={tileIcon}>
+                <span style={shapeOf(animal.shape, animal.colour, 30)} />
+              </span>
+              <span style={tileName}>{animal.name}</span>
+            </button>
+          )
+        })}
       </div>
 
       <button
@@ -285,7 +340,11 @@ function Planting({ round, hand }: { round: Round; hand: readonly DefenderId[] }
               onDragEnd={() => setHolding(null)}
               onClick={() => setHolding(held ? null : id)}
               disabled={!afford}
-              title={afford ? 'Drag onto the lawn, or click then click a square' : 'Not enough seeds'}
+              title={
+                afford
+                  ? `${describe(animal)} — drag onto the lawn, or click then click a square`
+                  : `${describe(animal)} — not enough seeds`
+              }
               style={{
                 ...packet,
                 cursor: afford ? 'grab' : 'default',
@@ -294,9 +353,8 @@ function Planting({ round, hand }: { round: Round; hand: readonly DefenderId[] }
                 opacity: afford ? 1 : 0.4,
               }}
             >
-              <span style={shapeOf(animal.shape, animal.colour, 22)} />
+              <span style={shapeOf(animal.shape, animal.colour, 20)} />
               <span>{animal.name}</span>
-              <span style={{ color: '#e8d98a' }}>{animal.cost}</span>
             </button>
           )
         })}
@@ -306,60 +364,79 @@ function Planting({ round, hand }: { round: Round; hand: readonly DefenderId[] }
         </span>
       </div>
 
-      <div style={lawn}>
-        {everyCell().map((cell) => {
-          const here = plantAt(round, cell.row, cell.col)
-          const seed = round.loose.find((s) => s.row === cell.row && s.col === cell.col)
-          const animal = here ? defenderById(here.id) : null
-          return (
-            <div
-              key={`${cell.row},${cell.col}`}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
-                e.preventDefault()
-                drop(cell.row, cell.col)
-              }}
-              onClick={() => drop(cell.row, cell.col)}
-              data-cell={`${cell.row},${cell.col}`}
-              style={{
-                ...square,
-                background: isLight(cell.row, cell.col) ? '#5d9145' : '#4c7c39',
-                cursor: holding ? 'copy' : 'default',
-              }}
-            >
-              {animal ? (
-                <span
-                  title={animal.name}
-                  style={{ ...planted, ...shapeOf(animal.shape, animal.colour, null) }}
-                />
-              ) : null}
+      {/* The garden bed: a house to defend on the left, and the lawn itself. */}
+      <div style={gardenBed}>
+        <div style={lawnFrame}>
+          <div
+            style={houseEdge}
+            title="Defend the house - the left edge is what you are protecting"
+          >
+            <span style={roof} />
+            <span style={houseBody}>
+              <span style={houseDoor} />
+            </span>
+            <span style={houseLabel}>HOUSE</span>
+          </div>
 
-              {/* A seed, shrinking as it runs out. Clicking it is the whole of
-                  the economy: miss it and the pot does not grow. */}
-              {seed ? (
-                <button
-                  type="button"
-                  title={`${seed.worth} seeds`}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    claim(seed.id)
+          <div style={lawn}>
+            {everyCell().map((cell) => {
+              const here = plantAt(round, cell.row, cell.col)
+              const seed = round.loose.find((s) => s.row === cell.row && s.col === cell.col)
+              const animal = here ? defenderById(here.id) : null
+              return (
+                <div
+                  key={`${cell.row},${cell.col}`}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    drop(cell.row, cell.col)
                   }}
-                  data-seed={seed.id}
+                  onClick={() => drop(cell.row, cell.col)}
+                  data-cell={`${cell.row},${cell.col}`}
                   style={{
-                    ...token,
-                    transform: `scale(${0.55 + 0.45 * clamp(seed.left / SEED.life)})`,
-                    opacity: seed.left < 2 ? 0.55 + 0.45 * clamp(seed.left / 2) : 1,
+                    ...square,
+                    ...(isLight(cell.row, cell.col) ? grassLight : grassDark),
+                    // The column against the house gets a warm edge of its own,
+                    // so the one lane that matters most reads as the front line.
+                    ...(cell.col === 0 ? frontLine : null),
+                    cursor: holding ? 'copy' : 'default',
                   }}
-                />
-              ) : null}
-            </div>
-          )
-        })}
+                >
+                  {animal ? (
+                    <span
+                      title={animal.name}
+                      style={{ ...planted, ...shapeOf(animal.shape, animal.colour, null) }}
+                    />
+                  ) : null}
+
+                  {/* A seed, shrinking as it runs out. Clicking it is the whole
+                      of the economy: miss it and the pot does not grow. */}
+                  {seed ? (
+                    <button
+                      type="button"
+                      title={`${seed.worth} seeds`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        claim(seed.id)
+                      }}
+                      data-seed={seed.id}
+                      style={{
+                        ...token,
+                        transform: `scale(${0.55 + 0.45 * clamp(seed.left / SEED.life)})`,
+                        opacity: seed.left < 2 ? 0.55 + 0.45 * clamp(seed.left / 2) : 1,
+                      }}
+                    />
+                  ) : null}
+                </div>
+              )
+            })}
+          </div>
+        </div>
       </div>
 
       <div style={{ opacity: 0.4, marginTop: 8 }}>
-        {GRID.rows} lanes, {GRID.cols} deep. The house is on the left; nothing
-        comes in from the right yet.
+        {GRID.rows} lanes, {GRID.cols} deep. Defend the house on the left;
+        nothing comes in from the right yet.
       </div>
     </div>
   )
@@ -367,17 +444,22 @@ function Planting({ round, hand }: { round: Round; hand: readonly DefenderId[] }
 
 const clamp = (n: number) => Math.max(0, Math.min(1, n))
 
+/** What a card's hover says, since the card itself only shows an icon and a name. */
+function describe(animal: { cost: number; blurb: string }): string {
+  return `${animal.cost} seeds — ${animal.blurb}`
+}
+
 /**
  * A placeholder in the shape of the thing it stands for.
  *
- * Every creature is a coloured pill until the art is done, and fifty pills of
- * one size would be fifty things nobody can tell apart on a lawn. The species
- * carries its silhouette, so a Bamboo is tall and thin and a Pumpkin Shield is
- * wide and low **now** - and the same field is the brief for whoever models
- * them later.
+ * Every creature is a coloured pill until the art is done, and forty-nine
+ * pills of one size would be forty-nine things nobody can tell apart on a
+ * lawn. The species carries its silhouette, so a Bamboo is tall and thin and a
+ * Pumpkin Shield is wide and low **now** - and the same field is the brief for
+ * whoever models them later.
  *
  * `box` is what it is drawn inside: a percentage of a square on the lawn, or a
- * pixel size in the tray.
+ * pixel size in a card.
  */
 function shapeOf(shape: Shape, colour: string, box: number | null): React.CSSProperties {
   const { width, height, radius } = silhouette(shape)
@@ -435,27 +517,45 @@ const card: React.CSSProperties = {
   marginTop: 34,
 }
 
-/** The shelf scrolls; the loadout above it and the button below it do not. */
-const shelfBox: React.CSSProperties = {
-  maxHeight: '42vh',
-  overflowY: 'auto',
-  paddingRight: 4,
-}
-
-const grid: React.CSSProperties = {
+/** The 7x7 selection grid: forty-nine squares, forty-nine animals. */
+const shelfGrid: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
-  gap: 8,
+  gridTemplateColumns: 'repeat(7, 1fr)',
+  gap: 7,
 }
 
-const shelfCard: React.CSSProperties = {
-  display: 'block',
-  textAlign: 'left',
-  padding: '8px 10px',
+/** One card on the shelf: an icon, and a name at the bottom. Nothing else. */
+const tile: React.CSSProperties = {
+  position: 'relative',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  aspectRatio: '1 / 1',
+  padding: '6px 3px 5px',
   border: '1px solid rgba(255,255,255,0.14)',
-  borderRadius: 6,
+  borderRadius: 8,
   color: '#f2ece2',
   font: 'inherit',
+}
+
+const tileIcon: React.CSSProperties = {
+  flex: 1,
+  width: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+}
+
+const tileName: React.CSSProperties = {
+  display: '-webkit-box',
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: 'vertical',
+  overflow: 'hidden',
+  textAlign: 'center',
+  fontSize: 9,
+  lineHeight: 1.2,
+  opacity: 0.85,
 }
 
 const tray: React.CSSProperties = { display: 'flex', gap: 6, alignItems: 'center' }
@@ -473,13 +573,77 @@ const packet: React.CSSProperties = {
 }
 
 const emptySlot: React.CSSProperties = {
-  width: 86,
+  width: 76,
   height: 30,
   borderRadius: 6,
   border: '1px dashed rgba(255,255,255,0.14)',
 }
 
+/**
+ * The garden bed: a wooden crate the lawn sits in, so the board reads as a
+ * planter rather than a spreadsheet. One frame round both the house and the
+ * grid, so they read as one place rather than two things bolted together.
+ */
+const gardenBed: React.CSSProperties = {
+  padding: 9,
+  borderRadius: 14,
+  background: 'linear-gradient(180deg, #6b4a30, #4a3220)',
+  boxShadow: 'inset 0 0 0 3px rgba(0,0,0,0.22), 0 10px 26px rgba(0,0,0,0.4)',
+}
+
+const lawnFrame: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'stretch',
+  gap: 7,
+}
+
+/** The house, at the edge the party is defending. */
+const houseEdge: React.CSSProperties = {
+  flex: '0 0 58px',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 4,
+  borderRadius: 8,
+  background: 'linear-gradient(180deg, #3a2a1c, #2a1d13)',
+  boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)',
+}
+
+const roof: React.CSSProperties = {
+  width: 0,
+  height: 0,
+  borderLeft: '17px solid transparent',
+  borderRight: '17px solid transparent',
+  borderBottom: '14px solid #b5493a',
+}
+
+const houseBody: React.CSSProperties = {
+  position: 'relative',
+  width: 30,
+  height: 24,
+  background: '#e8d3a0',
+  borderRadius: '1px 1px 0 0',
+  display: 'flex',
+  alignItems: 'flex-end',
+  justifyContent: 'center',
+}
+
+const houseDoor: React.CSSProperties = {
+  width: 8,
+  height: 14,
+  background: '#6b4a30',
+  borderRadius: '2px 2px 0 0',
+}
+
+const houseLabel: React.CSSProperties = {
+  fontSize: 8,
+  letterSpacing: 1,
+  opacity: 0.6,
+}
+
 const lawn: React.CSSProperties = {
+  flex: 1,
   display: 'grid',
   gridTemplateColumns: `repeat(${GRID.cols}, 1fr)`,
   gap: 3,
@@ -495,6 +659,20 @@ const square: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
+}
+
+/** The checkerboard, as a soft grass gradient rather than a flat fill. */
+const grassLight: React.CSSProperties = {
+  background: 'linear-gradient(160deg, #6aa04f, #558a3d)',
+}
+
+const grassDark: React.CSSProperties = {
+  background: 'linear-gradient(160deg, #578239, #466c30)',
+}
+
+/** The lane against the house: a warm edge, marking the line that matters. */
+const frontLine: React.CSSProperties = {
+  boxShadow: 'inset 3px 0 0 rgba(224, 160, 90, 0.55)',
 }
 
 /** What `shapeOf` does not decide: everything on the lawn casts a little shade. */
@@ -530,4 +708,25 @@ const button: React.CSSProperties = {
   font: 'inherit',
   padding: '3px 8px',
   cursor: 'pointer',
+}
+
+const pauseBackdrop: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  zIndex: 60,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: 'rgba(4, 5, 7, 0.7)',
+}
+
+const pauseCard: React.CSSProperties = {
+  width: 260,
+  padding: '16px 18px',
+  borderRadius: 10,
+  background: 'rgba(20, 22, 26, 0.96)',
+  border: '1px solid rgba(255,255,255,0.14)',
+  boxShadow: '0 18px 50px rgba(0,0,0,0.55)',
+  color: '#f2ece2',
+  font: '12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace',
 }

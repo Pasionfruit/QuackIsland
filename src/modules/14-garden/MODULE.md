@@ -8,17 +8,24 @@ to be clicked before they go, and the pot they pay into is shared.
 
 What works now:
 
-- **One lawn**, 8 rows by 12 columns, drawn in the DOM over the world.
-- **One loadout, chosen as a team.** Six animals out of fifty, from one shelf
-  into one set of packets. Nobody plants until everybody says they are done.
+- **One lawn**, 8 rows by 12 columns, drawn in the DOM over the world, with a
+  house on the left edge - the one thing the party is defending.
+- **One loadout, chosen as a team.** Eight animals out of forty-nine, from one
+  shelf into one set of packets. Nobody plants until everybody says they are
+  done.
+- **A card is an icon and a name.** What it costs and what it does are a hover
+  away, in the title - the shelf is forty-nine of them and reading forty-nine
+  paragraphs before picking anything is not a menu, it is homework.
 - **Seeds land sporadically** and run out. Clicking one pays the shared pot;
   missing it costs the party the seed.
 - **Anybody plants anything**, by dragging a packet onto a square or by
   clicking the packet and then the square. The pot pays, so what one player
   plants is what another player cannot.
-
-- **The whole roster**: fifty defenders and twenty-five pests, with costs,
-  health, reach, speed, bite and a silhouette apiece.
+- **Escape pauses and offers a way out.** It covers the board and stops this
+  browser's own contribution to the round clock; from there you can resume or
+  leave the party.
+- **The whole roster**: forty-nine defenders and twenty-five pests, with
+  costs, health, reach, speed, bite and a silhouette apiece.
 
 What is still missing is the other half of a lane defence: **the pests do not
 walk yet**. All twenty-five are written down and none of them has ever been in
@@ -57,18 +64,34 @@ A column is a **number, not an index**: a defender sits in a square and a pest
 spends most of its life between two, so `col` is 6.4 for most of a worm's life
 and `piece.square` is the one it is standing in.
 
-## Growing to fifty animals and twenty-five pests
+**A house sits on the house edge.** A small drawn roof and wall, on the left
+of the lawn, at column 0 - the same edge `houseCol()` already named. It is
+decoration over an existing fact rather than a new one: the column was always
+the thing being defended, and until now nothing on the screen said so. The
+lane against it also carries a warm inner edge of its own, so the row that
+matters most reads as a front line even before anything is walking up it.
 
-That is where this is going, and everything here is shaped for it:
+## The shelf: a card is an icon and a name
 
-- **Species are data**, in two frozen tables. Adding one is an entry, not a
-  branch: nothing switches on an id anywhere.
-- **The shelf groups by role** (`shelf()`), because fifty in one flat column is
-  a scroll rather than a choice. A role nobody thought of still appears, under
-  `other`, so a new kind of animal cannot quietly go missing. There is a test.
-- **The loadout is the decision.** `GOOFS.handSize` is 6 of however many exist;
-  with fifty on the shelf a round is decided as much by what the party left
-  behind as by what it brought.
+Everything else - cost, what it does - is a hover away, in the card's title.
+Forty-nine cards is already a lot to look at; forty-nine cards each carrying
+its own paragraph is a page to read before the party has chosen anything.
+
+Laid out as a **flat 7x7 grid**, not grouped by role the way the catalogue
+itself is. One screen, no scrolling, no header to read past first - the whole
+shelf is visible at once, which is what lets a party compare cards rather than
+hunt through a list for one it remembers seeing.
+
+**The roster is sized to the grid, not the other way round.** Forty-nine
+defenders because seven squared is forty-nine: growing the roster past that
+means widening the grid to match, not just adding a row to a table. Twenty-five
+pests carry no such constraint, since nothing draws them in a picker yet.
+
+- **Species are data**, in two frozen tables. Adding one - within the limit the
+  grid sets - is an entry, not a branch: nothing switches on an id anywhere.
+- **The loadout is the decision.** `GOOFS.handSize` is 8 of the 49; with that
+  many on the shelf a round is decided as much by what the party left behind as
+  by what it brought.
 - **An animal travels as its index in the catalogue**, not its name, so a full
   lawn stays far inside the relay's four-kilobyte message limit however long
   the names get.
@@ -91,9 +114,11 @@ the health it has left.
 
 ## The roster, and the art brief
 
-Seventy-five species: **fifty** that defend the lawn and **twenty-five** that
-come for it. All of it is one table in `internal/pieces.ts` and not one branch
-anywhere switches on an id, so the seventy-sixth is a line and nothing else.
+Seventy-four species: **forty-nine** that defend the lawn - capped there by the
+7x7 shelf, see above - and **twenty-five** that come for it, uncapped. All of
+it is one table in `internal/pieces.ts` and not one branch anywhere switches on
+an id, so a pest's seventy-fifth is a line and nothing else; a defender's
+fiftieth is that and a wider grid.
 
 Two of them share a name with something on the other side, on purpose - there
 is a **Garden Snail** that helps and a **Snail** that eats the lawn, and the
@@ -136,11 +161,10 @@ punishment - and not one of them has been played with, because there is nothing
 to play yet. Balancing is editing a column in a table, which is the only way a
 roster this size was ever going to be balanced at all.
 
-### The fifty defenders
+### The forty-nine defenders
 
 Generated from `internal/pieces.ts`, which is the only place any of
 this is true. `reach` of 99 means the whole lane.
-
 
 **Shooters — they clear the lane in front of them** (10)
 
@@ -157,7 +181,7 @@ this is true. `reach` of 99 means the whole lane.
 | Pumpkin Launcher | 200 | 120 | lane | 18s | squat |
 | Watermelon Mortar | 300 | 110 | lane | 30s | squat |
 
-**Guards — they stand in the way** (15)
+**Guards — they stand in the way** (14)
 
 | Name | Cost | Health | Reach | Recharge | Shape |
 | --- | --- | --- | --- | --- | --- |
@@ -168,7 +192,6 @@ this is true. `reach` of 99 means the whole lane.
 | Mushroom Bouncer | 75 | 150 | 1 | 14s | round |
 | Vine Trap | 75 | 120 | 1 | 15s | long |
 | Thorn Bush | 100 | 200 | 1 | 12s | spiky |
-| Sneezy Flower | 100 | 90 | 2 | 14s | tall |
 | Cactus Guard | 125 | 250 | 1 | 16s | spiky |
 | Pumpkin Shield | 125 | 600 | 0 | 25s | round |
 | Garden Snail | 50 | 200 | 0 | 12s | round |
@@ -299,7 +322,6 @@ and there is a test that says so, because the relay refuses four.
 | `GOOFS` | Loadout size, starting seeds |
 | `toggle` / `validHand` / `handIsFull` | The party's loadout. Pure |
 | `gardenPhase` / `canBegin` / `everyoneHasPicked` / `waitingToPick` | Whether a round can begin. Pure |
-| `shelf()` | The animals, grouped for a menu that has to hold fifty. Pure |
 | `toWire` / `fromWire` / `decodeRound` / `decodeGoofs` / `encodeGoofs` | The wire, and its validation. Pure |
 | `useGoofs()` / `getGoofs()` | `{ hand, picked, round }` |
 | `toggleAnimal(id)` / `setDone(done)` / `amDone()` | Choosing, as a party |
@@ -327,15 +349,21 @@ and there is a test that says so, because the relay refuses four.
   worse than a lawn that did not arrive, because the next one will.
 - **Nothing is deader than dead.** `hurt` clamps at zero.
 - **Leaving a lobby clears the table.**
+- **The shelf is forty-nine cards, laid out 7x7, and no more.** The roster is
+  sized to the grid; there is no overflow case to get wrong because there is no
+  fiftieth card to place.
 
 ## Deliberate non-goals
 
-- **No pests in a round.** Twenty-five of them are planned, eight are written
-  down, none of them walks.
+- **No pests in a round.** Twenty-five of them are planned, none of them
+  walks.
 - **No fighting, no waves, no score, no winning or losing.**
 - **No art and no animation.** Every creature is a coloured pill.
 - **No per-mode rules yet** - endless, co-op and versus differ in name only.
 - **Nothing in 3D.**
+- **No shared pause.** Escape stops one browser's own clock; it is not a
+  message and does not stop the round for anybody else. See the limitation
+  below for what that means for a host who pauses.
 
 ## Known limitations
 
@@ -345,26 +373,36 @@ and there is a test that says so, because the relay refuses four.
 - **Seeds stop landing if the host's tab goes to the background**, because the
   round runs on `requestAnimationFrame` and browsers stop that in a hidden tab.
   The guests keep their lawns; nothing new arrives on them.
+- **A host who pauses stops the round for everyone**, because pausing stops
+  the same clock that spawning and ageing already ran on, and only the host's
+  copy of that clock was ever real. A guest who pauses only stops their own -
+  the round carries on without them and the next broadcast catches them up.
+  This is a consequence of who runs the clock, not a special case written for
+  pausing.
 - **Nothing pays back for digging an animal up**, and nothing stops you doing
   it. There is no undo and no refund because there is no round to balance yet.
 - **The three ways to play are names.**
-- **The world takes your keys while the screen is up.** WASD still walks your
-  body behind the overlay.
+- **The world still takes WASD while the screen is up** - escape opens the
+  pause card, but the body underneath can still be walked until you use it.
 
 ## How to review
 
 Two browsers in one lobby is the real test, but everything except the waiting
 works on your own - out of a lobby you are your own host.
 
-- **Pick Garden Goofs, ready up, start.** The shelf appears with the loadout
-  empty above it and the animals grouped by what they are for below.
-- **Pick six animals.** The seventh should refuse rather than push one out.
+- **Pick Garden Goofs, ready up, start.** The shelf appears: forty-nine cards
+  in a 7x7 grid, each one an icon and a name, with the loadout empty above it.
+- **Hover a card.** The cost and what it does should appear as a tooltip, and
+  nowhere else - the card itself stays down to the icon and the name.
+- **Pick eight animals.** The ninth should refuse rather than push one out.
 - **Click one in the loadout row.** It comes back out again.
 - **With two browsers:** one player adding an animal must show up in the
   other's loadout, and either of them must be able to take it out again. That
   is what "as a team" means.
 - **Press done choosing in both.** The lawn only appears when both have.
-- **Count the squares.** Eight rows of twelve.
+- **Look at the board.** A house should sit on the left with a roof, a wall
+  and a door, and the lane against it should carry a warm edge the other lanes
+  do not. Count the squares: eight rows of twelve.
 - **Wait.** Seeds should land every few seconds, somewhere unpredictable, and
   shrink as they run out. Click one: the pot goes up by 25 in *both* browsers.
 - **Have both players click the same seed at once.** The pot must go up once.
@@ -377,6 +415,14 @@ works on your own - out of a lobby you are your own host.
 - **Spend the pot down.** Packets you cannot afford go dim and refuse to drag.
 - **Watch the other browser while you plant.** Animals must appear there too,
   and the pot must agree in both. It is one pot.
+- **Press escape.** A pause card covers the board with *resume* and *leave the
+  party*. Press escape again, or resume: it goes away and nothing was lost.
+- **As a guest, press escape and wait.** The host's seeds should keep landing
+  without you; coming back should show a lawn that moved on.
+- **As the host, press escape and wait.** Seeds should stop landing for
+  everyone until you resume - the round is genuinely paused, not just hidden.
+- **Press leave the party from the pause card.** You should end up back on
+  your own island, the same as leaving from the lobby popup.
 - **Press end the party.** Everybody goes home; starting again gives a fresh
   lawn, an empty loadout and a full pot.
 

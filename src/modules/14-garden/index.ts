@@ -71,7 +71,6 @@ export {
   fromWire,
   gardenPhase,
   handIsFull,
-  shelf,
   toWire,
   toggle,
   validHand,

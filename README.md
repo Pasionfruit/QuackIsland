@@ -75,13 +75,15 @@ lobby plays the same one. The host chooses:
   island across the water, out-of-round, with a horseshoe crater and the track
   winding three times up to the treasure at the top.
 - **Garden Goofs** — a flat **2D** lane defence on an eight-by-twelve lawn,
-  drawn over the world. The party picks its loadout **together** from one
-  shelf, seeds land on the grass and have to be clicked before they go, and
+  drawn over the world, with a house on the left edge marking what you are
+  defending. The party picks its loadout **together** from a 7x7 shelf of
+  forty-nine cards — each one an icon and a name, everything else a hover
+  away — seeds land on the grass and have to be clicked before they go, and
   anybody can drag an animal into any square out of the shared pot. The roster
-  is **fifty defenders** — shooters, guards, growers and eaters, from the Pea
-  Shooter to the Garden Gnome — against **twenty-five pests**, from a Mite to
-  the Garden Gremlin. The pests do not walk yet. Choose **Endless**, **Co-op**
-  or **Versus**.
+  is **forty-nine defenders** — shooters, guards, growers and eaters, from the
+  Pea Shooter to the Garden Gnome — against **twenty-five pests**, from a Mite
+  to the Garden Gremlin. The pests do not walk yet. Choose **Endless**,
+  **Co-op** or **Versus**, and press **escape** any time to pause and leave.
 
 The popup runs top to bottom in the order you do things: **your name**, then
 **ready up** once you are in a party, then the **code** that got you there,
@@ -94,9 +96,9 @@ player leaves the lobby and is put back on the spawn island, with a note saying
 why. And anybody joining a lobby is told what the host has chosen — your own
 selection is replaced by theirs the moment you arrive.
 
-Starting Garden Goofs opens the shelf, where the party chooses its six animals
-between them — anybody can add one or take one out — and the round waits until
-everybody says they are done. Then the lawn.
+Starting Garden Goofs opens the shelf, where the party chooses its eight
+animals between them — anybody can add one or take one out — and the round
+waits until everybody says they are done. Then the lawn.
 
 Neither game is written yet. The volcano's track and the lawn's grid are built,
 the rules that go on top of them are not: nothing is planted, nothing walks in,

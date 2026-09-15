@@ -209,6 +209,61 @@ describe('starting a round of Garden Goofs', () => {
     expect(html).toContain('between you')
   })
 
+  it('lays the shelf out as an exact 7x7 grid of forty-nine cards', () => {
+    act(() => chooseMode('garden'))
+    act(() => {
+      hostGame()
+      startGame()
+    })
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const created = createRoot(host)
+    root = created
+    act(() => created.render(<GardenScreen />))
+
+    // Every card, and nothing but the roster - no headers, no groups.
+    const cards = [...host.querySelectorAll('button')].filter((b) =>
+      DEFENDERS.some((d) => b.title.startsWith(`${d.cost} seeds`) && b.textContent === d.name),
+    )
+    expect(cards).toHaveLength(49)
+  })
+
+  it('keeps a card to an icon and a name, with the rest only on hover', () => {
+    act(() => chooseMode('garden'))
+    act(() => {
+      hostGame()
+      startGame()
+    })
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const created = createRoot(host)
+    root = created
+    act(() => created.render(<GardenScreen />))
+
+    const duck = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Duck')
+    expect(duck).toBeDefined()
+    // The blurb and the cost are not visible text...
+    expect(host.textContent).not.toContain(defenderById('duck').blurb)
+    // ...they are the title, which is what a browser shows on hover.
+    expect(duck?.title).toContain(String(defenderById('duck').cost))
+    expect(duck?.title).toContain(defenderById('duck').blurb)
+  })
+
+  it('lets the party bring eight animals, and refuses a ninth', () => {
+    act(() => chooseMode('garden'))
+    act(() => {
+      hostGame()
+      startGame()
+    })
+    act(() => {
+      for (const animal of DEFENDERS.slice(0, GOOFS.handSize)) toggleAnimal(animal.id)
+    })
+    expect(getGoofs().hand).toHaveLength(8)
+    act(() => toggleAnimal(DEFENDERS[GOOFS.handSize].id))
+    // A full loadout refuses another rather than pushing one out.
+    expect(getGoofs().hand).toHaveLength(8)
+  })
+
   it('gives you the lawn once everybody has picked', () => {
     act(() => chooseMode('garden'))
     act(() => {
@@ -385,6 +440,39 @@ describe('playing a round of Garden Goofs', () => {
 
   it('lists the three ways to play, still', () => {
     expect(GARDEN_MODES).toHaveLength(3)
+  })
+
+  it('marks the house on the left, the edge the party is defending', () => {
+    const host = lawn()
+    expect(host.textContent).toContain('HOUSE')
+    const houseEdge = [...host.querySelectorAll('div')].find((d) =>
+      d.title?.startsWith('Defend the house'),
+    )
+    expect(houseEdge).toBeDefined()
+  })
+
+  it('opens a pause card on escape, with a way back in and a way out', () => {
+    const host = lawn()
+    expect(host.textContent).not.toContain('Paused')
+
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true })))
+    expect(host.textContent).toContain('Paused')
+    expect(host.textContent).toContain('resume')
+    expect(host.textContent).toContain('leave the party')
+
+    // Escape again closes it, the same way it opened.
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true })))
+    expect(host.textContent).not.toContain('Paused')
+  })
+
+  it('resumes from the pause card without needing the key again', () => {
+    const host = lawn()
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true })))
+    expect(host.textContent).toContain('Paused')
+
+    const resume = [...host.querySelectorAll('button')].find((b) => b.textContent === 'resume')
+    click(resume ?? null)
+    expect(host.textContent).not.toContain('Paused')
   })
 })
 

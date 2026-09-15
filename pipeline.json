@@ -1177,7 +1177,7 @@
         },
         {
           "id": "14.3",
-          "title": "GardenPiece, and the two catalogues, shaped to grow to 50 and 25",
+          "title": "GardenPiece, and the two catalogues, sized to a 7x7 shelf and 25 pests",
           "status": "done"
         },
         {
@@ -1207,19 +1207,24 @@
         },
         {
           "id": "14.9",
-          "title": "The roster: 50 defenders and 25 pests, with silhouettes",
+          "title": "The roster: 49 defenders (7x7, exactly) and 25 pests, with silhouettes",
           "status": "done"
         },
         {
           "id": "14.10",
           "title": "The art: models for all 75, through the asset pipeline module",
           "status": "planned"
+        },
+        {
+          "id": "14.11",
+          "title": "The shelf as a 7x7 grid of minimal cards, house edge, and escape to pause and leave",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-15T02:15:14.841Z"
+          "at": "2026-09-15T02:59:23.885Z"
         },
         "human": {
           "status": "pending"
@@ -1232,7 +1237,8 @@
         "No winning or losing a round",
         "No art. The roster and the silhouettes are here; the models are another module’s job",
         "No per-mode rules yet - endless, co-op and versus differ in name only",
-        "Nothing in 3D. It is a 2D game drawn over the world, not a place in it"
+        "Nothing in 3D. It is a 2D game drawn over the world, not a place in it",
+        "No shared pause - escape stops one browser's own round clock, not a message to anybody else"
       ],
       "budgets": {
         "drawCallsMax": 0,

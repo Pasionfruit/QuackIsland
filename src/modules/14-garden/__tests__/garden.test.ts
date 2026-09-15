@@ -46,7 +46,6 @@ import {
   everyoneHasPicked,
   gardenPhase,
   handIsFull,
-  shelf,
   toggle,
   validHand,
   waitingToPick,
@@ -109,8 +108,11 @@ describe('the lawn', () => {
 })
 
 describe('the roster', () => {
-  it('is fifty animals and twenty-five pests', () => {
-    expect(DEFENDERS).toHaveLength(50)
+  it('is forty-nine animals and twenty-five pests', () => {
+    // Forty-nine so the picking shelf is an exact 7x7 grid - one screen, no
+    // scrolling, no half-filled row at the end.
+    expect(DEFENDERS).toHaveLength(49)
+    expect(Math.sqrt(DEFENDERS.length)).toBe(7)
     expect(PESTS).toHaveLength(25)
   })
 
@@ -158,9 +160,9 @@ describe('the roster', () => {
     }
   })
 
-  it('uses more than a couple of shapes across fifty animals', () => {
-    // Fifty things that are all "round" would be fifty things nobody can tell
-    // apart on a lawn.
+  it('uses more than a couple of shapes across the roster', () => {
+    // Forty-nine things that are all "round" would be forty-nine things
+    // nobody can tell apart on a lawn.
     expect(new Set(DEFENDERS.map((d) => d.shape)).size).toBeGreaterThan(3)
     expect(new Set(PESTS.map((p) => p.shape)).size).toBeGreaterThan(3)
   })
@@ -334,23 +336,10 @@ describe('the loadout the party brings', () => {
   })
 
   it('brings fewer animals than there are to choose from', () => {
-    // The loadout is meant to be a decision. With fifty on the shelf it is
-    // decided as much by what you left behind as by what you brought.
+    // The loadout is meant to be a decision. With forty-nine on the shelf it
+    // is decided as much by what you left behind as by what you brought.
     expect(GOOFS.handSize).toBeGreaterThan(0)
-  })
-})
-
-describe('the shelf the animals are chosen from', () => {
-  it('groups them, because fifty in a flat list is a scroll', () => {
-    const groups = shelf()
-    expect(groups.length).toBeGreaterThan(1)
-    for (const group of groups) expect(group.animals.length).toBeGreaterThan(0)
-  })
-
-  it('loses nothing on the way', () => {
-    // Adding a new kind of animal must not quietly drop it off the shelf.
-    const shown = shelf().flatMap((group) => group.animals.map((a) => a.id))
-    expect(new Set(shown).size).toBe(DEFENDERS.length)
+    expect(GOOFS.handSize).toBeLessThan(DEFENDERS.length)
   })
 })
 
