@@ -196,3 +196,28 @@ export function setModuleEnabled(id: string, enabled: boolean): void {
   version++
   for (const l of listeners) l()
 }
+
+/**
+ * The lobby: the spawn island and everything tied to it. Not the party
+ * island - that is a game's own venue, and stays exactly as visible as it
+ * always was regardless of what this hides.
+ *
+ * Hidden the moment any game starts, whichever one it is, and put back the
+ * moment it ends - see `setLobbyVisible`, which `World` calls with this. A
+ * host starting Garden Goofs is looking at a full-screen 2D panel a second
+ * later; a host starting Volcano Island has already been teleported there.
+ * Either way, the beach everybody was just standing on is not part of the
+ * game and has no business still being drawn behind it.
+ */
+export const LOBBY_ISLAND = ['01-terrain', '07-shore', '12-rocks', '03-footprints']
+
+/**
+ * Shows or hides the lobby, as a unit.
+ *
+ * Pure in effect if not in form - it only ever touches `SCENE`, the one seam
+ * that is allowed to change - which is what lets this be called from a
+ * `useEffect` with nothing else to mock, and tested the same way.
+ */
+export function setLobbyVisible(visible: boolean): void {
+  for (const id of LOBBY_ISLAND) setModuleEnabled(id, visible)
+}

@@ -43,7 +43,19 @@ function storeVolume(volume: number): void {
   }
 }
 
-export function MusicPlayer() {
+export interface MusicPlayerProps {
+  /**
+   * Silences the music while true, and brings it back when it goes false -
+   * if it was playing.
+   *
+   * Passed in rather than sensed: this module owns one audio element and
+   * nothing in the world, and has no way to know a game exists. Whether one
+   * is running is a question for whoever is composing the page.
+   */
+  stopped?: boolean
+}
+
+export function MusicPlayer({ stopped = false }: MusicPlayerProps = {}) {
   const audio = useRef<HTMLAudioElement | null>(null)
   const [tracks, setTracks] = useState<Track[]>([])
   const [index, setIndex] = useState(0)
@@ -56,6 +68,18 @@ export function MusicPlayer() {
   /** Tracks that failed in a row, so a broken playlist stops rather than spins. */
   const failures = useRef(0)
   const [folded, setFolded] = useState(() => readFolded('music'))
+
+  /**
+   * Whether the *listener* wants music playing, as distinct from whether it
+   * currently is.
+   *
+   * `stopped` pauses the element without touching this, so a game does not
+   * quietly turn music off forever - and does not turn it back on for
+   * somebody who had paused it themselves. Set wherever a person actually
+   * asks for play or pause; never by `stopped` forcing the element one way
+   * or the other.
+   */
+  const wanted = useRef(true)
 
   const track = tracks[index] ?? null
 
@@ -116,6 +140,12 @@ export function MusicPlayer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [track, load])
 
+  // Read through a ref so the gesture handler below, armed once and possibly
+  // fired long after, sees whether a game is running *at that moment* rather
+  // than whichever way it happened to be when the playlist first arrived.
+  const stoppedRef = useRef(stopped)
+  stoppedRef.current = stopped
+
   // Start once there is something to play. Browsers refuse to make noise
   // before the page has been interacted with, so if that refusal comes back,
   // wait for the first click or key and try again.
@@ -127,6 +157,10 @@ export function MusicPlayer() {
     let armed = false
 
     const start = () => {
+      // A game already running by the time this fires is not this module's
+      // business to talk over; the `stopped` effect below will start it the
+      // moment there is next nothing playing.
+      if (stoppedRef.current) return
       element
         .play()
         .then(() => {
@@ -178,6 +212,7 @@ export function MusicPlayer() {
     const element = audio.current
     if (!element) return
     if (element.paused) {
+      wanted.current = true
       element
         .play()
         .then(() => {
@@ -186,10 +221,29 @@ export function MusicPlayer() {
         })
         .catch(() => setBlocked(true))
     } else {
+      wanted.current = false
       element.pause()
       setPlaying(false)
     }
   }, [])
+
+  /**
+   * A game running silences the music; the end of one brings back whatever
+   * the listener actually wanted, rather than forcing it on.
+   *
+   * The element's own `play`/`pause` events already keep `playing` in step
+   * with whichever of these actually happens, so this only ever has to move
+   * the element itself.
+   */
+  useEffect(() => {
+    const element = audio.current
+    if (!element || tracks.length === 0) return
+    if (stopped) {
+      if (!element.paused) element.pause()
+    } else if (wanted.current && element.paused) {
+      element.play().catch(() => setBlocked(true))
+    }
+  }, [stopped, tracks.length])
 
   const changeVolume = useCallback((next: number) => {
     const level = clampVolume(next)

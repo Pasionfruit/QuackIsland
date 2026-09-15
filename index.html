@@ -2,10 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- No pinch or double-tap zoom: the 2D game's own panel is drawn at a
+         fixed pixel size and must not be rescaled by the browser out from
+         under it. Desktop browser zoom (Ctrl +/-) cannot be blocked from a
+         page at all - that one is the visitor's, not the game's. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>LocalRot</title>
     <style>
-      html, body, #root { height: 100%; margin: 0; background: #9fc4dd; }
+      /* No page scroll, in either direction: the 2D game's panel sits inside
+         a fixed, full-viewport overlay, and a scrolled page would shift what
+         that overlay is centred over. */
+      html, body, #root { height: 100%; margin: 0; background: #9fc4dd; overflow: hidden; }
       canvas { display: block; }
     </style>
   </head>

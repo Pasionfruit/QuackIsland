@@ -368,6 +368,10 @@ Two browsers in one lobby; `DEPLOY.md` has the commands.
 - **Ready up on both, then press start.** Both ducks should arrive on the
   starting line, side by side, facing along the track, and both should be able
   to walk.
+- **Look at the spawn island the instant a game starts.** It, its shore and its
+  rocks should be gone - not faded, not still swimmable, just not drawn. The
+  party island you are racing on is untouched - see `setLobbyVisible` in
+  `src/app/scene.ts`. Disband the party: the spawn island should be back.
 - **Look at the island from the water.** You should see *ground* — sand, lit
   from above. If the island is a floating ring of tiles over open sea, the mesh
   is inside out again.

@@ -6,9 +6,9 @@ A background playlist that runs continuously, and a small panel in the top
 right to drive it: back, play/pause, skip, and a volume slider.
 
 It owns one `HTMLAudioElement` and nothing in the world. No positional sound,
-no reaction to anything on screen, no place in the scene registry — it is DOM,
-so `src/App.tsx` renders it beside the debug panel rather than the canvas
-drawing it.
+no place in the scene registry — it is DOM, so `src/App.tsx` renders it beside
+the debug panel rather than the canvas drawing it — and no sense of anything on
+screen beyond what it is handed through `stopped`.
 
 Everything decidable without a browser lives in `internal/playlist.ts` with no
 audio element in it, so the ordering, the back button, the volume clamp and the
@@ -19,6 +19,7 @@ readout are all tested in Node.
 | Export | Meaning |
 | --- | --- |
 | `MusicPlayer` | The panel. Rendered from `src/App.tsx` |
+| `MusicPlayerProps` | `{ stopped? }` - silence it while a game is running |
 | `nextIndex(i, count)` | The next track, wrapping. Pure |
 | `previousIndex(i, count)` | The previous track, wrapping. Pure |
 | `stepBack(i, count, position, window?)` | Where the back button lands. Pure |
@@ -50,6 +51,18 @@ audio can move to a CDN without touching this module.
   throws in the browser.
 - **The volume is remembered** between sessions, and its absence is not an
   error — a private window simply starts at the default.
+
+## Stopping for a game
+
+`stopped` pauses the element without asking it to forget anything, and does
+not touch what a listener actually wants - see `wanted` in the component. Pass
+it, and the moment it goes false again, whatever was playing before picks back
+up from where it left off; a listener who had paused it themselves stays
+paused, because the game did not do that and has no business undoing it.
+
+Passed in, not sensed: this module has never heard of a party or a phase, and
+`src/App.tsx` is the one place composing that knowledge - see `App.tsx` for
+where `stopped` actually comes from.
 
 ## Deliberate non-goals
 
@@ -143,6 +156,11 @@ want it to.
 - **Play with the game while music runs.** Walking, swimming and the day
   slider should all behave exactly as before; the frame time in the perf HUD
   should not move.
+- **Start a game.** The music should stop the moment it does, whichever game it
+  is. **End it.** Whatever was playing before should pick back up on its own.
+- **Pause the music yourself, then start and end a game.** It must stay paused
+  when the game ends - a game silencing it is not the same as you asking for
+  it back.
 - Try it with the assets folder renamed, if you want to see it fail: the game
   should run in silence with a console message, not break.
 

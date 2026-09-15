@@ -544,12 +544,17 @@
           "id": "05.4",
           "title": "Contract, tests, MODULE.md",
           "status": "done"
+        },
+        {
+          "id": "05.5",
+          "title": "Stopping for a game, and picking back up where it left off",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-09T02:38:46.292Z"
+          "at": "2026-09-15T03:36:20.998Z"
         },
         "human": {
           "status": "pending"
@@ -1224,12 +1229,17 @@
           "id": "14.12",
           "title": "A wave clock the whole party shares, and a trowel that digs a plant up for nothing back",
           "status": "done"
+        },
+        {
+          "id": "14.13",
+          "title": "The panel at a fixed pixel size, never a fraction of the viewport",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-15T03:12:25.869Z"
+          "at": "2026-09-15T03:35:59.166Z"
         },
         "human": {
           "status": "pending"

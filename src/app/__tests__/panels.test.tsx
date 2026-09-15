@@ -81,6 +81,14 @@ describe('the panels mount', () => {
     expect(mount(<MusicPlayer />)).toContain('MUSIC')
   })
 
+  it('renders the music player stopped, the way a running game leaves it', () => {
+    // `stopped` reaches an `HTMLAudioElement` this module builds itself,
+    // never renders into the DOM, and jsdom does not meaningfully simulate -
+    // so what a test here can hold onto is that passing it mounts cleanly,
+    // both ways, rather than throwing.
+    expect(mount(<MusicPlayer stopped />)).toContain('MUSIC')
+  })
+
   it('renders the debug panel', () => {
     expect(mount(<DebugPanel />)).toContain('TIME OF DAY')
   })
@@ -208,6 +216,43 @@ describe('starting a round of Garden Goofs', () => {
     expect(html).toContain('shared by everybody in the party')
     // One loadout for the party, not one each.
     expect(html).toContain('between you')
+  })
+
+  it('draws the panel at a fixed pixel size, not a fraction of the viewport', () => {
+    act(() => chooseMode('garden'))
+    act(() => {
+      hostGame()
+      startGame()
+    })
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const created = createRoot(host)
+    root = created
+    act(() => created.render(<GardenScreen />))
+
+    // The picking panel. `vw`, `vh` and `calc()` would all make this a
+    // fraction of the window instead of a fixed size - the whole point.
+    const picking = host.querySelector('div[style*="820px"]') as HTMLElement | null
+    expect(picking).not.toBeNull()
+    expect(picking?.style.width).toBe('820px')
+    expect(picking?.style.height).toBe('720px')
+    for (const style of [picking?.style.width, picking?.style.height, picking?.style.maxHeight]) {
+      expect(style ?? '').not.toMatch(/vw|vh|calc/)
+    }
+
+    act(() => {
+      toggleAnimal('pea-shooter')
+      setDone(true)
+    })
+
+    // The planting panel is wider, for the lawn, but just as fixed.
+    const planting = host.querySelector('div[style*="1180px"]') as HTMLElement | null
+    expect(planting).not.toBeNull()
+    expect(planting?.style.width).toBe('1180px')
+    expect(planting?.style.height).toBe('720px')
+    for (const style of [planting?.style.width, planting?.style.height]) {
+      expect(style ?? '').not.toMatch(/vw|vh|calc/)
+    }
   })
 
   it('lays the shelf out as an exact 7x7 grid of forty-nine cards', () => {

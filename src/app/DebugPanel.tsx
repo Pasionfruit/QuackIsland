@@ -440,6 +440,11 @@ const panel: React.CSSProperties = {
   width: 214,
   boxSizing: 'border-box',
   userSelect: 'none',
+  // The page no longer scrolls to reveal whatever this panel's sections do
+  // not fit - see `index.html` - so this has to scroll itself instead, or
+  // opening every section on a short window would strand the last few.
+  maxHeight: 'calc(100vh - 20px)',
+  overflowY: 'auto',
 }
 
 const heading: React.CSSProperties = { opacity: 0.55, letterSpacing: 0.6, margin: '12px 0 4px' }

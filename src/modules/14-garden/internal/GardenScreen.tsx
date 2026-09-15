@@ -392,7 +392,7 @@ function Planting({
   }
 
   return (
-    <div style={{ ...card, width: 'min(96vw, 1180px)' }}>
+    <div style={{ ...card, width: 1180 }}>
       {/* The tray: what the party brought, and what it can afford right now. */}
       <div style={{ ...tray, marginBottom: 10, flexWrap: 'wrap' }}>
         {hand.map((id) => {
@@ -585,15 +585,27 @@ const bar: React.CSSProperties = {
   borderBottom: '1px solid rgba(255,255,255,0.1)',
 }
 
+/**
+ * The panel a round is actually played in: picking or planting, whichever is
+ * up.
+ *
+ * A **fixed size in pixels**, not a fraction of the viewport. This is a 2D
+ * game - the board is drawn once, at one size, not reflowed every time the
+ * window is, and picking and planting share one box so moving between them
+ * within a round is not itself a resize. Content that does not fit scrolls
+ * inside it; the panel's own bounds never move.
+ */
 const card: React.CSSProperties = {
-  width: 'min(94vw, 820px)',
-  maxHeight: 'calc(100vh - 90px)',
+  width: 820,
+  height: 720,
   overflowY: 'auto',
   padding: '14px 16px',
   borderRadius: 10,
   background: 'rgba(20, 22, 26, 0.94)',
   border: '1px solid rgba(255,255,255,0.12)',
   boxShadow: '0 18px 50px rgba(0,0,0,0.5)',
+  boxSizing: 'border-box',
+  flex: '0 0 auto',
   marginTop: 34,
 }
 

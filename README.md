@@ -22,7 +22,9 @@ in the panel snaps back. A plain click, either button, never moves the camera.
 Music plays in the background from `public/assets/music/`. The panel above the
 day controls skips, rewinds, pauses and sets the volume; **back** restarts the
 track first and goes to the previous one if pressed again straight away. To add
-a song, drop it in that folder and run `npm run music:scan`.
+a song, drop it in that folder and run `npm run music:scan`. It stops the
+moment either game starts and picks back up where it left off when the game
+ends — unless you had paused it yourself, in which case it stays paused.
 
 Pick the **weather** in the same panel: sunny, cloudy, rainy or snowing. It
 takes a couple of seconds to come over rather than cutting, and it dims the sun
@@ -102,6 +104,14 @@ selection is replaced by theirs the moment you arrive.
 Starting Garden Goofs opens the shelf, where the party chooses its eight
 animals between them — anybody can add one or take one out — and the round
 waits until everybody says they are done. Then the lawn.
+
+Starting either game hides the spawn island — its shore and rocks with it —
+the instant it starts, so the game you are looking at is the only thing on
+screen; it comes back the moment the party disbands. Garden Goofs' own panel
+is a **fixed pixel size**, never a fraction of the window, so the board is the
+same square at the same spot for everyone regardless of window size, and the
+page itself is locked against pinch and double-tap zoom so nothing shifts
+underneath it.
 
 Neither game is written yet. The volcano's track and the lawn's grid are built,
 the rules that go on top of them are not: nothing is planted, nothing walks in,

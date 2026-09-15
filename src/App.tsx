@@ -12,12 +12,18 @@ import { World } from './app/World'
 import { DebugPanel } from './app/DebugPanel'
 import { PartyPanel } from './app/PartyPanel'
 import { LobbyPopup } from './app/LobbyPopup'
+import { useParty } from './modules/10-party'
 import { GardenScreen } from './modules/14-garden'
 import { Scoreboard } from './app/Scoreboard'
 import { Boundary } from './app/Boundary'
 import { Toasts } from './app/Toasts'
 
 export default function App() {
+  // Whatever the party is doing - background music has no other way to know
+  // a game has started, and stopping it is the whole point of asking.
+  const party = useParty()
+  const playingAGame = party.phase === 'playing'
+
   return (
     <>
       <Boundary what="the world">
@@ -37,7 +43,7 @@ export default function App() {
         </div>
 
         <div style={{ ...column, top: 10, right: 10, alignItems: 'flex-end' }}>
-          <MusicPlayer />
+          <MusicPlayer stopped={playingAGame} />
           <DebugPanel />
         </div>
 

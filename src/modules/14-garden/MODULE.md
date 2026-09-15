@@ -47,6 +47,28 @@ The world carries on behind it, which is where everybody's body still is. That
 is the difference between the two games this build has: Volcano Island moves
 your body somewhere, and Garden Goofs draws over it.
 
+**The lobby is hidden while it does**, along with the rest of the world's
+worth of scene - see `setLobbyVisible` in `src/app/scene.ts`. Not this
+module's own decision: the composition root watches the party's phase and
+hides the spawn island, and everything tied to it, the moment any game starts,
+Garden Goofs included. What it does not hide is the *panel itself*, which is
+this module's business alone - see below.
+
+## The panel is a fixed size
+
+820 by 720 pixels while picking, 1180 by 720 while planting - in **pixels**,
+never `vw`, `vh`, or a `calc()` against either. A responsive size is right for
+a document; it is wrong for a board game, where a square has to be the same
+square from one moment to the next and a party comparing screens wants to be
+looking at the same thing.
+
+So the panel does not reflow when the window does, does not grow or shrink
+between picking and planting beyond the one deliberate width change, and does
+not rescale under pinch or double-tap zoom - the page itself refuses that, in
+`index.html`. Content that does not fit inside the fixed box scrolls within
+it; the box's own bounds never move. There is a test that reads the rendered
+style back and fails on a stray `vw`, `vh`, or `calc()` reappearing.
+
 ## The lawn
 
 | | |
@@ -435,6 +457,14 @@ works on your own - out of a lobby you are your own host.
 
 - **Pick Garden Goofs, ready up, start.** The shelf appears: forty-nine cards
   in a 7x7 grid, each one an icon and a name, with the loadout empty above it.
+- **Look at the world behind the panel the instant it starts.** The spawn
+  island, its shells and its rocks should be gone - not faded, not still
+  swimmable, just not drawn. Disband the party: they should be back.
+- **Listen on the way in.** Whatever music was playing should stop the moment
+  the shelf appears, and pick back up where it left off once the party ends.
+- **Resize the browser window while the shelf or the lawn is up.** The panel's
+  own size in pixels must not change, and neither must the size of a single
+  card or square within it.
 - **Hover a card.** The cost and what it does should appear as a tooltip, and
   nowhere else - the card itself stays down to the icon and the name.
 - **Pick eight animals.** The ninth should refuse rather than push one out.
