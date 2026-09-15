@@ -228,7 +228,30 @@ function set(patch: Partial<NetInfo>): void {
   info.set({ ...info.get(), ...patch })
 }
 
+/**
+ * Starts a lobby of your own, under a code you chose.
+ *
+ * **Not the same call as joining one**, and the difference is on the wire. The
+ * relay used to make a room if there was not one and put you in it either way,
+ * which meant typing somebody else's code into your own box and pressing
+ * create walked you into their party. Now it is refused, with words.
+ */
+export function createLobby(rawCode: string, rawName: string): void {
+  open(rawCode, rawName, true)
+}
+
+/**
+ * Joins somebody else's, under the code they gave you.
+ *
+ * A code nobody is using is refused rather than made. Mistyping one used to
+ * land you alone in a room nobody else would ever be in - host of it, with
+ * everything looking like it had worked, waiting.
+ */
 export function joinLobby(rawCode: string, rawName: string): void {
+  open(rawCode, rawName, false)
+}
+
+function open(rawCode: string, rawName: string, make: boolean): void {
   const room = normaliseCode(rawCode)
   if (!room) {
     set({ status: 'error', why: 'that is not a lobby code', room: null, id: null, peers: 0 })
@@ -237,7 +260,10 @@ export function joinLobby(rawCode: string, rawName: string): void {
 
   leaveLobby()
   myName = cleanName(rawName)
-  set({ status: 'connecting', room, id: null, peers: 0, why: null })
+  // Not host until the relay says who is in the room. Leaving set it true -
+  // alone you are your own host - and carrying that through a connection would
+  // flash a start button at somebody who is about to be a guest.
+  set({ status: 'connecting', room, id: null, peers: 0, why: null, host: false })
 
   let ws: WebSocket
   try {
@@ -250,7 +276,7 @@ export function joinLobby(rawCode: string, rawName: string): void {
   socket = ws
 
   ws.onopen = () => {
-    ws.send(JSON.stringify({ t: 'join', room, name: myName }))
+    ws.send(JSON.stringify({ t: 'join', room, name: myName, make }))
   }
 
   ws.onmessage = (event) => {

@@ -21,6 +21,10 @@ In each window:
 2. In the first, press **create** under its own code.
 3. In the second, type that code into **or join someone** and press **join**.
 
+**Create** and **join** are not interchangeable: creating with a code somebody
+is already using is refused, and joining a code nobody is using is refused too.
+Both say so rather than quietly putting you in a room on your own.
+
 Both LOBBY buttons should show the code, and the popup should say
 `1 other here`. Walk around and you will see the other duck.
 

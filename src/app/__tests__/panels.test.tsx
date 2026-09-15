@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { PerfHUD } from '../../modules/00-core'
 import { MusicPlayer } from '../../modules/05-music'
 import { DebugPanel } from '../DebugPanel'
-import { LobbyPopup } from '../LobbyPopup'
+import { LobbyPopup, readyLook } from '../LobbyPopup'
 import { PartyPanel } from '../PartyPanel'
 import { Scoreboard } from '../Scoreboard'
 import { MODES, chooseMode } from '../../modules/13-modes'
@@ -385,5 +385,58 @@ describe('playing a round of Garden Goofs', () => {
 
   it('lists the three ways to play, still', () => {
     expect(GARDEN_MODES).toHaveLength(3)
+  })
+})
+
+
+describe('the ready button', () => {
+  it('sits quietly when the lobby is not waiting on anybody', () => {
+    expect(readyLook(false, 0)).toEqual({ label: 'ready up', lit: false, danger: false })
+  })
+
+  it('lights up while somebody still has to ready up', () => {
+    // The one thing anybody is in the popup to do should be the one thing that
+    // catches the eye.
+    expect(readyLook(false, 1).lit).toBe(true)
+    expect(readyLook(false, 3).lit).toBe(true)
+    expect(readyLook(false, 1).danger).toBe(false)
+  })
+
+  it('goes red once it is your own ready it would be taking back', () => {
+    const look = readyLook(true, 1)
+    expect(look.danger).toBe(true)
+    expect(look.lit).toBe(true)
+    expect(look.label).toBe('cancel ready')
+  })
+
+  it('stays red once everybody is in, because it still cancels', () => {
+    expect(readyLook(true, 0)).toEqual({ label: 'cancel ready', lit: true, danger: true })
+  })
+})
+
+describe('changing the game before the party starts', () => {
+  afterEach(() => {
+    endGame()
+    act(() => chooseMode('island'))
+  })
+
+  it('leaves the shelf open while the lobby is gathering', () => {
+    // Being in a lobby *is* gathering, so locking on "any phase but off" shut
+    // the host out of the one window in which anybody would change their mind.
+    act(() => hostGame())
+    const rows = [...openLobby().querySelectorAll('button')].filter((b) =>
+      MODES.some((m) => b.textContent?.includes(m.title)),
+    )
+    expect(rows.length).toBe(MODES.length)
+    for (const row of rows) expect(row.hasAttribute('disabled')).toBe(false)
+  })
+
+  it('settles it once the party has actually started', () => {
+    act(() => {
+      hostGame()
+      startGame()
+    })
+    const html = openLobby().innerHTML
+    expect(html).toContain('settled for this round')
   })
 })

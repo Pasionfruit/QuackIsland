@@ -199,6 +199,9 @@ and the gate's review list should say so.
   should move to that lobby rather than being told you are already in one.
 - **Press join with a half-typed code.** The button should be unpressable
   rather than reporting an error after the fact.
+- **Change the game after joining, before starting.** The shelf must stay
+  open the whole time the lobby is gathering - it is the only window in which
+  anybody would change their mind. It settles only once the party has started.
 - **Pick Garden Goofs.** It takes the highlight, three ways to play appear
   under it, and the PARTY panel above names both the game and the way.
 - **Pick Volcano Island again.** The three ways to play go away.

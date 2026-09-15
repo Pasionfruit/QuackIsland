@@ -41,6 +41,7 @@ export {
 } from './internal/interpolate'
 
 export {
+  createLobby,
   followWorld,
   getNet,
   getPeers,

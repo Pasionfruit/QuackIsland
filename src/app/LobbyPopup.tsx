@@ -25,7 +25,15 @@
  * root is the one place allowed to know all of them.
  */
 import { useEffect, useRef, useState } from 'react'
-import { joinLobby, leaveLobby, makeCode, normaliseCode, useNet, usePeers } from '../modules/09-net'
+import {
+  createLobby,
+  joinLobby,
+  leaveLobby,
+  makeCode,
+  normaliseCode,
+  useNet,
+  usePeers,
+} from '../modules/09-net'
 import {
   ME,
   canStart,
@@ -43,6 +51,27 @@ import {
   useGardenMode,
   useGoofsSync,
 } from '../modules/14-garden'
+
+/**
+ * What the ready button looks like and says.
+ *
+ * Out here and pure because it is a rule rather than a decoration, and rules
+ * that live inside a style object regress without anybody noticing:
+ *
+ * - **Lit while the lobby is waiting on somebody.** The one thing anybody is
+ *   in the popup to do should be the one thing that catches the eye.
+ * - **Red once you are ready**, because from that moment the button takes it
+ *   back rather than giving it - and a button that undoes something should not
+ *   look like the button that did it.
+ */
+export function readyLook(ready: boolean, waiting: number): {
+  label: string
+  lit: boolean
+  danger: boolean
+} {
+  if (ready) return { label: 'cancel ready', lit: true, danger: true }
+  return { label: 'ready up', lit: waiting > 0, danger: false }
+}
 
 export function LobbyPopup() {
   const [open, setOpen] = useState(false)
@@ -68,9 +97,15 @@ export function LobbyPopup() {
   // The host picks the game, the same as the clock and the weather. Alone you
   // are your own host, so picking works before anybody else has arrived.
   const guest = joined && !net.host
-  // Mid-game the choice is settled; changing it under people already on the
-  // island is a way to break a game rather than a way to leave one.
-  const locked = party.phase !== 'off'
+  /**
+   * Only a game that is actually running is settled.
+   *
+   * This used to be "any phase but off", which locked the shelf the instant
+   * you were in a lobby - because being in a lobby *is* gathering. The host
+   * could not change their mind between arriving and pressing start, which is
+   * exactly the window in which anybody would.
+   */
+  const locked = party.phase === 'playing'
 
   const game = modeById(mode)
   const everyone = [...peers.map((p) => p.id), ME]
@@ -200,19 +235,7 @@ export function LobbyPopup() {
           {joined ? (
             <>
               <div style={rule} />
-              <button
-                type="button"
-                onClick={() => setReady(!ready)}
-                style={{
-                  ...button,
-                  width: '100%',
-                  padding: '6px 8px',
-                  background: ready ? '#6fb6c8' : 'rgba(255,255,255,0.06)',
-                  color: ready ? '#16202a' : '#f2ece2',
-                }}
-              >
-                {ready ? 'ready' : 'ready up'}
-              </button>
+<ReadyButton ready={ready} waiting={waiting} />
               <div style={{ opacity: 0.45, marginTop: 4 }}>
                 {waiting === 0
                   ? 'everybody is ready'
@@ -244,7 +267,7 @@ export function LobbyPopup() {
             </button>
             <button
               type="button"
-              onClick={() => joinLobby(mine, name)}
+              onClick={() => createLobby(mine, name)}
               disabled={joined && net.room === mine}
               style={{
                 ...button,
@@ -393,6 +416,28 @@ export function LobbyPopup() {
         </div>
       ) : null}
     </div>
+  )
+}
+
+function ReadyButton({ ready, waiting }: { ready: boolean; waiting: number }) {
+  const look = readyLook(ready, waiting)
+  const glow = look.danger ? '#c8443c' : '#e0a05a'
+  return (
+    <button
+      type="button"
+      onClick={() => setReady(!ready)}
+      style={{
+        ...button,
+        width: '100%',
+        padding: '6px 8px',
+        background: look.lit ? glow : 'rgba(255,255,255,0.06)',
+        color: look.lit ? '#20222a' : '#f2ece2',
+        borderColor: look.lit ? (look.danger ? '#ff8d84' : '#ffcf8a') : 'rgba(255,255,255,0.14)',
+        boxShadow: look.lit ? `0 0 10px ${glow}8c` : 'none',
+      }}
+    >
+      {look.label}
+    </button>
   )
 }
 

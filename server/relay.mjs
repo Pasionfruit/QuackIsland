@@ -138,14 +138,42 @@ sockets.on('connection', (socket) => {
   socket.on('error', () => leave(client))
 })
 
+/**
+ * Making a lobby and joining one are different things.
+ *
+ * The relay used to treat them as one - it made a room if there was not one
+ * and put you in it either way - and that is two bugs rather than a shortcut:
+ *
+ * - Type somebody else's code into your own box, press **create**, and you
+ *   walk into their party instead of starting yours.
+ * - Mistype a code, press **join**, and you land alone in a room nobody else
+ *   will ever be in. You are its host, everything looks like it worked, and
+ *   you wait there.
+ *
+ * So the client says which it meant, and being wrong is an error with words on
+ * it rather than a room. A message with no `make` at all still gets the old
+ * make-or-join, because that is what anything else talking to this relay
+ * expects.
+ */
+function roomRefusal(room, make) {
+  const exists = rooms.has(room)
+  if (make === true && exists) return 'that code is taken - press new for another'
+  if (make === false && !exists) return 'no lobby with that code'
+  if (!exists && rooms.size >= LIMITS.rooms) return 'server full'
+  return null
+}
+
 function joinRoom(client, socket, message) {
   const room = String(message.room ?? '').toUpperCase().slice(0, 12)
   if (!/^[A-Z0-9]{3,12}$/.test(room)) {
     socket.send(JSON.stringify({ t: 'error', why: 'bad room code' }))
     return
   }
-  if (!rooms.has(room) && rooms.size >= LIMITS.rooms) {
-    socket.send(JSON.stringify({ t: 'error', why: 'server full' }))
+
+  const make = typeof message.make === 'boolean' ? message.make : null
+  const refusal = roomRefusal(room, make)
+  if (refusal) {
+    socket.send(JSON.stringify({ t: 'error', why: refusal }))
     return
   }
 

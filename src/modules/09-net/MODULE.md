@@ -33,11 +33,36 @@ syncing, that is the moment to split them.
 | `createTrack` / `record` / `sampleTrack` / `stale` | Interpolation. Pure |
 | `shortestAngle(from, to)` | The short way round. Pure |
 | `peerAt(id, now)` / `peerTracks()` | Where a peer is right now, for the renderer |
+| `createLobby(code, name)` | Start one of your own. Refused if the code is taken |
+| `joinLobby(code, name)` | Join somebody else's. Refused if nobody is using it |
 | `relayUrl()` | Where the relay is |
 | `relayProblem()` | Why it could not be reached, in words worth reading |
 | `statusAfterClose(status)` | What a socket closing means. Pure |
 | `NET` | Send rate, interpolation delay, timeout, history size |
 | `DuckState`, `Peer`, `Track`, `Snapshot`, `NetInfo`, `NetStatus` | The shapes. `DuckState` is the wire name for a player's position and pose |
+
+## Making a lobby and joining one are different things
+
+They used to be one call, and the relay made a room if there was not one and
+put you in it either way. That is two bugs rather than a shortcut, and both of
+them were found by playing:
+
+- **Type somebody else's code into your own box and press create**, and you
+  walked into their party instead of starting yours.
+- **Mistype a code and press join**, and you landed alone in a room nobody else
+  would ever be in. You were its host, everything looked like it had worked,
+  and you waited there. That is what "I hosted, then joined another party, and
+  I was still the host" actually was.
+
+So the client says which it meant - `make: true` or `make: false` on the join
+message - and being wrong is an error with words on it rather than a room. A
+message with no `make` at all still gets the old make-or-join, because that is
+what anything else talking to this relay would expect.
+
+**`host` is false while connecting.** Leaving sets it true, because alone you
+are your own host, and carrying that through a connection flashed a start
+button at somebody who was about to be a guest. Who actually hosts is settled
+by `isHost` the moment the relay says who is in the room.
 
 ## Invariants you may rely on
 
