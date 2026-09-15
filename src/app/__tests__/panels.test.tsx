@@ -218,7 +218,7 @@ describe('starting a round of Garden Goofs', () => {
     expect(html).toContain('between you')
   })
 
-  it('draws the panel at a fixed pixel size, not a fraction of the viewport', () => {
+  it('takes the whole window, with nothing anywhere that scrolls', () => {
     act(() => chooseMode('garden'))
     act(() => {
       hostGame()
@@ -230,29 +230,54 @@ describe('starting a round of Garden Goofs', () => {
     root = created
     act(() => created.render(<GardenScreen />))
 
-    // The picking panel. `vw`, `vh` and `calc()` would all make this a
-    // fraction of the window instead of a fixed size - the whole point.
-    const picking = host.querySelector('div[style*="820px"]') as HTMLElement | null
-    expect(picking).not.toBeNull()
-    expect(picking?.style.width).toBe('820px')
-    expect(picking?.style.height).toBe('720px')
-    for (const style of [picking?.style.width, picking?.style.height, picking?.style.maxHeight]) {
-      expect(style ?? '').not.toMatch(/vw|vh|calc/)
+    // The page itself: every edge of the window, and the last thing in here
+    // allowed to have an overflow at all.
+    const screen = host.firstElementChild as HTMLElement | null
+    expect(screen?.style.position).toBe('fixed')
+    expect(screen?.style.inset).toBe('0px')
+    expect(screen?.style.overflow).toBe('hidden')
+
+    // Nothing inside it is a box of a fixed size with its own scrollbar - that
+    // is what made it read as a panel rather than a page.
+    const boxes = [...host.querySelectorAll('div')] as HTMLElement[]
+    for (const box of boxes) {
+      expect(box.style.overflowY).not.toBe('auto')
+      expect(box.style.overflowY).not.toBe('scroll')
     }
+    expect(host.innerHTML).not.toContain('820px')
+    expect(host.innerHTML).not.toContain('1180px')
 
     act(() => {
       toggleAnimal('pea-shooter')
       setDone(true)
     })
 
-    // The planting panel is wider, for the lawn, but just as fixed.
-    const planting = host.querySelector('div[style*="1180px"]') as HTMLElement | null
-    expect(planting).not.toBeNull()
-    expect(planting?.style.width).toBe('1180px')
-    expect(planting?.style.height).toBe('720px')
-    for (const style of [planting?.style.width, planting?.style.height]) {
-      expect(style ?? '').not.toMatch(/vw|vh|calc/)
+    // The lawn is the same: room shared out by the page, not a size of its own.
+    for (const box of [...host.querySelectorAll('div')] as HTMLElement[]) {
+      expect(box.style.overflowY).not.toBe('auto')
+      expect(box.style.overflowY).not.toBe('scroll')
     }
+    expect(host.querySelectorAll('[data-cell]')).toHaveLength(96)
+  })
+
+  it('loads as a page of its own, opaque, not a translucent popup over the world', () => {
+    act(() => chooseMode('garden'))
+    act(() => {
+      hostGame()
+      startGame()
+    })
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const created = createRoot(host)
+    root = created
+    act(() => created.render(<GardenScreen />))
+
+    const screen = host.firstElementChild as HTMLElement | null
+    expect(screen).not.toBeNull()
+    // A translucent background is what makes an overlay read as a popup
+    // floating over the page behind it - a page load has none of that.
+    expect(screen?.style.background ?? '').not.toBe('')
+    expect(screen?.style.background ?? '').not.toMatch(/rgba|hsla/)
   })
 
   it('lays the shelf out as an exact 7x7 grid of forty-nine cards', () => {
@@ -269,12 +294,14 @@ describe('starting a round of Garden Goofs', () => {
 
     // Every card, and nothing but the roster - no headers, no groups.
     const cards = [...host.querySelectorAll('button')].filter((b) =>
-      DEFENDERS.some((d) => b.title.startsWith(`${d.cost} seeds`) && b.textContent === d.name),
+      DEFENDERS.some(
+        (d) => b.title.startsWith(`${d.cost} seeds`) && b.textContent === `${d.name}${d.cost}`,
+      ),
     )
     expect(cards).toHaveLength(49)
   })
 
-  it('keeps a card to an icon and a name, with the rest only on hover', () => {
+  it('keeps a card to an icon, a name and a price, with the blurb only on hover', () => {
     act(() => chooseMode('garden'))
     act(() => {
       hostGame()
@@ -286,11 +313,15 @@ describe('starting a round of Garden Goofs', () => {
     root = created
     act(() => created.render(<GardenScreen />))
 
-    const duck = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Duck')
+    const duck = [...host.querySelectorAll('button')].find(
+      (b) => b.textContent === `Duck${defenderById('duck').cost}`,
+    )
     expect(duck).toBeDefined()
-    // The blurb and the cost are not visible text...
+    // The price is visible on the card itself...
+    expect(duck?.textContent).toContain(String(defenderById('duck').cost))
+    // ...but the blurb is not - it is the title, which is what a browser
+    // shows on hover.
     expect(host.textContent).not.toContain(defenderById('duck').blurb)
-    // ...they are the title, which is what a browser shows on hover.
     expect(duck?.title).toContain(String(defenderById('duck').cost))
     expect(duck?.title).toContain(defenderById('duck').blurb)
   })
@@ -374,6 +405,15 @@ describe('playing a round of Garden Goofs', () => {
     const host = lawn()
     expect(host.querySelectorAll('[data-cell]')).toHaveLength(96)
     expect(getGoofs().round.seeds).toBe(GOOFS.startingSeeds)
+  })
+
+  it('shows what a brought animal costs on its tray card, not just on hover', () => {
+    const host = lawn()
+    const tray = [...host.querySelectorAll('button')].find((b) =>
+      b.textContent?.includes('Pea Shooter'),
+    )
+    expect(tray).toBeDefined()
+    expect(tray?.textContent).toContain(String(defenderById('pea-shooter').cost))
   })
 
   it('plants an animal into the square you pick, and the pot pays for it', () => {
@@ -558,7 +598,7 @@ describe('playing a round of Garden Goofs', () => {
   it('digs up a planted animal with the trowel, and refunds nothing', () => {
     const host = lawn()
     const tray = () =>
-      [...host.querySelectorAll('button')].find((b) => b.textContent === 'Pea Shooter')
+      [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Pea Shooter'))
 
     click(tray() ?? null)
     click(host.querySelector('[data-cell="2,2"]'))

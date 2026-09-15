@@ -45,29 +45,46 @@ is the view's business and nobody else's.
 
 The world carries on behind it, which is where everybody's body still is. That
 is the difference between the two games this build has: Volcano Island moves
-your body somewhere, and Garden Goofs draws over it.
+your body somewhere, and Garden Goofs draws over it - but **opaquely**, as a
+page of its own rather than a dialog floating on top of the last one. Starting
+the game is a page load, not a popup opening: `screen`'s background is solid,
+not the translucent overlay it once was, so nothing of the world - or of the
+panels docked around its edges - shows through underneath it.
 
 **The lobby is hidden while it does**, along with the rest of the world's
 worth of scene - see `setLobbyVisible` in `src/app/scene.ts`. Not this
 module's own decision: the composition root watches the party's phase and
 hides the spawn island, and everything tied to it, the moment any game starts,
-Garden Goofs included. What it does not hide is the *panel itself*, which is
+Garden Goofs included. What it does not hide is the *page itself*, which is
 this module's business alone - see below.
 
-## The panel is a fixed size
+## The whole page, and nothing to scroll
 
-820 by 720 pixels while picking, 1180 by 720 while planting - in **pixels**,
-never `vw`, `vh`, or a `calc()` against either. A responsive size is right for
-a document; it is wrong for a board game, where a square has to be the same
-square from one moment to the next and a party comparing screens wants to be
-looking at the same thing.
+There is no panel. The game is the window: `screen` is every edge of it, the
+bar is the first row of it, and the shelf or the lawn takes all the height
+left under that. It was a fixed 820 by 720 box floating in the middle of a
+dimmed world once, with its own scrollbar; it is a page now, because a lane
+defence you have to scroll is a lane defence you cannot see coming.
 
-So the panel does not reflow when the window does, does not grow or shrink
-between picking and planting beyond the one deliberate width change, and does
-not rescale under pinch or double-tap zoom - the page itself refuses that, in
-`index.html`. Content that does not fit inside the fixed box scrolls within
-it; the box's own bounds never move. There is a test that reads the rendered
-style back and fails on a stray `vw`, `vh`, or `calc()` reappearing.
+**Nothing below `screen` is allowed an overflow.** Every column in here is a
+flexbox with `minHeight: 0` on the part that has to give - without that zero
+minimum a grid refuses to shrink below its own content and the page grows a
+scrollbar, which is the one thing this layout exists to prevent. Rows that
+must stay legible - the bar, the tray, the button, the footer - are
+`flex: 0 0 auto` and take what they need first; the board takes the rest and
+fits itself into it.
+
+So the board **does** resize with the window now, which is the deliberate
+reversal of what this section used to say. The shelf shares the leftover
+height between seven rows of `1fr` and caps its width near that same height,
+which keeps a card roughly square without any measuring; the lawn shares its
+own leftover between eight rows and twelve columns, so a square comes out a
+little wider than it is tall - which is what a lane defence wants anyway,
+since the lanes run the long way. What has not changed is that the page never
+scrolls and never zooms: `index.html` still refuses both.
+
+There is a test that mounts the screen and fails if any `div` in it carries a
+scrolling overflow, or if either of the old fixed sizes comes back.
 
 ## The lawn
 
@@ -97,11 +114,15 @@ the thing being defended, and until now nothing on the screen said so. The
 lane against it also carries a warm inner edge of its own, so the row that
 matters most reads as a front line even before anything is walking up it.
 
-## The shelf: a card is an icon and a name
+## The shelf: a card is an icon, a name and a price
 
-Everything else - cost, what it does - is a hover away, in the card's title.
-Forty-nine cards is already a lot to look at; forty-nine cards each carrying
-its own paragraph is a page to read before the party has chosen anything.
+What it does is still a hover away, in the card's title - a blurb is a
+sentence, and forty-nine sentences is a page to read before the party has
+chosen anything. What it **costs** is not: the price sits bottom right of
+every shelf card and, again, on the tray card once it has been brought to the
+lawn - the one number that changes what a party can actually afford is not
+worth an extra hover to see, in the menu that picks it or the tool that plays
+it.
 
 Laid out as a **flat 7x7 grid**, not grouped by role the way the catalogue
 itself is. One screen, no scrolling, no header to read past first - the whole
@@ -331,8 +352,10 @@ every other refusal here - a drop that silently does nothing is a bug report.
 way seeds are - each browser counts its own copy up between the host's
 messages, so it moves smoothly rather than jumping when one arrives.
 `waveAt(elapsed)` turns that into a number: the first `WAVE.length` seconds are
-wave 1, the next are wave 2, and so on. It is shown bottom right for as long as
-there is a round running.
+wave 1, the next are wave 2, and so on. It is shown at the bottom right of the
+page for as long as there is a round running - on the footer line, in the
+layout rather than floating over it, since the lawn now reaches the corner it
+used to sit in.
 
 **Nothing changes when the wave advances**, yet. There are no pests to send,
 so a wave here is a clock with a name and nothing riding on it. It exists now
@@ -455,18 +478,28 @@ and there is a test that says so, because the relay refuses four.
 Two browsers in one lobby is the real test, but everything except the waiting
 works on your own - out of a lobby you are your own host.
 
-- **Pick Garden Goofs, ready up, start.** The shelf appears: forty-nine cards
-  in a 7x7 grid, each one an icon and a name, with the loadout empty above it.
-- **Look at the world behind the panel the instant it starts.** The spawn
-  island, its shells and its rocks should be gone - not faded, not still
-  swimmable, just not drawn. Disband the party: they should be back.
+- **Pick Garden Goofs, ready up, start.** A new page should load, solid and
+  opaque - not a dialog fading in over a dimmed view of the world you were
+  just standing in. The shelf appears: forty-nine cards in a 7x7 grid, each
+  one an icon, a name and a price in the corner, with the loadout empty above
+  it.
+- **Look for the world once the page is up.** None of it should show through
+  - not the island, not the sea, not any panel docked at the corners of the
+  screen you were just looking at. Disband the party: the page should give way
+  back to the world, and the spawn island - shells, rocks and all - should be
+  there again, not faded or still swimmable the moment before, just not drawn
+  until then.
 - **Listen on the way in.** Whatever music was playing should stop the moment
   the shelf appears, and pick back up where it left off once the party ends.
-- **Resize the browser window while the shelf or the lawn is up.** The panel's
-  own size in pixels must not change, and neither must the size of a single
-  card or square within it.
-- **Hover a card.** The cost and what it does should appear as a tooltip, and
-  nowhere else - the card itself stays down to the icon and the name.
+- **Resize the browser window while the shelf or the lawn is up**, both ways,
+  and drag it small. The board should follow the window - growing into it,
+  shrinking to fit it - and at no size should a scrollbar appear, anywhere, or
+  a card or square fall off the bottom to go looking for one.
+- **Look at a shelf card without hovering it.** The price should already be
+  there, bottom right. Hover it anyway: what it *does* should appear as a
+  tooltip - that part, and only that part, stays a hover away.
+- **Bring an animal to the lawn and look at its tray card.** The same price
+  should be sitting on it there too, not just back on the shelf.
 - **Pick eight animals.** The ninth should refuse rather than push one out.
 - **Click one in the loadout row.** It comes back out again.
 - **With two browsers:** one player adding an animal must show up in the
@@ -490,7 +523,8 @@ works on your own - out of a lobby you are your own host.
   and the pot must agree in both. It is one pot.
 - **Look bottom right.** A wave count should read *wave 1* the moment the lawn
   appears, and climb on its own as the round goes on - in both browsers,
-  together.
+  together. It should sit on the footer line, clear of the board, not on top
+  of the last lane.
 - **Drag the trowel, top right, onto a planted square.** It clears, and the
   pot does **not** move - digging one up is not a refund.
 - **Click the trowel and then a planted square.** Same result, the click-then-

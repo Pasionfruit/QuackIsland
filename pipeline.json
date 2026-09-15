@@ -1232,7 +1232,12 @@
         },
         {
           "id": "14.13",
-          "title": "The panel at a fixed pixel size, never a fraction of the viewport",
+          "title": "The whole window rather than a panel in the middle of it, with nothing that scrolls",
+          "status": "done"
+        },
+        {
+          "id": "14.14",
+          "title": "An opaque page of its own, not a popup over the world, and a price on every card",
           "status": "done"
         }
       ],

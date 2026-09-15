@@ -177,11 +177,6 @@ export function GardenScreen() {
         <Planting round={goofs.round} hand={goofs.hand} holding={holding} setHolding={setHolding} />
       )}
 
-      {/* The wave, bottom right, for as long as there is a round to be in one. */}
-      {phase === 'planting' ? (
-        <div style={waveBadge}>wave {waveAt(goofs.round.elapsed)}</div>
-      ) : null}
-
       {paused ? <Paused onResume={() => setPaused(false)} /> : null}
     </div>
   )
@@ -217,10 +212,10 @@ function Paused({ onResume }: { onResume: () => void }) {
 }
 
 /**
- * The shelf: everything there is, laid out as one 7x7 grid - forty-nine
- * squares, forty-nine animals, no scrolling and no grouping to read through
- * first. Each card is an icon and a name; everything else - what it costs,
- * what it does - is a hover away, in the title.
+ * The shelf: everything there is, laid out as one 7x7 grid across the whole
+ * page - forty-nine squares, forty-nine animals, no scrolling and no grouping
+ * to read through first. Each card is an icon, a name and a price; what it
+ * *does* is the one thing left a hover away, in the title.
  */
 function Picking({
   hand,
@@ -236,11 +231,11 @@ function Picking({
   const full = handIsFull(hand)
 
   return (
-    <div style={card}>
-      <div style={{ fontSize: 15, marginBottom: 2 }}>
+    <div style={page}>
+      <div style={{ fontSize: 15, marginBottom: 2, flex: '0 0 auto' }}>
         Pick {GOOFS.handSize} animals, between you
       </div>
-      <div style={{ opacity: 0.5, marginBottom: 10 }}>
+      <div style={{ opacity: 0.5, marginBottom: 10, flex: '0 0 auto' }}>
         One lawn, one pot of seeds, one loadout - anybody can add to it or take
         something out again. Hover a card to read what it does.
       </div>
@@ -291,6 +286,7 @@ function Picking({
                 <span style={shapeOf(animal.shape, animal.colour, 30)} />
               </span>
               <span style={tileName}>{animal.name}</span>
+              <span style={tilePrice}>{animal.cost}</span>
             </button>
           )
         })}
@@ -303,6 +299,7 @@ function Picking({
         style={{
           ...button,
           width: '100%',
+          flex: '0 0 auto',
           marginTop: 10,
           padding: '7px 8px',
           background: done ? '#6fb6c8' : hand.length ? '#e0a05a' : 'rgba(255,255,255,0.06)',
@@ -329,7 +326,7 @@ function Picking({
         ))}
       </div>
 
-      <div style={{ opacity: 0.4, marginTop: 8 }}>
+      <div style={{ opacity: 0.4, marginTop: 8, flex: '0 0 auto' }}>
         {waiting === 0 ? 'everybody is in' : `waiting on ${waiting}`}
       </div>
     </div>
@@ -392,7 +389,7 @@ function Planting({
   }
 
   return (
-    <div style={{ ...card, width: 1180 }}>
+    <div style={page}>
       {/* The tray: what the party brought, and what it can afford right now. */}
       <div style={{ ...tray, marginBottom: 10, flexWrap: 'wrap' }}>
         {hand.map((id) => {
@@ -423,6 +420,7 @@ function Planting({
             >
               <span style={shapeOf(animal.shape, animal.colour, 20)} />
               <span>{animal.name}</span>
+              <span style={packetPrice}>{animal.cost}</span>
             </button>
           )
         })}
@@ -514,9 +512,16 @@ function Planting({
         </div>
       </div>
 
-      <div style={{ opacity: 0.4, marginTop: 8 }}>
-        {GRID.rows} lanes, {GRID.cols} deep. Defend the house on the left;
-        nothing comes in from the right yet.
+      {/* The footer line, and the wave count at the bottom right of it - in the
+          page rather than floating over it, now that the lawn reaches the
+          corner the badge used to sit in. */}
+      <div style={footer}>
+        <span style={{ opacity: 0.4 }}>
+          {GRID.rows} lanes, {GRID.cols} deep. Defend the house on the left;
+          nothing comes in from the right yet.
+        </span>
+        <span style={{ flex: 1 }} />
+        <span style={waveBadge}>wave {waveAt(round.elapsed)}</span>
       </div>
     </div>
   )
@@ -524,7 +529,7 @@ function Planting({
 
 const clamp = (n: number) => Math.max(0, Math.min(1, n))
 
-/** What a card's hover says, since the card itself only shows an icon and a name. */
+/** What a card's hover says. The cost is on the card too; the blurb is not. */
 function describe(animal: { cost: number; blurb: string }): string {
   return `${animal.cost} seeds — ${animal.blurb}`
 }
@@ -557,73 +562,99 @@ function shapeOf(shape: Shape, colour: string, box: number | null): React.CSSPro
   }
 }
 
+/**
+ * A page of its own, not a dialog floating on top of the last one.
+ *
+ * Solid, not translucent - the world behind is not meant to show through, even
+ * dimmed. A game starting is a page load, not a popup opening over the one you
+ * were already on.
+ *
+ * It is also the **whole** window, and the last thing in here with a scrollbar.
+ * Everything below fits itself into what this leaves rather than running past
+ * the bottom of it: a lane defence you have to scroll is a lane defence you
+ * cannot see coming.
+ */
 const screen: React.CSSProperties = {
   position: 'fixed',
   inset: 0,
   zIndex: 40,
   display: 'flex',
   flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 12,
-  background: 'rgba(8, 10, 14, 0.82)',
+  overflow: 'hidden',
+  background: 'radial-gradient(ellipse at 50% 30%, #1b2420 0%, #0e1114 70%)',
   color: '#f2ece2',
   font: '12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace',
   userSelect: 'none',
 }
 
+/** The top strip. A row of the page, not something floating over it. */
 const bar: React.CSSProperties = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
+  flex: '0 0 auto',
   display: 'flex',
   alignItems: 'center',
   gap: 10,
   padding: '8px 12px',
-  background: 'rgba(20, 22, 26, 0.9)',
+  background: 'rgba(20, 22, 26, 0.55)',
   borderBottom: '1px solid rgba(255,255,255,0.1)',
 }
 
 /**
- * The panel a round is actually played in: picking or planting, whichever is
- * up.
+ * Everything under the bar: the shelf while picking, the lawn while planting.
  *
- * A **fixed size in pixels**, not a fraction of the viewport. This is a 2D
- * game - the board is drawn once, at one size, not reflowed every time the
- * window is, and picking and planting share one box so moving between them
- * within a round is not itself a resize. Content that does not fit scrolls
- * inside it; the panel's own bounds never move.
+ * All of the room there is, and never any more than that. `flex: 1` with
+ * `minHeight: 0` is what lets the board inside shrink to the window instead of
+ * pushing past it - without the zero minimum a grid refuses to go below its
+ * own content and the page grows a scrollbar, which is the one thing this is
+ * here to prevent.
  */
-const card: React.CSSProperties = {
-  width: 820,
-  height: 720,
-  overflowY: 'auto',
-  padding: '14px 16px',
-  borderRadius: 10,
-  background: 'rgba(20, 22, 26, 0.94)',
-  border: '1px solid rgba(255,255,255,0.12)',
-  boxShadow: '0 18px 50px rgba(0,0,0,0.5)',
+const page: React.CSSProperties = {
+  flex: 1,
+  minHeight: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  padding: '12px 16px',
   boxSizing: 'border-box',
-  flex: '0 0 auto',
-  marginTop: 34,
+  overflow: 'hidden',
 }
 
-/** The 7x7 selection grid: forty-nine squares, forty-nine animals. */
+/**
+ * The 7x7 selection grid: forty-nine squares, forty-nine animals, all of them
+ * on the screen at once.
+ *
+ * Seven rows of `1fr` share whatever height is left over, so the shelf fills
+ * the page down to the button and stops. The width is capped at roughly that
+ * same height, which is all it takes to keep a card about square on a wide
+ * monitor - too small only makes the cards tall, and too large only makes them
+ * wide. Neither can overflow, because the height is settled first.
+ */
 const shelfGrid: React.CSSProperties = {
+  flex: 1,
+  minHeight: 0,
+  width: '100%',
+  maxWidth: 'min(100%, max(240px, calc(100vh - 300px)))',
+  margin: '0 auto',
   display: 'grid',
   gridTemplateColumns: 'repeat(7, 1fr)',
+  gridTemplateRows: 'repeat(7, 1fr)',
   gap: 7,
 }
 
-/** One card on the shelf: an icon, and a name at the bottom. Nothing else. */
+/**
+ * One card on the shelf: an icon, a name at the bottom, a price in the corner.
+ *
+ * Sized by the grid rather than by its own aspect - the shelf decides how much
+ * room there is and the card takes exactly that, so forty-nine of them always
+ * come to one screenful however tall the window is. Anything that will not fit
+ * at that size is clipped rather than allowed to stretch the grid.
+ */
 const tile: React.CSSProperties = {
   position: 'relative',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'space-between',
-  aspectRatio: '1 / 1',
+  minHeight: 0,
+  overflow: 'hidden',
   padding: '6px 3px 5px',
   border: '1px solid rgba(255,255,255,0.14)',
   borderRadius: 8,
@@ -633,6 +664,7 @@ const tile: React.CSSProperties = {
 
 const tileIcon: React.CSSProperties = {
   flex: 1,
+  minHeight: 0,
   width: '100%',
   display: 'flex',
   alignItems: 'center',
@@ -650,7 +682,26 @@ const tileName: React.CSSProperties = {
   opacity: 0.85,
 }
 
-const tray: React.CSSProperties = { display: 'flex', gap: 6, alignItems: 'center' }
+/**
+ * What a shelf card costs, bottom right - the one fact `describe` otherwise
+ * keeps behind a hover, put where an eye scanning the grid actually lands.
+ */
+const tilePrice: React.CSSProperties = {
+  position: 'absolute',
+  right: 4,
+  bottom: 3,
+  fontSize: 8,
+  color: '#e8d98a',
+  opacity: 0.9,
+}
+
+/** A row of cards. Never squashed to make room for the board below it. */
+const tray: React.CSSProperties = {
+  display: 'flex',
+  gap: 6,
+  alignItems: 'center',
+  flex: '0 0 auto',
+}
 
 const packet: React.CSSProperties = {
   display: 'flex',
@@ -662,6 +713,14 @@ const packet: React.CSSProperties = {
   background: 'rgba(255,255,255,0.04)',
   color: '#f2ece2',
   font: 'inherit',
+}
+
+/** The same cost, read off the tray card mid-round rather than the shelf. */
+const packetPrice: React.CSSProperties = {
+  marginLeft: 4,
+  fontSize: 9,
+  color: '#e8d98a',
+  opacity: 0.75,
 }
 
 const emptySlot: React.CSSProperties = {
@@ -677,13 +736,19 @@ const emptySlot: React.CSSProperties = {
  * grid, so they read as one place rather than two things bolted together.
  */
 const gardenBed: React.CSSProperties = {
+  flex: 1,
+  minHeight: 0,
+  display: 'flex',
   padding: 9,
+  boxSizing: 'border-box',
   borderRadius: 14,
   background: 'linear-gradient(180deg, #6b4a30, #4a3220)',
   boxShadow: 'inset 0 0 0 3px rgba(0,0,0,0.22), 0 10px 26px rgba(0,0,0,0.4)',
 }
 
 const lawnFrame: React.CSSProperties = {
+  flex: 1,
+  minHeight: 0,
   display: 'flex',
   alignItems: 'stretch',
   gap: 7,
@@ -734,19 +799,31 @@ const houseLabel: React.CSSProperties = {
   opacity: 0.6,
 }
 
+/**
+ * Ninety-six squares, filling whatever the bed has room for.
+ *
+ * Both axes are `1fr`, so the lawn is exactly as tall as the page leaves it and
+ * exactly as wide as the window is. A square is therefore a little wider than
+ * it is high on most screens, which is what a lane defence wants anyway: the
+ * lanes are the long way along.
+ */
 const lawn: React.CSSProperties = {
   flex: 1,
+  minWidth: 0,
   display: 'grid',
   gridTemplateColumns: `repeat(${GRID.cols}, 1fr)`,
+  gridTemplateRows: `repeat(${GRID.rows}, 1fr)`,
   gap: 3,
   padding: 6,
+  boxSizing: 'border-box',
   borderRadius: 8,
   background: '#3c2f21',
 }
 
 const square: React.CSSProperties = {
   position: 'relative',
-  aspectRatio: '1 / 1',
+  minHeight: 0,
+  minWidth: 0,
   borderRadius: 4,
   display: 'flex',
   alignItems: 'center',
@@ -872,17 +949,22 @@ const trowelHandle: React.CSSProperties = {
   transform: 'translate(-50%, 25%) rotate(-40deg)',
 }
 
+/** The last line of the page: what the board is, and which wave it is on. */
+const footer: React.CSSProperties = {
+  flex: '0 0 auto',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 10,
+  marginTop: 8,
+}
+
 /** The wave count, bottom right, for as long as there is a round to be in one. */
 const waveBadge: React.CSSProperties = {
-  position: 'fixed',
-  right: 14,
-  bottom: 14,
-  zIndex: 45,
-  padding: '6px 12px',
+  flex: '0 0 auto',
+  padding: '3px 12px',
   borderRadius: 8,
   background: 'rgba(20, 22, 26, 0.85)',
   border: '1px solid rgba(255,255,255,0.14)',
   color: '#f2ece2',
-  font: '12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace',
   letterSpacing: 0.4,
 }

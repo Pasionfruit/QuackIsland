@@ -76,10 +76,11 @@ lobby plays the same one. The host chooses:
 - **Volcano Island** — a 120-tile spiral race up a 150 m volcano on a second
   island across the water, out-of-round, with a horseshoe crater and the track
   winding three times up to the treasure at the top.
-- **Garden Goofs** — a flat **2D** lane defence on an eight-by-twelve lawn,
-  drawn over the world, with a house on the left edge marking what you are
-  defending. The party picks its loadout **together** from a 7x7 shelf of
-  forty-nine cards — each one an icon and a name, everything else a hover
+- **Garden Goofs** — a flat **2D** lane defence on an eight-by-twelve lawn.
+  Starting it loads a page of its own, opaque and full screen, not a dialog
+  over the world — a house on the left edge marks what you are defending. The
+  party picks its loadout **together** from a 7x7 shelf of forty-nine cards —
+  each one an icon, a name and a price in the corner, everything else a hover
   away — seeds land on the grass and have to be clicked before they go, and
   anybody can drag an animal into any square out of the shared pot. A
   **trowel**, top right, drags onto a planted square to dig it back up — seeds
@@ -107,11 +108,11 @@ waits until everybody says they are done. Then the lawn.
 
 Starting either game hides the spawn island — its shore and rocks with it —
 the instant it starts, so the game you are looking at is the only thing on
-screen; it comes back the moment the party disbands. Garden Goofs' own panel
-is a **fixed pixel size**, never a fraction of the window, so the board is the
-same square at the same spot for everyone regardless of window size, and the
-page itself is locked against pinch and double-tap zoom so nothing shifts
-underneath it.
+screen; it comes back the moment the party disbands. Garden Goofs takes **the
+whole window** rather than sitting in a panel in the middle of it: the shelf
+and the lawn size themselves to whatever room the window has, so there is
+never anything to scroll, and the page is locked against pinch and double-tap
+zoom so nothing shifts underneath you mid-round.
 
 Neither game is written yet. The volcano's track and the lawn's grid are built,
 the rules that go on top of them are not: nothing is planted, nothing walks in,
