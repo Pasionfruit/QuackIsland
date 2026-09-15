@@ -31,29 +31,30 @@ import {
 } from '../internal/pieces'
 import {
   GOOFS,
-  canAfford,
-  cheapestCost,
+  canBegin,
   decodeGoofs,
   encodeGoofs,
   everyoneHasPicked,
   gardenPhase,
   handIsFull,
+  shelf,
+  toggle,
   validHand,
   waitingToPick,
-  type Hands,
 } from '../internal/goofs'
 
 describe('the lawn', () => {
-  it('is six rows by nine columns, and nothing else', () => {
-    expect(GRID.rows).toBe(6)
-    expect(GRID.cols).toBe(9)
-    expect(cellCount()).toBe(54)
-    expect(everyCell()).toHaveLength(54)
+  it('is eight rows by twelve columns, and nothing else', () => {
+    // Two people play on one lawn, so it is bigger than one person can cover.
+    expect(GRID.rows).toBe(8)
+    expect(GRID.cols).toBe(12)
+    expect(cellCount()).toBe(96)
+    expect(everyCell()).toHaveLength(96)
   })
 
   it('lists every square exactly once, in reading order', () => {
     const cells = everyCell()
-    expect(new Set(cells.map((c) => `${c.row},${c.col}`)).size).toBe(54)
+    expect(new Set(cells.map((c) => `${c.row},${c.col}`)).size).toBe(96)
     cells.forEach((cell, i) => {
       expect(cellIndex(cell.row, cell.col)).toBe(i)
       expect(cellAt(i)).toEqual(cell)
@@ -69,8 +70,8 @@ describe('the lawn', () => {
     // A pest sits between two squares, so a fractional column is a real thing
     // to be handed - and it is not a square.
     expect(inGrid(0, 3.5)).toBe(false)
-    expect(cellIndex(9, 9)).toBe(-1)
-    expect(cellAt(54)).toBeNull()
+    expect(cellIndex(GRID.rows, GRID.cols)).toBe(-1)
+    expect(cellAt(96)).toBeNull()
     expect(cellAt(-1)).toBeNull()
     expect(cellAt(1.5)).toBeNull()
   })
@@ -165,7 +166,7 @@ describe('the animals and the pests', () => {
   it('starts the pot able to afford something and not everything', () => {
     expect(DEFENDERS.some((d) => GOOFS.startingSeeds >= d.cost)).toBe(true)
     const all = DEFENDERS.reduce((sum, d) => sum + d.cost, 0)
-    expect(GOOFS.startingSeeds).toBeLessThan(all)
+    expect(GOOFS.startingSeeds).toBeLessThan(all * 2)
   })
 
   it('looks one up, and guards one from the wire', () => {
@@ -247,108 +248,131 @@ describe('a piece on the lawn', () => {
   })
 })
 
-describe('picking a hand', () => {
-  it('takes a legal hand and hands it back clean', () => {
+describe('the loadout the party brings', () => {
+  it('takes a legal loadout and hands it back clean', () => {
     expect(validHand(['duck', 'frog'])).toEqual(['duck', 'frog'])
   })
 
   it('drops a double click rather than refusing it', () => {
+    // Two people clicking the duck is agreement, not a lie.
     expect(validHand(['duck', 'duck', 'frog'])).toEqual(['duck', 'frog'])
   })
 
-  it('refuses a hand that is empty, too big, or made up', () => {
-    expect(validHand([])).toBeNull()
-    expect(validHand(['duck', 'frog', 'rabbit', 'turtle'])).toBeNull()
+  it('allows an empty one, because a party starts with nothing chosen', () => {
+    expect(validHand([])).toEqual([])
+  })
+
+  it('refuses one that is too big, or made up', () => {
+    // More distinct animals than the loadout holds is refused outright.
+    const toomany = DEFENDERS.map((d) => d.id).slice(0, GOOFS.handSize + 1)
+    if (toomany.length > GOOFS.handSize) expect(validHand(toomany)).toBeNull()
     expect(validHand(['duck', 'wasp'])).toBeNull()
     expect(validHand('duck')).toBeNull()
     expect(validHand(null)).toBeNull()
   })
 
-  it('knows when the hand is full', () => {
-    expect(handIsFull(['duck', 'frog'])).toBe(false)
-    expect(handIsFull(['duck', 'frog', 'rabbit'])).toBe(true)
-    expect(GOOFS.handSize).toBeLessThan(DEFENDERS.length)
+  it('is added to and taken from by anybody', () => {
+    // "As a team" is the whole point: it is one lawn and one pot, so it is one
+    // loadout, and anybody may change anybody's pick.
+    expect(toggle([], 'duck')).toEqual(['duck'])
+    expect(toggle(['duck', 'frog'], 'duck')).toEqual(['frog'])
+  })
+
+  it('refuses another once it is full rather than pushing one out', () => {
+    // Silently replacing somebody else's pick is the worst of both.
+    const full = DEFENDERS.slice(0, GOOFS.handSize).map((d) => d.id)
+    if (full.length < GOOFS.handSize) return
+    expect(handIsFull(full)).toBe(true)
+    const spare = DEFENDERS.find((d) => !full.includes(d.id))
+    if (spare) expect(toggle(full, spare.id)).toEqual(full)
+  })
+
+  it('brings fewer animals than there are to choose from', () => {
+    // The loadout is meant to be a decision. With fifty on the shelf it is
+    // decided as much by what you left behind as by what you brought.
+    expect(GOOFS.handSize).toBeGreaterThan(0)
+  })
+})
+
+describe('the shelf the animals are chosen from', () => {
+  it('groups them, because fifty in a flat list is a scroll', () => {
+    const groups = shelf()
+    expect(groups.length).toBeGreaterThan(1)
+    for (const group of groups) expect(group.animals.length).toBeGreaterThan(0)
+  })
+
+  it('loses nothing on the way', () => {
+    // Adding a new kind of animal must not quietly drop it off the shelf.
+    const shown = shelf().flatMap((group) => group.animals.map((a) => a.id))
+    expect(new Set(shown).size).toBe(DEFENDERS.length)
   })
 })
 
 describe('whether the round can begin', () => {
-  const hands = (...who: string[]): Hands =>
-    Object.fromEntries(who.map((id) => [id, ['duck'] as const]))
-
   it('waits for everybody, not just for most', () => {
     const ids = ['self', 'a', 'b']
-    expect(everyoneHasPicked(ids, hands('self', 'a'))).toBe(false)
-    expect(waitingToPick(ids, hands('self', 'a'))).toBe(1)
-    expect(everyoneHasPicked(ids, hands('self', 'a', 'b'))).toBe(true)
-    expect(waitingToPick(ids, hands('self', 'a', 'b'))).toBe(0)
+    expect(everyoneHasPicked(ids, ['self', 'a'])).toBe(false)
+    expect(waitingToPick(ids, ['self', 'a'])).toBe(1)
+    expect(everyoneHasPicked(ids, ids)).toBe(true)
+    expect(waitingToPick(ids, ids)).toBe(0)
   })
 
   it('is not waiting on a lobby with nobody in it', () => {
-    expect(everyoneHasPicked([], {})).toBe(false)
+    expect(everyoneHasPicked([], [])).toBe(false)
   })
 
-  it('opens the menu when the host starts, and the lawn when everyone is in', () => {
+  it('refuses to begin on an empty loadout', () => {
+    // A round that started with nothing chosen would be a lawn nobody could
+    // put anything on.
+    const ids = ['self']
+    expect(canBegin(ids, ids, [])).toBe(false)
+    expect(canBegin(ids, ids, ['duck'])).toBe(true)
+  })
+
+  it('opens the shelf when the host starts, and the lawn when everyone is in', () => {
     const ids = ['self', 'a']
-    expect(gardenPhase(false, ids, {})).toBe('off')
-    expect(gardenPhase(false, ids, hands('self', 'a'))).toBe('off')
-    expect(gardenPhase(true, ids, {})).toBe('picking')
-    expect(gardenPhase(true, ids, hands('self'))).toBe('picking')
-    expect(gardenPhase(true, ids, hands('self', 'a'))).toBe('planting')
-  })
-})
-
-describe('the shared pot', () => {
-  it('knows what it covers', () => {
-    expect(canAfford(GOOFS.startingSeeds, 'duck')).toBe(true)
-    expect(canAfford(0, 'duck')).toBe(false)
-    expect(canAfford(defenderById('turtle').cost, 'turtle')).toBe(true)
-    expect(canAfford(defenderById('turtle').cost - 1, 'turtle')).toBe(false)
-  })
-
-  it('knows the least a hand could spend', () => {
-    // Against the table rather than against a number, so rebalancing the
-    // animals does not break the arithmetic's test.
-    expect(cheapestCost(['turtle', 'frog'])).toBe(
-      Math.min(defenderById('turtle').cost, defenderById('frog').cost),
-    )
-    expect(cheapestCost([])).toBe(0)
+    expect(gardenPhase(false, ids, ids, ['duck'])).toBe('off')
+    expect(gardenPhase(true, ids, [], ['duck'])).toBe('picking')
+    expect(gardenPhase(true, ids, ['self'], ['duck'])).toBe('picking')
+    expect(gardenPhase(true, ids, ids, [])).toBe('picking')
+    expect(gardenPhase(true, ids, ids, ['duck'])).toBe('planting')
   })
 })
 
 describe('what arrives from another browser', () => {
-  it('round-trips a hand through the transport, which is JSON', () => {
+  it('round-trips a loadout through the transport, which is JSON', () => {
     const sent = JSON.parse(JSON.stringify(encodeGoofs({ hand: ['duck', 'turtle'] })))
     expect(decodeGoofs(sent)).toEqual({ hand: ['duck', 'turtle'] })
   })
 
-  it('carries the pot, and a question with no answer in it', () => {
-    expect(decodeGoofs(encodeGoofs({ seeds: 75 }))).toEqual({ seeds: 75 })
+  it('carries a done flag, a claim, a planting and a question', () => {
+    expect(decodeGoofs(encodeGoofs({ done: true }))).toEqual({ done: true })
+    expect(decodeGoofs(encodeGoofs({ claim: 12 }))).toEqual({ claim: 12 })
+    expect(decodeGoofs(encodeGoofs({ plant: { row: 1, col: 2, id: 'duck' } }))).toEqual({
+      plant: { row: 1, col: 2, id: 'duck' },
+    })
     expect(decodeGoofs(encodeGoofs({ ask: true }))).toEqual({ ask: true })
   })
 
-  it('leaves everybody else’s messages alone', () => {
-    // The room channel is shared with the party and with the choice of game.
+  it('leaves everybody else messages alone', () => {
     expect(decodeGoofs({ t: 'party', phase: 'playing' })).toBeNull()
     expect(decodeGoofs({ t: 'mode', value: 'garden' })).toBeNull()
     expect(decodeGoofs({})).toBeNull()
   })
 
-  it('refuses a hand it cannot draw', () => {
-    // An animal nobody has heard of, or a hand of nine, would put something in
-    // the menu that cannot be drawn and cannot be cleared.
+  it('refuses a loadout it cannot draw', () => {
     expect(decodeGoofs({ t: 'goofs', hand: ['wasp'] })).toBeNull()
-    expect(decodeGoofs({ t: 'goofs', hand: [] })).toBeNull()
-    expect(decodeGoofs({ t: 'goofs', hand: ['duck', 'frog', 'rabbit', 'turtle'] })).toBeNull()
     expect(decodeGoofs({ t: 'goofs', hand: 'duck' })).toBeNull()
   })
 
-  it('refuses a pot that is not a number of seeds', () => {
-    expect(decodeGoofs({ t: 'goofs', seeds: -1 })).toBeNull()
-    expect(decodeGoofs({ t: 'goofs', seeds: Number.NaN })).toBeNull()
-    expect(decodeGoofs({ t: 'goofs', seeds: Infinity })).toBeNull()
-    expect(decodeGoofs({ t: 'goofs', seeds: '50' })).toBeNull()
-    // A fraction of a seed is nobody's idea of a pot, so it is floored.
-    expect(decodeGoofs({ t: 'goofs', seeds: 49.9 })).toEqual({ seeds: 49 })
+  it('refuses a planting off the lawn or of something unheard of', () => {
+    expect(decodeGoofs({ t: 'goofs', plant: { row: 99, col: 0, id: 'duck' } })).toBeNull()
+    expect(decodeGoofs({ t: 'goofs', plant: { row: 0, col: 0, id: 'wasp' } })).toBeNull()
+    expect(decodeGoofs({ t: 'goofs', plant: { row: 0, col: 0 } })).toBeNull()
+  })
+
+  it('refuses a done flag that is not one', () => {
+    expect(decodeGoofs({ t: 'goofs', done: 'yes' })).toBeNull()
   })
 })
 

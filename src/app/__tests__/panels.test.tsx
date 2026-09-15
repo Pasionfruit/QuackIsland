@@ -13,10 +13,15 @@ import {
   DEFENDERS,
   GARDEN_MODES,
   GardenScreen,
+  SEED,
   clearHands,
-  pickHand,
+  getGoofs,
+  setDone,
+  tick,
+  toggleAnimal,
 } from '../../modules/14-garden'
 import { endGame, hostGame, startGame } from '../../modules/10-party'
+import { GOOFS, defenderById } from '../../modules/14-garden'
 
 /**
  * Does the interface actually mount.
@@ -199,7 +204,9 @@ describe('starting a round of Garden Goofs', () => {
     expect(html).toContain('GARDEN GOOFS')
     for (const animal of DEFENDERS) expect(html).toContain(animal.name)
     // The pot is shared, and it says so.
-    expect(html).toContain('shared seeds')
+    expect(html).toContain('shared by everybody in the party')
+    // One loadout for the party, not one each.
+    expect(html).toContain('between you')
   })
 
   it('gives you the lawn once everybody has picked', () => {
@@ -213,12 +220,170 @@ describe('starting a round of Garden Goofs', () => {
     const created = createRoot(host)
     root = created
     act(() => created.render(<GardenScreen />))
-    expect(host.innerHTML).toContain('animals to take in')
+    expect(host.innerHTML).toContain('between you')
 
-    act(() => pickHand(['duck']))
+    act(() => {
+      toggleAnimal('duck')
+      setDone(true)
+    })
 
-    // Six rows of nine, and no menu over the top of them.
-    expect(host.innerHTML).not.toContain('animals to take in')
-    expect(host.querySelectorAll('[style*="aspect-ratio"]')).toHaveLength(54)
+    // The lawn, and no shelf over the top of it.
+    expect(host.innerHTML).not.toContain('between you')
+    expect(host.querySelectorAll('[data-cell]')).toHaveLength(96)
+  })
+})
+
+
+/**
+ * The game, as far as it goes: a loadout chosen together, seeds landing on the
+ * lawn to be clicked, and animals dragged into squares out of a shared pot.
+ *
+ * Driven by clicking rather than by dragging, because the screen deliberately
+ * accepts both and a synthetic HTML5 drag proves less than a real one does.
+ */
+describe('playing a round of Garden Goofs', () => {
+  function lawn(): HTMLDivElement {
+    act(() => chooseMode('garden'))
+    act(() => {
+      hostGame()
+      startGame()
+    })
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const created = createRoot(host)
+    root = created
+    act(() => created.render(<GardenScreen />))
+    act(() => {
+      toggleAnimal('duck')
+      setDone(true)
+    })
+    return host
+  }
+
+  afterEach(() => {
+    endGame()
+    clearHands()
+    act(() => chooseMode('island'))
+  })
+
+  const click = (el: Element | null) =>
+    act(() => el?.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+
+  it('opens the lawn with a full pot once everybody is in', () => {
+    const host = lawn()
+    expect(host.querySelectorAll('[data-cell]')).toHaveLength(96)
+    expect(getGoofs().round.seeds).toBe(GOOFS.startingSeeds)
+  })
+
+  it('plants an animal into the square you pick, and the pot pays for it', () => {
+    const host = lawn()
+    const before = getGoofs().round.seeds
+
+    // Pick the duck up out of the tray, then put it in a square.
+    const tray = [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Duck'))
+    click(tray ?? null)
+    click(host.querySelector('[data-cell="3,5"]'))
+
+    const planted = getGoofs().round.plants
+    expect(planted).toHaveLength(1)
+    expect(planted[0]).toEqual({ row: 3, col: 5, id: 'duck' })
+    expect(getGoofs().round.seeds).toBe(before - defenderById('duck').cost)
+  })
+
+  it('refuses a square that is already taken, and charges nothing for trying', () => {
+    const host = lawn()
+    const tray = () => [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Duck'))
+
+    click(tray() ?? null)
+    click(host.querySelector('[data-cell="1,1"]'))
+    const after = getGoofs().round.seeds
+
+    click(tray() ?? null)
+    click(host.querySelector('[data-cell="1,1"]'))
+    expect(getGoofs().round.plants).toHaveLength(1)
+    expect(getGoofs().round.seeds).toBe(after)
+    // And it says why rather than doing nothing.
+    expect(host.textContent).toContain('square taken')
+  })
+
+  it('does nothing at all until something is picked up', () => {
+    const host = lawn()
+    click(host.querySelector('[data-cell="0,0"]'))
+    expect(getGoofs().round.plants).toHaveLength(0)
+    expect(getGoofs().round.seeds).toBe(GOOFS.startingSeeds)
+  })
+
+  it('drops seeds on the lawn, and pays the pot when one is clicked', () => {
+    const host = lawn()
+    const before = getGoofs().round.seeds
+
+    // Push the round along until the host drops one. The clock is a frame
+    // loop in the real thing; here the test is the clock.
+    act(() => tick(SEED.every + SEED.jitter + 0.1))
+    expect(getGoofs().round.loose.length).toBeGreaterThan(0)
+
+    const seed = host.querySelector('[data-seed]')
+    expect(seed).not.toBeNull()
+    click(seed)
+
+    expect(getGoofs().round.seeds).toBe(before + SEED.worth)
+    expect(getGoofs().round.loose).toHaveLength(0)
+  })
+
+  it('takes a seed away again if nobody clicks it in time', () => {
+    lawn()
+    act(() => tick(SEED.every + SEED.jitter + 0.1))
+    const first = getGoofs().round.loose[0]
+    expect(first).toBeDefined()
+    const pot = getGoofs().round.seeds
+
+    // Long enough for it to run out, in steps a frame loop would take. More
+    // seeds land while this happens, which is the round working - the one
+    // being watched is the one that has to go.
+    for (let i = 0; i < Math.ceil(SEED.life / 0.2) + 2; i++) act(() => tick(0.2))
+    expect(getGoofs().round.loose.some((s) => s.id === first.id)).toBe(false)
+    // Missing it costs you nothing but the seed.
+    expect(getGoofs().round.seeds).toBe(pot)
+  })
+
+  it('will not let you plant what the pot cannot pay for', () => {
+    const host = lawn()
+    const duck = defenderById('duck')
+    const affordable = Math.floor(GOOFS.startingSeeds / duck.cost)
+
+    const tray = () => [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Duck'))
+    for (let i = 0; i < affordable; i++) {
+      click(tray() ?? null)
+      click(host.querySelector(`[data-cell="0,${i}"]`))
+    }
+    expect(getGoofs().round.plants).toHaveLength(affordable)
+    expect(getGoofs().round.seeds).toBeLessThan(duck.cost)
+
+    // The tray packet goes dead rather than letting you try.
+    expect(tray()?.hasAttribute('disabled')).toBe(true)
+  })
+
+  it('chooses the loadout as a party, not one each', () => {
+    act(() => chooseMode('garden'))
+    act(() => {
+      hostGame()
+      startGame()
+    })
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const created = createRoot(host)
+    root = created
+    act(() => created.render(<GardenScreen />))
+
+    act(() => toggleAnimal('turtle'))
+    expect(getGoofs().hand).toEqual(['turtle'])
+    // Anybody can take somebody else's pick back out again.
+    act(() => toggleAnimal('turtle'))
+    expect(getGoofs().hand).toEqual([])
+    expect(host.textContent).toContain(`Pick ${GOOFS.handSize} animals, between you`)
+  })
+
+  it('lists the three ways to play, still', () => {
+    expect(GARDEN_MODES).toHaveLength(3)
   })
 })

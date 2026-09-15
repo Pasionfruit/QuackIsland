@@ -2,44 +2,44 @@
  * Garden Goofs, on the screen.
  *
  * A **2D** game, drawn in the DOM over the world rather than in it: a board of
- * squares, a menu in front of it, and nothing in three dimensions anywhere.
+ * squares, a shelf in front of it, and nothing in three dimensions anywhere.
  * The world carries on behind, which is where everybody's body still is.
  *
  * Two screens, and which one you get is `gardenPhase`:
  *
- * - **Picking.** The host pressed start and everybody chooses the animals they
- *   are taking in. Nobody plays until everybody has finished choosing.
- * - **Planting.** The lawn, and the hand you chose. There is nothing to plant
- *   yet - the round does not begin, because there is no round.
+ * - **Picking.** The host pressed start and the party chooses its loadout
+ *   together - one shelf, one set of packets, everybody clicking. Nobody
+ *   plants until everybody has said they are done.
+ * - **Planting.** The lawn. Seeds land on it and have to be clicked before
+ *   they go; the shared pot pays for animals, which anybody drags out of the
+ *   tray into any square.
  *
- * No game. Nothing walks in, nothing is eaten, nothing is scored. What is here
- * is the board, the menu, the shared pot and the two catalogues, which is what
- * all of that will be built on.
+ * What is still not here is anything to defend against: no pests walk in, so
+ * nothing is eaten, nothing fights and nothing is scored.
  */
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNet, usePeers } from '../../09-net'
 import { disbandParty, useParty } from '../../10-party'
 import { useGameMode } from '../../13-modes'
 import { GRID, everyCell, isLight } from './grid'
-import {
-  GOOFS,
-  gardenPhase,
-  handIsFull,
-  waitingToPick,
-  type Hands,
-} from './goofs'
+import { GOOFS, gardenPhase, handIsFull, shelf, waitingToPick, type Picked } from './goofs'
 import { gardenModeById } from './modes'
-import { DEFENDERS, PESTS, defenderById, type DefenderId } from './pieces'
+import { defenderById, type DefenderId } from './pieces'
+import { SEED, plantAt, refusePlant, type Round } from './round'
 import {
   ME,
+  amDone,
+  claim,
   clearHands,
   forgetPicker,
-  pickHand,
-  resetSeeds,
+  place,
+  setDone,
+  startRound,
+  toggleAnimal,
   useGardenMode,
   useGoofs,
+  useRoundClock,
 } from './state'
-import { useState } from 'react'
 
 export function GardenScreen() {
   const net = useNet()
@@ -49,38 +49,32 @@ export function GardenScreen() {
   const way = useGardenMode()
   const goofs = useGoofs()
 
-  /** The hand you are building. A draft: it is nobody else's business yet. */
-  const [draft, setDraft] = useState<DefenderId[]>([])
-
   const playing = mode === 'garden' && party.phase === 'playing'
   const everyone = [...peers.map((p) => p.id), ME]
-  const phase = gardenPhase(playing, everyone, goofs.hands)
-  const mine = goofs.hands[ME] ?? null
+  const phase = gardenPhase(playing, everyone, goofs.picked, goofs.hand)
 
-  // Between rounds nobody has a hand. Clearing on the way *out* rather than on
-  // the way in means a round always starts from an empty table, however it
-  // ended - the host calling it off, or everybody leaving.
+  // The round runs while the lawn is up, and stops when it is not. Everybody
+  // runs it; only the host's copy decides anything.
+  useRoundClock(phase === 'planting')
+
+  // Between rounds the table is clear. Doing it on the way *out* means a round
+  // always starts from nothing, however the last one ended.
   useEffect(() => {
-    if (!playing) {
-      clearHands()
-      setDraft([])
-    }
+    if (!playing) clearHands()
   }, [playing])
 
-  // The pot is the host's, and a round starts with a full one.
+  // A fresh pot and an empty lawn, the moment the party finishes choosing.
   useEffect(() => {
-    if (playing && net.host) resetSeeds()
-  }, [playing, net.host])
+    if (phase === 'planting' && net.host) startRound()
+  }, [phase, net.host])
 
   // Nobody waits on a browser that has closed.
   useEffect(() => {
     const here = new Set(everyone)
-    for (const id of Object.keys(goofs.hands)) if (!here.has(id)) forgetPicker(id)
+    for (const id of goofs.picked) if (!here.has(id)) forgetPicker(id)
   })
 
   if (!playing) return null
-
-  const waiting = waitingToPick(everyone, goofs.hands)
 
   return (
     <div style={screen}>
@@ -88,9 +82,9 @@ export function GardenScreen() {
         <span style={{ letterSpacing: 1, color: '#9fd8e6' }}>GARDEN GOOFS</span>
         <span style={{ opacity: 0.6 }}>{gardenModeById(way).title}</span>
         <span style={{ flex: 1 }} />
-        <span title="The pot is shared by everybody in the lobby">
-          <span style={{ opacity: 0.6 }}>shared seeds </span>
-          <span style={{ color: '#e8d98a' }}>{goofs.seeds}</span>
+        <span title="One pot, shared by everybody in the party">
+          <span style={{ opacity: 0.6 }}>seeds </span>
+          <span style={{ color: '#e8d98a' }}>{goofs.round.seeds}</span>
         </span>
         {net.host ? (
           <button type="button" onClick={disbandParty} style={{ ...button, marginLeft: 10 }}>
@@ -100,169 +94,273 @@ export function GardenScreen() {
       </div>
 
       {phase === 'picking' ? (
-        <Picking
-          draft={draft}
-          setDraft={setDraft}
-          mine={mine}
-          waiting={waiting}
-          hands={goofs.hands}
-          everyone={everyone}
-        />
+        <Picking hand={goofs.hand} picked={goofs.picked} everyone={everyone} />
       ) : (
-        <Planting hand={mine ?? []} />
+        <Planting round={goofs.round} hand={goofs.hand} />
       )}
     </div>
   )
 }
 
+/**
+ * The shelf: everything there is, and the packets the party is taking in.
+ *
+ * Grouped by what an animal is for, because this is meant to hold fifty of
+ * them one day and fifty in a flat list is a scroll rather than a choice.
+ */
 function Picking({
-  draft,
-  setDraft,
-  mine,
-  waiting,
-  hands,
+  hand,
+  picked,
   everyone,
 }: {
-  draft: DefenderId[]
-  setDraft: (next: DefenderId[]) => void
-  mine: readonly DefenderId[] | null
-  waiting: number
-  hands: Hands
+  hand: readonly DefenderId[]
+  picked: Picked
   everyone: string[]
 }) {
-  const toggle = (id: DefenderId) => {
-    if (mine) return
-    if (draft.includes(id)) setDraft(draft.filter((d) => d !== id))
-    else if (!handIsFull(draft)) setDraft([...draft, id])
-  }
+  const done = amDone()
+  const waiting = waitingToPick(everyone, picked)
+  const full = handIsFull(hand)
 
   return (
     <div style={card}>
       <div style={{ fontSize: 15, marginBottom: 2 }}>
-        {mine ? 'Your animals are in' : `Pick ${GOOFS.handSize} animals to take in`}
+        Pick {GOOFS.handSize} animals, between you
       </div>
       <div style={{ opacity: 0.5, marginBottom: 10 }}>
-        {mine
-          ? waiting > 0
-            ? `waiting on ${waiting} of ${everyone.length}`
-            : 'everybody has picked'
-          : 'The lawn is shared, and so is the seed pot. Bring what the others did not.'}
+        One lawn, one pot of seeds, one loadout - anybody can add to it or take
+        something out again.
       </div>
 
-      <div style={shelf}>
-        {DEFENDERS.map((animal) => {
-          const chosen = (mine ?? draft).includes(animal.id)
-          const spare = !mine && !chosen && handIsFull(draft)
+      {/* The loadout, always in the same place, so a party can see what it has
+          agreed on without reading the shelf back. */}
+      <div style={{ ...tray, marginBottom: 10, flexWrap: 'wrap' }}>
+        {Array.from({ length: GOOFS.handSize }, (_, slot) => {
+          const id = hand[slot]
+          if (!id) return <span key={`slot${slot}`} style={emptySlot} />
+          const animal = defenderById(id)
           return (
             <button
-              key={animal.id}
+              key={id}
               type="button"
-              onClick={() => toggle(animal.id)}
-              disabled={!!mine || spare}
-              style={{
-                ...packet,
-                borderColor: chosen ? '#6fb6c8' : 'rgba(255,255,255,0.14)',
-                background: chosen ? 'rgba(111,182,200,0.16)' : 'rgba(255,255,255,0.04)',
-                opacity: spare ? 0.35 : 1,
-                cursor: mine || spare ? 'default' : 'pointer',
-              }}
+              onClick={() => toggleAnimal(id)}
+              disabled={done}
+              title="Take it out again"
+              style={{ ...packet, borderColor: '#6fb6c8', background: 'rgba(111,182,200,0.16)' }}
             >
               <span style={{ ...pill, background: animal.colour }} />
-              <span style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                <span>{animal.name}</span>
-                <span style={{ color: '#e8d98a' }}>{animal.cost}</span>
-              </span>
-              <span style={{ display: 'block', opacity: 0.55, marginTop: 3 }}>{animal.blurb}</span>
-              <span style={{ display: 'block', opacity: 0.4, marginTop: 4 }}>
-                {animal.role} · {animal.health} health · {animal.recharge}s
-              </span>
+              <span>{animal.name}</span>
+              <span style={{ color: '#e8d98a' }}>{animal.cost}</span>
             </button>
           )
         })}
       </div>
 
+      <div style={shelfBox}>
+        {shelf().map((group) => (
+          <div key={group.role} style={{ marginBottom: 8 }}>
+            <div style={{ opacity: 0.4, marginBottom: 4 }}>{group.role}</div>
+            <div style={grid}>
+              {group.animals.map((animal) => {
+                const chosen = hand.includes(animal.id)
+                const spare = !chosen && full
+                return (
+                  <button
+                    key={animal.id}
+                    type="button"
+                    onClick={() => toggleAnimal(animal.id)}
+                    disabled={done || spare}
+                    style={{
+                      ...shelfCard,
+                      borderColor: chosen ? '#6fb6c8' : 'rgba(255,255,255,0.14)',
+                      background: chosen ? 'rgba(111,182,200,0.16)' : 'rgba(255,255,255,0.04)',
+                      opacity: spare ? 0.35 : 1,
+                      cursor: done || spare ? 'default' : 'pointer',
+                    }}
+                  >
+                    <span style={{ ...pill, background: animal.colour }} />
+                    <span style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                      <span>{animal.name}</span>
+                      <span style={{ color: '#e8d98a' }}>{animal.cost}</span>
+                    </span>
+                    <span style={{ display: 'block', opacity: 0.55, marginTop: 3 }}>
+                      {animal.blurb}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
       <button
         type="button"
-        onClick={() => pickHand(draft)}
-        disabled={!!mine || draft.length === 0}
+        onClick={() => setDone(!done)}
+        disabled={hand.length === 0 && !done}
         style={{
           ...button,
           width: '100%',
-          marginTop: 12,
+          marginTop: 10,
           padding: '7px 8px',
-          background: mine ? 'rgba(255,255,255,0.06)' : draft.length ? '#e0a05a' : 'none',
-          color: mine || !draft.length ? '#f2ece2' : '#20222a',
-          opacity: mine || !draft.length ? 0.55 : 1,
-          cursor: mine || !draft.length ? 'default' : 'pointer',
+          background: done ? '#6fb6c8' : hand.length ? '#e0a05a' : 'rgba(255,255,255,0.06)',
+          color: done || hand.length ? '#16202a' : '#f2ece2',
+          opacity: hand.length === 0 && !done ? 0.5 : 1,
         }}
       >
-        {mine ? 'waiting for the others' : `take ${draft.length || 'these'} in`}
+        {done ? 'done - waiting for the others' : 'done choosing'}
       </button>
 
-      {/* Who is still reading. Their hands are nobody's business until the
-          round starts, so this is a count and not a list of picks. */}
-      <div style={{ ...row, marginTop: 8, flexWrap: 'wrap', gap: 6 }}>
+      <div style={{ ...tray, marginTop: 8, flexWrap: 'wrap' }}>
         {everyone.map((id) => (
           <span
             key={id}
             style={{
               ...tag,
-              borderColor: hands[id] ? '#6fb6c8' : 'rgba(255,255,255,0.14)',
-              opacity: hands[id] ? 1 : 0.5,
+              borderColor: picked.includes(id) ? '#6fb6c8' : 'rgba(255,255,255,0.14)',
+              opacity: picked.includes(id) ? 1 : 0.5,
             }}
           >
             {id === ME ? 'you' : id}
-            {hands[id] ? ' · in' : ' · choosing'}
+            {picked.includes(id) ? ' · in' : ' · choosing'}
           </span>
         ))}
       </div>
 
-      <div style={{ opacity: 0.35, marginTop: 10 }}>
-        coming for it: {PESTS.map((p) => p.name.toLowerCase()).join(', ')}
+      <div style={{ opacity: 0.4, marginTop: 8 }}>
+        {waiting === 0 ? 'everybody is in' : `waiting on ${waiting}`}
       </div>
     </div>
   )
 }
 
-function Planting({ hand }: { hand: readonly DefenderId[] }) {
+/**
+ * The lawn: seeds to click, and animals to drag onto it.
+ *
+ * Dragging is the way in, and clicking the tray then a square does the same
+ * thing - a trackpad makes a long drag across twelve columns miserable, and a
+ * click-then-click is also the only version of this a test can drive.
+ */
+function Planting({ round, hand }: { round: Round; hand: readonly DefenderId[] }) {
+  /** The animal being dragged, or the one picked up with a click. */
+  const [holding, setHolding] = useState<DefenderId | null>(null)
+  const [refused, setRefused] = useState<string | null>(null)
+  const clearRefusal = useRef(0)
+
+  const say = (why: string | null) => {
+    setRefused(why)
+    window.clearTimeout(clearRefusal.current)
+    if (why) clearRefusal.current = window.setTimeout(() => setRefused(null), 2200)
+  }
+
+  useEffect(() => () => window.clearTimeout(clearRefusal.current), [])
+
+  const drop = (row: number, col: number) => {
+    if (!holding) return
+    // Checked here as well as by the host, so a refusal is a sentence on the
+    // screen rather than a drop that quietly does nothing.
+    const no = refusePlant(round, hand, row, col, holding)
+    if (no) {
+      say(no)
+      return
+    }
+    place(row, col, holding)
+    setHolding(null)
+    say(null)
+  }
+
   return (
-    <div style={{ ...card, width: 'min(94vw, 1080px)' }}>
-      {/* Your hand, along the top, the way a seed tray sits above a lawn. */}
-      <div style={{ ...row, marginBottom: 10 }}>
+    <div style={{ ...card, width: 'min(96vw, 1180px)' }}>
+      {/* The tray: what the party brought, and what it can afford right now. */}
+      <div style={{ ...tray, marginBottom: 10, flexWrap: 'wrap' }}>
         {hand.map((id) => {
           const animal = defenderById(id)
+          const afford = round.seeds >= animal.cost
+          const held = holding === id
           return (
-            <span key={id} style={tray}>
+            <button
+              key={id}
+              type="button"
+              draggable={afford}
+              onDragStart={() => setHolding(id)}
+              onDragEnd={() => setHolding(null)}
+              onClick={() => setHolding(held ? null : id)}
+              disabled={!afford}
+              title={afford ? 'Drag onto the lawn, or click then click a square' : 'Not enough seeds'}
+              style={{
+                ...packet,
+                cursor: afford ? 'grab' : 'default',
+                borderColor: held ? '#e0a05a' : 'rgba(255,255,255,0.14)',
+                background: held ? 'rgba(224,160,90,0.18)' : 'rgba(255,255,255,0.04)',
+                opacity: afford ? 1 : 0.4,
+              }}
+            >
               <span style={{ ...pill, background: animal.colour }} />
               <span>{animal.name}</span>
               <span style={{ color: '#e8d98a' }}>{animal.cost}</span>
-            </span>
+            </button>
           )
         })}
         <span style={{ flex: 1 }} />
-        <span style={{ opacity: 0.4, alignSelf: 'center' }}>
-          {GRID.rows} lanes · nothing to plant yet
+        <span style={{ opacity: 0.45, alignSelf: 'center' }}>
+          {refused ?? (holding ? 'now click a square' : 'drag an animal onto the lawn')}
         </span>
       </div>
 
       <div style={lawn}>
-        {everyCell().map((cell) => (
-          <div
-            key={`${cell.row},${cell.col}`}
-            style={{
-              ...square,
-              background: isLight(cell.row, cell.col) ? '#5d9145' : '#4c7c39',
-            }}
-          />
-        ))}
+        {everyCell().map((cell) => {
+          const here = plantAt(round, cell.row, cell.col)
+          const seed = round.loose.find((s) => s.row === cell.row && s.col === cell.col)
+          const animal = here ? defenderById(here.id) : null
+          return (
+            <div
+              key={`${cell.row},${cell.col}`}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault()
+                drop(cell.row, cell.col)
+              }}
+              onClick={() => drop(cell.row, cell.col)}
+              data-cell={`${cell.row},${cell.col}`}
+              style={{
+                ...square,
+                background: isLight(cell.row, cell.col) ? '#5d9145' : '#4c7c39',
+                cursor: holding ? 'copy' : 'default',
+              }}
+            >
+              {animal ? <span style={{ ...planted, background: animal.colour }} /> : null}
+
+              {/* A seed, shrinking as it runs out. Clicking it is the whole of
+                  the economy: miss it and the pot does not grow. */}
+              {seed ? (
+                <button
+                  type="button"
+                  title={`${seed.worth} seeds`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    claim(seed.id)
+                  }}
+                  data-seed={seed.id}
+                  style={{
+                    ...token,
+                    transform: `scale(${0.55 + 0.45 * clamp(seed.left / SEED.life)})`,
+                    opacity: seed.left < 2 ? 0.55 + 0.45 * clamp(seed.left / 2) : 1,
+                  }}
+                />
+              ) : null}
+            </div>
+          )
+        })}
       </div>
 
       <div style={{ opacity: 0.4, marginTop: 8 }}>
-        The house is on the left; they come in from the right.
+        {GRID.rows} lanes, {GRID.cols} deep. The house is on the left; nothing
+        comes in from the right yet.
       </div>
     </div>
   )
 }
+
+const clamp = (n: number) => Math.max(0, Math.min(1, n))
 
 const screen: React.CSSProperties = {
   position: 'fixed',
@@ -293,7 +391,7 @@ const bar: React.CSSProperties = {
 }
 
 const card: React.CSSProperties = {
-  width: 'min(94vw, 760px)',
+  width: 'min(94vw, 820px)',
   maxHeight: 'calc(100vh - 90px)',
   overflowY: 'auto',
   padding: '14px 16px',
@@ -304,13 +402,20 @@ const card: React.CSSProperties = {
   marginTop: 34,
 }
 
-const shelf: React.CSSProperties = {
+/** The shelf scrolls; the loadout above it and the button below it do not. */
+const shelfBox: React.CSSProperties = {
+  maxHeight: '42vh',
+  overflowY: 'auto',
+  paddingRight: 4,
+}
+
+const grid: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
   gap: 8,
 }
 
-const packet: React.CSSProperties = {
+const shelfCard: React.CSSProperties = {
   display: 'block',
   textAlign: 'left',
   padding: '8px 10px',
@@ -320,13 +425,34 @@ const packet: React.CSSProperties = {
   font: 'inherit',
 }
 
+const tray: React.CSSProperties = { display: 'flex', gap: 6, alignItems: 'center' }
+
+const packet: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+  padding: '4px 8px',
+  borderRadius: 6,
+  border: '1px solid rgba(255,255,255,0.14)',
+  background: 'rgba(255,255,255,0.04)',
+  color: '#f2ece2',
+  font: 'inherit',
+}
+
+const emptySlot: React.CSSProperties = {
+  width: 86,
+  height: 30,
+  borderRadius: 6,
+  border: '1px dashed rgba(255,255,255,0.14)',
+}
+
 /** Every creature is a pill until the art is done. */
 const pill: React.CSSProperties = {
   display: 'block',
-  width: 14,
-  height: 22,
-  borderRadius: 7,
-  marginBottom: 6,
+  width: 12,
+  height: 19,
+  borderRadius: 6,
+  flex: '0 0 auto',
 }
 
 const lawn: React.CSSProperties = {
@@ -339,20 +465,34 @@ const lawn: React.CSSProperties = {
 }
 
 const square: React.CSSProperties = {
+  position: 'relative',
   aspectRatio: '1 / 1',
   borderRadius: 4,
-}
-
-const row: React.CSSProperties = { display: 'flex', gap: 8 }
-
-const tray: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: 6,
-  padding: '4px 8px',
-  borderRadius: 6,
-  border: '1px solid rgba(255,255,255,0.14)',
-  background: 'rgba(255,255,255,0.04)',
+  justifyContent: 'center',
+}
+
+const planted: React.CSSProperties = {
+  display: 'block',
+  width: '38%',
+  height: '62%',
+  borderRadius: 999,
+  boxShadow: '0 2px 5px rgba(0,0,0,0.35)',
+}
+
+const token: React.CSSProperties = {
+  position: 'absolute',
+  right: '8%',
+  top: '8%',
+  width: '42%',
+  height: '42%',
+  padding: 0,
+  borderRadius: '50%',
+  border: '2px solid #fff6c9',
+  background: 'radial-gradient(circle at 35% 30%, #ffe9a3, #d9a441)',
+  boxShadow: '0 0 10px rgba(255, 220, 130, 0.65)',
+  cursor: 'pointer',
 }
 
 const tag: React.CSSProperties = {

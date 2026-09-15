@@ -2,29 +2,31 @@
 
 ## What this is
 
-**Garden Goofs, without the game.** A 2D lane defence played on a six-by-nine
-lawn: animals hold the lanes, pests come up them, and seeds are one pot shared
-by the whole party.
+**Garden Goofs**: a 2D lane defence played on an eight-by-twelve lawn, by the
+whole party at once. Animals hold the lanes, seeds land on the grass and have
+to be clicked before they go, and the pot they pay into is shared.
 
-What is built is everything a round needs before it can start:
+What works now:
 
-- **The lawn** - six rows, nine columns, pure indices.
-- **The pieces** - `GardenPiece`, and the two catalogues under it: four animals
-  and eight pests.
-- **The lobby** - endless, co-op or versus, chosen by the host.
-- **The menu** - the host presses start and everybody chooses the animals they
-  are taking in. Nobody plays until everybody has finished choosing.
-- **The pot** - one shared number, the host's to be right about.
+- **One lawn**, 8 rows by 12 columns, drawn in the DOM over the world.
+- **One loadout, chosen as a team.** Everybody picks from the same shelf into
+  the same packets. Nobody plants until everybody says they are done.
+- **Seeds land sporadically** and run out. Clicking one pays the shared pot;
+  missing it costs the party the seed.
+- **Anybody plants anything**, by dragging a packet onto a square or by
+  clicking the packet and then the square. The pot pays, so what one player
+  plants is what another player cannot.
 
-Then the lawn is drawn and **nothing happens**, because there is no game.
-Nothing is planted, nothing walks in, nothing is eaten, nothing is scored.
+What is still missing is the other half of a lane defence: **no pests**.
+Nothing walks in, nothing is eaten, nothing fights, nothing is scored, and no
+round is ever won or lost.
 
 ## It is a 2D game
 
 Drawn in the DOM, over the world, in `GardenScreen`. Not a place in the world:
-there is no board in the sea, no raft, nothing to swim to, and nothing in this
-module is measured in metres. A square is a row and a column; how big that is
-on the screen is the view's business and nobody else's.
+there is no board in the sea, nothing to swim to, and nothing in this module is
+measured in metres. A square is a row and a column; how big that is on screen
+is the view's business and nobody else's.
 
 The world carries on behind it, which is where everybody's body still is. That
 is the difference between the two games this build has: Volcano Island moves
@@ -34,18 +36,38 @@ your body somewhere, and Garden Goofs draws over it.
 
 | | |
 | --- | --- |
-| Rows | 6, and a row is a **lane** |
-| Columns | 9 |
-| Squares | 54, indexed in reading order |
+| Rows | 8, and a row is a **lane** |
+| Columns | 12 |
+| Squares | 96, indexed in reading order |
 
-**Column 0 is the house end; column 8 is where pests come in**, so a pest walks
-from 8 down towards 0 along one row. That is the one thing here which is a game
-decision rather than arithmetic, and it is written down so the whole build
-agrees on it before anybody writes a wave. There is a test.
+**Eight lanes because two people play on one lawn.** Six was a board one player
+could cover on their own, and two players covering one board between them is
+two players watching each other play.
+
+**Column 0 is the house end; the last column is where pests will come in**, so
+a pest walks from the far end towards 0 along one row. That is the one thing
+here which is a game decision rather than arithmetic, and it is written down so
+the whole build agrees on it before anybody writes a wave. There is a test.
 
 A column is a **number, not an index**: a defender sits in a square and a pest
 spends most of its life between two, so `col` is 6.4 for most of a worm's life
 and `piece.square` is the one it is standing in.
+
+## Growing to fifty animals and twenty-five pests
+
+That is where this is going, and everything here is shaped for it:
+
+- **Species are data**, in two frozen tables. Adding one is an entry, not a
+  branch: nothing switches on an id anywhere.
+- **The shelf groups by role** (`shelf()`), because fifty in one flat column is
+  a scroll rather than a choice. A role nobody thought of still appears, under
+  `other`, so a new kind of animal cannot quietly go missing. There is a test.
+- **The loadout is the decision.** `GOOFS.handSize` is 6 of however many exist;
+  with fifty on the shelf a round is decided as much by what the party left
+  behind as by what it brought.
+- **An animal travels as its index in the catalogue**, not its name, so a full
+  lawn stays far inside the relay's four-kilobyte message limit however long
+  the names get.
 
 ## The pieces
 
@@ -60,10 +82,10 @@ GardenPiece            species, row, col, health, hurt(), alive, condition, squa
 ```
 
 **Species are data; pieces are alive.** The catalogues are frozen tables read by
-the menu long before any game exists; a piece is one duck in one square with the
-health it has left. Keeping them apart is what lets the lobby be built first.
+the shelf long before any round exists; a piece is one duck in one square with
+the health it has left.
 
-### The four animals
+### The four animals, so far
 
 | | Cost | Health | Role | Reach |
 | --- | --- | --- | --- | --- |
@@ -76,136 +98,152 @@ Exactly one animal turns up seeds, and it cannot defend itself - the pot has to
 come from somewhere, and a lawn of nothing but growers should be as broken as a
 lawn with none. Tested, both ways.
 
-### The eight pests
+### The eight pests, so far
 
 Worm, beetle, snail, ant, grasshopper, bee, spider, moth. Each has health, a
 speed in squares a second, a bite, and how it gets about: `walks`, `flies` (a
-wall is no use) or `hops` (clears exactly one thing in the way). At least one
-flies, and there is a test that says so - a defence with no answer to the air
-is a defence that cannot be balanced.
+wall is no use) or `hops`. **None of them is in a round yet.**
 
 **The numbers are first numbers.** They are in a table precisely so that
 balancing later is editing a table rather than hunting through code.
 
-## Seeds are shared
+## Seeds
 
-One pot for the whole party, not one each. Somebody has to be right about a
-shared number, and it is the host - the same person who is right about the
-clock, the weather and the phase.
+Seeds land on the lawn on their own, one every `SEED.every` seconds give or
+take `SEED.jitter`, anywhere at all - a planted square included, because a seed
+is a thing lying on the grass rather than a thing growing in it, and reaching
+over your own turtle is the game working.
 
-Nothing spends seeds yet. `changeSeeds` is host-only, and when planting exists
-a guest planting a duck will have to go through the host; see the limitations.
+Each one sits for `SEED.life` seconds and then it is gone. That countdown is
+the whole clicking game: a seed nobody reaches is a seed the party does not
+get. `SEED.most` caps how many can be waiting at once, or a party that stops
+clicking comes back to a paved lawn and a pot that pays for everything.
 
-## Picking, and when a round begins
+**Two seconds are not sent as a timestamp.** Two browsers do not share a clock,
+so a seed carries *how long it has left*, which means the same thing in every
+browser that reads it. Everybody counts their own copy down, so seeds fade
+smoothly between the host's messages instead of jumping when one arrives.
 
-The party phase is `10-party`'s, and says the host pressed start. What happens
-then is this module's:
+## Who is allowed to be right
 
-```
-gardenPhase(playing, everyone, hands)
-  not playing                  -> 'off'
-  playing, somebody still out  -> 'picking'
-  playing, everybody in        -> 'planting'
-```
+Three owners, and this is the whole reason `state.ts` exists:
 
-A hand is in `hands` **only once its owner has confirmed it**. A half-chosen
-hand is a draft and stays in the menu, because this is the answer to "has
-everybody picked" and a half-finished answer is worse than none.
+| | Owner | Why |
+| --- | --- | --- |
+| The way it is played | the host | `13-modes`'s `hostChoice`, like the game itself |
+| The loadout | everybody | one lawn, one pot, one loadout - anybody may change it |
+| The round | **the host** | two people *will* click the same seed |
 
-`GOOFS.handSize` is 3 out of the 4 animals. Fewer than there are, on purpose:
-three out of four is a decision every round - bring the turtle or bring the
-frog - and four out of four is a list you click through without reading.
+So a guest never changes a round: it asks. `claim` and `plant` are requests,
+the host runs the same pure rules from `round.ts` over its own copy, and what
+comes back is what happened. The cost is a round trip before your own click
+lands, which on a lobby-sized network is nothing. What it buys is that two
+lawns cannot drift apart.
+
+**The host sends the whole round after every change**, packed into arrays of
+numbers, rather than sending a description of the change. Deltas are smaller
+and every one of them is a chance to end up with two lawns that disagree - and
+these changes happen at the speed of a person clicking, not sixty times a
+second. A full lawn of ninety-six plants packs to well under three kilobytes,
+and there is a test that says so, because the relay refuses four.
 
 ## Public contract
 
 | Export | Meaning |
 | --- | --- |
-| `GRID`, `Cell` | 6 by 9, and what a square is |
+| `GRID`, `Cell` | 8 by 12, and what a square is |
 | `everyCell()` / `cellIndex(r, c)` / `cellAt(i)` / `inGrid(r, c)` | The board. Pure |
 | `isLight(r, c)` / `laneProgress(col)` / `houseCol()` / `entryCol()` | Drawing it, and which way is which. Pure |
 | `GardenPiece`, `Defender`, `Pest` | The base class and the two sides |
 | `DEFENDERS`, `PESTS` | The two catalogues. Frozen |
-| `DefenderSpecies`, `PestSpecies`, `Species` | What is in them |
 | `defenderById` / `pestById` / `isDefenderId` / `isPestId` | Looking one up, guarding one. Pure |
-| `GOOFS` | Hand size, starting seeds |
-| `gardenPhase` / `everyoneHasPicked` / `waitingToPick` | Whether a round can begin. Pure |
-| `validHand` / `handIsFull` | What counts as a hand. Pure |
-| `canAfford` / `cheapestCost` | The pot against the price list. Pure |
-| `decodeGoofs` / `encodeGoofs` | The wire format, and its validation. Pure |
-| `useGoofs()` / `getGoofs()` | `{ hands, seeds }` |
-| `pickHand(hand)` / `myHand()` / `clearHands()` / `forgetPicker(id)` | Your hand, and everybody's |
-| `resetSeeds()` / `changeSeeds(by)` | The pot. Host only |
+| `SEED` | How often seeds land, how long they last, what they are worth |
+| `Round`, `Seed`, `Plant` | A round in progress |
+| `spawnSeed` / `nextSpawnIn` / `age` / `addSeed` / `claimSeed` | The seed game. Pure |
+| `plant` / `refusePlant` / `plantAt` / `uproot` / `Refusal` | Planting, and why not. Pure |
+| `GOOFS` | Loadout size, starting seeds |
+| `toggle` / `validHand` / `handIsFull` | The party's loadout. Pure |
+| `gardenPhase` / `canBegin` / `everyoneHasPicked` / `waitingToPick` | Whether a round can begin. Pure |
+| `shelf()` | The animals, grouped for a menu that has to hold fifty. Pure |
+| `toWire` / `fromWire` / `decodeRound` / `decodeGoofs` / `encodeGoofs` | The wire, and its validation. Pure |
+| `useGoofs()` / `getGoofs()` | `{ hand, picked, round }` |
+| `toggleAnimal(id)` / `setDone(done)` / `amDone()` | Choosing, as a party |
+| `claim(id)` / `place(row, col, id)` | Clicking a seed, and planting. Requests, if you are a guest |
+| `startRound()` / `tick(delta)` / `useRoundClock(running)` | Running a round |
 | `useGardenMode()` / `chooseGardenMode(id)` / `GARDEN_MODES` | Endless, co-op, versus |
-| `needsPlayers(id)` | The fewest players a mode makes sense with. Pure |
 | `useGoofsSync()` | Keep the lobby in step. Call once, from something always mounted |
 | `GardenScreen` | The 2D screen. Mounted in `App.tsx`, outside the canvas |
 
 ## Invariants you may rely on
 
-- **Six by nine, lanes along the rows, house at column 0.** Everything written
-  later will assume it and none of it will say so.
+- **Eight by twelve, lanes along the rows, house at column 0.**
 - **A fractional column is not a square.** `inGrid` refuses one, which is what
   stops a walking pest being treated as standing somewhere.
-- **Nothing is deader than dead.** `hurt` clamps at zero; a health of -9000
-  leaks into every health bar that ever reads it.
-- **A hand is whole or it is not a hand.** Empty, oversized, or naming an
-  animal nobody has heard of is refused outright - and a duplicate is dropped
-  rather than refused, because clicking twice is a slip and not a lie.
-- **The pot is the host's.** A guest's `changeSeeds` does nothing.
-- **An unreadable message is refused whole.** A hand of nine or a pot of NaN
-  would put something in the menu that cannot be drawn and cannot be cleared.
-- **Leaving a lobby clears the table.** Hands go, the pot goes back to the
-  start, and the next round begins from nobody.
+- **First click wins a seed, and the second pays nothing.** Two players will
+  click the same seed; the loser must not be told they earned twenty-five that
+  nobody adds to the pot.
+- **A refused planting costs nothing.** Every refusal hands back the round it
+  was given, so a caller that forgot to check cannot spend seeds on a square it
+  did not get.
+- **Never two seeds in one square**, which would be one seed you cannot click.
+- **Never two animals in one square**, on the wire or off it - a round that
+  says otherwise is refused whole.
+- **An unreadable round is refused whole**, not patched up. Half a lawn is
+  worse than a lawn that did not arrive, because the next one will.
+- **Nothing is deader than dead.** `hurt` clamps at zero.
+- **Leaving a lobby clears the table.**
 
 ## Deliberate non-goals
 
-- **No game.** Nothing is planted, nothing walks, nothing is eaten or scored,
-  and the three modes differ in name only.
-- **No art and no animation.** Every creature is a coloured pill - see the note
-  in `13-modes`.
-- **No spending.** Seeds are shared and counted; nothing takes any.
-- **Nothing in 3D.** No board in the world, nothing to swim to.
+- **No pests in a round.** Twenty-five of them are planned, eight are written
+  down, none of them walks.
+- **No fighting, no waves, no score, no winning or losing.**
+- **No art and no animation.** Every creature is a coloured pill.
+- **No per-mode rules yet** - endless, co-op and versus differ in name only.
+- **Nothing in 3D.**
 
 ## Known limitations
 
-- **The pot is host-owned with no way to ask it for anything.** That is fine
-  while nothing spends. When planting exists, a guest will have to ask the host
-  and be told yes or no, or two people will plant the last duck at once.
+- **A guest sees its own click land a round trip late.** That is the price of
+  the host being the only one allowed to be right, and at lobby latency it is
+  not visible. It would be, over a bad connection.
+- **Seeds stop landing if the host's tab goes to the background**, because the
+  round runs on `requestAnimationFrame` and browsers stop that in a hidden tab.
+  The guests keep their lawns; nothing new arrives on them.
+- **Nothing pays back for digging an animal up**, and nothing stops you doing
+  it. There is no undo and no refund because there is no round to balance yet.
+- **The three ways to play are names.**
 - **The world takes your keys while the screen is up.** WASD still walks your
-  body behind the overlay, and V still swaps the view. Harmless, and worth
-  fixing when the board wants keys of its own.
-- **Nothing prunes a hand mid-round** except a player leaving; a round that
-  starts is stuck with the hands it started with.
-- **The three modes are names.** The lobby promises them; the game will have to
-  keep the promise.
+  body behind the overlay.
 
 ## How to review
 
 Two browsers in one lobby is the real test, but everything except the waiting
 works on your own - out of a lobby you are your own host.
 
-- **Pick Garden Goofs in the lobby, ready up, press start.** A 2D board should
-  cover the screen with a menu over it, and the world should still be there
-  behind the dark.
-- **Read the menu.** Four animals, each with a cost, a health, a recharge and a
-  line saying what it is for. The pests it is warning you about are listed
-  along the bottom.
-- **Pick a fourth animal.** You should not be able to: three is the hand, and
-  the ones you have not chosen go dim once it is full.
-- **Click one you have chosen.** It should come back out again.
-- **Press take these in.** Your hand should lock, and the menu should say who
-  it is still waiting for.
-- **With two browsers:** the round must not begin until *both* have taken their
-  animals in. One player picking should not move the other player's screen on.
-- **Then the lawn.** Six rows of nine, checkerboarded, with your chosen animals
-  in a tray above it and the shared seed count in the bar.
-- **Watch the seed count in both browsers.** It is one pot: they must agree.
-- **Press end the party as the host.** Everybody leaves the lobby, goes home
-  to the spawn island, and gets a note saying why. Starting a fresh party
-  should open the menu with nobody's hand in it.
-- **Have the guest leave mid-pick.** The host must stop waiting on them.
-- **Make the window narrow.** The board should stay square-ruled and on the
-  screen rather than running off the side.
+- **Pick Garden Goofs, ready up, start.** The shelf appears with the loadout
+  empty above it and the animals grouped by what they are for below.
+- **Pick six animals.** The seventh should refuse rather than push one out.
+- **Click one in the loadout row.** It comes back out again.
+- **With two browsers:** one player adding an animal must show up in the
+  other's loadout, and either of them must be able to take it out again. That
+  is what "as a team" means.
+- **Press done choosing in both.** The lawn only appears when both have.
+- **Count the squares.** Eight rows of twelve.
+- **Wait.** Seeds should land every few seconds, somewhere unpredictable, and
+  shrink as they run out. Click one: the pot goes up by 25 in *both* browsers.
+- **Have both players click the same seed at once.** The pot must go up once.
+- **Let one run out.** It disappears and the pot does not change.
+- **Drag a packet onto a square.** It plants, and the pot drops by its cost.
+- **Click a packet and then a square.** Same again - both ways work, because a
+  long drag across twelve columns on a trackpad is miserable.
+- **Drop one on a square that is taken.** It refuses and says so in the tray,
+  and the pot does not move.
+- **Spend the pot down.** Packets you cannot afford go dim and refuse to drag.
+- **Watch the other browser while you plant.** Animals must appear there too,
+  and the pot must agree in both. It is one pot.
+- **Press end the party.** Everybody goes home; starting again gives a fresh
+  lawn, an empty loadout and a full pot.
 
 ## Gate record
 

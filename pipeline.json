@@ -1149,7 +1149,7 @@
     {
       "id": "14-garden",
       "phase": "P6",
-      "title": "Garden Goofs: the lobby, the picking menu, and the 2D 6x9 lawn",
+      "title": "Garden Goofs: the 8x12 lawn, a shared loadout, seeds to click and animals to plant",
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
@@ -1167,7 +1167,7 @@
       "blocks": [
         {
           "id": "14.1",
-          "title": "The grid: six lanes, nine columns, pure indices, no world in it",
+          "title": "The grid: eight lanes, twelve deep, pure indices",
           "status": "done"
         },
         {
@@ -1177,34 +1177,44 @@
         },
         {
           "id": "14.3",
-          "title": "GardenPiece, and the two catalogues: four animals, eight pests",
+          "title": "GardenPiece, and the two catalogues, shaped to grow to 50 and 25",
           "status": "done"
         },
         {
           "id": "14.4",
-          "title": "The shared seed pot, and each player’s hand, synced",
+          "title": "One loadout, chosen by the whole party",
           "status": "done"
         },
         {
           "id": "14.5",
-          "title": "The 2D screen: the picking menu on start, then the lawn",
+          "title": "Seeds that land, run out, and pay the shared pot when clicked",
           "status": "done"
         },
         {
           "id": "14.6",
-          "title": "Contract, tests, MODULE.md",
+          "title": "Planting by drag or by click, host-authoritative",
           "status": "done"
         },
         {
           "id": "14.7",
-          "title": "The game itself: planting, walkers, waves, scoring",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "14.8",
+          "title": "Pests: waves walking the lanes, eating, and being eaten",
+          "status": "planned"
+        },
+        {
+          "id": "14.9",
+          "title": "The rest of the catalogue: 50 animals and 25 pests",
           "status": "planned"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-14T22:59:24.819Z"
+          "at": "2026-09-15T00:11:51.450Z"
         },
         "human": {
           "status": "pending"
@@ -1213,9 +1223,9 @@
       },
       "freeze": null,
       "nonGoals": [
-        "No game yet: nothing is planted, nothing walks in, nothing is eaten or scored",
+        "No pests in a round yet: nothing walks in, nothing is eaten, nothing is scored",
+        "No winning or losing a round",
         "No art and no animation - every creature is a coloured pill first",
-        "No spending: seeds are shared and counted, and nothing takes any",
         "No per-mode rules yet - endless, co-op and versus differ in name only",
         "Nothing in 3D. It is a 2D game drawn over the world, not a place in it"
       ],

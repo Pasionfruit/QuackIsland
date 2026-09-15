@@ -1,29 +1,49 @@
 /**
- * What this lobby has settled on for Garden Goofs, and what a round has so far.
+ * What this lobby has settled on for Garden Goofs, and what the round has so
+ * far.
  *
- * Three things, and they are owned by three different people, which is the
- * whole reason this file exists:
+ * Three things owned by three different people, which is the whole reason this
+ * file exists:
  *
  * - **The way it is played** - endless, co-op or versus - is the host's, and
  *   rides on `13-modes`'s `hostChoice` like the choice of game itself.
- * - **Your hand** is yours. You confirm it, you send it, and everybody keeps a
- *   copy. Exactly how readying up works, and for the same reason.
- * - **The seed pot is shared**, so somebody has to be right about it: the host
- *   is, and says so.
+ * - **The loadout is the party's.** Anybody may add an animal or take one out,
+ *   and everybody sees the same shelf. Last word wins, which is what you want
+ *   from two people pointing at the same packet.
+ * - **The round is the host's.** Seeds, plants and the pot are one shared
+ *   truth and somebody has to hold it, because two people *will* click the
+ *   same seed and exactly one of them can have it.
+ *
+ * So a guest never changes the round: it asks. `claim` and `plant` are
+ * requests, the host runs the same pure rules from `round.ts` over its own
+ * copy, and what comes back is what happened. The cost is a round trip before
+ * you see your own click land, which on a lobby-sized network is nothing, and
+ * the thing it buys is that the two lawns cannot drift apart.
  */
-import { createStore, useStore } from '../../00-core'
+import { useEffect, useRef } from 'react'
+import { createRng, createStore, useStore } from '../../00-core'
 import { getNet, sendToRoom, subscribeRoom, useNet } from '../../09-net'
 import { hostChoice } from '../../13-modes'
-import { useEffect } from 'react'
 import {
-  GOOFS,
   decodeGoofs,
   encodeGoofs,
-  validHand,
-  type Hands,
+  freshRound,
+  fromWire,
+  toWire,
+  toggle,
+  type Picked,
 } from './goofs'
 import { DEFAULT_GARDEN_MODE, isGardenMode, type GardenMode } from './modes'
 import type { DefenderId } from './pieces'
+import {
+  addSeed,
+  age,
+  claimSeed,
+  nextSpawnIn,
+  plant as plantInto,
+  spawnSeed,
+  type Round,
+} from './round'
 
 const mode = hostChoice<GardenMode>('garden', isGardenMode, DEFAULT_GARDEN_MODE)
 
@@ -31,13 +51,15 @@ const mode = hostChoice<GardenMode>('garden', isGardenMode, DEFAULT_GARDEN_MODE)
 export const ME = 'self'
 
 export interface GoofsState {
-  /** Everyone who has confirmed a hand, by peer id. */
-  hands: Hands
-  /** The shared pot. One number for the whole party. */
-  seeds: number
+  /** The animals the party is taking in. Everybody's, and everybody edits it. */
+  hand: readonly DefenderId[]
+  /** Everybody who has said they are done choosing. */
+  picked: Picked
+  /** The round in progress. */
+  round: Round
 }
 
-const store = createStore<GoofsState>({ hands: {}, seeds: GOOFS.startingSeeds })
+const store = createStore<GoofsState>({ hand: [], picked: [], round: freshRound() })
 
 export function useGoofs(): GoofsState {
   return useStore(store)
@@ -51,12 +73,20 @@ function set(next: Partial<GoofsState>): void {
   store.set({ ...store.get(), ...next })
 }
 
-/** The chosen way to play, for React. */
+const amHost = (): boolean => getNet().host
+
+/** Sends the round, if it is yours to send. */
+function publishRound(round: Round): void {
+  set({ round })
+  if (amHost()) sendToRoom(encodeGoofs({ round: toWire(round) }))
+}
+
+// --- the way it is played ---------------------------------------------------
+
 export function useGardenMode(): GardenMode {
   return mode.use()
 }
 
-/** The chosen way to play, for anything outside React. */
 export function getGardenMode(): GardenMode {
   return mode.get()
 }
@@ -66,119 +96,176 @@ export function chooseGardenMode(id: GardenMode): void {
   mode.set(id)
 }
 
-/** Tells everyone which it is. The host's answer to a new arrival. */
 export function announceGardenMode(): void {
   mode.announce()
 }
 
-/** Back to the default, for leaving a lobby. */
 export function resetGardenMode(): void {
   mode.reset()
 }
 
-/** Starts listening for the way it is played. Returns the unsubscribe. */
 export function listenForGardenModes(): () => void {
   return mode.listen()
 }
 
-/**
- * Confirms the animals you are taking in, and tells everybody.
- *
- * Only a whole, legal hand counts. A draft - two of the three chosen, menu
- * still open - stays in the menu: this is the answer to "has everybody
- * picked", and a half-finished answer is worse than none.
- */
-export function pickHand(hand: readonly DefenderId[]): void {
-  const clean = validHand([...hand])
-  if (!clean) return
-  set({ hands: { ...store.get().hands, [ME]: clean } })
-  sendToRoom(encodeGoofs({ hand: clean }))
-}
-
-/** Your hand, or `null` if you have not confirmed one. */
-export function myHand(): readonly DefenderId[] | null {
-  return store.get().hands[ME] ?? null
-}
+// --- the loadout, which belongs to everybody --------------------------------
 
 /**
- * Forgets every hand, for the end of a round.
+ * Adds an animal to the party's loadout, or takes it out again.
  *
- * Not the pot: that is the host's and is reset with it, so a guest clearing
- * the table cannot quietly hand everybody fifty seeds.
+ * Anybody may do this to anybody's pick. It is one lawn and one pot, so it is
+ * one loadout, and arguing about it is part of the game.
  */
-export function clearHands(): void {
-  if (Object.keys(store.get().hands).length === 0) return
-  set({ hands: {} })
+export function toggleAnimal(id: DefenderId): void {
+  const hand = toggle(store.get().hand, id)
+  set({ hand })
+  sendToRoom(encodeGoofs({ hand: [...hand] }))
+}
+
+/** Says you are done choosing, or that you are not after all. */
+export function setDone(done: boolean): void {
+  const picked = store.get().picked.filter((who) => who !== ME)
+  set({ picked: done ? [...picked, ME] : picked })
+  sendToRoom(encodeGoofs({ done }))
+}
+
+/** Whether you have said you are done. */
+export function amDone(): boolean {
+  return store.get().picked.includes(ME)
 }
 
 /** Drops somebody who has left, so nobody waits on a closed browser. */
 export function forgetPicker(id: string): void {
-  const hands = store.get().hands
-  if (!hands[id]) return
-  const next = { ...hands }
-  delete next[id]
-  set({ hands: next })
+  const picked = store.get().picked
+  if (!picked.includes(id)) return
+  set({ picked: picked.filter((who) => who !== id) })
+}
+
+/** Clears the table between rounds. */
+export function clearHands(): void {
+  const now = store.get()
+  if (now.hand.length === 0 && now.picked.length === 0) return
+  set({ hand: [], picked: [] })
+}
+
+// --- the round, which belongs to the host -----------------------------------
+
+/** Starts a fresh round with a full pot. Host only. */
+export function startRound(): void {
+  if (!amHost()) return
+  seedId = 1
+  publishRound(freshRound())
 }
 
 /**
- * Puts the pot back to the start of a round. Host only.
+ * Clicks a seed.
  *
- * Seeds are shared, so one person has to be right about them and it is the
- * same person who is right about the clock.
+ * The host answers this for everybody, including itself, because two people
+ * clicking the same seed is the normal case on a shared lawn and only one of
+ * them can have it.
  */
-export function resetSeeds(): void {
-  if (!getNet().host) return
-  set({ seeds: GOOFS.startingSeeds })
-  sendToRoom(encodeGoofs({ seeds: GOOFS.startingSeeds }))
+export function claim(id: number): void {
+  if (!amHost()) {
+    sendToRoom(encodeGoofs({ claim: id }))
+    return
+  }
+  const { round, gained } = claimSeed(store.get().round, id)
+  if (gained > 0) publishRound(round)
 }
 
 /**
- * Moves the pot. Host only, and never below nothing.
+ * Asks for an animal to go in a square.
  *
- * Nothing spends seeds yet. When planting exists this is where it will have to
- * go through, and a guest planting a duck will have to ask - see the
- * limitation in MODULE.md.
+ * Refused silently here and answered by the host, whose copy of the pot is the
+ * one that counts. The interface checks the same rules before it lets go of
+ * the drag, so a refusal that gets this far is a race rather than a mistake.
  */
-export function changeSeeds(by: number): void {
-  if (!getNet().host || !Number.isFinite(by)) return
-  const seeds = Math.max(0, Math.floor(store.get().seeds + by))
-  if (seeds === store.get().seeds) return
-  set({ seeds })
-  sendToRoom(encodeGoofs({ seeds }))
+export function place(row: number, col: number, id: DefenderId): void {
+  if (!amHost()) {
+    sendToRoom(encodeGoofs({ plant: { row, col, id } }))
+    return
+  }
+  const { round, refused } = plantInto(store.get().round, store.get().hand, row, col, id)
+  if (!refused) publishRound(round)
 }
 
-/** Tells everyone where things stand. The host's answer to a new arrival. */
+/** The host's own numbering for seeds. Unique within a round. */
+let seedId = 1
+/** Seconds until the host drops the next seed. */
+let untilSpawn = 0
+const random = createRng(0x600f5)
+
+/**
+ * A moment of the round passing.
+ *
+ * **Everybody ages their own copy**, so seeds fade smoothly between the host's
+ * messages rather than jumping when one arrives. Only the host adds new ones,
+ * and only the host's pot is real - a guest counting a seed out is drawing,
+ * not deciding.
+ */
+export function tick(delta: number): void {
+  if (!(delta > 0)) return
+  const now = store.get().round
+  let round = age(now, delta)
+
+  if (amHost()) {
+    untilSpawn -= delta
+    if (untilSpawn <= 0) {
+      untilSpawn = nextSpawnIn(random)
+      const seed = spawnSeed(round, seedId, random)
+      if (seed) {
+        seedId++
+        round = addSeed(round, seed)
+        publishRound(round)
+        return
+      }
+    }
+  }
+
+  if (round !== now) set({ round })
+}
+
+// --- talking to everybody else ----------------------------------------------
+
+/** Tells everyone where things stand. */
 export function announceGoofs(): void {
   const state = store.get()
-  const mine = state.hands[ME]
-  sendToRoom(
-    encodeGoofs(getNet().host ? { seeds: state.seeds, ...(mine ? { hand: [...mine] } : {}) } : mine ? { hand: [...mine] } : {}),
-  )
+  // Your own answer to "is everybody done", which is yours to give whoever you
+  // are. The host adds the things only it can be right about.
+  sendToRoom(encodeGoofs({ done: state.picked.includes(ME) }))
+  if (amHost()) {
+    sendToRoom(encodeGoofs({ hand: [...state.hand], round: toWire(state.round) }))
+  }
 }
 
 /**
  * Starts listening.
  *
- * A hand belongs to whoever sent it. The pot belongs to the host and only the
- * host - two clients each believing they are host would otherwise take turns
- * overruling each other about how much everybody has to spend.
+ * A loadout and a done flag belong to whoever sent them. The round belongs to
+ * the host and only the host; a guest sending one is either confused or lying,
+ * and either way it is not the round.
  */
 export function listenForGoofs(): () => void {
   return subscribeRoom((from, raw) => {
     const message = decodeGoofs(raw)
     if (!message) return
-    const host = getNet().host
+    const host = amHost()
 
-    if (message.hand) {
-      set({ hands: { ...store.get().hands, [from]: message.hand } })
-      // Somebody spoke, so the host says where things stand - which is how
-      // anybody who arrives mid-round finds out what the pot is worth.
-      if (host) announceGoofs()
+    if (message.hand) set({ hand: message.hand })
+
+    if (message.done !== undefined) {
+      const picked = store.get().picked.filter((who) => who !== from)
+      set({ picked: message.done ? [...picked, from] : picked })
     }
 
-    if (message.seeds !== undefined && !host) set({ seeds: message.seeds })
+    if (message.round && !host) set({ round: fromWire(message.round) })
 
-    if (message.ask && host) announceGoofs()
+    // Requests. Only the host acts on these, and it runs the same rules it
+    // would run for its own click.
+    if (host && message.claim !== undefined) claim(message.claim)
+    if (host && message.plant) place(message.plant.row, message.plant.col, message.plant.id)
+
+    if (message.ask) announceGoofs()
   })
 }
 
@@ -186,7 +273,7 @@ export function listenForGoofs(): () => void {
  * Keeps this lobby's Garden Goofs in step, for as long as the interface is up.
  *
  * Call it once, from something that is always mounted. Leaving a lobby clears
- * the table: on your own again, nobody else has a hand and the pot is fresh.
+ * the table: on your own again, nobody else is choosing and the round is new.
  */
 export function useGoofsSync(): void {
   mode.useSync()
@@ -198,7 +285,36 @@ export function useGoofsSync(): void {
   useEffect(() => listenForGoofs(), [])
 
   useEffect(() => {
-    store.set({ hands: {}, seeds: GOOFS.startingSeeds })
+    store.set({ hand: [], picked: [], round: freshRound() })
     if (joined) sendToRoom(encodeGoofs({ ask: true }))
   }, [joined, room])
+}
+
+/**
+ * Runs the round while it is on the screen.
+ *
+ * A frame loop of its own rather than `00-core`'s, because this is a 2D game
+ * drawn in the DOM and `useGameFrame` belongs to the canvas. It stops when the
+ * screen goes, which is exactly when there is no round to run.
+ */
+export function useRoundClock(running: boolean): void {
+  const last = useRef(0)
+
+  useEffect(() => {
+    if (!running) return
+    let frame = 0
+    last.current = performance.now()
+
+    const step = (at: number) => {
+      // Clamped, so a tab that was in the background does not come back and
+      // expire every seed on the lawn at once.
+      const delta = Math.min(0.25, (at - last.current) / 1000)
+      last.current = at
+      tick(delta)
+      frame = requestAnimationFrame(step)
+    }
+
+    frame = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(frame)
+  }, [running])
 }

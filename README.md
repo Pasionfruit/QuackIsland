@@ -74,11 +74,13 @@ lobby plays the same one. The host chooses:
 - **Volcano Island** — a 120-tile spiral race up a 150 m volcano on a second
   island across the water, out-of-round, with a horseshoe crater and the track
   winding three times up to the treasure at the top.
-- **Garden Goofs** — a flat **2D** lane defence on a six-by-nine lawn, drawn
-  over the world. Animals hold the lanes — duck, frog, rabbit, turtle — against
-  eight pests: worm, beetle, snail, ant, grasshopper, bee, spider and moth.
-  Seeds are one pot shared by the whole party. Choose **Endless**, **Co-op** or
-  **Versus**.
+- **Garden Goofs** — a flat **2D** lane defence on an eight-by-twelve lawn,
+  drawn over the world. The party picks its loadout **together** from one
+  shelf, seeds land on the grass and have to be clicked before they go, and
+  anybody can drag an animal into any square out of the shared pot. Animals:
+  duck, frog, rabbit, turtle. Pests, written down and not yet walking: worm,
+  beetle, snail, ant, grasshopper, bee, spider, moth. Choose **Endless**,
+  **Co-op** or **Versus**.
 
 The popup runs top to bottom in the order you do things: **your name**, then
 **ready up** once you are in a party, then the **code** that got you there,
@@ -91,8 +93,9 @@ player leaves the lobby and is put back on the spawn island, with a note saying
 why. And anybody joining a lobby is told what the host has chosen — your own
 selection is replaced by theirs the moment you arrive.
 
-Starting Garden Goofs opens a menu to choose three of the four animals with,
-and the round waits until everybody has chosen. Then the lawn.
+Starting Garden Goofs opens the shelf, where the party chooses its six animals
+between them — anybody can add one or take one out — and the round waits until
+everybody says they are done. Then the lawn.
 
 Neither game is written yet. The volcano's track and the lawn's grid are built,
 the rules that go on top of them are not: nothing is planted, nothing walks in,
@@ -163,7 +166,7 @@ world is reproducible and testable.
 | `11-currency` | Fish, shells and grapes: the wallet and the readout |
 | `12-rocks` | Rocks of every size, solid enough to bump into and stand on |
 | `13-modes` | Which game the party is playing, and the lobby popup that chooses it |
-| `14-garden` | Garden Goofs: the lobby, the picking menu, and the 2D 6x9 lawn |
+| `14-garden` | Garden Goofs: the 2D 8x12 lawn, a shared loadout, seeds and planting |
 
 Next up: a sky dome driving the day cycle that `00-core` already exposes, then
 the Meshy asset pipeline and vegetation placed against the terrain's height

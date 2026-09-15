@@ -1,22 +1,28 @@
 /**
- * The lawn: six rows, nine columns, and nothing else.
+ * The lawn: eight rows, twelve columns, and nothing else.
  *
  * Pure indices. This is a **2D game** - it is played on a board drawn over the
  * world, not in it - so there are no metres in here and no world coordinates.
  * A square is a row and a column, the view decides how big that is on screen,
  * and every rule written later works in squares.
  *
- * **Rows are lanes.** Column 0 is the house end and column 8 is where pests
- * come in, so a pest walks from 8 towards 0 along one row. That is the only
+ * **Rows are lanes.** Column 0 is the house end and the last column is where
+ * pests come in, so a pest walks from the far end towards 0 along one row. That is the only
  * thing here which is a game decision rather than arithmetic, and it is
  * written down so the whole build agrees on it before anybody writes a wave.
  */
 
 export const GRID = {
-  /** Lanes. */
-  rows: 6,
-  /** Squares along a lane. */
-  cols: 9,
+  /**
+   * Lanes.
+   *
+   * Eight of them because two people play on one lawn: six was a board one
+   * player could cover, and two players covering one board between them is
+   * two players watching each other play.
+   */
+  rows: 8,
+  /** Squares along a lane. Long enough that a lane is a journey. */
+  cols: 12,
 } as const
 
 /** One square. */
