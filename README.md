@@ -79,10 +79,13 @@ lobby plays the same one. The host chooses:
   defending. The party picks its loadout **together** from a 7x7 shelf of
   forty-nine cards — each one an icon and a name, everything else a hover
   away — seeds land on the grass and have to be clicked before they go, and
-  anybody can drag an animal into any square out of the shared pot. The roster
-  is **forty-nine defenders** — shooters, guards, growers and eaters, from the
-  Pea Shooter to the Garden Gnome — against **twenty-five pests**, from a Mite
-  to the Garden Gremlin. The pests do not walk yet. Choose **Endless**,
+  anybody can drag an animal into any square out of the shared pot. A
+  **trowel**, top right, drags onto a planted square to dig it back up — seeds
+  are **not** refunded. Bottom right, a **wave count** climbs as the round
+  goes on. The roster is **forty-nine defenders** — shooters, guards, growers
+  and eaters, from the Pea Shooter to the Garden Gnome — against
+  **twenty-five pests**, from a Mite to the Garden Gremlin. The pests do not
+  walk yet, and nothing is sent on a wave when it turns. Choose **Endless**,
   **Co-op** or **Versus**, and press **escape** any time to pause and leave.
 
 The popup runs top to bottom in the order you do things: **your name**, then

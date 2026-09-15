@@ -42,6 +42,7 @@ import {
   nextSpawnIn,
   plant as plantInto,
   spawnSeed,
+  uproot,
   type Round,
 } from './round'
 
@@ -189,6 +190,24 @@ export function place(row: number, col: number, id: DefenderId): void {
   if (!refused) publishRound(round)
 }
 
+/**
+ * Asks for whatever is in a square to come out again - the trowel. No seeds
+ * come back; see `uproot`.
+ *
+ * Same shape as `place`: a guest asks, the host decides. Refused silently here
+ * for the same reason too - the interface checks there is something to dig up
+ * before it lets go of the trowel, so a refusal that gets this far is a race
+ * rather than a mistake.
+ */
+export function dig(row: number, col: number): void {
+  if (!amHost()) {
+    sendToRoom(encodeGoofs({ dig: { row, col } }))
+    return
+  }
+  const round = uproot(store.get().round, row, col)
+  if (round !== store.get().round) publishRound(round)
+}
+
 /** The host's own numbering for seeds. Unique within a round. */
 let seedId = 1
 /** Seconds until the host drops the next seed. */
@@ -264,6 +283,7 @@ export function listenForGoofs(): () => void {
     // would run for its own click.
     if (host && message.claim !== undefined) claim(message.claim)
     if (host && message.plant) place(message.plant.row, message.plant.col, message.plant.id)
+    if (host && message.dig) dig(message.dig.row, message.dig.col)
 
     if (message.ask) announceGoofs()
   })

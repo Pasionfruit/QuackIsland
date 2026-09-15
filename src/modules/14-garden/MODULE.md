@@ -21,6 +21,10 @@ What works now:
 - **Anybody plants anything**, by dragging a packet onto a square or by
   clicking the packet and then the square. The pot pays, so what one player
   plants is what another player cannot.
+- **The trowel digs one back up.** Drag it, top right, onto a planted square.
+  Nothing is refunded - the seeds were spent the moment it went in the ground.
+- **A wave count, bottom right**, so the party knows how long the round has
+  gone on. Nothing changes when it advances yet - see below.
 - **Escape pauses and offers a way out.** It covers the board and stops this
   browser's own contribution to the round clock; from there you can resume or
   leave the party.
@@ -282,6 +286,38 @@ so a seed carries *how long it has left*, which means the same thing in every
 browser that reads it. Everybody counts their own copy down, so seeds fade
 smoothly between the host's messages instead of jumping when one arrives.
 
+## The trowel
+
+The one thing that takes a plant back off the lawn. Drag it, top right of the
+bar, onto a planted square - or click it and then click the square, the same
+click-then-click every other tool here accepts. `uproot` is what runs: the
+square clears and **nothing comes back**. The seeds were spent the moment the
+animal went in the ground; digging it up again is not a refund, it is clearing
+the square for something else.
+
+Only shown while there is a lawn to use it on - it is absent during picking,
+where there is nothing planted yet to dig up.
+
+Same shape as planting, the other way round: a guest's drop is a request
+(`dig`), the host runs `uproot` over its own copy and the answer is whatever
+comes back. Dropping it on an empty square is refused, in words, the same as
+every other refusal here - a drop that silently does nothing is a bug report.
+
+## The wave
+
+`Round.elapsed` is a clock the whole party shares, aged by everybody the same
+way seeds are - each browser counts its own copy up between the host's
+messages, so it moves smoothly rather than jumping when one arrives.
+`waveAt(elapsed)` turns that into a number: the first `WAVE.length` seconds are
+wave 1, the next are wave 2, and so on. It is shown bottom right for as long as
+there is a round running.
+
+**Nothing changes when the wave advances**, yet. There are no pests to send,
+so a wave here is a clock with a name and nothing riding on it. It exists now
+because the display was asked for before the sending was built, and the honest
+thing to ship is a wave count that counts - not one wired to a pretend value
+that would have to be replaced the day waves start meaning something.
+
 ## Who is allowed to be right
 
 Three owners, and this is the whole reason `state.ts` exists:
@@ -316,16 +352,18 @@ and there is a test that says so, because the relay refuses four.
 | `DEFENDERS`, `PESTS` | The two catalogues. Frozen |
 | `defenderById` / `pestById` / `isDefenderId` / `isPestId` | Looking one up, guarding one. Pure |
 | `SEED` | How often seeds land, how long they last, what they are worth |
-| `Round`, `Seed`, `Plant` | A round in progress |
-| `spawnSeed` / `nextSpawnIn` / `age` / `addSeed` / `claimSeed` | The seed game. Pure |
-| `plant` / `refusePlant` / `plantAt` / `uproot` / `Refusal` | Planting, and why not. Pure |
+| `WAVE` | How long one wave lasts |
+| `waveAt(elapsed)` | Which wave, given how long the round has run. Pure |
+| `Round`, `Seed`, `Plant` | A round in progress. `Round.elapsed` is what `waveAt` reads |
+| `spawnSeed` / `nextSpawnIn` / `age` / `addSeed` / `claimSeed` | The seed game, and the round clock. Pure |
+| `plant` / `refusePlant` / `plantAt` / `uproot` / `Refusal` | Planting, digging up, and why not. Pure |
 | `GOOFS` | Loadout size, starting seeds |
 | `toggle` / `validHand` / `handIsFull` | The party's loadout. Pure |
 | `gardenPhase` / `canBegin` / `everyoneHasPicked` / `waitingToPick` | Whether a round can begin. Pure |
 | `toWire` / `fromWire` / `decodeRound` / `decodeGoofs` / `encodeGoofs` | The wire, and its validation. Pure |
 | `useGoofs()` / `getGoofs()` | `{ hand, picked, round }` |
 | `toggleAnimal(id)` / `setDone(done)` / `amDone()` | Choosing, as a party |
-| `claim(id)` / `place(row, col, id)` | Clicking a seed, and planting. Requests, if you are a guest |
+| `claim(id)` / `place(row, col, id)` / `dig(row, col)` | Clicking a seed, planting, and digging one up. Requests, if you are a guest |
 | `startRound()` / `tick(delta)` / `useRoundClock(running)` | Running a round |
 | `useGardenMode()` / `chooseGardenMode(id)` / `GARDEN_MODES` | Endless, co-op, versus |
 | `useGoofsSync()` | Keep the lobby in step. Call once, from something always mounted |
@@ -352,12 +390,17 @@ and there is a test that says so, because the relay refuses four.
 - **The shelf is forty-nine cards, laid out 7x7, and no more.** The roster is
   sized to the grid; there is no overflow case to get wrong because there is no
   fiftieth card to place.
+- **Digging up a plant with the trowel pays nothing back.** `uproot` only ever
+  clears the square; there is no path anywhere that returns a seed for it.
+- **The round clock moves whether or not a seed happens to be loose.** The wave
+  count reads `Round.elapsed`, and it must not stall just because the lawn is
+  briefly empty of seeds.
 
 ## Deliberate non-goals
 
 - **No pests in a round.** Twenty-five of them are planned, none of them
-  walks.
-- **No fighting, no waves, no score, no winning or losing.**
+  walks, and nothing is sent on a wave when it turns.
+- **No fighting, no score, no winning or losing.**
 - **No art and no animation.** Every creature is a coloured pill.
 - **No per-mode rules yet** - endless, co-op and versus differ in name only.
 - **Nothing in 3D.**
@@ -379,8 +422,8 @@ and there is a test that says so, because the relay refuses four.
   the round carries on without them and the next broadcast catches them up.
   This is a consequence of who runs the clock, not a special case written for
   pausing.
-- **Nothing pays back for digging an animal up**, and nothing stops you doing
-  it. There is no undo and no refund because there is no round to balance yet.
+- **The wave count is cosmetic.** It is a real, synced clock - see the invariant
+  above - but nothing reads it back yet beyond the number on the screen.
 - **The three ways to play are names.**
 - **The world still takes WASD while the screen is up** - escape opens the
   pause card, but the body underneath can still be walked until you use it.
@@ -415,6 +458,17 @@ works on your own - out of a lobby you are your own host.
 - **Spend the pot down.** Packets you cannot afford go dim and refuse to drag.
 - **Watch the other browser while you plant.** Animals must appear there too,
   and the pot must agree in both. It is one pot.
+- **Look bottom right.** A wave count should read *wave 1* the moment the lawn
+  appears, and climb on its own as the round goes on - in both browsers,
+  together.
+- **Drag the trowel, top right, onto a planted square.** It clears, and the
+  pot does **not** move - digging one up is not a refund.
+- **Click the trowel and then a planted square.** Same result, the click-then-
+  click way in.
+- **Drop the trowel on an empty square.** It refuses and says so, and nothing
+  changes.
+- **Dig one up as a guest, and watch the host's browser.** The square should
+  clear there too, and the pot should still not move in either one.
 - **Press escape.** A pause card covers the board with *resume* and *leave the
   party*. Press escape again, or resume: it goes away and nothing was lost.
 - **As a guest, press escape and wait.** The host's seeds should keep landing

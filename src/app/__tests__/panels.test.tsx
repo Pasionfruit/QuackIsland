@@ -14,6 +14,7 @@ import {
   GARDEN_MODES,
   GardenScreen,
   SEED,
+  WAVE,
   clearHands,
   getGoofs,
   setDone,
@@ -473,6 +474,74 @@ describe('playing a round of Garden Goofs', () => {
     const resume = [...host.querySelectorAll('button')].find((b) => b.textContent === 'resume')
     click(resume ?? null)
     expect(host.textContent).not.toContain('Paused')
+  })
+
+  it('shows which wave the party is in, bottom right, and it advances', () => {
+    const host = lawn()
+    expect(host.textContent).toContain('wave 1')
+    act(() => tick(WAVE.length))
+    expect(host.textContent).toContain('wave 2')
+    expect(host.textContent).not.toContain('wave 1')
+  })
+
+  it('offers a trowel only once there is a lawn to use it on', () => {
+    act(() => chooseMode('garden'))
+    act(() => {
+      hostGame()
+      startGame()
+    })
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const created = createRoot(host)
+    root = created
+    act(() => created.render(<GardenScreen />))
+
+    // Picking: nothing to dig up yet.
+    expect([...host.querySelectorAll('button')].some((b) => b.title.startsWith('Trowel'))).toBe(
+      false,
+    )
+
+    act(() => {
+      toggleAnimal('pea-shooter')
+      setDone(true)
+    })
+
+    const trowel = [...host.querySelectorAll('button')].find((b) => b.title.startsWith('Trowel'))
+    expect(trowel).toBeDefined()
+  })
+
+  it('digs up a planted animal with the trowel, and refunds nothing', () => {
+    const host = lawn()
+    const tray = () =>
+      [...host.querySelectorAll('button')].find((b) => b.textContent === 'Pea Shooter')
+
+    click(tray() ?? null)
+    click(host.querySelector('[data-cell="2,2"]'))
+    const afterPlanting = getGoofs().round.seeds
+    expect(getGoofs().round.plants).toHaveLength(1)
+    expect(afterPlanting).toBe(GOOFS.startingSeeds - defenderById('pea-shooter').cost)
+
+    const trowel = [...host.querySelectorAll('button')].find((b) => b.title.startsWith('Trowel'))
+    click(trowel ?? null)
+    click(host.querySelector('[data-cell="2,2"]'))
+
+    expect(getGoofs().round.plants).toHaveLength(0)
+    // The seeds it cost to plant are gone for good - digging it up is not a
+    // refund, it is clearing the square.
+    expect(getGoofs().round.seeds).toBe(afterPlanting)
+  })
+
+  it('refuses the trowel on an empty square, and changes nothing', () => {
+    const host = lawn()
+    const before = getGoofs().round.seeds
+
+    const trowel = [...host.querySelectorAll('button')].find((b) => b.title.startsWith('Trowel'))
+    click(trowel ?? null)
+    click(host.querySelector('[data-cell="5,5"]'))
+
+    expect(getGoofs().round.plants).toHaveLength(0)
+    expect(getGoofs().round.seeds).toBe(before)
+    expect(host.textContent).toContain('nothing to dig up')
   })
 })
 

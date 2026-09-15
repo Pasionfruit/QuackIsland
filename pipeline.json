@@ -1219,12 +1219,17 @@
           "id": "14.11",
           "title": "The shelf as a 7x7 grid of minimal cards, house edge, and escape to pause and leave",
           "status": "done"
+        },
+        {
+          "id": "14.12",
+          "title": "A wave clock the whole party shares, and a trowel that digs a plant up for nothing back",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-15T02:59:23.885Z"
+          "at": "2026-09-15T03:12:25.869Z"
         },
         "human": {
           "status": "pending"

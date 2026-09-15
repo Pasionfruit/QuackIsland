@@ -134,6 +134,11 @@ export interface GoofsMessage {
   claim?: number
   /** A guest asking to plant. The host decides whether it happened. */
   plant?: { row: number; col: number; id: DefenderId }
+  /**
+   * A guest asking to dig one up - the trowel. The host decides whether there
+   * was anything there to take out.
+   */
+  dig?: { row: number; col: number }
   /** Somebody newly arrived, asking where things stand. */
   ask?: boolean
 }
@@ -153,12 +158,20 @@ export interface WireRound {
   l: [number, number, number, number, number][]
   /** Plants: row, column, index into `DEFENDERS`. */
   p: [number, number, number][]
+  /** Seconds since the round began. What the wave count is read from. */
+  e: number
 }
 
 function wholeNumber(value: unknown, most: number): number | null {
   if (typeof value !== 'number' || !Number.isFinite(value)) return null
   const rounded = Math.floor(value)
   return rounded >= 0 && rounded <= most ? rounded : null
+}
+
+/** Like `wholeNumber`, but for a value that is allowed to carry decimals. */
+function finiteNumber(value: unknown, most: number): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null
+  return value >= 0 && value <= most ? value : null
 }
 
 /**
@@ -176,6 +189,12 @@ export function decodeRound(value: unknown): WireRound | null {
 
   const seeds = wholeNumber(raw.s, 1_000_000)
   if (seeds === null) return null
+
+  // A day and a half of round time is generous enough that nothing legitimate
+  // ever gets near it, and small enough that a garbled value cannot claim a
+  // wave count in the millions.
+  const elapsed = finiteNumber(raw.e, 130_000)
+  if (elapsed === null) return null
 
   if (!Array.isArray(raw.l) || !Array.isArray(raw.p)) return null
   if (raw.l.length > 64 || raw.p.length > GRID.rows * GRID.cols) return null
@@ -207,7 +226,7 @@ export function decodeRound(value: unknown): WireRound | null {
     plants.push([row, col, kind])
   }
 
-  return { s: seeds, l: loose, p: plants }
+  return { s: seeds, l: loose, p: plants, e: elapsed }
 }
 
 /**
@@ -252,6 +271,15 @@ export function decodeGoofs(message: Record<string, unknown>): GoofsMessage | nu
     out.plant = { row, col, id: want.id }
   }
 
+  if (message.dig !== undefined) {
+    const want = message.dig as Record<string, unknown> | null
+    if (!want || typeof want !== 'object') return null
+    const row = wholeNumber(want.row, GRID.rows - 1)
+    const col = wholeNumber(want.col, GRID.cols - 1)
+    if (row === null || col === null) return null
+    out.dig = { row, col }
+  }
+
   if (message.ask !== undefined) {
     if (typeof message.ask !== 'boolean') return null
     out.ask = message.ask
@@ -282,6 +310,9 @@ export function toWire(round: Round): WireRound {
       plant.col,
       DEFENDERS.findIndex((animal) => animal.id === plant.id),
     ]),
+    // Same two decimals as a seed's countdown, for the same reason: closer
+    // than that is not worth the bytes.
+    e: Math.round(Math.max(0, round.elapsed) * 100) / 100,
   }
 }
 
@@ -296,6 +327,7 @@ export function fromWire(wire: WireRound): Round {
     seeds: wire.s,
     loose: wire.l.map(([id, row, col, worth, left]) => ({ id, row, col, worth, left })),
     plants: wire.p.map(([row, col, kind]) => ({ row, col, id: DEFENDERS[kind].id })),
+    elapsed: wire.e,
   }
 }
 

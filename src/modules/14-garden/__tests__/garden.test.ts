@@ -380,11 +380,14 @@ describe('what arrives from another browser', () => {
     expect(decodeGoofs(sent)).toEqual({ hand: ['duck', 'turtle'] })
   })
 
-  it('carries a done flag, a claim, a planting and a question', () => {
+  it('carries a done flag, a claim, a planting, a digging and a question', () => {
     expect(decodeGoofs(encodeGoofs({ done: true }))).toEqual({ done: true })
     expect(decodeGoofs(encodeGoofs({ claim: 12 }))).toEqual({ claim: 12 })
     expect(decodeGoofs(encodeGoofs({ plant: { row: 1, col: 2, id: 'duck' } }))).toEqual({
       plant: { row: 1, col: 2, id: 'duck' },
+    })
+    expect(decodeGoofs(encodeGoofs({ dig: { row: 3, col: 4 } }))).toEqual({
+      dig: { row: 3, col: 4 },
     })
     expect(decodeGoofs(encodeGoofs({ ask: true }))).toEqual({ ask: true })
   })
@@ -404,6 +407,12 @@ describe('what arrives from another browser', () => {
     expect(decodeGoofs({ t: 'goofs', plant: { row: 99, col: 0, id: 'duck' } })).toBeNull()
     expect(decodeGoofs({ t: 'goofs', plant: { row: 0, col: 0, id: 'wasp' } })).toBeNull()
     expect(decodeGoofs({ t: 'goofs', plant: { row: 0, col: 0 } })).toBeNull()
+  })
+
+  it('refuses a digging off the lawn', () => {
+    expect(decodeGoofs({ t: 'goofs', dig: { row: 99, col: 0 } })).toBeNull()
+    expect(decodeGoofs({ t: 'goofs', dig: { row: 0 } })).toBeNull()
+    expect(decodeGoofs({ t: 'goofs', dig: 'here' })).toBeNull()
   })
 
   it('refuses a done flag that is not one', () => {

@@ -4,6 +4,7 @@ import { GOOFS, decodeRound, fromWire, toWire } from '../internal/goofs'
 import { DEFENDERS, defenderById } from '../internal/pieces'
 import {
   SEED,
+  WAVE,
   addSeed,
   age,
   claimSeed,
@@ -14,6 +15,7 @@ import {
   refusePlant,
   spawnSeed,
   uproot,
+  waveAt,
   type Round,
   type Seed,
 } from '../internal/round'
@@ -93,6 +95,41 @@ describe('seeds running out', () => {
     const round = seeded(4)
     expect(age(round, 0)).toBe(round)
     expect(age(round, -3)).toBe(round)
+  })
+
+  it('moves the round clock on regardless of whether anything is loose', () => {
+    // The clock the wave count reads must not stall just because the lawn
+    // happens to be empty of seeds at that exact moment.
+    const bare = emptyRound(0)
+    expect(bare.loose).toHaveLength(0)
+    expect(age(bare, 5).elapsed).toBeCloseTo(5, 9)
+  })
+
+  it('moves the clock on at the same time as it ages seeds', () => {
+    const round = age(seeded(SEED.life), 3)
+    expect(round.elapsed).toBeCloseTo(3, 9)
+  })
+})
+
+describe('the wave', () => {
+  it('starts a round on the first wave', () => {
+    expect(waveAt(0)).toBe(1)
+    expect(emptyRound(0).elapsed).toBe(0)
+  })
+
+  it('moves to the next wave once one has run its length', () => {
+    expect(waveAt(WAVE.length - 0.01)).toBe(1)
+    expect(waveAt(WAVE.length)).toBe(2)
+    expect(waveAt(WAVE.length * 4)).toBe(5)
+  })
+
+  it('never goes below the first wave', () => {
+    expect(waveAt(-50)).toBe(1)
+  })
+
+  it('is read straight off the round the clock is already keeping', () => {
+    const round = age(emptyRound(0), WAVE.length * 2 + 1)
+    expect(waveAt(round.elapsed)).toBe(3)
   })
 })
 
@@ -180,7 +217,10 @@ describe('the round on the wire', () => {
     let round = emptyRound(250)
     round = addSeed(round, { id: 1, row: 0, col: 0, worth: 25, left: 8.256 })
     round = addSeed(round, { id: 2, row: 7, col: 11, worth: 25, left: 1.5 })
-    return plant(round, ['duck', 'turtle'], 4, 4, 'turtle').round
+    round = plant(round, ['duck', 'turtle'], 4, 4, 'turtle').round
+    // Set directly rather than via `age`, which would also run these seeds'
+    // own countdown down to nothing over a span this long.
+    return { ...round, elapsed: WAVE.length * 2 + 3.256 }
   }
 
   it('round-trips through the transport, which is JSON', () => {
@@ -194,6 +234,9 @@ describe('the round on the wire', () => {
     expect(back.loose.map((s) => s.id)).toEqual([1, 2])
     // Seconds are rounded on the way out; a hundredth is a tenth of a frame.
     expect(back.loose[0].left).toBeCloseTo(8.26, 2)
+    expect(back.elapsed).toBeCloseTo(there.elapsed, 2)
+    // The wave count is read straight off it, so it has to have survived.
+    expect(waveAt(back.elapsed)).toBe(waveAt(there.elapsed))
   })
 
   it('stays well inside what the relay will carry', () => {
@@ -224,13 +267,20 @@ describe('the round on the wire', () => {
     // Two animals in one square is a lawn that cannot be drawn.
     expect(decodeRound({ ...good, p: [[1, 1, 0], [1, 1, 1]] })).toBeNull()
     expect(decodeRound({ ...good, l: [[1, 0, 0, 25]] })).toBeNull()
+    expect(decodeRound({ ...good, e: -1 })).toBeNull()
+    expect(decodeRound({ ...good, e: Number.NaN })).toBeNull()
+    expect(decodeRound({ ...good, e: Infinity })).toBeNull()
+    expect(decodeRound({ ...good, e: 'soon' })).toBeNull()
+    const { e, ...noElapsed } = good
+    void e
+    expect(decodeRound(noElapsed)).toBeNull()
     expect(decodeRound(null)).toBeNull()
     expect(decodeRound('round')).toBeNull()
   })
 
   it('refuses more plants than there are squares', () => {
     const many = Array.from({ length: GRID.rows * GRID.cols + 1 }, () => [0, 0, 0])
-    expect(decodeRound({ s: 0, l: [], p: many })).toBeNull()
+    expect(decodeRound({ s: 0, e: 0, l: [], p: many })).toBeNull()
   })
 })
 

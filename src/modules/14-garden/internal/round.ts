@@ -39,6 +39,18 @@ export const SEED = {
   most: 6,
 } as const
 
+export const WAVE = {
+  /**
+   * Seconds one wave lasts before the next begins.
+   *
+   * Nothing yet changes when it does - there are no pests to send - but the
+   * count is real and it is the host's, aged the same way everything else in
+   * the round is: `waveAt` reads it off `Round.elapsed`, which every browser
+   * counts down for itself between the host's messages.
+   */
+  length: 45,
+} as const
+
 /** One seed, sitting on the lawn, waiting to be clicked. */
 export interface Seed {
   /** The host's own numbering. Unique for the round. */
@@ -72,10 +84,17 @@ export interface Round {
   loose: Seed[]
   /** What has been planted, at most one to a square. */
   plants: Plant[]
+  /** Seconds since the round began. What `waveAt` reads. */
+  elapsed: number
 }
 
 export function emptyRound(seeds: number): Round {
-  return { seeds, loose: [], plants: [] }
+  return { seeds, loose: [], plants: [], elapsed: 0 }
+}
+
+/** Which wave is running, given how long the round has gone on. */
+export function waveAt(elapsed: number): number {
+  return 1 + Math.floor(Math.max(0, elapsed) / WAVE.length)
 }
 
 /** How long until the next seed, in seconds. */
@@ -116,18 +135,22 @@ export function spawnSeed(round: Round, id: number, random: () => number): Seed 
 /**
  * The lawn, a moment later.
  *
- * Seeds run down and the ones that reach zero are gone. Whoever is reading
- * this counts down their own copy, so a guest's seeds fade at the same rate
- * the host's do without the two of them sharing a clock.
+ * Seeds run down and the ones that reach zero are gone; the clock the wave
+ * count reads moves on regardless of whether anything is lying on the grass.
+ * Whoever is reading this ages their own copy, so a guest's seeds fade and the
+ * wave advances at the same rate the host's do without the two of them sharing
+ * a clock.
  */
 export function age(round: Round, delta: number): Round {
-  if (!(delta > 0) || round.loose.length === 0) return round
+  if (!(delta > 0)) return round
+  const elapsed = round.elapsed + delta
+  if (round.loose.length === 0) return { ...round, elapsed }
   const loose: Seed[] = []
   for (const seed of round.loose) {
     const left = seed.left - delta
     if (left > 0) loose.push({ ...seed, left })
   }
-  return { ...round, loose }
+  return { ...round, loose, elapsed }
 }
 
 /** A seed, added to the lawn. */
@@ -210,7 +233,12 @@ export function plant(
   }
 }
 
-/** Digs one up again. Pays nothing back - you planted it, it is planted. */
+/**
+ * Digs one up again - what the trowel does.
+ *
+ * Pays nothing back. The seeds were spent the moment it went in the ground;
+ * digging it back up is not a refund, it is clearing the square.
+ */
 export function uproot(round: Round, row: number, col: number): Round {
   if (!plantAt(round, row, col)) return round
   return { ...round, plants: round.plants.filter((p) => !(p.row === row && p.col === col)) }

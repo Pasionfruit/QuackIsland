@@ -83,6 +83,7 @@ export {
 
 export {
   SEED,
+  WAVE,
   addSeed,
   age,
   claimSeed,
@@ -93,6 +94,7 @@ export {
   refusePlant,
   spawnSeed,
   uproot,
+  waveAt,
   type Plant,
   type Refusal,
   type Round,
@@ -107,6 +109,7 @@ export {
   chooseGardenMode,
   claim,
   clearHands,
+  dig,
   forgetPicker,
   getGardenMode,
   getGoofs,

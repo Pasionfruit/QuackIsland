@@ -30,12 +30,13 @@ import { GRID, everyCell, isLight } from './grid'
 import { GOOFS, gardenPhase, handIsFull, waitingToPick, type Picked } from './goofs'
 import { gardenModeById } from './modes'
 import { DEFENDERS, defenderById, silhouette, type DefenderId, type Shape } from './pieces'
-import { SEED, plantAt, refusePlant, type Round } from './round'
+import { SEED, plantAt, refusePlant, waveAt, type Round } from './round'
 import {
   ME,
   amDone,
   claim,
   clearHands,
+  dig,
   forgetPicker,
   place,
   setDone,
@@ -45,6 +46,14 @@ import {
   useGoofs,
   useRoundClock,
 } from './state'
+
+/**
+ * What a player has picked up, to drop onto the lawn: an animal from the
+ * tray, or the trowel from the bar. One state for both, because they share
+ * the same mechanics - grab it, drop it on a square, something happens - and
+ * a square only ever has one thing landing on it at a time.
+ */
+type Holding = { tool: 'plant'; id: DefenderId } | { tool: 'trowel' }
 
 export function GardenScreen() {
   const net = useNet()
@@ -57,6 +66,16 @@ export function GardenScreen() {
   const playing = mode === 'garden' && party.phase === 'playing'
   const everyone = [...peers.map((p) => p.id), ME]
   const phase = gardenPhase(playing, everyone, goofs.picked, goofs.hand)
+
+  /**
+   * What is picked up right now - an animal, or the trowel. Held here rather
+   * than inside `Planting`, because the trowel is grabbed from the bar, above
+   * it, and dropped on the lawn, inside it.
+   */
+  const [holding, setHolding] = useState<Holding | null>(null)
+  useEffect(() => {
+    if (phase !== 'planting') setHolding(null)
+  }, [phase])
 
   /**
    * Escape opens this. Reset the moment the round is no longer up, so leaving
@@ -126,13 +145,42 @@ export function GardenScreen() {
             end the party
           </button>
         ) : null}
+
+        {/* The trowel: top right, and only while there is a lawn to use it on.
+            Drag it onto a planted square, or click it and then click one. */}
+        {phase === 'planting' ? (
+          <button
+            type="button"
+            draggable
+            onDragStart={() => setHolding({ tool: 'trowel' })}
+            onDragEnd={() => setHolding(null)}
+            onClick={() =>
+              setHolding((was) => (was?.tool === 'trowel' ? null : { tool: 'trowel' }))
+            }
+            title="Trowel — drag onto a planted square to dig it up. Seeds are not refunded."
+            style={{
+              ...trowelButton,
+              ...(holding?.tool === 'trowel' ? trowelHeld : null),
+            }}
+          >
+            <span style={trowelIcon}>
+              <span style={trowelBlade} />
+              <span style={trowelHandle} />
+            </span>
+          </button>
+        ) : null}
       </div>
 
       {phase === 'picking' ? (
         <Picking hand={goofs.hand} picked={goofs.picked} everyone={everyone} />
       ) : (
-        <Planting round={goofs.round} hand={goofs.hand} />
+        <Planting round={goofs.round} hand={goofs.hand} holding={holding} setHolding={setHolding} />
       )}
+
+      {/* The wave, bottom right, for as long as there is a round to be in one. */}
+      {phase === 'planting' ? (
+        <div style={waveBadge}>wave {waveAt(goofs.round.elapsed)}</div>
+      ) : null}
 
       {paused ? <Paused onResume={() => setPaused(false)} /> : null}
     </div>
@@ -295,9 +343,17 @@ function Picking({
  * thing - a trackpad makes a long drag across twelve columns miserable, and a
  * click-then-click is also the only version of this a test can drive.
  */
-function Planting({ round, hand }: { round: Round; hand: readonly DefenderId[] }) {
-  /** The animal being dragged, or the one picked up with a click. */
-  const [holding, setHolding] = useState<DefenderId | null>(null)
+function Planting({
+  round,
+  hand,
+  holding,
+  setHolding,
+}: {
+  round: Round
+  hand: readonly DefenderId[]
+  holding: Holding | null
+  setHolding: (next: Holding | null | ((was: Holding | null) => Holding | null)) => void
+}) {
   const [refused, setRefused] = useState<string | null>(null)
   const clearRefusal = useRef(0)
 
@@ -311,14 +367,26 @@ function Planting({ round, hand }: { round: Round; hand: readonly DefenderId[] }
 
   const drop = (row: number, col: number) => {
     if (!holding) return
-    // Checked here as well as by the host, so a refusal is a sentence on the
-    // screen rather than a drop that quietly does nothing.
-    const no = refusePlant(round, hand, row, col, holding)
+
+    if (holding.tool === 'trowel') {
+      // Checked here as well as by the host, for the same reason planting is:
+      // a refusal is a sentence on the screen, not a drop that does nothing.
+      if (!plantAt(round, row, col)) {
+        say('nothing to dig up')
+        return
+      }
+      dig(row, col)
+      setHolding(null)
+      say(null)
+      return
+    }
+
+    const no = refusePlant(round, hand, row, col, holding.id)
     if (no) {
       say(no)
       return
     }
-    place(row, col, holding)
+    place(row, col, holding.id)
     setHolding(null)
     say(null)
   }
@@ -330,15 +398,15 @@ function Planting({ round, hand }: { round: Round; hand: readonly DefenderId[] }
         {hand.map((id) => {
           const animal = defenderById(id)
           const afford = round.seeds >= animal.cost
-          const held = holding === id
+          const held = holding?.tool === 'plant' && holding.id === id
           return (
             <button
               key={id}
               type="button"
               draggable={afford}
-              onDragStart={() => setHolding(id)}
+              onDragStart={() => setHolding({ tool: 'plant', id })}
               onDragEnd={() => setHolding(null)}
-              onClick={() => setHolding(held ? null : id)}
+              onClick={() => setHolding(held ? null : { tool: 'plant', id })}
               disabled={!afford}
               title={
                 afford
@@ -360,7 +428,12 @@ function Planting({ round, hand }: { round: Round; hand: readonly DefenderId[] }
         })}
         <span style={{ flex: 1 }} />
         <span style={{ opacity: 0.45, alignSelf: 'center' }}>
-          {refused ?? (holding ? 'now click a square' : 'drag an animal onto the lawn')}
+          {refused ??
+            (holding?.tool === 'trowel'
+              ? 'now click a planted square to dig it up'
+              : holding
+                ? 'now click a square'
+                : 'drag an animal onto the lawn, or the trowel onto one to dig it up')}
         </span>
       </div>
 
@@ -399,7 +472,14 @@ function Planting({ round, hand }: { round: Round; hand: readonly DefenderId[] }
                     // The column against the house gets a warm edge of its own,
                     // so the one lane that matters most reads as the front line.
                     ...(cell.col === 0 ? frontLine : null),
-                    cursor: holding ? 'copy' : 'default',
+                    cursor:
+                      holding?.tool === 'trowel'
+                        ? animal
+                          ? 'pointer'
+                          : 'not-allowed'
+                        : holding
+                          ? 'copy'
+                          : 'default',
                   }}
                 >
                   {animal ? (
@@ -729,4 +809,68 @@ const pauseCard: React.CSSProperties = {
   boxShadow: '0 18px 50px rgba(0,0,0,0.55)',
   color: '#f2ece2',
   font: '12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace',
+}
+
+/** The trowel, top right of the bar. Square, so it does not read as text. */
+const trowelButton: React.CSSProperties = {
+  ...button,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 30,
+  height: 26,
+  padding: 0,
+  cursor: 'grab',
+}
+
+const trowelHeld: React.CSSProperties = {
+  borderColor: '#e0a05a',
+  background: 'rgba(224,160,90,0.18)',
+}
+
+const trowelIcon: React.CSSProperties = {
+  position: 'relative',
+  width: 16,
+  height: 16,
+}
+
+/** Rotated as one, so a rounded blade and a straight handle read as one tool. */
+const trowelShapeCommon: React.CSSProperties = {
+  position: 'absolute',
+  left: '50%',
+  top: '50%',
+}
+
+const trowelBlade: React.CSSProperties = {
+  ...trowelShapeCommon,
+  width: 9,
+  height: 11,
+  background: '#c3cbd1',
+  borderRadius: '2px 2px 7px 7px',
+  boxShadow: 'inset 0 -2px 0 rgba(0,0,0,0.18)',
+  transform: 'translate(-50%, -85%) rotate(-40deg)',
+}
+
+const trowelHandle: React.CSSProperties = {
+  ...trowelShapeCommon,
+  width: 4,
+  height: 8,
+  background: '#8a5a34',
+  borderRadius: 2,
+  transform: 'translate(-50%, 25%) rotate(-40deg)',
+}
+
+/** The wave count, bottom right, for as long as there is a round to be in one. */
+const waveBadge: React.CSSProperties = {
+  position: 'fixed',
+  right: 14,
+  bottom: 14,
+  zIndex: 45,
+  padding: '6px 12px',
+  borderRadius: 8,
+  background: 'rgba(20, 22, 26, 0.85)',
+  border: '1px solid rgba(255,255,255,0.14)',
+  color: '#f2ece2',
+  font: '12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace',
+  letterSpacing: 0.4,
 }
