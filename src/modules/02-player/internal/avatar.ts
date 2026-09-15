@@ -34,15 +34,27 @@ export const AVATAR = {
   eyeSpread: 0.155,
   eyeRadius: 0.075,
 
-  /** The centre of the circle the smile is an arc of, above the feet. */
-  mouthY: 1.27,
-  /** The radius of that circle, so the smile hangs below `mouthY` by this. */
-  mouthRadius: 0.17,
-  /** How far round the bottom of the circle the smile runs, in radians. */
-  mouthArc: (140 * Math.PI) / 180,
+  /**
+   * The centre of the circle the smile is an arc of, above the feet.
+   *
+   * Held a hair below `eyeY - eyeRadius`, so the corners of the mouth - the
+   * highest points on a "u" - sit just under the eyes rather than level with
+   * them or lost far below.
+   */
+  mouthY: 1.21,
+  /** The radius of that circle: small, so the smile is a small "u". */
+  mouthRadius: 0.07,
+  /**
+   * How far round the circle the smile runs, in radians.
+   *
+   * A full half turn - the whole bottom of the circle, corner to corner -
+   * which is what makes this a "u" rather than a shallow crescent: the two
+   * ends sit level with `mouthY` and the middle dips a full radius below it.
+   */
+  mouthArc: Math.PI,
   /** The smile is drawn as overlapping dots; this is how many and how big. */
   mouthDots: 7,
-  mouthDotRadius: 0.042,
+  mouthDotRadius: 0.024,
 
   /**
    * How far each piece of the face sinks into the body, as a fraction of its
