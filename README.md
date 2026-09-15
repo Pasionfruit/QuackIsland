@@ -77,10 +77,11 @@ lobby plays the same one. The host chooses:
 - **Garden Goofs** — a flat **2D** lane defence on an eight-by-twelve lawn,
   drawn over the world. The party picks its loadout **together** from one
   shelf, seeds land on the grass and have to be clicked before they go, and
-  anybody can drag an animal into any square out of the shared pot. Animals:
-  duck, frog, rabbit, turtle. Pests, written down and not yet walking: worm,
-  beetle, snail, ant, grasshopper, bee, spider, moth. Choose **Endless**,
-  **Co-op** or **Versus**.
+  anybody can drag an animal into any square out of the shared pot. The roster
+  is **fifty defenders** — shooters, guards, growers and eaters, from the Pea
+  Shooter to the Garden Gnome — against **twenty-five pests**, from a Mite to
+  the Garden Gremlin. The pests do not walk yet. Choose **Endless**, **Co-op**
+  or **Versus**.
 
 The popup runs top to bottom in the order you do things: **your name**, then
 **ready up** once you are in a party, then the **code** that got you there,

@@ -9,17 +9,21 @@ to be clicked before they go, and the pot they pay into is shared.
 What works now:
 
 - **One lawn**, 8 rows by 12 columns, drawn in the DOM over the world.
-- **One loadout, chosen as a team.** Everybody picks from the same shelf into
-  the same packets. Nobody plants until everybody says they are done.
+- **One loadout, chosen as a team.** Six animals out of fifty, from one shelf
+  into one set of packets. Nobody plants until everybody says they are done.
 - **Seeds land sporadically** and run out. Clicking one pays the shared pot;
   missing it costs the party the seed.
 - **Anybody plants anything**, by dragging a packet onto a square or by
   clicking the packet and then the square. The pot pays, so what one player
   plants is what another player cannot.
 
-What is still missing is the other half of a lane defence: **no pests**.
-Nothing walks in, nothing is eaten, nothing fights, nothing is scored, and no
-round is ever won or lost.
+- **The whole roster**: fifty defenders and twenty-five pests, with costs,
+  health, reach, speed, bite and a silhouette apiece.
+
+What is still missing is the other half of a lane defence: **the pests do not
+walk yet**. All twenty-five are written down and none of them has ever been in
+a round - nothing is eaten, nothing fights, nothing is scored, and no round is
+ever won or lost.
 
 ## It is a 2D game
 
@@ -73,10 +77,10 @@ That is where this is going, and everything here is shaped for it:
 
 `GardenPiece` is the base of everything on the lawn. It carries what is true of
 both sides and no more - what it is, where it is, how much of it is left - and
-that is genuinely all a duck and a beetle have in common.
+that is genuinely all a Pea Shooter and a Raccoon have in common.
 
 ```
-GardenPiece            species, row, col, health, hurt(), alive, condition, square
+GardenPiece            species, row, col, health, shape, hurt(), alive, condition, square
  ├─ Defender           cost, enriches, planter
  └─ Pest               flies
 ```
@@ -85,27 +89,158 @@ GardenPiece            species, row, col, health, hurt(), alive, condition, squa
 the shelf long before any round exists; a piece is one duck in one square with
 the health it has left.
 
-### The four animals, so far
+## The roster, and the art brief
 
-| | Cost | Health | Role | Reach |
-| --- | --- | --- | --- | --- |
-| Duck | 25 | 100 | eats | the lane |
-| Frog | 50 | 80 | eats | 3 squares |
-| Rabbit | 25 | 60 | **enriches** | none |
-| Turtle | 40 | 400 | walls | none |
+Seventy-five species: **fifty** that defend the lawn and **twenty-five** that
+come for it. All of it is one table in `internal/pieces.ts` and not one branch
+anywhere switches on an id, so the seventy-sixth is a line and nothing else.
 
-Exactly one animal turns up seeds, and it cannot defend itself - the pot has to
-come from somewhere, and a lawn of nothing but growers should be as broken as a
-lawn with none. Tested, both ways.
+Two of them share a name with something on the other side, on purpose - there
+is a **Garden Snail** that helps and a **Snail** that eats the lawn, and the
+same for spiders. They are different creatures with different ids, and a test
+holds the two catalogues apart: an id in both would let a pest through a
+defender's guard.
 
-### The eight pests, so far
+### Style, for whoever builds the assets
 
-Worm, beetle, snail, ant, grasshopper, bee, spider, moth. Each has health, a
-speed in squares a second, a bite, and how it gets about: `walks`, `flies` (a
-wall is no use) or `hops`. **None of them is in a round yet.**
+Cute, colourful, goofy 3D garden-game look, matching the island. Rounded
+shapes, toy-like proportions, bright colours, expressive faces, simple readable
+silhouettes, family-friendly, low-poly and game-ready.
 
-**The numbers are first numbers.** They are in a table precisely so that
-balancing later is editing a table rather than hunting through code.
+**Not** realistic, scary, grotesque, or zombie-like. Nothing here is horror.
+
+- **Defenders look friendly and helpful.** They are on your side and they know
+  it.
+- **Pests look mischievous and silly, never threatening.** The difference
+  between a nuisance and a monster is most of what makes this game what it is.
+- **Every asset needs its own silhouette**, readable at the size of one square
+  from across the lawn.
+
+That last rule is already load-bearing rather than aspirational: every species
+carries a `shape`, the placeholder is drawn in those proportions, and a test
+checks no two shapes come out the same size. A Bamboo is tall and thin and a
+Pumpkin Shield is wide and low **today**, in coloured pills, before anybody
+models a thing. When the models arrive they have to match the shape the species
+already claims.
+
+**No art has been generated.** This module does not own the asset pipeline and
+must not call it - see the Meshy rule in `AGENTS.md`. What is here is the
+roster, the numbers, the colours and the silhouettes; the models are a separate
+job with a separate owner.
+
+### The numbers are first numbers
+
+They are ordered sensibly against each other - a Watermelon Mortar costs more
+and hits harder than a Pea Shooter, a Garden Gremlin takes ten Mites' worth of
+punishment - and not one of them has been played with, because there is nothing
+to play yet. Balancing is editing a column in a table, which is the only way a
+roster this size was ever going to be balanced at all.
+
+### The fifty defenders
+
+Generated from `internal/pieces.ts`, which is the only place any of
+this is true. `reach` of 99 means the whole lane.
+
+
+**Shooters — they clear the lane in front of them** (10)
+
+| Name | Cost | Health | Reach | Recharge | Shape |
+| --- | --- | --- | --- | --- | --- |
+| Pea Shooter | 25 | 100 | lane | 5s | tall |
+| Acorn Cannon | 50 | 110 | lane | 7s | tall |
+| Carrot Cannon | 75 | 100 | lane | 8s | tall |
+| Corn Popper | 100 | 90 | 4 | 10s | tall |
+| Tomato Tosser | 125 | 90 | lane | 12s | round |
+| Berry Blaster | 150 | 90 | lane | 12s | round |
+| Pepper Popper | 150 | 80 | 3 | 20s | tall |
+| Cucumber Catapult | 175 | 100 | lane | 15s | wide |
+| Pumpkin Launcher | 200 | 120 | lane | 18s | squat |
+| Watermelon Mortar | 300 | 110 | lane | 30s | squat |
+
+**Guards — they stand in the way** (15)
+
+| Name | Cost | Health | Reach | Recharge | Shape |
+| --- | --- | --- | --- | --- | --- |
+| Lily Pad | 25 | 100 | 0 | 8s | wide |
+| Potato Pal | 25 | 350 | 0 | 20s | squat |
+| Moss Mat | 50 | 180 | 0 | 10s | wide |
+| Sticky Flower | 75 | 90 | 1 | 12s | tall |
+| Mushroom Bouncer | 75 | 150 | 1 | 14s | round |
+| Vine Trap | 75 | 120 | 1 | 15s | long |
+| Thorn Bush | 100 | 200 | 1 | 12s | spiky |
+| Sneezy Flower | 100 | 90 | 2 | 14s | tall |
+| Cactus Guard | 125 | 250 | 1 | 16s | spiky |
+| Pumpkin Shield | 125 | 600 | 0 | 25s | round |
+| Garden Snail | 50 | 200 | 0 | 12s | round |
+| Turtle | 100 | 500 | 0 | 20s | wide |
+| Crab | 100 | 220 | 1 | 14s | wide |
+| Mole | 125 | 150 | 0 | 16s | squat |
+| Garden Gnome | 250 | 400 | 1 | 30s | tall |
+
+**Growers — they pay for everything else** (15)
+
+| Name | Cost | Health | Reach | Recharge | Shape |
+| --- | --- | --- | --- | --- | --- |
+| Sunflower | 25 | 60 | 0 | 6s | tall |
+| Daisy | 50 | 60 | 0 | 9s | tall |
+| Water Lily | 50 | 70 | 0 | 10s | wide |
+| Berry Bush | 75 | 100 | 0 | 12s | round |
+| Mint Plant | 75 | 70 | 0 | 15s | tall |
+| Lucky Clover | 100 | 60 | 0 | 20s | round |
+| Lavender | 100 | 70 | 0 | 18s | tall |
+| Rose Bush | 125 | 120 | 0 | 16s | spiky |
+| Bamboo | 150 | 200 | 0 | 22s | tall |
+| Magic Mushroom | 200 | 80 | 0 | 30s | round |
+| Rabbit | 50 | 90 | 0 | 10s | squat |
+| Earthworm | 50 | 80 | 0 | 10s | long |
+| Squirrel | 75 | 90 | 0 | 12s | squat |
+| Butterfly | 75 | 50 | 0 | 12s | winged |
+| Bee | 100 | 60 | 0 | 14s | winged |
+
+**Eaters — they deal with whatever gets close** (10)
+
+| Name | Cost | Health | Reach | Recharge | Shape |
+| --- | --- | --- | --- | --- | --- |
+| Ladybug | 50 | 70 | 3 | 8s | round |
+| Duck | 75 | 130 | 4 | 10s | squat |
+| Frog | 100 | 110 | 3 | 12s | squat |
+| Chicken | 100 | 120 | 2 | 12s | squat |
+| Hedgehog | 125 | 180 | 1 | 14s | spiky |
+| Garden Spider | 125 | 90 | 2 | 15s | spiky |
+| Bird | 150 | 90 | lane | 16s | winged |
+| Otter | 150 | 160 | 3 | 18s | long |
+| Goat | 175 | 250 | 1 | 20s | squat |
+| Penguin | 175 | 180 | 2 | 20s | tall |
+
+### The twenty-five pests
+
+| Name | Health | Speed | Bite | Moves | Shape |
+| --- | --- | --- | --- | --- | --- |
+| Mite | 20 | 0.55 | 4 | walks | round |
+| Aphid | 25 | 0.4 | 5 | walks | round |
+| Ant | 30 | 0.45 | 6 | walks | long |
+| Flea | 35 | 0.6 | 6 | hops | round |
+| Mosquito | 40 | 0.5 | 9 | flies | winged |
+| Fly | 45 | 0.55 | 7 | flies | winged |
+| Moth | 50 | 0.34 | 7 | flies | winged |
+| Worm | 60 | 0.16 | 8 | walks | long |
+| Locust | 80 | 0.5 | 13 | flies | winged |
+| Grasshopper | 90 | 0.3 | 10 | hops | long |
+| Termite | 90 | 0.24 | 18 | walks | long |
+| Earwig | 100 | 0.3 | 12 | walks | long |
+| Spider | 110 | 0.26 | 14 | walks | spiky |
+| Weevil | 110 | 0.22 | 11 | walks | round |
+| Caterpillar | 120 | 0.18 | 10 | walks | long |
+| Cicada | 130 | 0.28 | 12 | flies | winged |
+| Slug | 150 | 0.12 | 14 | walks | long |
+| Centipede | 160 | 0.35 | 15 | walks | long |
+| Snail | 180 | 0.1 | 16 | walks | round |
+| Squirrel Thief | 180 | 0.55 | 15 | hops | squat |
+| Crow | 200 | 0.45 | 18 | flies | winged |
+| Beetle | 220 | 0.2 | 12 | walks | round |
+| Gopher | 260 | 0.2 | 20 | walks | squat |
+| Raccoon | 400 | 0.22 | 25 | walks | squat |
+| Garden Gremlin | 600 | 0.18 | 30 | walks | tall |
 
 ## Seeds
 

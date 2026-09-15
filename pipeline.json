@@ -1207,14 +1207,19 @@
         },
         {
           "id": "14.9",
-          "title": "The rest of the catalogue: 50 animals and 25 pests",
+          "title": "The roster: 50 defenders and 25 pests, with silhouettes",
+          "status": "done"
+        },
+        {
+          "id": "14.10",
+          "title": "The art: models for all 75, through the asset pipeline module",
           "status": "planned"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-15T00:11:51.450Z"
+          "at": "2026-09-15T02:15:14.841Z"
         },
         "human": {
           "status": "pending"
@@ -1223,9 +1228,9 @@
       },
       "freeze": null,
       "nonGoals": [
-        "No pests in a round yet: nothing walks in, nothing is eaten, nothing is scored",
+        "No pests in a round yet: all 25 are written down and none of them walks",
         "No winning or losing a round",
-        "No art and no animation - every creature is a coloured pill first",
+        "No art. The roster and the silhouettes are here; the models are another module’s job",
         "No per-mode rules yet - endless, co-op and versus differ in name only",
         "Nothing in 3D. It is a 2D game drawn over the world, not a place in it"
       ],

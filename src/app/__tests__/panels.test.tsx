@@ -223,7 +223,7 @@ describe('starting a round of Garden Goofs', () => {
     expect(host.innerHTML).toContain('between you')
 
     act(() => {
-      toggleAnimal('duck')
+      toggleAnimal('pea-shooter')
       setDone(true)
     })
 
@@ -254,7 +254,7 @@ describe('playing a round of Garden Goofs', () => {
     root = created
     act(() => created.render(<GardenScreen />))
     act(() => {
-      toggleAnimal('duck')
+      toggleAnimal('pea-shooter')
       setDone(true)
     })
     return host
@@ -280,19 +280,19 @@ describe('playing a round of Garden Goofs', () => {
     const before = getGoofs().round.seeds
 
     // Pick the duck up out of the tray, then put it in a square.
-    const tray = [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Duck'))
+    const tray = [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Pea Shooter'))
     click(tray ?? null)
     click(host.querySelector('[data-cell="3,5"]'))
 
     const planted = getGoofs().round.plants
     expect(planted).toHaveLength(1)
-    expect(planted[0]).toEqual({ row: 3, col: 5, id: 'duck' })
-    expect(getGoofs().round.seeds).toBe(before - defenderById('duck').cost)
+    expect(planted[0]).toEqual({ row: 3, col: 5, id: 'pea-shooter' })
+    expect(getGoofs().round.seeds).toBe(before - defenderById('pea-shooter').cost)
   })
 
   it('refuses a square that is already taken, and charges nothing for trying', () => {
     const host = lawn()
-    const tray = () => [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Duck'))
+    const tray = () => [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Pea Shooter'))
 
     click(tray() ?? null)
     click(host.querySelector('[data-cell="1,1"]'))
@@ -348,16 +348,16 @@ describe('playing a round of Garden Goofs', () => {
 
   it('will not let you plant what the pot cannot pay for', () => {
     const host = lawn()
-    const duck = defenderById('duck')
-    const affordable = Math.floor(GOOFS.startingSeeds / duck.cost)
+    const staple = defenderById('pea-shooter')
+    const affordable = Math.floor(GOOFS.startingSeeds / staple.cost)
 
-    const tray = () => [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Duck'))
+    const tray = () => [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Pea Shooter'))
     for (let i = 0; i < affordable; i++) {
       click(tray() ?? null)
       click(host.querySelector(`[data-cell="0,${i}"]`))
     }
     expect(getGoofs().round.plants).toHaveLength(affordable)
-    expect(getGoofs().round.seeds).toBeLessThan(duck.cost)
+    expect(getGoofs().round.seeds).toBeLessThan(staple.cost)
 
     // The tray packet goes dead rather than letting you try.
     expect(tray()?.hasAttribute('disabled')).toBe(true)

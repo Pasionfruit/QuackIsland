@@ -28,7 +28,16 @@ import {
   isDefenderId,
   isPestId,
   pestById,
+  silhouette,
+  type Gait,
+  type Role,
+  type Shape,
 } from '../internal/pieces'
+
+/** Every shape, role and gait there is, so a test can walk all of them. */
+const SHAPES: Shape[] = ['tall', 'round', 'squat', 'wide', 'spiky', 'long', 'winged']
+const ROLES: Role[] = ['shoots', 'guards', 'grows', 'eats']
+const GAITS: Gait[] = ['walks', 'flies', 'hops']
 import {
   GOOFS,
   canBegin,
@@ -99,33 +108,61 @@ describe('the lawn', () => {
   })
 })
 
-describe('the animals and the pests', () => {
-  it('is four animals: duck, frog, rabbit, turtle', () => {
-    expect(DEFENDERS.map((d) => d.id)).toEqual(['duck', 'frog', 'rabbit', 'turtle'])
+describe('the roster', () => {
+  it('is fifty animals and twenty-five pests', () => {
+    expect(DEFENDERS).toHaveLength(50)
+    expect(PESTS).toHaveLength(25)
   })
 
-  it('is eight pests', () => {
-    expect(PESTS.map((p) => p.id)).toEqual([
-      'worm',
-      'beetle',
-      'snail',
-      'ant',
-      'grasshopper',
-      'bee',
-      'spider',
-      'moth',
-    ])
+  it('names everybody once, on both sides', () => {
+    expect(new Set(DEFENDERS.map((d) => d.id)).size).toBe(DEFENDERS.length)
+    expect(new Set(PESTS.map((p) => p.id)).size).toBe(PESTS.length)
+    expect(new Set(DEFENDERS.map((d) => d.name)).size).toBe(DEFENDERS.length)
+    expect(new Set(PESTS.map((p) => p.name)).size).toBe(PESTS.length)
   })
 
-  it('gives everything a name, a line to read and a colour to be', () => {
+  it('keeps the two catalogues apart, snails and spiders included', () => {
+    // There is a garden snail that helps and a snail that eats the lawn, and
+    // the same for spiders. They are different creatures with different ids,
+    // and an id that was in both would let a pest through a defender's guard.
+    for (const pest of PESTS) expect(isDefenderId(pest.id)).toBe(false)
+    for (const animal of DEFENDERS) expect(isPestId(animal.id)).toBe(false)
+    expect(isDefenderId('garden-snail')).toBe(true)
+    expect(isPestId('snail')).toBe(true)
+  })
+
+  it('gives everything a name, a line to read, a colour and a shape', () => {
     for (const species of [...DEFENDERS, ...PESTS]) {
       expect(species.name.length).toBeGreaterThan(0)
       expect(species.blurb.length).toBeGreaterThan(0)
-      // Until the art is done every creature is a pill, so the colour is the
-      // only thing telling a duck from a turtle.
+      // Until the art is done every creature is a pill, so the colour and the
+      // shape are the whole of what tells one from another.
       expect(species.colour).toMatch(/^#[0-9a-f]{6}$/i)
       expect(species.health).toBeGreaterThan(0)
+      expect(SHAPES).toContain(species.shape)
     }
+  })
+
+  it('draws a different silhouette for every shape there is', () => {
+    // The design rule: recognisable at a small distance. Two shapes that came
+    // out the same size would be one shape with two names.
+    const drawn = SHAPES.map((shape) => JSON.stringify(silhouette(shape)))
+    expect(new Set(drawn).size).toBe(SHAPES.length)
+    for (const shape of SHAPES) {
+      const { width, height, radius } = silhouette(shape)
+      expect(width).toBeGreaterThan(0)
+      expect(width).toBeLessThanOrEqual(1)
+      expect(height).toBeGreaterThan(0)
+      expect(height).toBeLessThanOrEqual(1)
+      expect(radius).toBeGreaterThanOrEqual(0)
+    }
+  })
+
+  it('uses more than a couple of shapes across fifty animals', () => {
+    // Fifty things that are all "round" would be fifty things nobody can tell
+    // apart on a lawn.
+    expect(new Set(DEFENDERS.map((d) => d.shape)).size).toBeGreaterThan(3)
+    expect(new Set(PESTS.map((p) => p.shape)).size).toBeGreaterThan(3)
   })
 
   it('costs something to plant, and takes time to come back', () => {
@@ -136,18 +173,18 @@ describe('the animals and the pests', () => {
     }
   })
 
-  it('has exactly one animal that turns up seeds', () => {
-    // The pot has to come from somewhere, and a lawn of nothing but growers is
-    // as broken as a lawn with none.
-    expect(DEFENDERS.filter((d) => d.role === 'enriches')).toHaveLength(1)
-    expect(DEFENDERS.some((d) => d.role === 'walls')).toBe(true)
-    expect(DEFENDERS.some((d) => d.role === 'eats')).toBe(true)
+  it('has all four jobs on the shelf, and plenty of each', () => {
+    for (const role of ROLES) {
+      expect(DEFENDERS.filter((d) => d.role === role).length).toBeGreaterThan(5)
+    }
   })
 
   it('gives a grower no reach, because it cannot defend itself', () => {
+    // The pot has to come from somewhere, and something that both paid and
+    // fought would make every other choice on the shelf pointless.
     for (const animal of DEFENDERS) {
-      if (animal.role !== 'eats') expect(animal.reach).toBe(0)
-      else expect(animal.reach).toBeGreaterThan(0)
+      if (animal.role === 'grows') expect(animal.reach).toBe(0)
+      if (animal.role === 'shoots') expect(animal.reach).toBeGreaterThan(0)
     }
   })
 
@@ -155,18 +192,28 @@ describe('the animals and the pests', () => {
     for (const pest of PESTS) {
       expect(pest.speed).toBeGreaterThan(0)
       expect(pest.bite).toBeGreaterThan(0)
-      expect(['walks', 'flies', 'hops']).toContain(pest.moves)
+      expect(GAITS).toContain(pest.moves)
     }
   })
 
-  it('has something a wall cannot stop', () => {
+  it('has some pests a wall cannot stop, and some that hop it', () => {
     expect(PESTS.some((p) => p.moves === 'flies')).toBe(true)
+    expect(PESTS.some((p) => p.moves === 'hops')).toBe(true)
+    expect(PESTS.some((p) => p.moves === 'walks')).toBe(true)
+  })
+
+  it('runs from a nuisance up to something you have to plan for', () => {
+    // Cheap and quick at one end, slow and enormous at the other. A roster
+    // where everything cost and took the same would be one pest with 25 names.
+    const health = PESTS.map((p) => p.health)
+    expect(Math.max(...health)).toBeGreaterThan(Math.min(...health) * 10)
+    const costs = DEFENDERS.map((d) => d.cost)
+    expect(Math.max(...costs)).toBeGreaterThan(Math.min(...costs) * 5)
   })
 
   it('starts the pot able to afford something and not everything', () => {
     expect(DEFENDERS.some((d) => GOOFS.startingSeeds >= d.cost)).toBe(true)
-    const all = DEFENDERS.reduce((sum, d) => sum + d.cost, 0)
-    expect(GOOFS.startingSeeds).toBeLessThan(all * 2)
+    expect(DEFENDERS.some((d) => GOOFS.startingSeeds < d.cost)).toBe(true)
   })
 
   it('looks one up, and guards one from the wire', () => {
@@ -182,14 +229,13 @@ describe('the animals and the pests', () => {
       expect(isDefenderId(junk)).toBe(false)
       expect(isPestId(junk)).toBe(false)
     }
-    // The two catalogues do not overlap, so neither guard lets the other in.
-    for (const pest of PESTS) expect(isDefenderId(pest.id)).toBe(false)
   })
 
   it('cannot be added to at runtime', () => {
     expect(Object.isFrozen(DEFENDERS)).toBe(true)
     expect(Object.isFrozen(PESTS)).toBe(true)
     expect(Object.isFrozen(DEFENDERS[0])).toBe(true)
+    expect(Object.isFrozen(PESTS[0])).toBe(true)
   })
 })
 
@@ -237,7 +283,7 @@ describe('a piece on the lawn', () => {
   })
 
   it('knows what a wall will not stop', () => {
-    expect(new Pest(pestById('bee'), 0, 8).flies).toBe(true)
+    expect(new Pest(pestById('crow'), 0, 8).flies).toBe(true)
     expect(new Pest(pestById('worm'), 0, 8).flies).toBe(false)
   })
 

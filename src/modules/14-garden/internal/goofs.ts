@@ -125,12 +125,14 @@ export function gardenPhase(
  * The animals, in the order the shelf lists them.
  *
  * Grouped by what they are for rather than left in catalogue order, because
- * this list is meant to grow to fifty and fifty of anything in one flat column
- * is not a choice, it is a scroll. Within a group they stay in catalogue
- * order, so a party that has learned where the duck is keeps being right.
+ * there are fifty of them and fifty in one flat column is not a choice, it is
+ * a scroll. Within a group they stay in catalogue order, so a party that has
+ * learned where the duck is keeps being right.
  */
 export function shelf(): { role: string; animals: typeof DEFENDERS }[] {
-  const roles = ['eats', 'walls', 'enriches'] as const
+  // The order a party reads them in: what shoots, what stands in the way, what
+  // pays for it, and what walks about eating things.
+  const roles = ['shoots', 'guards', 'grows', 'eats'] as const
   const groups: { role: string; animals: typeof DEFENDERS }[] = []
   for (const role of roles) {
     const animals = DEFENDERS.filter((animal) => animal.role === role)

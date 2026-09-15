@@ -49,10 +49,14 @@ export {
   isDefenderId,
   isPestId,
   pestById,
+  silhouette,
   type DefenderId,
   type DefenderSpecies,
+  type Gait,
   type PestId,
   type PestSpecies,
+  type Role,
+  type Shape,
   type Species,
 } from './internal/pieces'
 

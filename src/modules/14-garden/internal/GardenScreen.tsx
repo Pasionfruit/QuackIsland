@@ -24,7 +24,7 @@ import { useGameMode } from '../../13-modes'
 import { GRID, everyCell, isLight } from './grid'
 import { GOOFS, gardenPhase, handIsFull, shelf, waitingToPick, type Picked } from './goofs'
 import { gardenModeById } from './modes'
-import { defenderById, type DefenderId } from './pieces'
+import { defenderById, silhouette, type DefenderId, type Shape } from './pieces'
 import { SEED, plantAt, refusePlant, type Round } from './round'
 import {
   ME,
@@ -147,7 +147,7 @@ function Picking({
               title="Take it out again"
               style={{ ...packet, borderColor: '#6fb6c8', background: 'rgba(111,182,200,0.16)' }}
             >
-              <span style={{ ...pill, background: animal.colour }} />
+              <span style={shapeOf(animal.shape, animal.colour, 22)} />
               <span>{animal.name}</span>
               <span style={{ color: '#e8d98a' }}>{animal.cost}</span>
             </button>
@@ -177,7 +177,7 @@ function Picking({
                       cursor: done || spare ? 'default' : 'pointer',
                     }}
                   >
-                    <span style={{ ...pill, background: animal.colour }} />
+                    <span style={shapeOf(animal.shape, animal.colour, 22)} />
                     <span style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                       <span>{animal.name}</span>
                       <span style={{ color: '#e8d98a' }}>{animal.cost}</span>
@@ -294,7 +294,7 @@ function Planting({ round, hand }: { round: Round; hand: readonly DefenderId[] }
                 opacity: afford ? 1 : 0.4,
               }}
             >
-              <span style={{ ...pill, background: animal.colour }} />
+              <span style={shapeOf(animal.shape, animal.colour, 22)} />
               <span>{animal.name}</span>
               <span style={{ color: '#e8d98a' }}>{animal.cost}</span>
             </button>
@@ -327,7 +327,12 @@ function Planting({ round, hand }: { round: Round; hand: readonly DefenderId[] }
                 cursor: holding ? 'copy' : 'default',
               }}
             >
-              {animal ? <span style={{ ...planted, background: animal.colour }} /> : null}
+              {animal ? (
+                <span
+                  title={animal.name}
+                  style={{ ...planted, ...shapeOf(animal.shape, animal.colour, null) }}
+                />
+              ) : null}
 
               {/* A seed, shrinking as it runs out. Clicking it is the whole of
                   the economy: miss it and the pot does not grow. */}
@@ -361,6 +366,34 @@ function Planting({ round, hand }: { round: Round; hand: readonly DefenderId[] }
 }
 
 const clamp = (n: number) => Math.max(0, Math.min(1, n))
+
+/**
+ * A placeholder in the shape of the thing it stands for.
+ *
+ * Every creature is a coloured pill until the art is done, and fifty pills of
+ * one size would be fifty things nobody can tell apart on a lawn. The species
+ * carries its silhouette, so a Bamboo is tall and thin and a Pumpkin Shield is
+ * wide and low **now** - and the same field is the brief for whoever models
+ * them later.
+ *
+ * `box` is what it is drawn inside: a percentage of a square on the lawn, or a
+ * pixel size in the tray.
+ */
+function shapeOf(shape: Shape, colour: string, box: number | null): React.CSSProperties {
+  const { width, height, radius } = silhouette(shape)
+  // Rounded, or a third of a pixel arrives in the DOM as 18.919999999999998.
+  const round = (n: number) => Math.round(n * 100) / 100
+  const size = (fraction: number) =>
+    box === null ? `${round(fraction * 100)}%` : `${round(fraction * box)}px`
+  return {
+    display: 'block',
+    flex: '0 0 auto',
+    background: colour,
+    width: size(width),
+    height: size(height),
+    borderRadius: size(radius),
+  }
+}
 
 const screen: React.CSSProperties = {
   position: 'fixed',
@@ -446,15 +479,6 @@ const emptySlot: React.CSSProperties = {
   border: '1px dashed rgba(255,255,255,0.14)',
 }
 
-/** Every creature is a pill until the art is done. */
-const pill: React.CSSProperties = {
-  display: 'block',
-  width: 12,
-  height: 19,
-  borderRadius: 6,
-  flex: '0 0 auto',
-}
-
 const lawn: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: `repeat(${GRID.cols}, 1fr)`,
@@ -473,11 +497,8 @@ const square: React.CSSProperties = {
   justifyContent: 'center',
 }
 
+/** What `shapeOf` does not decide: everything on the lawn casts a little shade. */
 const planted: React.CSSProperties = {
-  display: 'block',
-  width: '38%',
-  height: '62%',
-  borderRadius: 999,
   boxShadow: '0 2px 5px rgba(0,0,0,0.35)',
 }
 
