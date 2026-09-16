@@ -174,13 +174,23 @@ describe('a game briefing', () => {
 
   it('lists the three stages with the next one marked', () => {
     const where = mount()
-    act(() => openMinigame('zombie-tag'))
+    // A game nothing has been done to: the first stage is the one owed.
+    act(() => openMinigame('duck-hunt'))
 
     for (const step of BUILD_STEPS) {
       expect(where.querySelector(`[data-step="${step}"]`)).not.toBeNull()
     }
     expect(where.querySelector('[data-step="environment"]')?.textContent).toContain('→')
     expect(where.querySelector('[data-step="controls"]')?.textContent).not.toContain('→')
+  })
+
+  it('ticks off the stages a part-built game has finished', () => {
+    const where = mount()
+    act(() => openMinigame('zombie-tag'))
+
+    expect(where.querySelector('[data-step="environment"]')?.textContent).toContain('✓')
+    expect(where.querySelector('[data-step="controls"]')?.textContent).toContain('✓')
+    expect(where.querySelector('[data-step="assets"]')?.textContent).toContain('→')
   })
 
   it('opens a free slot like any other, and says a number is waiting', () => {

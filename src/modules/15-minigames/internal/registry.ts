@@ -17,9 +17,9 @@
  * regardless: which one it is, and whether it is being briefed, played or
  * over.
  *
- * Empty today, on purpose. Every game in the catalogue is at `template`, so
- * nothing has registered yet and the screen falls back to a template panel for
- * all of them - see `MinigameScreen`.
+ * One game in it today: Zombie Tag, from `16-zombie-tag`, which registers
+ * itself when that module is imported. The other forty have no build, so the
+ * screen briefs them and then says so - see `MinigameScreen`.
  */
 import type { ReactNode } from 'react'
 import type { MinigameId } from './catalogue'

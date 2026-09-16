@@ -107,16 +107,19 @@ const ENTRIES = [
     title: 'Zombie Tag',
     kind: 'free-for-all',
     description: [
-      'Six zombies start the round and come for everybody. Get caught and you become one of them.',
-      'The arena is walled and full of things to put between you and them, and everybody spawns in the middle of it. Push knocks another player down: three seconds between pushes, and a second on the floor for whoever you hit.',
-      'Zombies move at half your speed. The last player still running wins.',
+      'Survive as long as you can while six zombies chase everybody around an enclosed arena full of obstacles. All of you spawn in the middle, and everything is solid - bodies included.',
+      'Get caught and you become a zombie and join the chase.',
+      'Players move twice as fast as zombies, and can push each other to disrupt an escape. A push has a three second cooldown and puts whoever it lands on down for one second.',
+      'The last surviving player wins. The camera never moves - the whole arena is in front of you the entire round.',
     ],
     controls: [
       { input: 'WASD', does: 'Move' },
       { input: 'Space', does: 'Push' },
     ],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `16-zombie-tag`. The assets stage is still to do - every body
+    // is a coloured circle and every crate a brown rectangle.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'messy-maze',

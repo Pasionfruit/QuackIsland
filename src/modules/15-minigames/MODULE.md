@@ -213,7 +213,7 @@ syncs it.
 
 ## Deliberate non-goals
 
-- No minigame. Forty-one are named and none is playable.
+- No minigame beyond the first. Zombie Tag plays; the other forty do not.
 - No rules, scoring, rounds or win conditions - each arrives with its build.
 - No turn order for the one-vs-all games. The kind is recorded; the rotation
   that goes with it is not.
@@ -222,6 +222,8 @@ syncs it.
 
 ## Known limitations
 
+- **One game of forty-one is built.** Zombie Tag has its environment and its
+  controls; everything else is a briefing with nothing behind it.
 - **The controls are half written.** Games 1–12 arrived with theirs and they
   are in the catalogue; 13 onwards have none, and their controls tab says so.
 - **Play starts a round for you and nobody else.** See above - the countdown

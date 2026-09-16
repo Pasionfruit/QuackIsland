@@ -104,7 +104,8 @@
       "modules": [
         "13-modes",
         "14-garden",
-        "15-minigames"
+        "15-minigames",
+        "16-zombie-tag"
       ]
     }
   ],
@@ -1282,7 +1283,9 @@
       "dependsOn": [
         "00-core"
       ],
-      "dependents": [],
+      "dependents": [
+        "16-zombie-tag"
+      ],
       "generation": 1,
       "contract": {
         "version": "0.1.0",
@@ -1349,6 +1352,84 @@
         "No 3D. The dashboard and the templates are DOM over the world, like Garden Goofs",
         "No art, sound or characters",
         "No synced start: play runs the countdown on your own screen, not the party's"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "16-zombie-tag",
+      "phase": "P6",
+      "title": "Minigame 1, Zombie Tag: six zombies, an arena of crates, and the last one running",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "16.1",
+          "title": "The environment: a walled arena, crates, spawns, and one collision routine",
+          "status": "done"
+        },
+        {
+          "id": "16.2",
+          "title": "The rules: chase, catch, convert, and the last one running",
+          "status": "done"
+        },
+        {
+          "id": "16.3",
+          "title": "The controls: WASD to move, space to push, with cooldown and stun",
+          "status": "done"
+        },
+        {
+          "id": "16.4",
+          "title": "A still camera over the whole arena, and the round drawn into it",
+          "status": "done"
+        },
+        {
+          "id": "16.5",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "16.6",
+          "title": "The assets: models, sprites and sound in place of coloured circles",
+          "status": "planned"
+        },
+        {
+          "id": "16.7",
+          "title": "A round synced across the lobby, in place of the stand-in runners",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-16T01:45:18.087Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No assets: every body is a coloured circle and every crate a brown rectangle",
+        "No multiplayer round yet - the other runners are stand-ins, not peers",
+        "No moving camera, ever. The still overhead view is the game, not a limitation",
+        "No pathfinding: zombies go at you and turn aside when a crate is in the way",
+        "No zombie pushing - the push is for disrupting other runners, not for fighting back",
+        "No sound, no score kept between rounds, no ranking across a party"
       ],
       "budgets": {
         "drawCallsMax": 0,

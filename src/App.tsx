@@ -15,6 +15,9 @@ import { LobbyPopup } from './app/LobbyPopup'
 import { useParty } from './modules/10-party'
 import { GardenScreen } from './modules/14-garden'
 import { MinigameScreen } from './modules/15-minigames'
+// Imported for the side effect: it registers itself with the minigame
+// registry, which is the whole of how a built game plugs in.
+import './modules/16-zombie-tag'
 import { Scoreboard } from './app/Scoreboard'
 import { Boundary } from './app/Boundary'
 import { Toasts } from './app/Toasts'

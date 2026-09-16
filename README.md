@@ -81,7 +81,12 @@ lobby plays the same one. The host chooses:
   **minigames** in the party panel to see the lot on one screen — sand and sea
   rather than the dark HUD, a tile each, no descriptions to wade through.
   Opening one gives you its own page: what it is, what you press, and a **play**
-  button that counts three, two, one into a round that is still empty.
+  button that counts three, two, one into the round. **Zombie Tag** is the
+  first one built — six zombies chase everybody around a walled arena of
+  crates, all of you spawn in the middle, and getting caught turns you into one
+  of them. You move twice as fast as a zombie; **space** shoves another runner
+  over for a second, on a three second cooldown. The camera never moves: the
+  whole arena is in front of you the entire round. Last one running wins.
 - **Garden Goofs** — a flat **2D** lane defence on an eight-by-twelve lawn.
   Starting it loads a page of its own, opaque and full screen, not a dialog
   over the world — a house on the left edge marks what you are defending. The
@@ -191,6 +196,7 @@ world is reproducible and testable.
 | `13-modes` | Which game the party is playing, and the lobby popup that chooses it |
 | `14-garden` | Garden Goofs: the 2D 8x12 lawn, a shared loadout, seeds and planting |
 | `15-minigames` | Volcano Island's forty-one minigames: the catalogue, the dashboard, and the seam each one plugs into |
+| `16-zombie-tag` | Minigame 1: six zombies, an arena of crates, and the last one running |
 
 Next up: a sky dome driving the day cycle that `00-core` already exposes, then
 the Meshy asset pipeline and vegetation placed against the terrain's height

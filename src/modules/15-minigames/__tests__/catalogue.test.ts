@@ -87,13 +87,40 @@ describe('the catalogue', () => {
     }
   })
 
-  it('has not started a single stage of a single game yet', () => {
-    // The honest statement of where this pass got to. It is meant to fail the
-    // day a stage is actually finished, at which point it is the thing to edit.
+  it('never finishes a stage before the one it depends on', () => {
+    // The stages are in dependency order, so a game with its controls done and
+    // no environment is a game whose record is wrong. Nothing enforces the
+    // order when the entry is written down, so this does.
+    for (const game of MINIGAMES) {
+      let owed = false
+      for (const step of BUILD_STEPS) {
+        if (!game.done[step]) owed = true
+        else expect(owed, `${game.id} finished ${step} out of order`).toBe(false)
+      }
+    }
+  })
+
+  it('counts up to the catalogue and no further', () => {
     const far = progress()
-    expect(far.playable).toBe(0)
-    for (const step of BUILD_STEPS) expect(far.steps[step]).toBe(0)
     expect(far.named + far.reserved).toBe(MINIGAMES.length)
+    for (const step of BUILD_STEPS) {
+      expect(far.steps[step]).toBeLessThanOrEqual(far.named)
+    }
+    // Each stage can only be as far along as the one before it.
+    expect(far.steps.controls).toBeLessThanOrEqual(far.steps.environment)
+    expect(far.steps.assets).toBeLessThanOrEqual(far.steps.controls)
+  })
+
+  it('knows Zombie Tag is part built and nothing else has started', () => {
+    // The honest statement of where the build has got to. Meant to be edited
+    // the day the next game starts, which is the point of writing it down.
+    const zombie = minigameById('zombie-tag')
+    expect(zombie.done).toEqual({ environment: true, controls: true, assets: false })
+    expect(nextStep(zombie)).toBe('assets')
+
+    const started = MINIGAMES.filter((game) => stepsDone(game) > 0).map((game) => game.id)
+    expect(started).toEqual(['zombie-tag'])
+    expect(progress().playable).toBe(0)
   })
 
   it('finds a game by its id, and knows an id it has never heard of', () => {
