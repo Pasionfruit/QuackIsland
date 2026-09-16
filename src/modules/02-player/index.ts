@@ -9,14 +9,16 @@
 export {
   PLAYER,
   IDLE_INPUT,
+  STUN,
   createPlayer,
   stepPlayer,
+  stunFall,
   type PlayerState,
   type PlayerInput,
   type StepOptions,
 } from './internal/controller'
 
-export { AVATAR, bodyPose, createAvatar, facePoints } from './internal/avatar'
+export { AVATAR, armPoints, bodyPose, createAvatar, facePoints } from './internal/avatar'
 
 export {
   VIEW,
@@ -41,5 +43,7 @@ export {
   type PlayerProps,
   getPlayerState,
   isCameraOffPlayer,
+  isStunned,
   refocusCamera,
+  stunPlayer,
 } from './internal/PlayerView'

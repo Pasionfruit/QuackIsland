@@ -35,7 +35,13 @@ import {
   useLightingSettings,
   useWeather,
 } from '../modules/00-core'
-import { isCameraOffPlayer, refocusCamera, toggleViewMode, useViewMode } from '../modules/02-player'
+import {
+  isCameraOffPlayer,
+  refocusCamera,
+  stunPlayer,
+  toggleViewMode,
+  useViewMode,
+} from '../modules/02-player'
 import { AUDIO, getCueEngine, readStoredVolume, setEffectsVolume } from '../modules/08-audio'
 import { useNet } from '../modules/09-net'
 import { CURRENCIES, clearPurse, earn, trySpend, usePurse } from '../modules/11-currency'
@@ -403,6 +409,22 @@ export function DebugPanel() {
           }}
         >
           refocus on player (F)
+        </button>
+
+        {/* No minigame pushes anybody over yet, so this is the only way to see
+            the stun. Temporary, like the animation it is here to show. */}
+        <button
+          type="button"
+          onClick={() => stunPlayer(1.5)}
+          style={{
+            ...flat,
+            marginTop: 4,
+            border: '1px solid #6b6862',
+            borderRadius: 4,
+            padding: '2px 8px',
+          }}
+        >
+          knock over (1.5s)
         </button>
       </Section>
 

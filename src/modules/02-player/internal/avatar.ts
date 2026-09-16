@@ -78,6 +78,27 @@ export const AVATAR = {
    * 0.2 or so floats it upright and leans it into the stroke instead.
    */
   swimTip: 1,
+
+  /**
+   * The arms: one capsule a side, and where they hang.
+   *
+   * Temporary, and built the same way the rest of the body is - a primitive
+   * rather than a model, because the failure modes of four numbers are the
+   * ones you can see in the numbers. There is no rig and nothing swings: they
+   * are merged into the body and come along with whatever it does, which is
+   * all a stunned body tipping over actually needs.
+   *
+   * `armDrop` is where the shoulder sits below the eyes, and `armOut` how far
+   * the hand swings away from the body - a small angle, so the silhouette
+   * still reads as a pill with arms rather than a starfish.
+   */
+  shoulderY: 1.06,
+  armLength: 0.46,
+  armRadius: 0.075,
+  /** How far out from the middle the shoulder is. Just proud of the body. */
+  armSpread: 0.36,
+  /** How far the arms swing out from straight down, in radians. */
+  armOut: 0.34,
 } as const
 
 /** The curve of the body at a given sideways offset, at face height. */
@@ -121,6 +142,25 @@ export function facePoints(): { x: number; y: number; z: number; radius: number 
   return points
 }
 
+/**
+ * Where each arm hangs: the middle of the capsule, and how far it is swung out.
+ *
+ * Pure, so the thing that is easy to get wrong - an arm inside the body, or
+ * floating a hand's width off it - is checked by a test rather than by looking
+ * at it. Swung out by `armOut` about the shoulder, so the middle of the arm
+ * moves out and up by exactly the half-length it pivots through.
+ */
+export function armPoints(): { x: number; y: number; roll: number }[] {
+  const half = AVATAR.armLength / 2
+  return [-1, 1].map((side) => ({
+    x: side * (AVATAR.armSpread + Math.sin(AVATAR.armOut) * half),
+    y: AVATAR.shoulderY - Math.cos(AVATAR.armOut) * half,
+    // Positive roll swings the +X arm away from the body, so the sign follows
+    // the side it is on.
+    roll: -side * AVATAR.armOut,
+  }))
+}
+
 /** Built on first use and then shared by every body in the world. */
 let shared: { body: BufferGeometry; face: BufferGeometry; skin: MeshStandardMaterial; ink: MeshStandardMaterial } | null =
   null
@@ -128,10 +168,23 @@ let shared: { body: BufferGeometry; face: BufferGeometry; skin: MeshStandardMate
 function parts() {
   if (shared) return shared
 
-  const body = new CapsuleGeometry(PLAYER.radius, PLAYER.height - PLAYER.radius * 2, 6, 12)
+  const trunk = new CapsuleGeometry(PLAYER.radius, PLAYER.height - PLAYER.radius * 2, 6, 12)
   // The capsule is built about its own middle and the controller keeps the
   // feet at zero, so lift it once here rather than everywhere it is used.
-  body.translate(0, PLAYER.height / 2, 0)
+  trunk.translate(0, PLAYER.height / 2, 0)
+
+  // The arms are merged into the trunk rather than hung off it as their own
+  // meshes: nothing animates them separately, so two more meshes would be two
+  // more draw calls for a body that is still standing at exactly one pose.
+  const limbs: BufferGeometry[] = [trunk]
+  for (const arm of armPoints()) {
+    const limb = new CapsuleGeometry(AVATAR.armRadius, AVATAR.armLength - AVATAR.armRadius * 2, 4, 8)
+    limb.rotateZ(arm.roll)
+    limb.translate(arm.x, arm.y, 0)
+    limbs.push(limb)
+  }
+  const body = mergeGeometries(limbs, false) as BufferGeometry
+  for (const limb of limbs) limb.dispose()
 
   const pieces: BufferGeometry[] = []
   for (const point of facePoints()) {
@@ -179,15 +232,32 @@ export function createAvatar(): Group {
 }
 
 /**
- * How the body sits, given how far it has leaned into a swim.
+ * How the body sits, given how far it has leaned into a swim and how far it
+ * has been knocked over.
  *
  * Standing, the origin is at the feet so the middle of the body is half a
- * height up; tipped over, the middle drops towards the surface. Both the local
- * body and every remote one are placed with this, so a remote player can never
- * float at a different height from the one driving them.
+ * height up; tipped over either way, the middle drops towards the ground.
+ * Both the local body and every remote one are placed with this, so a remote
+ * player can never float at a different height from the one driving them.
+ *
+ * **The two tip opposite ways, on purpose.** A swimmer goes face down, which
+ * is how anybody swims. A body that has been knocked over goes on its back,
+ * so the face stays pointing at the room - being able to see whose it is is
+ * most of what makes a stun readable from across an arena.
+ *
+ * They are not added together. A body cannot be both face down and on its
+ * back, so whichever is further over wins and decides the height as well.
+ * `fall` is optional, so every caller that only knows about swimming - see
+ * the remote bodies in `09-net` - carries on unchanged.
  */
-export function bodyPose(lean: number, height: number, radius: number): { rise: number; tip: number } {
-  const eased = Math.min(1, Math.max(0, lean))
-  const tip = eased * AVATAR.swimTip
-  return { rise: height / 2 - tip * (height / 2 - radius), tip }
+export function bodyPose(
+  lean: number,
+  height: number,
+  radius: number,
+  fall = 0,
+): { rise: number; tip: number } {
+  const swim = Math.min(1, Math.max(0, lean)) * AVATAR.swimTip
+  const knocked = Math.min(1, Math.max(0, fall))
+  const over = Math.max(swim, knocked)
+  return { rise: height / 2 - over * (height / 2 - radius), tip: knocked > swim ? -knocked : swim }
 }

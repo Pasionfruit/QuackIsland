@@ -35,7 +35,10 @@ three.js in it, so how the player moves is tested in Node rather than by eye.
 | `AVATAR` | The body's look: colours, where the face sits, how far it tips |
 | `createAvatar()` | One body, feet on `y = 0`, facing +Z, over shared geometry |
 | `facePoints()` | Where each piece of the face sits on the body. Pure |
-| `bodyPose(lean, height, radius)` | How high the middle rides and how far it tips. Pure |
+| `armPoints()` | Where each arm hangs and how far it swings out. Pure |
+| `bodyPose(lean, height, radius, fall?)` | How high the middle rides and how far it tips, swimming or knocked over. Pure |
+| `stunPlayer(seconds)` / `isStunned()` | Put the body on its back, and ask whether it is |
+| `stunFall(remaining, total)` / `STUN` | How far over a stunned body is, and the timings. Pure |
 | `stepPlayer(state, input, dt, groundAt, opts?)` | One step of movement. Pure |
 | `createPlayer(x, z, groundAt)` | A player standing on the ground at that spot |
 | `StepOptions` | `{ bounds?, seaLevel?, surfaceAt?, collide? }`. All optional |
@@ -212,6 +215,48 @@ The face is left out of the shadow pass on purpose. It is a few centimetres of
 detail pressed against a body that is already casting, and nothing it could add
 would be visible.
 
+**It has arms**, one capsule a side, merged into the trunk rather than hung off
+it as their own meshes. Nothing animates them separately, so two more meshes
+would be two more draw calls for a body standing at exactly one pose — the
+whole body is still two calls with them on. They hang from `AVATAR.shoulderY`
+and swing out by `AVATAR.armOut`, which is a small angle: the silhouette should
+still read as a pill with arms and not as a starfish. `armPoints` is pure and
+tested, so an arm inside the body or floating a hand's width off it is caught
+by arithmetic rather than by looking.
+
+**They are temporary.** They exist so a minigame that pushes people about has a
+body worth looking at while it does, and they are meant to be thrown away the
+day there is a rig and a real animation.
+
+## Being knocked over
+
+`stunPlayer(seconds)` puts the body on its back and takes it out of its owner's
+hands for a while. It is the one thing a minigame reaches for: Zombie Tag's
+push stuns for a second, Helping Dad's wall for one and a half.
+
+**A stunned body takes no instructions, and is still subject to everything that
+is not one.** `stepPlayer` drops the movement and the jump while `stun` is
+running, and changes nothing else — it still falls, still lands, still floats
+if it went over in deep water. Being stunned is not being removed from the
+world.
+
+**It goes over backwards, not face first.** A swimmer goes face down because
+that is how anybody swims; a body that has been knocked over goes on its back
+so the face keeps pointing at the room, and being able to see whose face it is
+is most of what makes a stun readable from across an arena. `bodyPose` takes
+both and uses whichever is further over rather than adding them — a body cannot
+be face down and on its back at once.
+
+`stunFall` is the whole of the animation and it is pure arithmetic: given how
+much of a stun is left and how long it was for, the body goes over, lies there,
+and gets up. A stun too short to do all three goes over and comes straight back
+without ever quite reaching the floor, which is why it never snaps upright from
+halfway. It is eased at both ends, and it is temporary in exactly the way the
+arms are.
+
+A stun that arrives while one is already running takes whichever is longer, so
+two zombies landing on the same player cannot cut each other's short.
+
 ## How far it tips when it swims
 
 `lean` in the controller means *lie flat*, and `AVATAR.swimTip` is the fraction
@@ -300,6 +345,20 @@ that the seam is the right way round, and it is in both modules' review lists.
 
 ## How to review
 
+- **Look at the body.** It should have an arm hanging each side, swung out a
+  little, clear of the face and not stuck out in front. Walk about: they do not
+  swing, and are not meant to yet.
+- **Press "knock over" in the debug panel's CAMERA section.** The body should
+  tip over *backwards* — face up, not face down — lie there about a second, and
+  climb back up more slowly than it went down.
+- **Hold WASD and space through the whole stun.** Nothing should move until it
+  is back on its feet, and then everything should work at once.
+- **Knock yourself over on a slope, and off a ledge.** It should still slide
+  and still fall: being stunned stops you steering, not everything else.
+- **Knock yourself over twice in quick succession.** The second must not cut
+  the first short or leave the body stuck on the floor.
+- **Knock yourself over in deep water.** It should float rather than sink, the
+  same as treading water does.
 - **Click once, left and right, without dragging. The camera must not move at
   all.** This is the whole reason there is no pointer lock.
 - **Hold shift to run.** Nearly twice walking pace, and it must not punch

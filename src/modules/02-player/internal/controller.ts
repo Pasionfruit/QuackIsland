@@ -31,6 +31,20 @@ export interface PlayerState {
    * tips into a swim and stands back up instead of snapping between the two.
    */
   lean: number
+  /**
+   * Seconds left of being knocked over, or 0 while on your feet.
+   *
+   * A stunned body takes no instructions - see `stepPlayer` - but is still
+   * subject to everything that is not an instruction. It falls, it lands, it
+   * floats if it goes over in deep water. Being stunned is not being removed
+   * from the world.
+   */
+  stun: number
+  /**
+   * How long the current stun was for, so the animation knows where in it the
+   * body is. 0 whenever `stun` is.
+   */
+  stunFor: number
 }
 
 export interface PlayerInput {
@@ -106,7 +120,58 @@ export function createPlayer(x: number, z: number, groundAt: (x: number, z: numb
     speed: 0,
     swimming: false,
     lean: 0,
+    stun: 0,
+    stunFor: 0,
   }
+}
+
+/**
+ * Knocking a body over, and how long it takes to go down and get back up.
+ *
+ * Temporary, and honest about it: there is no rig and no animation to play, so
+ * being stunned is the whole body tipping over backwards and lying there. It
+ * is enough to test a minigame that pushes people about - see Zombie Tag,
+ * whose push stuns for a second - and it is meant to be thrown away the day
+ * there is a real one.
+ */
+export const STUN = {
+  /** How long the body takes to go over, in seconds. */
+  fallTime: 0.2,
+  /** How long it takes to climb back up. Slower than going down, as it is. */
+  riseTime: 0.36,
+  /**
+   * The most of a short stun either end may eat.
+   *
+   * A stun shorter than falling and rising put together has to fit both into
+   * what there is, or the body would still be on its way down when the stun
+   * ended and would snap upright from halfway over.
+   */
+  share: 0.45,
+} as const
+
+/** Eased at both ends, so the body does not start and stop falling dead. */
+function smooth(t: number): number {
+  const clamped = Math.min(1, Math.max(0, t))
+  return clamped * clamped * (3 - 2 * clamped)
+}
+
+/**
+ * How far over a stunned body is: 0 on its feet, 1 flat on its back.
+ *
+ * Pure, and the whole of the animation. Given how much of a stun is left and
+ * how long it was for, it goes over, stays down, and gets up - and for a stun
+ * too short to do all three, it goes over and comes straight back up without
+ * ever quite reaching the floor.
+ */
+export function stunFall(remaining: number, total: number): number {
+  if (remaining <= 0 || total <= 0) return 0
+  const left = Math.min(remaining, total)
+  const down = Math.min(STUN.fallTime, total * STUN.share)
+  const up = Math.min(STUN.riseTime, total * STUN.share)
+  const elapsed = total - left
+  if (elapsed < down) return smooth(elapsed / down)
+  if (left < up) return smooth(left / up)
+  return 1
 }
 
 export interface StepOptions {
@@ -181,8 +246,23 @@ export function stepPlayer(
   const rightX = -forwardZ
   const rightZ = forwardX
 
-  const fwd = (input.forward ? 1 : 0) - (input.back ? 1 : 0)
-  const side = (input.right ? 1 : 0) - (input.left ? 1 : 0)
+  // Knocked over: the clock runs down whatever else happens this frame, and
+  // nothing the player presses while it does gets through. Gravity, water and
+  // the ground are not instructions, so they carry on below as normal.
+  if (state.stun > 0) {
+    // Snapped to zero rather than clamped at it. Counting a half-second stun
+    // down in sixtieths leaves about 1e-16 on the clock, which is still
+    // greater than zero - so without this the body would never get up.
+    state.stun -= step
+    if (state.stun <= 1e-6) {
+      state.stun = 0
+      state.stunFor = 0
+    }
+  }
+  const taking = state.stun <= 0
+
+  const fwd = taking ? (input.forward ? 1 : 0) - (input.back ? 1 : 0) : 0
+  const side = taking ? (input.right ? 1 : 0) - (input.left ? 1 : 0) : 0
   const magnitude = Math.hypot(fwd, side)
   let moveX = 0
   let moveZ = 0
@@ -236,7 +316,7 @@ export function stepPlayer(
     // Jump only from the ground, and only on the frame the key goes down - the
     // caller is responsible for edge detection, so holding space does not
     // hover. No jumping while out of your depth.
-    if (input.jump && state.grounded) {
+    if (taking && input.jump && state.grounded) {
       state.vy = PLAYER.jumpSpeed
       state.grounded = false
     }

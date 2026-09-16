@@ -1,7 +1,15 @@
 import { PerspectiveCamera, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 import { heightAt, slopeAt } from '../../01-terrain'
-import { IDLE_INPUT, PLAYER, createPlayer, stepPlayer, type PlayerInput } from '../internal/controller'
+import {
+  IDLE_INPUT,
+  PLAYER,
+  STUN,
+  createPlayer,
+  stepPlayer,
+  stunFall,
+  type PlayerInput,
+} from '../internal/controller'
 
 type Ground = (x: number, z: number) => number
 
@@ -561,5 +569,124 @@ describe('staying on the ground', () => {
       stepPlayer(p, press({ forward: true, cameraYaw: Math.PI / 2 }), 1 / 60, dip)
       expect(p.y).toBeCloseTo(dip(p.x, p.z), 6)
     }
+  })
+})
+
+/**
+ * Being knocked over.
+ *
+ * Temporary in the world - there is no rig yet - but the arithmetic is the
+ * real thing, and it is what a minigame that pushes people about will lean on.
+ */
+describe('being stunned', () => {
+  it('starts on its feet', () => {
+    const p = createPlayer(0, 0, flat(0))
+    expect(p.stun).toBe(0)
+    expect(p.stunFor).toBe(0)
+    expect(stunFall(p.stun, p.stunFor)).toBe(0)
+  })
+
+  it('goes nowhere while it is down, however hard you press', () => {
+    const p = createPlayer(0, 0, flat(0))
+    p.stun = 1
+    p.stunFor = 1
+    run(p, press({ forward: true, run: true, cameraYaw: 0 }), 30)
+    expect(p.x).toBeCloseTo(0, 9)
+    expect(p.z).toBeCloseTo(0, 9)
+    expect(p.speed).toBe(0)
+  })
+
+  it('cannot jump out of it either', () => {
+    const p = createPlayer(0, 0, flat(0))
+    p.stun = 1
+    p.stunFor = 1
+    stepPlayer(p, press({ jump: true }), 1 / 60, flat(0))
+    expect(p.grounded).toBe(true)
+    expect(p.y).toBeCloseTo(0, 9)
+  })
+
+  it('still falls, because gravity is not an instruction', () => {
+    const p = createPlayer(0, 0, flat(0))
+    p.y = 8
+    p.grounded = false
+    p.stun = 1
+    p.stunFor = 1
+    run(p, press(), 6)
+    expect(p.y).toBeLessThan(8)
+    expect(p.vy).toBeLessThan(0)
+  })
+
+  it('runs the clock down and gets back up on its own', () => {
+    const p = createPlayer(0, 0, flat(0))
+    p.stun = 0.5
+    p.stunFor = 0.5
+    run(p, press(), 30)
+    expect(p.stun).toBe(0)
+    expect(p.stunFor).toBe(0)
+
+    // And takes instructions again the moment it is up.
+    run(p, press({ forward: true, cameraYaw: 0 }), 10)
+    expect(Math.hypot(p.x, p.z)).toBeGreaterThan(0)
+  })
+
+  it('never runs the clock past zero', () => {
+    const p = createPlayer(0, 0, flat(0))
+    p.stun = 1 / 120
+    p.stunFor = 1 / 120
+    run(p, press(), 5)
+    expect(p.stun).toBe(0)
+  })
+})
+
+describe('the falling animation', () => {
+  it('is flat on the floor in the middle of a long stun', () => {
+    expect(stunFall(1, 2)).toBe(1)
+  })
+
+  it('goes over and gets up, in that order', () => {
+    const total = 2
+    const down = stunFall(total - 0.05, total)
+    const flatOut = stunFall(total / 2, total)
+    const up = stunFall(0.05, total)
+
+    expect(down).toBeGreaterThan(0)
+    expect(down).toBeLessThan(1)
+    expect(flatOut).toBe(1)
+    expect(up).toBeGreaterThan(0)
+    expect(up).toBeLessThan(1)
+  })
+
+  it('takes longer to get up than to go down', () => {
+    expect(STUN.riseTime).toBeGreaterThan(STUN.fallTime)
+  })
+
+  it('starts and ends on its feet, whatever the stun was for', () => {
+    for (const total of [0.15, 0.5, 1, 3]) {
+      expect(stunFall(total, total)).toBeCloseTo(0, 6)
+      expect(stunFall(0, total)).toBe(0)
+    }
+  })
+
+  it('never leaves the body stuck part way over at the end of a short stun', () => {
+    // A stun shorter than a fall plus a rise still has to come all the way
+    // back up, or the body snaps upright from halfway.
+    const total = 0.1
+    expect(stunFall(0.0001, total)).toBeLessThan(0.1)
+  })
+
+  it('stays between flat and upright, always', () => {
+    for (const total of [0.1, 0.4, 1, 5]) {
+      for (let i = 0; i <= 40; i++) {
+        const fall = stunFall((total * i) / 40, total)
+        expect(fall).toBeGreaterThanOrEqual(0)
+        expect(fall).toBeLessThanOrEqual(1)
+      }
+    }
+  })
+
+  it('is nothing at all for a stun that never happened', () => {
+    expect(stunFall(0, 0)).toBe(0)
+    expect(stunFall(-1, 2)).toBe(0)
+    expect(stunFall(1, 0)).toBe(0)
   })
 })

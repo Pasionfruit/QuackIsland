@@ -16,6 +16,7 @@ import { useNet, usePeers } from '../modules/09-net'
 import { ME, disbandParty, useParty, waitingFor } from '../modules/10-party'
 import { modeById, useGameMode } from '../modules/13-modes'
 import { gardenModeById, useGardenMode } from '../modules/14-garden'
+import { MINIGAMES, openDashboard } from '../modules/15-minigames'
 
 export function PartyPanel() {
   const net = useNet()
@@ -65,6 +66,19 @@ export function PartyPanel() {
           ) : null}
         </>
       )}
+
+      {/* The minigames are Volcano Island's, so the way into the catalogue is
+          offered when that is the game - and only there. Browsing it is local:
+          it opens your screen and nobody else's. */}
+      {mode === 'island' ? (
+        <button
+          type="button"
+          onClick={openDashboard}
+          style={{ ...button, width: '100%', marginTop: 5 }}
+        >
+          minigames · {MINIGAMES.length}
+        </button>
+      ) : null}
 
       <div style={{ opacity: 0.4, marginTop: 5 }}>tab for everyone</div>
     </div>

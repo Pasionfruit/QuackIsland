@@ -1,7 +1,7 @@
 import { Box3, Mesh, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 import { PLAYER } from '../internal/controller'
-import { AVATAR, bodyPose, createAvatar, facePoints } from '../internal/avatar'
+import { AVATAR, armPoints, bodyPose, createAvatar, facePoints } from '../internal/avatar'
 
 /**
  * A body is exactly the kind of thing that goes wrong silently - inside out,
@@ -27,11 +27,16 @@ describe('the body', () => {
     expect(box.max.y).toBeCloseTo(PLAYER.height, 2)
   })
 
-  it('is as wide as the controller is round', () => {
+  it('is as wide as the controller is round, plus a pair of arms', () => {
     const size = boxOf(createAvatar()).getSize(new Vector3())
+    // The arms hang outside the trunk, so the silhouette is wider than the
+    // capsule the controller collides with - by less than an arm either side,
+    // which is the check that they are hung on the body rather than beside it.
+    expect(size.x).toBeGreaterThan(PLAYER.radius * 2)
+    expect(size.x).toBeLessThan(PLAYER.radius * 2 + AVATAR.armLength)
     // The face stands a couple of centimetres proud of the front, so depth is
-    // allowed to run over; the width across is the capsule and nothing else.
-    expect(size.x).toBeCloseTo(PLAYER.radius * 2, 1)
+    // allowed to run over - but the arms must not add to it, or they are
+    // sticking out in front instead of hanging down.
     expect(size.z).toBeGreaterThanOrEqual(PLAYER.radius * 2)
     expect(size.z).toBeLessThan(PLAYER.radius * 2 + 0.1)
   })
@@ -142,5 +147,79 @@ describe('how it sits in the water', () => {
   it('ignores a lean outside nought to one', () => {
     expect(bodyPose(-3, PLAYER.height, PLAYER.radius)).toEqual(bodyPose(0, PLAYER.height, PLAYER.radius))
     expect(bodyPose(9, PLAYER.height, PLAYER.radius)).toEqual(bodyPose(1, PLAYER.height, PLAYER.radius))
+  })
+
+  it('goes over backwards when knocked down, not face first', () => {
+    // The sign is the whole point: a swimmer goes face down and a stunned body
+    // goes on its back, so you can still see whose face it is.
+    const { rise, tip } = bodyPose(0, PLAYER.height, PLAYER.radius, 1)
+    expect(tip).toBeCloseTo(-1, 9)
+    expect(rise).toBeCloseTo(PLAYER.radius, 9)
+  })
+
+  it('lies at the same height whichever way it went over', () => {
+    const swimming = bodyPose(1, PLAYER.height, PLAYER.radius)
+    const floored = bodyPose(0, PLAYER.height, PLAYER.radius, 1)
+    expect(floored.rise).toBeCloseTo(swimming.rise, 9)
+  })
+
+  it('picks whichever is further over rather than adding them', () => {
+    // Knocked over while swimming is not folded in half.
+    const both = bodyPose(0.3, PLAYER.height, PLAYER.radius, 0.9)
+    expect(both.tip).toBeCloseTo(-0.9, 9)
+    expect(Math.abs(both.tip)).toBeLessThanOrEqual(1)
+
+    const mostlySwimming = bodyPose(0.9, PLAYER.height, PLAYER.radius, 0.3)
+    expect(mostlySwimming.tip).toBeCloseTo(0.9, 9)
+  })
+
+  it('is unchanged for everything that never heard of a stun', () => {
+    // `09-net` places every remote body with three arguments. A fourth that
+    // changed the answer would sink them all.
+    expect(bodyPose(0.4, PLAYER.height, PLAYER.radius)).toEqual(
+      bodyPose(0.4, PLAYER.height, PLAYER.radius, 0),
+    )
+  })
+})
+
+describe('the arms', () => {
+  it('hangs one a side, level with each other', () => {
+    const [left, right] = armPoints()
+    expect(left.x).toBeCloseTo(-right.x, 9)
+    expect(left.y).toBeCloseTo(right.y, 9)
+    expect(left.roll).toBeCloseTo(-right.roll, 9)
+  })
+
+  it('attaches them to the body rather than beside it', () => {
+    // The shoulder end has to be inside the trunk, or the arms float.
+    for (const arm of armPoints()) {
+      expect(Math.abs(arm.x)).toBeLessThan(PLAYER.radius + AVATAR.armLength / 2)
+      expect(Math.abs(arm.x)).toBeGreaterThan(PLAYER.radius / 2)
+    }
+  })
+
+  it('hangs them below the shoulder and above the feet', () => {
+    for (const arm of armPoints()) {
+      expect(arm.y).toBeLessThan(AVATAR.shoulderY)
+      expect(arm.y - AVATAR.armLength / 2).toBeGreaterThan(0)
+    }
+  })
+
+  it('swings them out rather than forwards', () => {
+    // Nothing in the arm has a z of its own; they hang in the body's own
+    // plane, so turning to face somewhere does not swing them about.
+    for (const arm of armPoints()) {
+      expect(Math.abs(arm.roll)).toBeCloseTo(AVATAR.armOut, 9)
+    }
+  })
+
+  it('keeps the face clear of them', () => {
+    // An arm across the eyes would be worse than no arms at all.
+    const eyes = facePoints().filter((p) => p.radius === AVATAR.eyeRadius)
+    for (const arm of armPoints()) {
+      for (const eye of eyes) {
+        expect(Math.abs(arm.x) - AVATAR.armRadius).toBeGreaterThan(Math.abs(eye.x))
+      }
+    }
   })
 })

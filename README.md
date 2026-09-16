@@ -75,7 +75,11 @@ lobby plays the same one. The host chooses:
 
 - **Volcano Island** — a 120-tile spiral race up a 150 m volcano on a second
   island across the water, out-of-round, with a horseshoe crater and the track
-  winding three times up to the treasure at the top.
+  winding three times up to the treasure at the top. It is also where the
+  **minigames** live: forty-one of them planned, thirty free-for-all and
+  eleven one-vs-all, twenty-six named so far and none playable yet. Press
+  **minigames** in the party panel to see the lot on one screen; every tile
+  opens a template of the game that is coming.
 - **Garden Goofs** — a flat **2D** lane defence on an eight-by-twelve lawn.
   Starting it loads a page of its own, opaque and full screen, not a dialog
   over the world — a house on the left edge marks what you are defending. The
@@ -184,6 +188,7 @@ world is reproducible and testable.
 | `12-rocks` | Rocks of every size, solid enough to bump into and stand on |
 | `13-modes` | Which game the party is playing, and the lobby popup that chooses it |
 | `14-garden` | Garden Goofs: the 2D 8x12 lawn, a shared loadout, seeds and planting |
+| `15-minigames` | Volcano Island's forty-one minigames: the catalogue, the dashboard, and the seam each one plugs into |
 
 Next up: a sky dome driving the day cycle that `00-core` already exposes, then
 the Meshy asset pipeline and vegetation placed against the terrain's height

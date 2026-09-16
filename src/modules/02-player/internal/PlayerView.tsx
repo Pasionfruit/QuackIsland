@@ -14,7 +14,15 @@ import { useEffect, useMemo, useRef } from 'react'
 import { Group, Vector3 } from 'three'
 import { PRIORITY, getDayTime, setCameraMode, tideAt, useGameFrame } from '../../00-core'
 import { SEA_LEVEL, heightAt, worldBounds } from '../../01-terrain'
-import { IDLE_INPUT, PLAYER, createPlayer, stepPlayer, type PlayerInput, type PlayerState } from './controller'
+import {
+  IDLE_INPUT,
+  PLAYER,
+  createPlayer,
+  stepPlayer,
+  stunFall,
+  type PlayerInput,
+  type PlayerState,
+} from './controller'
 import { clampPitch, getViewMode, placeCamera, toggleViewMode } from './camera'
 import { bodyPose, createAvatar } from './avatar'
 
@@ -64,6 +72,27 @@ export function movePlayerTo(x: number, y: number, z: number): void {
   live.z = z
   live.vy = 0
   live.grounded = false
+}
+
+/**
+ * Knocks the player over for a while.
+ *
+ * The one thing a minigame needs to reach for: Zombie Tag's push stuns for a
+ * second, Helping Dad's wall stuns for one and a half. It is a request rather
+ * than a command - stunning a body that is not there does nothing, and a stun
+ * that arrives while one is already running takes whichever is longer, so two
+ * zombies landing on the same player cannot cut each other's short.
+ */
+export function stunPlayer(seconds: number): void {
+  if (!live || seconds <= 0) return
+  if (seconds <= live.stun) return
+  live.stun = seconds
+  live.stunFor = seconds
+}
+
+/** Whether the player is currently on the floor. */
+export function isStunned(): boolean {
+  return (live?.stun ?? 0) > 0
 }
 
 /** Camera state, kept outside React so dragging costs no re-renders. */
@@ -323,7 +352,13 @@ export function Player({
     })
 
     // Shared with every remote body, so they cannot sit at different heights.
-    const { rise, tip } = bodyPose(state.lean, PLAYER.height, PLAYER.radius)
+    // The fall is the whole of the stun animation - see `stunFall`.
+    const { rise, tip } = bodyPose(
+      state.lean,
+      PLAYER.height,
+      PLAYER.radius,
+      stunFall(state.stun, state.stunFor),
+    )
 
     const view = getViewMode()
 
