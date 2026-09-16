@@ -3,7 +3,7 @@
  *
  *   node .claude/skills/run-localrot/scripts/solo.mjs --game messy-maze --out <dir> [--steer] [--software]
  *
- * --game      messy-maze (default), zombie-tag or probable-stop
+ * --game      messy-maze (default), zombie-tag, probable-stop or duck-hunt
  * --app       dev server URL (default http://localhost:5199/)
  * --out       where screenshots go (default <temp>/localrot-run/solo)
  * --steer     Messy Maze: drive your racer to the middle with the stand-ins'
@@ -11,13 +11,15 @@
  *             wait for the results. Zombie Tag: hold D for two seconds.
  *             Probable Stop: play all six rounds - a different path each
  *             round, confirmed - screenshotting a reveal, then the results.
+ *             Duck Hunt: shoot one of your own balloons whenever the cooldown
+ *             allows, for the whole minute, then the results.
  * --software  render with SwiftShader instead of the GPU (slow; see cdp.mjs)
  *
  * Needs the dev server running; not the relay - alone you are your own host.
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, gameState, launch, say, sleep } from './cdp.mjs'
+import { GAMES, args, duckHuntShot, gameState, launch, say, sleep } from './cdp.mjs'
 
 const opt = args({ game: 'messy-maze', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'solo'), port: '9400' })
 const game = GAMES[opt.game]
@@ -68,6 +70,24 @@ try {
     })()`)
     say('steered', JSON.stringify(log), await page.shot('3-in.png'))
     await page.waitFor(`!!document.querySelector('[data-again]')`, 120000)
+    say('results', await page.shot('4-results.png'))
+  } else if (opt.steer && opt.game === 'duck-hunt') {
+    let fired = 0
+    let shotMid = false
+    for (let i = 0; i < 2000; i++) {
+      const s = await page.eval(`(() => { const g = ${gameState('duck-hunt')}; const me = g.players.find((p) => p.mine); return { over: g.over, elapsed: g.elapsed, score: me.score, shots: me.shots } })()`)
+      if (s.over) break
+      if (await page.eval(duckHuntShot())) fired += 1
+      if (!shotMid && s.elapsed > 20) {
+        shotMid = true
+        await sleep(60)
+        say('mid-game', JSON.stringify(s), await page.shot('3-shooting.png'))
+      }
+      await sleep(80)
+    }
+    const end = await page.eval(`(() => { const g = ${gameState('duck-hunt')}; return g.players.map((p) => ({ id: p.id, score: p.score, shots: p.shots, mine: p.mine })) })()`)
+    say('clicked', fired, 'times; scores', JSON.stringify(end))
+    await page.waitFor(`!!document.querySelector('[data-again]')`, 30000)
     say('results', await page.shot('4-results.png'))
   } else if (opt.steer && opt.game === 'probable-stop') {
     const state = () => page.eval(`(() => { const g = ${gameState('probable-stop')}; const me = g.players.find((p) => p.mine); return { round: g.round, phase: g.phase, clock: g.clock, safe: g.safe, pick: me.pick, confirmed: me.confirmed, alive: me.alive, outIn: me.outIn, left: g.players.filter((p) => p.alive).length } })()`)

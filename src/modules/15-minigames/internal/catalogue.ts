@@ -169,7 +169,9 @@ const ENTRIES = [
       { input: 'Left click', does: 'Shoot' },
     ],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `19-duck-hunt`. The assets stage is still to do - balloons
+    // are spheres with a flat shape on them.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'pet-race',

@@ -177,7 +177,7 @@ describe('a game briefing', () => {
   it('lists the three stages with the next one marked', () => {
     const where = mount()
     // A game nothing has been done to: the first stage is the one owed.
-    act(() => openMinigame('duck-hunt'))
+    act(() => openMinigame('pet-race'))
 
     for (const step of BUILD_STEPS) {
       expect(where.querySelector(`[data-step="${step}"]`)).not.toBeNull()

@@ -107,7 +107,8 @@
         "15-minigames",
         "16-zombie-tag",
         "17-messy-maze",
-        "18-probable-stop"
+        "18-probable-stop",
+        "19-duck-hunt"
       ]
     }
   ],
@@ -135,7 +136,8 @@
         "14-garden",
         "15-minigames",
         "17-messy-maze",
-        "18-probable-stop"
+        "18-probable-stop",
+        "19-duck-hunt"
       ],
       "generation": 1,
       "contract": {
@@ -307,7 +309,8 @@
         "10-party",
         "16-zombie-tag",
         "17-messy-maze",
-        "18-probable-stop"
+        "18-probable-stop",
+        "19-duck-hunt"
       ],
       "generation": 1,
       "contract": {
@@ -804,7 +807,8 @@
         "15-minigames",
         "16-zombie-tag",
         "17-messy-maze",
-        "18-probable-stop"
+        "18-probable-stop",
+        "19-duck-hunt"
       ],
       "generation": 1,
       "contract": {
@@ -1300,7 +1304,8 @@
       "dependents": [
         "16-zombie-tag",
         "17-messy-maze",
-        "18-probable-stop"
+        "18-probable-stop",
+        "19-duck-hunt"
       ],
       "generation": 1,
       "contract": {
@@ -1615,6 +1620,85 @@
         "No models: players are the island's capsule avatar and the bridges are planks",
         "No skill in which path is safe - it is chance, decided by the host at the reveal",
         "No second chances: fall once and you watch the rest",
+        "No sound, no score kept between games"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "19-duck-hunt",
+      "phase": "P6",
+      "title": "Minigame 4, Duck Hunt: balloons in everybody's colours, a second and a half between shots, most of your own wins",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "19.1",
+          "title": "The arena: balloons in waves, one per player, each in its owner's colour and shape",
+          "status": "done"
+        },
+        {
+          "id": "19.2",
+          "title": "The rules: a shot, a cooldown, a pop, and a score for your own",
+          "status": "done"
+        },
+        {
+          "id": "19.3",
+          "title": "The controls: a crosshair on the mouse that shows the cooldown, click to shoot",
+          "status": "done"
+        },
+        {
+          "id": "19.4",
+          "title": "A still camera over the arena, the balloons drawn into it, pops you can see",
+          "status": "done"
+        },
+        {
+          "id": "19.5",
+          "title": "One game shared across the lobby: balloons from a seed, shots confirmed by the host",
+          "status": "done"
+        },
+        {
+          "id": "19.6",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "19.7",
+          "title": "The assets: models, sprites and sound in place of spheres and shapes",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-16T17:59:49.049Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: balloons are spheres with a flat shape on them",
+        "No moving camera, no zoom, no pointer lock",
+        "No lag compensation beyond trusting the shooter's own screen",
         "No sound, no score kept between games"
       ],
       "budgets": {

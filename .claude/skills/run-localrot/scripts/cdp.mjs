@@ -184,6 +184,60 @@ export const GAMES = {
     anchor: `document.querySelector('[data-path]')`,
     people: 'players',
   },
+  'duck-hunt': {
+    title: 'Duck Hunt',
+    screen: 'DuckHuntScreen',
+    anchor: `document.querySelector('[data-time-left]')`,
+    people: 'players',
+  },
+}
+
+/**
+ * An expression that, in a page showing Duck Hunt, clicks on one of this
+ * player's own balloons - a real pointer event on the canvas, at the balloon's
+ * spot on screen - and evaluates to what it aimed at, or null if there was
+ * nothing of theirs up or the cooldown was running.
+ *
+ * The balloon is put on screen with the game's own camera fit (`frameScene`)
+ * and plain perspective arithmetic, so the click goes through the game's real
+ * aiming: its ray, its `pickBalloon`.
+ */
+export function duckHuntShot() {
+  return `(async () => {
+    const arena = await import('/src/modules/19-duck-hunt/internal/arena.ts')
+    const cam = await import('/src/modules/19-duck-hunt/internal/camera.ts')
+    const g = ${gameState('duck-hunt')}
+    if (!g || g.over) return null
+    const me = g.players.findIndex((p) => p.mine)
+    if (me < 0 || g.players[me].cooldown > 0) return null
+    const canvas = [...document.querySelectorAll('canvas')].pop()
+    const rect = canvas.getBoundingClientRect()
+    const aspect = rect.width / rect.height
+    const shot = cam.frameScene(aspect)
+    const mine = g.balloons
+      .filter((b) => b.owner === me && !g.popped.has(b.id))
+      .map((b) => ({ b, at: arena.balloonAt(b, g.elapsed + 0.05) }))
+      .filter((x) => x.at && x.at.y > 2 && x.at.y < arena.ARENA.ceiling - 3)
+    if (mine.length === 0) return null
+    const { b, at } = mine[0]
+    const sub = (p, q) => ({ x: p.x - q.x, y: p.y - q.y, z: p.z - q.z })
+    const dot = (p, q) => p.x * q.x + p.y * q.y + p.z * q.z
+    const norm = (p) => { const l = Math.hypot(p.x, p.y, p.z); return { x: p.x / l, y: p.y / l, z: p.z / l } }
+    const cross = (p, q) => ({ x: p.y * q.z - p.z * q.y, y: p.z * q.x - p.x * q.z, z: p.x * q.y - p.y * q.x })
+    const eye = { x: shot.x, y: shot.y, z: shot.z }
+    const forward = norm(sub(shot.target, eye))
+    const right = norm(cross(forward, { x: 0, y: 1, z: 0 }))
+    const up = cross(right, forward)
+    const rel = sub(at, eye)
+    const depth = dot(rel, forward)
+    const half = Math.tan((cam.FOV * Math.PI) / 360)
+    const nx = dot(rel, right) / (depth * half * aspect)
+    const ny = dot(rel, up) / (depth * half)
+    const clientX = rect.left + ((nx + 1) / 2) * rect.width
+    const clientY = rect.top + ((1 - ny) / 2) * rect.height
+    canvas.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX, clientY, bubbles: true }))
+    return { balloon: b.id, x: Math.round(clientX), y: Math.round(clientY) }
+  })()`
 }
 
 /**

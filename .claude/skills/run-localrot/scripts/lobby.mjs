@@ -5,7 +5,7 @@
  *   node .claude/skills/run-localrot/scripts/lobby.mjs --players 8 --out <dir>
  *
  * --players   how many (default 8, the most the games are built for)
- * --games     comma list, in order (default zombie-tag,messy-maze,probable-stop)
+ * --games     comma list, in order (default zombie-tag,messy-maze,probable-stop,duck-hunt)
  * --app       dev server URL (default http://localhost:5199/)
  * --out       where screenshots go (default <temp>/localrot-run/lobby)
  * --software  render with SwiftShader instead of the GPU
@@ -21,9 +21,9 @@
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, gameState, launch, say, sleep } from './cdp.mjs'
+import { GAMES, args, duckHuntShot, gameState, launch, say, sleep } from './cdp.mjs'
 
-const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
+const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
 const count = Number(opt.players)
 const games = String(opt.games).split(',')
 const pages = []
@@ -87,6 +87,28 @@ try {
     const ownBody = seen.every((s) => s.mine === s.me)
     say(`${game}: same in every browser ${same}; each browser's own body right ${ownBody}`, JSON.stringify(seen[0]))
     if (!same || !ownBody) throw new Error(`${game}: browsers disagree - ${JSON.stringify(seen)}`)
+
+    if (game === 'duck-hunt') {
+      // A guest shoots one of its own balloons; the host should see the shot and the pop.
+      const guestOnHost = () => host.eval(`(() => { const g = ${gameState(game)}; const p = g.players.find((p) => p.id === ${JSON.stringify(moverId)}); return { shots: p.shots, score: p.score } })()`)
+      const before = await guestOnHost()
+      let aimed = null
+      for (let i = 0; i < 80 && !aimed; i++) {
+        aimed = await mover.eval(duckHuntShot())
+        if (!aimed) await sleep(150)
+      }
+      await sleep(1200)
+      const after = await guestOnHost()
+      say(`${game}: guest ${moverId} shot balloon ${aimed?.balloon}; host saw ${JSON.stringify(before)} -> ${JSON.stringify(after)}`)
+      await host.shot(`${game}-host.png`)
+      await mover.shot(`${game}-guest.png`)
+      if (!aimed || after.shots !== before.shots + 1 || after.score !== before.score + 1) {
+        throw new Error(`${game}: the host did not see the guest's shot land`)
+      }
+      await host.eval('window.__mg.backOut()')
+      for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
+      continue
+    }
 
     if (game === 'probable-stop') {
       // A guest steps to another path and confirms; the host should see both.
