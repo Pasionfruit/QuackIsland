@@ -14,7 +14,7 @@ import { PartyPanel } from './app/PartyPanel'
 import { LobbyPopup } from './app/LobbyPopup'
 import { useParty } from './modules/10-party'
 import { GardenScreen } from './modules/14-garden'
-import { MinigameScreen } from './modules/15-minigames'
+import { MinigameScreen, useMinigameSync } from './modules/15-minigames'
 // Imported for the side effect: it registers itself with the minigame
 // registry, which is the whole of how a built game plugs in.
 import './modules/16-zombie-tag'
@@ -27,6 +27,10 @@ export default function App() {
   // a game has started, and stopping it is the whole point of asking.
   const party = useParty()
   const playingAGame = party.phase === 'playing'
+
+  // Takes a guest wherever the host has gone. Live for everybody; the host's
+  // own calls come back to them and are ignored.
+  useMinigameSync()
 
   return (
     <>

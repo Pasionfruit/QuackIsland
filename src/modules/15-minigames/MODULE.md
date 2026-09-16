@@ -159,19 +159,59 @@ With no build registered, the round that starts is honest about being empty:
 the countdown ran, the phase really is `playing`, and what is missing is the
 game.
 
-## Browsing is local, starting will not be
+## Browsing is local; being in a game is the host's call
 
-Opening the dashboard changes your screen and nobody else's. Browsing a
-catalogue is not playing anything, so one player looking through it has no
-business moving everybody else's view.
+Opening the dashboard changes your screen and nobody else's. The host flicking
+through forty-one tiles has no business dragging everybody about.
 
-**Play is local too, for now, and that is the one thing here that will have to
-change.** A minigame everybody is in has to start for everybody at once, so
-when the games are real, `playMinigame` becomes the host's call and rides on
-the same `hostChoice` that the game, the weather and the time of day already
-do. It is deliberately the single line that would have to move: the store holds
-where you are looking, and the run it starts is yours alone until something
-syncs it.
+**The moment they open a game, everybody goes with them.** Guests get the same
+briefing and can read the rules while the host decides; when the host presses
+play, everybody counts down together. A guest has no dashboard and no play
+button, for the same reason they cannot pick the game in the lobby: there is
+nothing they could press that would not immediately be overruled.
+
+It rides on `hostChoice` from `13-modes` — the same machinery that carries
+which game the lobby is playing and what the weather is. The value is a string,
+because that is what a choice carries and because two fields packed into one
+value cannot arrive half-applied: `none`, or `<id>:open`, or `<id>:play`.
+
+**Guests follow a change, not the value.** This is the part that is easy to get
+wrong in both directions. A guest that ignores the call sits in the world while
+everybody else plays; a guest that applies it continuously is dragged back in on
+the very next render and can never leave at all. So `followCall` acts only when
+the call *becomes* something new — which means pressing escape and walking out
+of a round works, and lasts until the host starts something else.
+
+**The host leaving takes everybody out.** They are the reason anybody is in it.
+A guest leaving takes only themselves.
+
+### What is not shared
+
+Only the *call* crosses the wire. Everybody runs their own copy of the game
+from their own clock, so two browsers in one round are two simulations that
+agree because they started from the same place rather than because anything
+keeps them in step. For Zombie Tag, whose bodies are driven by stand-in runners
+rather than by peers, that is honest; for a round people actually play
+together it is the next thing that has to change.
+
+## Escape pauses, rather than leaving
+
+On the dashboard or a briefing there is nothing to lose, so escape steps back
+the way the button does. Once a round is counting or playing, stepping back
+would throw away a round you are in the middle of — so it stops the round and
+puts a card over it, offering **resume** and a way out.
+
+**Pausing is personal, not shared**, the same as Garden Goofs' pause and for
+the same reason: there is no message for it. A guest who pauses stops their own
+clock and everybody else carries on, which is the honest consequence of a round
+each browser runs its own copy of.
+
+A paused countdown does not count. Pressing escape on "two" and coming back to
+"two" is the only behaviour anybody would expect, and there is a test for it.
+
+The build's `Panel` is handed the run so a game can stop simulating while the
+card is up. A game that kept going behind a pause card would be a pause card
+with a game going on behind it.
 
 ## Public contract
 
@@ -187,6 +227,9 @@ syncs it.
 | `freshRun`, `MinigameRun`, `MinigameBuild`, `RunPhase` | A run of one game, at its beginning. |
 | `beginRun`, `tickRun`, `countShown`, `COUNT_FROM` | The three-two-one. All pure. |
 | `openDashboard`, `openMinigame`, `playMinigame`, `tickMinigame`, `backOut`, `closeMinigames` | Moving the screen about. |
+| `pauseMinigame`, `resumeMinigame`, `isPausable`, `pauseRun`, `resumeRun` | Stopping a round and starting it again. |
+| `useMinigameSync`, `getMinigameCall` | Taking a guest where the host went. Mount the hook once. |
+| `encodeCall`, `parseCall`, `followCall`, `isMinigameCall`, `NO_CALL` | The call itself. All pure. |
 | `useMinigameScreen`, `getMinigameScreen`, `MinigameScreenState` | Where the screen is. |
 | `MinigameScreen` | The one component the app mounts. |
 
@@ -209,6 +252,11 @@ syncs it.
 - **The countdown always reaches `playing`**, in big steps or small, and never
   counts past zero or backwards. Tested, for every game in the catalogue.
 - **Pressing play twice is not a restart.** Tested.
+- **A guest follows a change and never a value**, so stepping out of a round
+  keeps you out until the host starts something else. Tested.
+- **The host never follows their own call.** Tested.
+- **A paused countdown does not advance**, however long the card is up.
+  Tested.
 - **Nothing on the screen scrolls.** Tested.
 
 ## Deliberate non-goals
@@ -226,8 +274,9 @@ syncs it.
   controls; everything else is a briefing with nothing behind it.
 - **The controls are half written.** Games 1–12 arrived with theirs and they
   are in the catalogue; 13 onwards have none, and their controls tab says so.
-- **Play starts a round for you and nobody else.** See above - the countdown
-  and the phase are real, the sync is not.
+- **Only the call is shared, not the round.** Everybody runs their own copy
+  from their own clock. Two browsers agree because they started together, not
+  because anything keeps them in step.
 - **The rules are nowhere.** The descriptions the games were specified with
   have not been written into the catalogue - `pitch` is one line rather than a
   summary of them. Those belong with each game's `environment` stage, which is
@@ -272,8 +321,26 @@ party panel, bottom left.
   monospace. If it looks like the debug panel, the palette did not take.
 - **Check the footer.** It should count each stage against the number of named
   games, and all three should read 0 of 26 today.
-- **Press escape twice.** The first takes you back to the grid, the second
-  back to the world. The back button, top left, does the same thing.
+- **Press escape on the grid and on a briefing.** Nothing is running, so it
+  still takes you back a step — grid to world, briefing to grid.
+- **Press escape mid-round.** The round should *stop*, with a card over it
+  offering resume. Escape again, or resume, and it picks up exactly where it
+  left off — not a second later.
+- **Press escape during the three-two-one.** It should freeze on the number it
+  was on and come back to the same one.
+
+### With two browsers
+
+- **As a guest, look at the party panel.** No minigames button — it should say
+  the host picks it.
+- **Host: open a game.** The guest should land on the same briefing, able to
+  read both tabs, with *waiting for the host to start* where the play button is.
+- **Host: press play.** Both should count down and start together.
+- **Guest: press escape and leave the round.** They go back to the world and
+  stay there — they must not be dragged back in.
+- **Host: open a different game.** The guest who walked out should be picked
+  back up by it.
+- **Host: leave the round.** The guest should be taken out of it too.
 - **Check the world is still there behind it.** Closing the dashboard should
   put you back exactly where you were standing - this screen does not move
   anybody.

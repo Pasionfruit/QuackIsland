@@ -49,6 +49,8 @@ afterEach(() => {
 const click = (el: Element | null) =>
   act(() => el?.dispatchEvent(new MouseEvent('click', { bubbles: true })))
 
+const escape = () => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape' }))
+
 /** Presses play and runs the whole countdown out, without waiting for it. */
 const playThrough = () =>
   act(() => {
@@ -350,19 +352,61 @@ describe('getting back out', () => {
     expect(where.innerHTML).toBe('')
   })
 
-  it('steps back on escape, the same way the button does', () => {
+  it('steps back on escape while nothing is running', () => {
     mount()
     act(() => openMinigame('duck-hunt'))
 
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape' }))
-    })
+    act(() => escape())
     expect(getMinigameScreen().at).toBe('dashboard')
 
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape' }))
-    })
+    act(() => escape())
     expect(getMinigameScreen().at).toBe('closed')
+  })
+
+  it('pauses on escape once a round is running, rather than leaving it', () => {
+    // The round is the thing escape used to throw away. Now it stops it.
+    const where = mount()
+    act(() => openMinigame('duck-hunt'))
+    playThrough()
+
+    act(() => escape())
+    expect(getMinigameScreen()).toMatchObject({ at: 'game', run: { paused: true } })
+    expect(where.querySelector('[data-resume]')).not.toBeNull()
+
+    // And escape again puts it back, the same as pressing resume.
+    act(() => escape())
+    expect(getMinigameScreen()).toMatchObject({ at: 'game', run: { paused: false } })
+    expect(where.querySelector('[data-resume]')).toBeNull()
+  })
+
+  it('pauses a countdown too, and comes back on the same number', () => {
+    const where = mount()
+    act(() => openMinigame('duck-hunt'))
+    click(where.querySelector('[data-play]'))
+    act(() => tickMinigame(1))
+    expect(where.querySelector('[data-countdown]')?.textContent).toBe('2')
+
+    act(() => escape())
+    act(() => tickMinigame(30))
+    expect(where.querySelector('[data-countdown]')?.textContent).toBe('2')
+
+    act(() => escape())
+    act(() => tickMinigame(1))
+    expect(where.querySelector('[data-countdown]')?.textContent).toBe('1')
+  })
+
+  it('resumes from the card, and leaves from the card', () => {
+    const where = mount()
+    act(() => openMinigame('duck-hunt'))
+    playThrough()
+
+    act(() => escape())
+    click(where.querySelector('[data-resume]'))
+    expect(getMinigameScreen()).toMatchObject({ at: 'game', run: { paused: false } })
+
+    act(() => escape())
+    click(where.querySelector('[data-leave]'))
+    expect(getMinigameScreen().at).toBe('dashboard')
   })
 
   it('leaves a started round behind rather than pausing it', () => {

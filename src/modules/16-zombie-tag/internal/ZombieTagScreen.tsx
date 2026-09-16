@@ -35,6 +35,7 @@ import {
   type Round,
 } from './round'
 import { ME, newRound } from './setup'
+import type { MinigameRun } from '../../15-minigames'
 
 /** Text and chrome. The board's own colours live with the board, in the scene. */
 const LOOK = {
@@ -48,8 +49,12 @@ const LOOK = {
 const FONT =
   "ui-rounded, 'Hiragino Maru Gothic ProN', 'Segoe UI', system-ui, -apple-system, sans-serif"
 
-export function ZombieTagScreen() {
+export function ZombieTagScreen({ run }: { run: MinigameRun }) {
   const [round, setRound] = useState<Round>(() => newRound())
+  // Read in the frame callback rather than closed over, so pausing takes
+  // effect on the very next frame instead of whenever the effect re-runs.
+  const paused = useRef(run.paused)
+  paused.current = run.paused
   // The round is stepped every frame and drawn every frame, so it lives in a
   // ref and React is told about it rather than asked to own it.
   const live = useRef(round)
@@ -106,7 +111,9 @@ export function ZombieTagScreen() {
       const dt = (now - last) / 1000
       last = now
       const current = live.current
-      if (!current.over) {
+      // A paused round is stopped, not slowed: the clock is not read while the
+      // card is up, so coming back does not fast-forward through the gap.
+      if (!current.over && !paused.current) {
         const intents = crowdIntents(current)
         intents.set(ME, mine(keys.current, pushEdge.current))
         pushEdge.current = false

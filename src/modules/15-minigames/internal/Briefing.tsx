@@ -13,6 +13,7 @@
  * play button out from under the cursor.
  */
 import { useState } from 'react'
+import { useNet } from '../../09-net'
 import { BUILD_STEPS, minigameById, nextStep } from './catalogue'
 import {
   FONT,
@@ -46,10 +47,14 @@ type Leaf = 'how' | 'controls'
 
 export function Briefing({ run }: { run: MinigameRun }) {
   const game = minigameById(run.id)
+  const net = useNet()
   const [leaf, setLeaf] = useState<Leaf>('how')
   const up = nextStep(game)
   const count = countShown(run)
   const counting = run.phase === 'counting'
+  // Only the host starts a round. A guest is here because the host brought
+  // them, and a button that did nothing would be worse than no button.
+  const isHost = net.host
 
   return (
     <div style={screen}>
@@ -122,20 +127,27 @@ export function Briefing({ run }: { run: MinigameRun }) {
             </div>
           )}
 
-          {/* Play, at the bottom, where a play button goes. */}
-          <button
-            type="button"
-            data-play
-            onClick={playMinigame}
-            disabled={counting}
-            style={{ ...playButton, opacity: counting ? 0.6 : 1 }}
-          >
-            {counting ? 'starting…' : 'play'}
-          </button>
+          {/* Play, at the bottom, where a play button goes - the host's alone. */}
+          {isHost ? (
+            <button
+              type="button"
+              data-play
+              onClick={playMinigame}
+              disabled={counting}
+              style={{ ...playButton, opacity: counting ? 0.6 : 1 }}
+            >
+              {counting ? 'starting…' : 'play'}
+            </button>
+          ) : (
+            <div style={waiting} data-waiting>
+              {counting ? 'starting…' : 'waiting for the host to start'}
+            </div>
+          )}
 
           <div style={note}>
-            Nothing is built yet. Play still runs the three-two-one and starts
-            the round - what it starts is a game with no rules in it.
+            {isHost
+              ? 'Play runs the three-two-one and starts the round for everybody in the lobby.'
+              : 'The host brought you here and the host starts it. Escape to step out.'}
           </div>
         </div>
       </div>
@@ -288,6 +300,20 @@ const playButton: React.CSSProperties = {
   font: `700 18px/1.2 ${FONT}`,
   letterSpacing: 0.5,
   cursor: 'pointer',
+}
+
+/** What a guest gets where the host gets a button. Says why, rather than nothing. */
+const waiting: React.CSSProperties = {
+  flex: '0 0 auto',
+  width: '100%',
+  padding: '12px 16px',
+  borderRadius: 999,
+  boxSizing: 'border-box',
+  background: 'rgba(0,0,0,0.06)',
+  color: ISLAND.fadedInk,
+  font: `700 16px/1.2 ${FONT}`,
+  letterSpacing: 0.5,
+  textAlign: 'center',
 }
 
 const note: React.CSSProperties = {

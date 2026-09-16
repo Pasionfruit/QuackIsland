@@ -35,6 +35,17 @@ export {
 } from './internal/catalogue'
 
 export {
+  NO_CALL,
+  encodeCall,
+  followCall,
+  isMinigameCall,
+  parseCall,
+  type CallKind,
+  type MinigameCall,
+  type ParsedCall,
+} from './internal/call'
+
+export {
   COUNT_FROM,
   beginRun,
   buildFor,
@@ -43,7 +54,10 @@ export {
   forgetBuilds,
   freshRun,
   isBuilt,
+  isPausable,
+  pauseRun,
   registerMinigame,
+  resumeRun,
   tickRun,
   type MinigameBuild,
   type MinigameRun,
@@ -53,12 +67,16 @@ export {
 export {
   backOut,
   closeMinigames,
+  getMinigameCall,
   getMinigameScreen,
   openDashboard,
   openMinigame,
+  pauseMinigame,
   playMinigame,
+  resumeMinigame,
   tickMinigame,
   useMinigameScreen,
+  useMinigameSync,
   type MinigameScreenState,
 } from './internal/state'
 

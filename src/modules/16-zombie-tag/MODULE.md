@@ -181,8 +181,10 @@ else needs it. Nothing outside this module should be reaching for it.
 
 ## Known limitations
 
-- **A round is yours alone.** `15-minigames` starts a run locally, so this is
-  you and some stand-ins rather than a lobby. Block 16.7.
+- **A round is yours alone.** The host's *call* to start reaches everybody, so
+  a lobby enters and leaves a game together — but each browser then runs its
+  own copy against its own stand-in runners. Two people in one round are in two
+  rounds that look alike. Block 16.7.
 - **The avoidance is shallow.** A body in a dead end will scrape along a wall
   rather than back out of it. It never gets stuck permanently, because whatever
   it is fleeing eventually moves, but it does not look clever.
@@ -227,8 +229,9 @@ party panel, and open **1 · Zombie Tag**. Read it, then press **play**.
 - **Let the round finish.** A card should list everybody who was ever a player,
   longest survival first, with the six zombies nowhere on it. **Again** should
   start a fresh round.
-- **Press escape mid-round.** Back to the grid, and opening the game again
-  should give a fresh briefing rather than the round you walked out of.
+- **Press escape mid-round.** The round should stop dead — nobody moving, no
+  timer climbing — with a card offering resume. Resume and it carries on from
+  exactly there.
 
 ## Gate record
 

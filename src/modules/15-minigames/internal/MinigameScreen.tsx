@@ -11,33 +11,55 @@
  * of "three, two, one, go" be tested by calling `tickRun` with a few numbers
  * instead of waiting three real seconds for it.
  *
- * Escape steps back the same way the button does - out of a game to the
- * dashboard, out of the dashboard to the world.
+ * **Escape means two different things, and which one depends on whether
+ * anything is running.** On the dashboard or a briefing there is nothing to
+ * lose, so it steps back the way the button does. Once a round is counting or
+ * playing, stepping back would throw away a round you are in the middle of, so
+ * it stops the round and puts a card over it instead - see `Paused`.
  */
 import { useEffect } from 'react'
+import { useNet } from '../../09-net'
 import { Briefing } from './Briefing'
 import { Dashboard } from './Dashboard'
+import { Paused } from './Paused'
 import { minigameById } from './catalogue'
 import { FONT, ISLAND, bar, body, button, screen, wordmark } from './look'
-import { buildFor, type MinigameRun } from './registry'
-import { backOut, tickMinigame, useMinigameScreen } from './state'
+import { buildFor, isPausable, type MinigameRun } from './registry'
+import {
+  backOut,
+  pauseMinigame,
+  resumeMinigame,
+  tickMinigame,
+  useMinigameScreen,
+} from './state'
 
 /** How often the countdown is advanced. Ten a second is smoother than it needs. */
 const TICK_MS = 100
 
 export function MinigameScreen() {
   const open = useMinigameScreen()
+  const net = useNet()
   const showing = open.at !== 'closed'
-  const counting = open.at === 'game' && open.run.phase === 'counting'
+  const run = open.at === 'game' ? open.run : null
+  const counting = run?.phase === 'counting' && !run.paused
+  // Read through the render rather than closed over, so the key handler never
+  // acts on a phase that has moved on since it was installed.
+  const pausable = run !== null && isPausable(run)
+  const paused = run?.paused === true
 
   useEffect(() => {
     if (!showing) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.code === 'Escape') backOut()
+      if (e.code !== 'Escape') return
+      // Nothing running: escape is still the way back. Something running:
+      // stop it and ask, rather than throwing away a round in progress.
+      if (!pausable) backOut()
+      else if (paused) resumeMinigame()
+      else pauseMinigame()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [showing])
+  }, [showing, pausable, paused])
 
   useEffect(() => {
     if (!counting) return
@@ -50,18 +72,35 @@ export function MinigameScreen() {
 
   // Reading about it, or counting into it. Both are this module's screen.
   if (open.run.phase === 'briefing' || open.run.phase === 'counting') {
-    return <Briefing run={open.run} />
+    return (
+      <>
+        <Briefing run={open.run} />
+        {open.run.paused ? <Paused isHost={net.host} /> : null}
+      </>
+    )
   }
 
   const build = buildFor(open.run.id)
-  if (!build) return <NotBuilt run={open.run} />
+  if (!build) {
+    return (
+      <>
+        <NotBuilt run={open.run} />
+        {open.run.paused ? <Paused isHost={net.host} /> : null}
+      </>
+    )
+  }
 
   // Rendered as a component rather than called as a function, so a game's own
   // panel gets its own place to keep hooks. Called, its `useState` would
   // belong to this component instead, and switching games would hand the next
   // one the last one's state - which every game after the first would hit.
   const Panel = build.Panel
-  return <Panel key={open.run.id} />
+  return (
+    <>
+      <Panel key={open.run.id} run={open.run} />
+      {open.run.paused ? <Paused isHost={net.host} /> : null}
+    </>
+  )
 }
 
 /**

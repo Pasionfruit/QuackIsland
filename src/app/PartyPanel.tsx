@@ -68,9 +68,10 @@ export function PartyPanel() {
       )}
 
       {/* The minigames are Volcano Island's, so the way into the catalogue is
-          offered when that is the game - and only there. Browsing it is local:
-          it opens your screen and nobody else's. */}
-      {mode === 'island' ? (
+          offered when that is the game - and only to the host. Browsing is
+          local, but starting is not: a guest goes where the host goes, so a
+          catalogue would be offering them a choice they do not have. */}
+      {mode === 'island' && net.host ? (
         <button
           type="button"
           onClick={openDashboard}
@@ -78,6 +79,9 @@ export function PartyPanel() {
         >
           minigames · {MINIGAMES.length}
         </button>
+      ) : null}
+      {mode === 'island' && !net.host && net.status === 'joined' ? (
+        <div style={{ opacity: 0.45, marginTop: 5 }}>the host picks the minigame</div>
       ) : null}
 
       <div style={{ opacity: 0.4, marginTop: 5 }}>tab for everyone</div>

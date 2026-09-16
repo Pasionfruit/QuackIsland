@@ -40,6 +40,16 @@ export interface MinigameRun {
   /** Seconds left of the three-two-one. Only meaningful while `counting`. */
   countdown: number
   /**
+   * Stopped where it stands, with a card over it.
+   *
+   * **Personal, not shared**, the same as Garden Goofs' pause and for the same
+   * reason: there is no message for it. A guest who pauses stops their own
+   * clock and everybody else carries on, which is the honest consequence of a
+   * round that each browser is running its own copy of. Nothing is lost by it
+   * and nothing else has to know.
+   */
+  paused: boolean
+  /**
    * The game's own state, in whatever shape that game needs.
    *
    * `null` for a game that has no build yet, which is all of them. See the
@@ -54,8 +64,15 @@ export const COUNT_FROM = 3
 export interface MinigameBuild {
   /** The state this game starts a run with. Its shape is the game's business. */
   newGame: () => unknown
-  /** What the screen draws while this game is the one open. */
-  Panel: () => ReactNode
+  /**
+   * What the screen draws while this game is the one open.
+   *
+   * Handed the run, because the wrapper carries things a game has to obey and
+   * cannot work out for itself - `paused`, above all. A game that kept
+   * simulating through a pause card would be a pause card with a game going on
+   * behind it.
+   */
+  Panel: (props: { run: MinigameRun }) => ReactNode
 }
 
 const BUILDS = new Map<MinigameId, MinigameBuild>()
@@ -105,7 +122,7 @@ export function forgetBuilds(): void {
  */
 export function freshRun(id: MinigameId): MinigameRun {
   const build = buildFor(id)
-  return { id, phase: 'briefing', countdown: 0, game: build ? build.newGame() : null }
+  return { id, phase: 'briefing', countdown: 0, paused: false, game: build ? build.newGame() : null }
 }
 
 /**
@@ -123,6 +140,7 @@ export function beginRun(run: MinigameRun): MinigameRun {
     ...run,
     phase: 'counting',
     countdown: COUNT_FROM,
+    paused: false,
     game: build ? build.newGame() : null,
   }
 }
@@ -135,10 +153,34 @@ export function beginRun(run: MinigameRun): MinigameRun {
  * numbers instead of waiting three real seconds for it.
  */
 export function tickRun(run: MinigameRun, dt: number): MinigameRun {
-  if (run.phase !== 'counting') return run
+  // A paused countdown does not count. Pressing escape on "two" and coming
+  // back to "two" is the only behaviour anybody would expect.
+  if (run.phase !== 'counting' || run.paused) return run
   const left = run.countdown - Math.max(0, dt)
   if (left <= 0) return { ...run, phase: 'playing', countdown: 0 }
   return { ...run, countdown: left }
+}
+
+/**
+ * Whether there is anything to pause: a round on, or a countdown into one.
+ *
+ * A briefing is not paused, it is just read - so escape on a briefing means
+ * what it always meant, which is "take me back".
+ */
+export function isPausable(run: MinigameRun): boolean {
+  return run.phase === 'counting' || run.phase === 'playing'
+}
+
+/** Stops it where it stands. Does nothing to a briefing. */
+export function pauseRun(run: MinigameRun): MinigameRun {
+  if (!isPausable(run) || run.paused) return run
+  return { ...run, paused: true }
+}
+
+/** Starts it again from exactly where it stopped. */
+export function resumeRun(run: MinigameRun): MinigameRun {
+  if (!run.paused) return run
+  return { ...run, paused: false }
 }
 
 /**

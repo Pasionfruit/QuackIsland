@@ -77,11 +77,14 @@ lobby plays the same one. The host chooses:
   island across the water, out-of-round, with a horseshoe crater and the track
   winding three times up to the treasure at the top. It is also where the
   **minigames** live: forty-one of them planned, thirty free-for-all and
-  eleven one-vs-all, twenty-six named so far and none playable yet. Press
+  eleven one-vs-all, twenty-six named so far and none playable yet. The **host** presses
   **minigames** in the party panel to see the lot on one screen — sand and sea
   rather than the dark HUD, a tile each, no descriptions to wade through.
-  Opening one gives you its own page: what it is, what you press, and a **play**
-  button that counts three, two, one into the round. **Zombie Tag** is the
+  Opening one gives its own page: what it is, what you press, and a **play**
+  button that counts three, two, one into the round. **Everybody in the lobby
+  goes along** — guests get the same briefing and start when the host does,
+  rather than picking their own. **Escape** pauses a round where it stands and
+  offers to resume or leave. **Zombie Tag** is the
   first one built — six zombies chase everybody around a walled arena of
   crates, all of you spawn in the middle, and getting caught turns you into one
   of them. You move twice as fast as a zombie; **space** shoves another runner
