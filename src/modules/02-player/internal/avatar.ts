@@ -162,8 +162,7 @@ export function armPoints(): { x: number; y: number; roll: number }[] {
 }
 
 /** Built on first use and then shared by every body in the world. */
-let shared: { body: BufferGeometry; face: BufferGeometry; skin: MeshStandardMaterial; ink: MeshStandardMaterial } | null =
-  null
+let shared: { body: BufferGeometry; face: BufferGeometry; ink: MeshStandardMaterial } | null = null
 
 function parts() {
   if (shared) return shared
@@ -198,10 +197,26 @@ function parts() {
   shared = {
     body,
     face,
-    skin: new MeshStandardMaterial({ color: AVATAR.bodyColour, roughness: 0.55 }),
     ink: new MeshStandardMaterial({ color: AVATAR.faceColour, roughness: 0.7 }),
   }
   return shared
+}
+
+/**
+ * The skin for a colour, built once per colour and then shared.
+ *
+ * A minigame that wants a body per player wants a body per *colour*, and a
+ * fresh material each time would be a fresh shader program each time. Keyed by
+ * the colour string, so eight blue players cost one material between them.
+ */
+const skins = new Map<string, MeshStandardMaterial>()
+
+function skinFor(colour: string): MeshStandardMaterial {
+  const had = skins.get(colour)
+  if (had) return had
+  const made = new MeshStandardMaterial({ color: colour, roughness: 0.55 })
+  skins.set(colour, made)
+  return made
 }
 
 /**
@@ -209,9 +224,14 @@ function parts() {
  *
  * Every caller gets its own group - a local player and a remote one must not
  * share a transform - over the one set of geometries and materials.
+ *
+ * `colour` is for anything that needs to tell bodies apart at a glance: the
+ * world only ever has red ones, but a minigame full of them needs a colour per
+ * player. Geometry is shared whatever colour it is painted.
  */
-export function createAvatar(): Group {
-  const { body, face, skin, ink } = parts()
+export function createAvatar(colour: string = AVATAR.bodyColour): Group {
+  const { body, face, ink } = parts()
+  const skin = skinFor(colour)
 
   const pill = new Mesh(body, skin)
   pill.castShadow = true

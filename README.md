@@ -85,8 +85,10 @@ lobby plays the same one. The host chooses:
   first one built — six zombies chase everybody around a walled arena of
   crates, all of you spawn in the middle, and getting caught turns you into one
   of them. You move twice as fast as a zombie; **space** shoves another runner
-  over for a second, on a three second cooldown. The camera never moves: the
-  whole arena is in front of you the entire round. Last one running wins.
+  over for a second, on a three second cooldown. The camera never moves and sits at
+  sixty degrees, so you see across the room rather than down at a map — lit
+  with the island's own sun and sand, and everybody is the same capsule you
+  walk the beach in, painted a colour each. Last one running wins.
 - **Garden Goofs** — a flat **2D** lane defence on an eight-by-twelve lawn.
   Starting it loads a page of its own, opaque and full screen, not a dialog
   over the world — a house on the left edge marks what you are defending. The

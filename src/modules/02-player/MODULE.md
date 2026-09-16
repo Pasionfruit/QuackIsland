@@ -33,7 +33,7 @@ three.js in it, so how the player moves is tested in Node rather than by eye.
 | `clampPitch(mode, pitch)` | Keeps the pitch inside what a view can cope with |
 | `VIEW`, `VIEW_MODES`, `RigState`, `Placement`, `ViewMode` | The shapes above |
 | `AVATAR` | The body's look: colours, where the face sits, how far it tips |
-| `createAvatar()` | One body, feet on `y = 0`, facing +Z, over shared geometry |
+| `createAvatar(colour?)` | One body, feet on `y = 0`, facing +Z, over shared geometry. The colour is for anything needing to tell bodies apart — see `16-zombie-tag` |
 | `facePoints()` | Where each piece of the face sits on the body. Pure |
 | `armPoints()` | Where each arm hangs and how far it swings out. Pure |
 | `bodyPose(lean, height, radius, fall?)` | How high the middle rides and how far it tips, swimming or knocked over. Pure |
@@ -206,7 +206,9 @@ cuts into it or hangs off it at the ends; dots follow the curve. A test checks
 that consecutive dots overlap, so it reads as one line and not as a dotted one.
 
 **A whole body is two draw calls**, and every body in the world shares one set
-of geometry and materials. The face is merged into a single geometry when the
+of geometry and materials. `createAvatar` takes an optional colour and caches
+one material per colour, so a minigame with eight blue players costs one
+material between them and the geometry is still the geometry. The face is merged into a single geometry when the
 first body is built, so eyes and smile cost one call between them however many
 pieces they are made of. `createAvatar` hands out a fresh `Group` over that
 shared geometry — a local player and a remote one must never share a transform.

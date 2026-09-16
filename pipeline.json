@@ -300,7 +300,8 @@
         "03-footprints",
         "08-audio",
         "09-net",
-        "10-party"
+        "10-party",
+        "16-zombie-tag"
       ],
       "generation": 1,
       "contract": {
@@ -358,7 +359,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-15T23:46:10.194Z"
+          "at": "2026-09-16T01:56:46.610Z"
         },
         "human": {
           "status": "pending"
@@ -1366,6 +1367,7 @@
       "title": "Minigame 1, Zombie Tag: six zombies, an arena of crates, and the last one running",
       "status": "ready_for_review",
       "dependsOn": [
+        "02-player",
         "15-minigames"
       ],
       "dependents": [],
@@ -1410,12 +1412,17 @@
           "id": "16.7",
           "title": "A round synced across the lobby, in place of the stand-in runners",
           "status": "planned"
+        },
+        {
+          "id": "16.8",
+          "title": "Three dimensions: a tilted fixed camera, island light, and the island's own pill",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-16T01:45:18.087Z"
+          "at": "2026-09-16T01:55:53.410Z"
         },
         "human": {
           "status": "pending"
@@ -1424,7 +1431,7 @@
       },
       "freeze": null,
       "nonGoals": [
-        "No assets: every body is a coloured circle and every crate a brown rectangle",
+        "No models: the bodies are the island's capsule avatar and the crates are boxes",
         "No multiplayer round yet - the other runners are stand-ins, not peers",
         "No moving camera, ever. The still overhead view is the game, not a limitation",
         "No pathfinding: zombies go at you and turn aside when a crate is in the way",

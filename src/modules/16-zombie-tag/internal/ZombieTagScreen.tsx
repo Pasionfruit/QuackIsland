@@ -1,26 +1,28 @@
 /**
  * Zombie Tag, on the screen.
  *
- * **The camera never moves.** The whole arena is drawn at once, from directly
- * above, and it stays exactly where it is for the whole round - so what you
- * can see is never a thing you had to earn, and six zombies closing from three
- * sides is a thing you watch happen rather than a thing that surprises you.
- * That is the entire reason this is an SVG with a fixed `viewBox`: the browser
- * fits the arena into whatever room the window has, centred, undistorted, and
- * there is no camera code at all.
+ * **The camera never moves, and it is not overhead.** It sits high and back at
+ * sixty degrees - see `camera.ts` - so the arena reads as a room seen from
+ * across it rather than as a map, and everything in it has a side as well as a
+ * top. It stays exactly where it is for the whole round: six zombies closing
+ * from three sides is a thing you watch happen rather than a thing that
+ * surprises you, and no part of the board is information you had to earn.
  *
- * Everything else is a thin shell. Keys go in, `stepRound` decides what
- * happens, and this draws where the bodies ended up - the same split the
- * player controller uses, and for the same reason: the rules are worth testing
- * and the drawing is not.
+ * The world is drawn in its own canvas by `ZombieTagScene`, lit like the
+ * island and populated with the island's own avatar. This file is the shell
+ * around it: keys in, `stepRound` decides what happens, and the HUD sits over
+ * the top in the DOM where text belongs.
  *
- * Coloured shapes, not models. The assets stage of this game has not been
- * done, and pretending otherwise with a half-made duck would be worse than a
- * circle with a face on it.
+ * The split is the same one the player controller uses next door, for the same
+ * reason - the rules are worth testing and the drawing is not.
  */
+import { Canvas } from '@react-three/fiber'
 import { useEffect, useRef, useState } from 'react'
-import { ARENA, HALF_H, HALF_W, OBSTACLES } from './arena'
+import { ACESFilmicToneMapping, PCFSoftShadowMap } from 'three'
+import { ARENA } from './arena'
 import { crowdIntents } from './ai'
+import { FOV } from './camera'
+import { PALETTE, ZombieTagScene } from './ZombieTagScene'
 import {
   NO_INTENT,
   placings,
@@ -34,19 +36,13 @@ import {
 } from './round'
 import { ME, newRound } from './setup'
 
-/** How the arena is painted. Sand and sea, the same island the rest of it uses. */
+/** Text and chrome. The board's own colours live with the board, in the scene. */
 const LOOK = {
-  floor: '#f3e2c0',
-  floorLine: '#e4cfa4',
-  wall: '#8a6a44',
-  crate: '#c08a52',
-  crateTop: '#d8a468',
-  you: '#3f8fd0',
-  runner: '#5eb85b',
-  zombie: '#b0499a',
-  stunned: '#f0d048',
   ink: '#4a3524',
   sand: '#f6e4bf',
+  you: PALETTE.you,
+  runner: PALETTE.runner,
+  zombie: PALETTE.zombie,
 } as const
 
 const FONT =
@@ -138,80 +134,26 @@ export function ZombieTagScreen() {
         {you ? <PushMeter body={you} /> : null}
       </div>
 
-      {/* One fixed view of the whole arena. `meet` keeps it undistorted and
-          centred at any window size, which is the whole camera. */}
-      <svg
-        viewBox={`${-HALF_W} ${-HALF_H} ${ARENA.width} ${ARENA.height}`}
-        preserveAspectRatio="xMidYMid meet"
-        style={board}
-        aria-label="Zombie Tag arena"
-      >
-        <rect
-          x={-HALF_W}
-          y={-HALF_H}
-          width={ARENA.width}
-          height={ARENA.height}
-          fill={LOOK.floor}
-          stroke={LOOK.wall}
-          strokeWidth={0.6}
-          rx={0.8}
-        />
-
-        {OBSTACLES.map((box, i) => (
-          <g key={i}>
-            <rect
-              x={box.x - box.width / 2}
-              y={box.y - box.height / 2}
-              width={box.width}
-              height={box.height}
-              fill={LOOK.crate}
-              rx={0.3}
-              data-obstacle={i}
-            />
-            <rect
-              x={box.x - box.width / 2}
-              y={box.y - box.height / 2}
-              width={box.width}
-              height={box.height * 0.4}
-              fill={LOOK.crateTop}
-              rx={0.3}
-            />
-          </g>
-        ))}
-
-        {round.bodies.map((body) => (
-          <BodyMark key={body.id} body={body} />
-        ))}
-      </svg>
+      {/* The arena, in its own canvas. Its camera is fixed and tilted - see
+          `camera.ts` - and its lights are the island's daylight, so the room
+          belongs to the same world as the beach you walked in from. */}
+      <div style={board}>
+        <Canvas
+          shadows={{ type: PCFSoftShadowMap }}
+          dpr={[1, 2]}
+          camera={{ fov: FOV, near: 1, far: 400, position: [0, 60, 34] }}
+          gl={{ antialias: true, powerPreference: 'high-performance' }}
+          onCreated={({ gl }) => {
+            gl.toneMapping = ACESFilmicToneMapping
+            gl.toneMappingExposure = 1.05
+          }}
+        >
+          <ZombieTagScene round={round} />
+        </Canvas>
+      </div>
 
       {round.over ? <Over round={round} onAgain={() => setRound(newRound())} /> : null}
     </div>
-  )
-}
-
-/** One body: a circle, a nose to say which way it is facing, and a stun ring. */
-function BodyMark({ body }: { body: Body }) {
-  const colour = body.side === 'zombie' ? LOOK.zombie : body.mine ? LOOK.you : LOOK.runner
-  return (
-    <g data-body={body.id} data-side={body.side} transform={`translate(${body.x} ${body.y})`}>
-      {body.stun > 0 ? (
-        <circle r={ARENA.radius * 1.5} fill="none" stroke={LOOK.stunned} strokeWidth={0.22} />
-      ) : null}
-      <circle
-        r={ARENA.radius}
-        fill={colour}
-        stroke={body.mine ? LOOK.ink : 'none'}
-        strokeWidth={body.mine ? 0.18 : 0}
-      />
-      {/* Which way it is pointing. A chase is unreadable without it. */}
-      <circle
-        cx={Math.cos(body.facing) * ARENA.radius * 0.55}
-        cy={Math.sin(body.facing) * ARENA.radius * 0.55}
-        r={ARENA.radius * 0.28}
-        fill={LOOK.sand}
-        opacity={0.9}
-      />
-    </g>
   )
 }
 
@@ -331,12 +273,19 @@ const pill: React.CSSProperties = {
  * the fitting is `preserveAspectRatio`'s job - there is no measuring here and
  * no scrollbar anywhere.
  */
+/**
+ * Everything under the HUD, and what the canvas fills.
+ *
+ * No padding: the canvas is the room and it should run to the edges of the
+ * window the way the world's does. `minHeight: 0` so it gives rather than
+ * pushing the page past the bottom, which is the same rule every screen in
+ * this build follows.
+ */
 const board: React.CSSProperties = {
   flex: 1,
   minHeight: 0,
   width: '100%',
-  padding: 12,
-  boxSizing: 'border-box',
+  position: 'relative',
 }
 
 const overBackdrop: React.CSSProperties = {
