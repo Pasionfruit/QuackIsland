@@ -13,9 +13,9 @@
  * its entry is all there is and the screen draws a template from it.
  *
  * **Every game is built in the same three stages, in the same order** - see
- * `BUILD_STEPS`. A game with none of them done is a name and a pitch; a game
- * with all three is playable. Nothing below has started, which is exactly as
- * far as this pass goes.
+ * `BUILD_STEPS`. A game with none of them done is a name, a description and a
+ * list of controls; a game with all three is playable. Nothing below has
+ * started, which is exactly as far as this pass goes.
  */
 
 /**
@@ -68,13 +68,20 @@ export interface Minigame {
   number: number
   title: string
   kind: MinigameKind
-  /** One line under the title on a dashboard tile. Empty on a reserved slot. */
-  pitch: string
+  /**
+   * How the game is played, a paragraph at a time. Empty on a reserved slot.
+   *
+   * Not shown on the dashboard - forty-one tiles each carrying a paragraph is
+   * a wall of text nobody reads, and the grid is for picking a game rather
+   * than for reading about one. It lives behind the game's own screen, under
+   * the tab of the same name.
+   */
+  description: readonly string[]
   /** What the player presses. Empty until the controls pass has been done. */
   controls: readonly Control[]
   /**
-   * A slot with a number and no game in it yet. Its title and pitch are empty
-   * and none of its stages can be started until somebody names it.
+   * A slot with a number and no game in it yet. Its description and controls
+   * are empty, and none of its stages can be started until somebody names it.
    */
   reserved: boolean
   /** Which of the three stages are finished. All three means playable. */
@@ -99,7 +106,11 @@ const ENTRIES = [
     number: 1,
     title: 'Zombie Tag',
     kind: 'free-for-all',
-    pitch: 'Six zombies, one walled arena. Get caught and you join them.',
+    description: [
+      'Six zombies start the round and come for everybody. Get caught and you become one of them.',
+      'The arena is walled and full of things to put between you and them, and everybody spawns in the middle of it. Push knocks another player down: three seconds between pushes, and a second on the floor for whoever you hit.',
+      'Zombies move at half your speed. The last player still running wins.',
+    ],
     controls: [
       { input: 'WASD', does: 'Move' },
       { input: 'Space', does: 'Push' },
@@ -112,7 +123,10 @@ const ENTRIES = [
     number: 2,
     title: 'Messy Maze',
     kind: 'free-for-all',
-    pitch: 'Four corners, one centre, and platforms that rebind your keys on the way.',
+    description: [
+      'Everybody starts in a different corner and races for the centre.',
+      'Two spinning platforms sit in the way, and stepping on one rebinds your movement to different letters at random. You place in the order you reach the middle.',
+    ],
     controls: [{ input: 'WASD / assigned keys', does: 'Move' }],
     reserved: false,
     done: { environment: false, controls: false, assets: false },
@@ -122,7 +136,10 @@ const ENTRIES = [
     number: 3,
     title: 'Probable Stop',
     kind: 'free-for-all',
-    pitch: 'Six rounds, three paths, and odds that turn against you at the end.',
+    description: [
+      'Six rounds, three paths each. Pick one, and keep changing your mind until the countdown runs out.',
+      'The first four rounds give you two chances in three. The last two give you one in three. Survive a round and you go through to the next.',
+    ],
     controls: [
       { input: 'WASD', does: 'Move between choices' },
       { input: 'Mouse', does: 'Select or change path' },
@@ -136,7 +153,10 @@ const ENTRIES = [
     number: 4,
     title: 'Duck Hunt',
     kind: 'free-for-all',
-    pitch: 'Pop only the balloons wearing your colour. A second and a half between shots.',
+    description: [
+      'Balloons drift up around the arena, each one wearing somebody\'s colour. Shoot the ones that are yours and leave everybody else\'s alone.',
+      'A second and a half between shots, so a miss actually costs you. Most correct pops wins.',
+    ],
     controls: [
       { input: 'Mouse', does: 'Aim' },
       { input: 'Left click', does: 'Shoot' },
@@ -149,7 +169,10 @@ const ENTRIES = [
     number: 5,
     title: 'Pet Race',
     kind: 'free-for-all',
-    pitch: 'Dog, cat, rabbit, hamster or fish. They do not run the same.',
+    description: [
+      'Pick a dog, a cat, a rabbit, a hamster or a fish. Each has its own speed and its own stamina, and none of them is simply the best one.',
+      'Twenty seconds of countdown, and then race for the line.',
+    ],
     controls: [{ input: 'WASD', does: 'Move' }],
     reserved: false,
     done: { environment: false, controls: false, assets: false },
@@ -159,7 +182,10 @@ const ENTRIES = [
     number: 6,
     title: 'Feeding Time',
     kind: 'free-for-all',
-    pitch: 'Fling crackers across the pond. Whoever feeds the most ducks wins.',
+    description: [
+      'Ducks on a pond and a handful of crackers. Hold the button and flick the mouse from the bottom of the screen to the top to throw one.',
+      'Whoever feeds the most ducks wins.',
+    ],
     controls: [{ input: 'Left click + drag', does: 'Throw a cracker' }],
     reserved: false,
     done: { environment: false, controls: false, assets: false },
@@ -169,7 +195,11 @@ const ENTRIES = [
     number: 7,
     title: 'Sprint Triathlon',
     kind: 'free-for-all',
-    pitch: 'Swim by clicking, bike by mashing, run by typing. Got any grapes?',
+    description: [
+      'Three legs, back to back. Swim by clicking as fast as you can. Bike by hammering space. Then run, by typing the sentence out without getting it wrong:',
+      'Duck walked up to a lemonade stand, and he said to the man running the stand, hey! Got any grapes?',
+      'How you did across all three is your time.',
+    ],
     controls: [
       { input: 'Left click', does: 'Swim' },
       { input: 'Space', does: 'Bike' },
@@ -183,7 +213,10 @@ const ENTRIES = [
     number: 8,
     title: 'Punch Buggy',
     kind: 'free-for-all',
-    pitch: 'Extendable fists on a floating platform. One clean hit ends somebody.',
+    description: [
+      'A floating platform and a pair of fists that come off. Click to shoot a punch out, click again to pull it back.',
+      'A punch that lands on somebody knocks them out of the round. Thirty seconds on the clock.',
+    ],
     controls: [
       { input: 'WASD', does: 'Move' },
       { input: 'Left click', does: 'Extend or retract the punch' },
@@ -196,7 +229,10 @@ const ENTRIES = [
     number: 9,
     title: 'Time It',
     kind: 'free-for-all',
-    pitch: 'The stopwatch closes after two and a half seconds. Stop it anyway.',
+    description: [
+      'A stopwatch runs and you have to stop it on the target. You can watch it for the first two and a half seconds, and then it shuts and you are on your own.',
+      'The target is never under six and a half seconds. Closest wins. The round ends when everybody has stopped, or at thirty seconds, whichever comes first.',
+    ],
     controls: [{ input: 'Left click', does: 'Stop the stopwatch' }],
     reserved: false,
     done: { environment: false, controls: false, assets: false },
@@ -206,7 +242,10 @@ const ENTRIES = [
     number: 10,
     title: 'Wack-Attack',
     kind: 'free-for-all',
-    pitch: 'Sixteen holes, a hammer each, and a golden mole that will not wait.',
+    description: [
+      'Sixteen holes, moles coming out of them, and everybody walking about with a hammer.',
+      'An ordinary mole is worth what it is worth. The golden one is worth more and gives you far less time to get to it.',
+    ],
     controls: [
       { input: 'WASD', does: 'Move' },
       { input: 'Left click', does: 'Swing the hammer' },
@@ -219,7 +258,10 @@ const ENTRIES = [
     number: 11,
     title: 'Lady Luck',
     kind: 'free-for-all',
-    pitch: 'Three four-leaf clovers hidden in a field of threes. Claim one and it is yours.',
+    description: [
+      'A field of three-leaf clovers with exactly three four-leaf clovers hidden in it. Search, and click what you find.',
+      'Claiming one rings it in your colour and shuts everybody else out of it.',
+    ],
     controls: [
       { input: 'Mouse', does: 'Aim' },
       { input: 'Left click', does: 'Pick a clover' },
@@ -232,7 +274,10 @@ const ENTRIES = [
     number: 12,
     title: 'Find Yourself',
     kind: 'free-for-all',
-    pitch: 'Your face under a cup, three shuffles, each one worth more than the last.',
+    description: [
+      'Your face goes under a cup, and then the cups shuffle. Three stages, each one faster than the last, and you pick your cup at the end of each.',
+      'The first stage is worth a point, the second two, the third three.',
+    ],
     controls: [
       { input: 'Mouse', does: 'Aim' },
       { input: 'Left click', does: 'Pick a cup' },
@@ -245,7 +290,10 @@ const ENTRIES = [
     number: 13,
     title: 'Make The Cut',
     kind: 'free-for-all',
-    pitch: 'Strings over a tower. Cut the wrong one and you go over the side.',
+    description: [
+      'Everybody gets three strings, and there is one eliminating string for every player but one. A random player goes first.',
+      'Cut a string. Cut an eliminating one and you go off the side of the tower.',
+    ],
     controls: [],
     reserved: false,
     done: { environment: false, controls: false, assets: false },
@@ -255,7 +303,10 @@ const ENTRIES = [
     number: 14,
     title: "He's One Shot",
     kind: 'free-for-all',
-    pitch: 'First-person free-for-all. Being out does not stop you hunting.',
+    description: [
+      'First person, everybody against everybody, with a gun that needs a moment between shots. A minute and fifteen on the clock.',
+      'Being eliminated does not take you out of it - you stay in and keep hunting. The last player to go wins.',
+    ],
     controls: [],
     reserved: false,
     done: { environment: false, controls: false, assets: false },
@@ -265,7 +316,10 @@ const ENTRIES = [
     number: 15,
     title: "Where's Midnight?",
     kind: 'free-for-all',
-    pitch: 'A black cat in a night junkyard. Drag, zoom, and find her first.',
+    description: [
+      'A junkyard at night, and an all-black cat called Midnight somewhere in it.',
+      'Drag and zoom around the scene until you find her. You place in the order everybody does.',
+    ],
     controls: [],
     reserved: false,
     done: { environment: false, controls: false, assets: false },
@@ -275,7 +329,10 @@ const ENTRIES = [
     number: 16,
     title: 'Let Him Cook',
     kind: 'free-for-all',
-    pitch: 'One chef, six ingredients, fifteen dishes, and everybody else remembering.',
+    description: [
+      'One player is the chef and picks a dish out of fifteen, made from six ingredients. Everybody else has to remember what went into it.',
+      'Then you take turns choosing ingredients. Choose one that was not in the recipe, or one that has already been taken as many times as it appears, and you are out. Survive your turn and you go back in the line.',
+    ],
     controls: [],
     reserved: false,
     done: { environment: false, controls: false, assets: false },
@@ -285,7 +342,10 @@ const ENTRIES = [
     number: 17,
     title: 'I See The Light',
     kind: 'free-for-all',
-    pitch: 'Green light: mash. Red light: hold the cursor in the circle and do not twitch.',
+    description: [
+      'Red light, green light. On green, hammer space to get yourself forward.',
+      'On red, hold your cursor inside a floating circle that will not stay still. Let it slip out, or touch space while the light is red, and you are out.',
+    ],
     controls: [],
     reserved: false,
     done: { environment: false, controls: false, assets: false },
@@ -295,7 +355,10 @@ const ENTRIES = [
     number: 18,
     title: 'Helping Dad',
     kind: 'free-for-all',
-    pitch: 'A torch in your colour, a dark puzzle, and a shout every time you hit a wall.',
+    description: [
+      'A torch in your own colour, and a puzzle in the dark. Go slowly.',
+      'Walk into a wall and you get shouted at, and stand there stunned for a second and a half while everybody else gets on with it.',
+    ],
     controls: [],
     reserved: false,
     done: { environment: false, controls: false, assets: false },
@@ -305,7 +368,11 @@ const ENTRIES = [
     number: 19,
     title: 'Synchronize Steps',
     kind: 'free-for-all',
-    pitch: 'One, four or six steps down. Match one player and you move; match two and you fall.',
+    description: [
+      'Twenty steps down, and every two seconds everybody picks 1, 4 or 6.',
+      'If exactly two of you pick the same number, you both move that far. If three or more do, all of you drop eight. Match nobody and you stay exactly where you are.',
+      'Where you end up, top to bottom, is where you place.',
+    ],
     controls: [],
     reserved: false,
     done: { environment: false, controls: false, assets: false },
@@ -315,7 +382,10 @@ const ENTRIES = [
     number: 20,
     title: 'Sharing Is Caring',
     kind: 'free-for-all',
-    pitch: 'Reverse tag for a crown. Hold it longest in a minute.',
+    description: [
+      'Tag, backwards. A crown sits in the middle, and the first player to grab it starts scoring.',
+      'Bump into whoever is wearing it to take it off them. After a minute, whoever held it longest wins.',
+    ],
     controls: [],
     reserved: false,
     done: { environment: false, controls: false, assets: false },
@@ -325,7 +395,10 @@ const ENTRIES = [
     number: 21,
     title: 'Keyboard Warrior',
     kind: 'free-for-all',
-    pitch: 'A letter appears. One try each. The fastest correct key takes it.',
+    description: [
+      'Letters float into the arena one at a time.',
+      'Each is worth a point to whoever types it correctly first, and you get exactly one attempt at each.',
+    ],
     controls: [],
     reserved: false,
     done: { environment: false, controls: false, assets: false },
@@ -335,7 +408,10 @@ const ENTRIES = [
     number: 22,
     title: 'Tetris Master',
     kind: 'free-for-all',
-    pitch: 'Stack a tower out of awkward blocks, then survive the earthquake.',
+    description: [
+      'Blocks of awkward shapes, one tower each. Build it high and build it stable.',
+      'Earthquakes and worse are coming for it. The best tower still standing at the end wins.',
+    ],
     controls: [],
     reserved: false,
     done: { environment: false, controls: false, assets: false },
@@ -345,7 +421,7 @@ const ENTRIES = [
     number: 23,
     title: 'Free slot',
     kind: 'free-for-all',
-    pitch: '',
+    description: [],
     controls: [],
     reserved: true,
     done: { environment: false, controls: false, assets: false },
@@ -355,7 +431,7 @@ const ENTRIES = [
     number: 24,
     title: 'Free slot',
     kind: 'free-for-all',
-    pitch: '',
+    description: [],
     controls: [],
     reserved: true,
     done: { environment: false, controls: false, assets: false },
@@ -365,7 +441,10 @@ const ENTRIES = [
     number: 25,
     title: 'Short Song Rhythm',
     kind: 'free-for-all',
-    pitch: 'Ten rounds of a short song, on left click, right click, or both at once.',
+    description: [
+      'A short song, ten rounds of rhythm, and three things you can hit: left click, right click, or both at once.',
+      'How close you are to the beat is your score.',
+    ],
     controls: [],
     reserved: false,
     done: { environment: false, controls: false, assets: false },
@@ -375,7 +454,10 @@ const ENTRIES = [
     number: 26,
     title: 'Make Some Noise',
     kind: 'one-vs-all',
-    pitch: 'A duck, a floating island, and a minute to break as much of it as possible.',
+    description: [
+      'You are a duck on a floating island with one minute to wreck as much of it as you possibly can.',
+      'Different parts of the island are worth different amounts. Fall off the edge and your turn ends that instant.',
+    ],
     controls: [],
     reserved: false,
     done: { environment: false, controls: false, assets: false },
@@ -385,7 +467,10 @@ const ENTRIES = [
     number: 27,
     title: 'Perfect Game',
     kind: 'one-vs-all',
-    pitch: 'Thirty crabs in a swaying column. One coconut, fifteen seconds to aim it.',
+    description: [
+      'A bent column of thirty crabs sways left and right in front of you.',
+      'Fifteen seconds to set where you stand and the angle of your coconut roll, and then you let it go. Every crab it hits is a point.',
+    ],
     controls: [],
     reserved: false,
     done: { environment: false, controls: false, assets: false },
@@ -395,7 +480,11 @@ const ENTRIES = [
     number: 28,
     title: 'Chef Caricature',
     kind: 'one-vs-all',
-    pitch: 'Trace the outline in one unbroken stroke. Cover enough of it and the duck eats it.',
+    description: [
+      'You get the outline of an ingredient or a dish, and forty-five seconds to trace as many of them as you can.',
+      'Cover at least three quarters of an outline and a duck accepts the drawing and eats it for a point.',
+      'There is no erasing, and letting go before an outline is finished wipes what you had.',
+    ],
     controls: [],
     reserved: false,
     done: { environment: false, controls: false, assets: false },
@@ -405,7 +494,7 @@ const ENTRIES = [
     number: 29,
     title: 'Free slot',
     kind: 'one-vs-all',
-    pitch: '',
+    description: [],
     controls: [],
     reserved: true,
     done: { environment: false, controls: false, assets: false },
@@ -415,7 +504,7 @@ const ENTRIES = [
     number: 30,
     title: 'Free slot',
     kind: 'one-vs-all',
-    pitch: '',
+    description: [],
     controls: [],
     reserved: true,
     done: { environment: false, controls: false, assets: false },
@@ -425,7 +514,7 @@ const ENTRIES = [
     number: 31,
     title: 'Free slot',
     kind: 'free-for-all',
-    pitch: '',
+    description: [],
     controls: [],
     reserved: true,
     done: { environment: false, controls: false, assets: false },
@@ -435,7 +524,7 @@ const ENTRIES = [
     number: 32,
     title: 'Free slot',
     kind: 'free-for-all',
-    pitch: '',
+    description: [],
     controls: [],
     reserved: true,
     done: { environment: false, controls: false, assets: false },
@@ -445,7 +534,7 @@ const ENTRIES = [
     number: 33,
     title: 'Free slot',
     kind: 'free-for-all',
-    pitch: '',
+    description: [],
     controls: [],
     reserved: true,
     done: { environment: false, controls: false, assets: false },
@@ -455,7 +544,7 @@ const ENTRIES = [
     number: 34,
     title: 'Free slot',
     kind: 'free-for-all',
-    pitch: '',
+    description: [],
     controls: [],
     reserved: true,
     done: { environment: false, controls: false, assets: false },
@@ -465,7 +554,7 @@ const ENTRIES = [
     number: 35,
     title: 'Free slot',
     kind: 'free-for-all',
-    pitch: '',
+    description: [],
     controls: [],
     reserved: true,
     done: { environment: false, controls: false, assets: false },
@@ -475,7 +564,7 @@ const ENTRIES = [
     number: 36,
     title: 'Free slot',
     kind: 'one-vs-all',
-    pitch: '',
+    description: [],
     controls: [],
     reserved: true,
     done: { environment: false, controls: false, assets: false },
@@ -485,7 +574,7 @@ const ENTRIES = [
     number: 37,
     title: 'Free slot',
     kind: 'one-vs-all',
-    pitch: '',
+    description: [],
     controls: [],
     reserved: true,
     done: { environment: false, controls: false, assets: false },
@@ -495,7 +584,7 @@ const ENTRIES = [
     number: 38,
     title: 'Free slot',
     kind: 'one-vs-all',
-    pitch: '',
+    description: [],
     controls: [],
     reserved: true,
     done: { environment: false, controls: false, assets: false },
@@ -505,7 +594,7 @@ const ENTRIES = [
     number: 39,
     title: 'Free slot',
     kind: 'one-vs-all',
-    pitch: '',
+    description: [],
     controls: [],
     reserved: true,
     done: { environment: false, controls: false, assets: false },
@@ -515,7 +604,7 @@ const ENTRIES = [
     number: 40,
     title: 'Free slot',
     kind: 'one-vs-all',
-    pitch: '',
+    description: [],
     controls: [],
     reserved: true,
     done: { environment: false, controls: false, assets: false },
@@ -525,7 +614,7 @@ const ENTRIES = [
     number: 41,
     title: 'Free slot',
     kind: 'one-vs-all',
-    pitch: '',
+    description: [],
     controls: [],
     reserved: true,
     done: { environment: false, controls: false, assets: false },

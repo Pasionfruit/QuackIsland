@@ -3,8 +3,13 @@
  *
  * Forty-one tiles in a seven-wide grid, which is the whole point: the plan is
  * legible at a glance, including the parts of it that do not exist. A slot
- * nobody has named yet is drawn dim rather than left out, so the gap between
+ * nobody has named yet is drawn faint rather than left out, so the gap between
  * what is planned and what is built is the thing you actually see.
+ *
+ * **A tile is a number, a name and three pips, and nothing else.** No
+ * description: forty-one paragraphs at once is a wall of text nobody reads,
+ * and the grid is for picking a game rather than for reading about one. What a
+ * game is lives behind its own screen, one tab along.
  *
  * It never scrolls. The rows share out whatever height is left under the bar,
  * so filtering to eleven games makes the tiles taller rather than making the
@@ -21,7 +26,19 @@ import {
   type Minigame,
   type MinigameKind,
 } from './catalogue'
-import { KIND_COLOUR, RESERVED_LOOK, STEP_LOOK, bar, body, button, buttonOn, screen } from './look'
+import {
+  FONT,
+  ISLAND,
+  KIND_COLOUR,
+  RESERVED_LOOK,
+  STEP_LOOK,
+  bar,
+  body,
+  button,
+  buttonOn,
+  screen,
+  wordmark,
+} from './look'
 import { builtMinigames } from './registry'
 import { backOut, openMinigame } from './state'
 
@@ -41,8 +58,8 @@ export function Dashboard() {
   return (
     <div style={screen}>
       <div style={bar}>
-        <span style={{ letterSpacing: 1, color: '#b39ddb' }}>MINIGAMES</span>
-        <span style={{ opacity: 0.6 }}>Volcano Island</span>
+        <span style={wordmark}>Minigames</span>
+        <span style={{ color: ISLAND.fadedInk }}>Volcano Island</span>
 
         <span style={{ flex: 1 }} />
 
@@ -56,7 +73,7 @@ export function Dashboard() {
           one vs all {MINIGAME_TARGET['one-vs-all']}
         </Tab>
 
-        <button type="button" onClick={backOut} style={{ ...button, marginLeft: 10 }}>
+        <button type="button" onClick={backOut} style={{ ...button, marginLeft: 8 }}>
           close
         </button>
       </div>
@@ -72,17 +89,17 @@ export function Dashboard() {
             how many slots, how many named, and how far the three stages have
             got across all of them. */}
         <div style={footer}>
-          <span style={{ opacity: 0.45 }}>
+          <span>
             {far.slots} slots · {far.named} named · {far.reserved} free
           </span>
           <span style={{ flex: 1 }} />
           {BUILD_STEPS.map((step) => (
-            <span key={step} style={{ opacity: 0.55 }}>
-              <span style={{ ...pip, background: STEP_LOOK[step].colour, opacity: 0.9 }} />
+            <span key={step}>
+              <span style={{ ...pip, background: STEP_LOOK[step].colour }} />
               {STEP_LOOK[step].label} {far.steps[step]}/{far.named}
             </span>
           ))}
-          <span style={{ opacity: 0.45 }}>· {built} registered</span>
+          <span>· {built} registered</span>
         </div>
       </div>
     </div>
@@ -117,7 +134,7 @@ function Tab({
  * One game on the grid: its number, its name, and how far along it is.
  *
  * A reserved slot is a tile like any other and opens like one - it has a
- * number, and the panel behind it is where its name will go.
+ * number, and the screen behind it is where its name will go.
  */
 function Tile({ game }: { game: Minigame }) {
   const up = nextStep(game)
@@ -136,33 +153,31 @@ function Tile({ game }: { game: Minigame }) {
       style={{
         ...tile,
         opacity: game.reserved ? RESERVED_LOOK.fade : 1,
-        borderLeft: `3px solid ${KIND_COLOUR[game.kind]}`,
+        borderBottom: `4px solid ${KIND_COLOUR[game.kind]}`,
       }}
     >
       <span style={tileTop}>
-        <span style={{ opacity: 0.4 }}>{game.number}</span>
+        <span style={tileNumber}>{game.number}</span>
         {/* Three pips, one per stage, filled as each is finished. A tile is
             readable as a progress bar without anybody reading a word of it. */}
-        {game.reserved ? (
-          <span style={{ color: RESERVED_LOOK.colour, fontSize: 9 }}>{RESERVED_LOOK.label}</span>
-        ) : (
+        {game.reserved ? null : (
           <span style={pips} title={says}>
             {BUILD_STEPS.map((step) => (
               <span
                 key={step}
                 style={{
                   ...pip,
+                  marginRight: 0,
                   background: game.done[step] ? STEP_LOOK[step].colour : 'transparent',
-                  border: `1px solid ${STEP_LOOK[step].colour}`,
-                  opacity: game.done[step] ? 1 : 0.35,
+                  border: `2px solid ${STEP_LOOK[step].colour}`,
+                  opacity: game.done[step] ? 1 : 0.4,
                 }}
               />
             ))}
           </span>
         )}
       </span>
-      <span style={tileTitle}>{game.title}</span>
-      <span style={tilePitch}>{game.pitch}</span>
+      <span style={tileTitle}>{game.reserved ? RESERVED_LOOK.label : game.title}</span>
     </button>
   )
 }
@@ -172,22 +187,24 @@ const grid: React.CSSProperties = {
   minHeight: 0,
   display: 'grid',
   gridTemplateColumns: `repeat(${COLUMNS}, 1fr)`,
-  gap: 7,
+  gap: 9,
 }
 
 const tile: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'stretch',
-  gap: 3,
+  justifyContent: 'space-between',
+  gap: 4,
   minHeight: 0,
   overflow: 'hidden',
-  padding: '6px 8px',
-  border: '1px solid rgba(255,255,255,0.14)',
-  borderRadius: 8,
-  background: 'rgba(255,255,255,0.04)',
-  color: '#f2ece2',
-  font: 'inherit',
+  padding: '8px 10px 7px',
+  border: 'none',
+  borderRadius: 14,
+  background: ISLAND.sand,
+  boxShadow: '0 3px 0 rgba(0,0,0,0.12)',
+  color: ISLAND.ink,
+  font: `600 13px/1.25 ${FONT}`,
   textAlign: 'left',
   cursor: 'pointer',
 }
@@ -195,46 +212,49 @@ const tile: React.CSSProperties = {
 const tileTop: React.CSSProperties = {
   flex: '0 0 auto',
   display: 'flex',
-  alignItems: 'baseline',
+  alignItems: 'center',
   justifyContent: 'space-between',
   gap: 6,
 }
 
-const tileTitle: React.CSSProperties = {
-  flex: '0 0 auto',
-  fontSize: 12,
-  lineHeight: 1.25,
+const tileNumber: React.CSSProperties = {
+  font: `700 15px/1 ${FONT}`,
+  color: ISLAND.fadedInk,
 }
 
-const tilePitch: React.CSSProperties = {
-  flex: 1,
-  minHeight: 0,
+const tileTitle: React.CSSProperties = {
+  flex: '0 0 auto',
+  display: '-webkit-box',
+  WebkitLineClamp: 3,
+  WebkitBoxOrient: 'vertical',
   overflow: 'hidden',
-  fontSize: 9,
-  lineHeight: 1.35,
-  opacity: 0.5,
+  fontSize: 13,
+  lineHeight: 1.2,
 }
 
 const footer: React.CSSProperties = {
   flex: '0 0 auto',
   display: 'flex',
   alignItems: 'center',
-  gap: 10,
-  marginTop: 8,
+  gap: 12,
+  marginTop: 10,
+  font: `500 12px/1.4 ${FONT}`,
+  color: ISLAND.deepSea,
 }
 
 /** The three stage lights on a tile, and in the footer's legend. */
 const pips: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: 3,
+  gap: 4,
 }
 
 const pip: React.CSSProperties = {
   display: 'inline-block',
-  width: 6,
-  height: 6,
+  width: 8,
+  height: 8,
   borderRadius: '50%',
-  marginRight: 4,
+  marginRight: 5,
   boxSizing: 'border-box',
+  verticalAlign: 'middle',
 }

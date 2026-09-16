@@ -94,14 +94,70 @@ arrangement exists to have.
 Forty-one tiles in a seven-wide grid, filterable to one kind or the other, with
 a count of what is named against what is planned.
 
+**A tile is a number, a name and three pips, and nothing else.** No
+description: forty-one paragraphs at once is a wall of text nobody reads, and
+the grid is there to pick a game rather than to read about one. What a game
+actually is lives behind its own screen.
+
 **It never scrolls**, the same as Garden Goofs next door and for the same
 reason: the rows share out whatever height is left under the bar, so filtering
 to eleven games makes the tiles taller rather than making the page shorter. It
 is a page - opaque, every edge of the window - not a panel floating over the
 world.
 
-Reserved slots are drawn dim rather than left out, and they open like any other
-tile. The panel behind one is where its name will go.
+Reserved slots are drawn faint rather than left out, and they open like any
+other tile. The screen behind one is where its name will go.
+
+## It looks like the island, not like the debug panel
+
+The rest of the interface is dark slate and monospace because it is
+instrumentation: a frame counter wants to be legible and ignorable. A wall of
+party games is the opposite thing, so this is sand, sea and sun - see `ISLAND`
+in `look.ts` - in a rounded face, with nothing square on it and no colour that
+is not on a beach.
+
+**No web font is shipped.** `ui-rounded` is the real thing on Apple platforms
+and the stack falls back through Segoe UI on Windows, which is friendly without
+being round. A genuinely rounded face on every machine means shipping a font
+file, which is a bigger decision than a colour scheme and one worth taking on
+purpose rather than in passing.
+
+## A game's own screen
+
+The title, one panel that flips between **how it plays** and **the controls**,
+the three stages underneath, and **play** at the bottom.
+
+Two tabs rather than both at once, because they answer different questions and
+you want one at a time: what is this, and what do I press. The panel keeps one
+size either way, so flipping between them does not move the play button out
+from under the cursor.
+
+Every game gets this screen, built or not, out of its catalogue entry - which
+is what makes forty-one briefings a thing that already exists rather than a
+thing to generate.
+
+## Three, two, one
+
+Press play and the run goes `briefing` → `counting` → `playing`. The count is
+the same three seconds for every game, which is exactly why it lives here
+rather than in each of them: a countdown is something the screen does, not
+something forty-one games each have to remember to do.
+
+The numbers go **over** the briefing rather than instead of it, so what you
+were reading a second ago is still there behind them. Each is rounded up, so
+the three is up for a whole second rather than for a frame.
+
+**The game's state is built when the count starts, not when it ends** - a game
+that wants to draw its board behind the numbers has a board to draw.
+
+`tickRun` is pure and is the only thing that moves a run from `counting` to
+`playing`, so the whole of the countdown is tested by passing it numbers rather
+than by waiting three real seconds. The clock that calls it lives in
+`MinigameScreen` and stops with the screen; there is a test that it does.
+
+With no build registered, the round that starts is honest about being empty:
+the countdown ran, the phase really is `playing`, and what is missing is the
+game.
 
 ## Browsing is local, starting will not be
 
@@ -109,10 +165,13 @@ Opening the dashboard changes your screen and nobody else's. Browsing a
 catalogue is not playing anything, so one player looking through it has no
 business moving everybody else's view.
 
-When a game is actually built, *starting* it is a different act and the host's
-call - it will ride on the same `hostChoice` that the game, the weather and the
-time of day already do. This module's store is not in the way of that, because
-it holds where you are looking rather than what the party is doing.
+**Play is local too, for now, and that is the one thing here that will have to
+change.** A minigame everybody is in has to start for everybody at once, so
+when the games are real, `playMinigame` becomes the host's call and rides on
+the same `hostChoice` that the game, the weather and the time of day already
+do. It is deliberately the single line that would have to move: the store holds
+where you are looking, and the run it starts is yours alone until something
+syncs it.
 
 ## Public contract
 
@@ -126,7 +185,8 @@ it holds where you are looking rather than what the party is doing.
 | `registerMinigame` | How a built game plugs in. |
 | `buildFor`, `isBuilt`, `builtMinigames`, `forgetBuilds` | Reading the registry. `forgetBuilds` is for tests. |
 | `freshRun`, `MinigameRun`, `MinigameBuild`, `RunPhase` | A run of one game, at its beginning. |
-| `openDashboard`, `openMinigame`, `backOut`, `closeMinigames` | Moving the screen about. |
+| `beginRun`, `tickRun`, `countShown`, `COUNT_FROM` | The three-two-one. All pure. |
+| `openDashboard`, `openMinigame`, `playMinigame`, `tickMinigame`, `backOut`, `closeMinigames` | Moving the screen about. |
 | `useMinigameScreen`, `getMinigameScreen`, `MinigameScreenState` | Where the screen is. |
 | `MinigameScreen` | The one component the app mounts. |
 
@@ -144,6 +204,11 @@ it holds where you are looking rather than what the party is doing.
 - **Nothing claims to be playable without a build behind it.** Tested - and
   tested against a game that does claim it, so the rule is not passing just
   because the catalogue is empty.
+- **Every game has a briefing**, with both tabs and a play button. Tested
+  against the whole catalogue, not a sample.
+- **The countdown always reaches `playing`**, in big steps or small, and never
+  counts past zero or backwards. Tested, for every game in the catalogue.
+- **Pressing play twice is not a restart.** Tested.
 - **Nothing on the screen scrolls.** Tested.
 
 ## Deliberate non-goals
@@ -158,7 +223,9 @@ it holds where you are looking rather than what the party is doing.
 ## Known limitations
 
 - **The controls are half written.** Games 1–12 arrived with theirs and they
-  are in the catalogue; 13 onwards have none, and their templates say so.
+  are in the catalogue; 13 onwards have none, and their controls tab says so.
+- **Play starts a round for you and nobody else.** See above - the countdown
+  and the phase are real, the sync is not.
 - **The rules are nowhere.** The descriptions the games were specified with
   have not been written into the catalogue - `pitch` is one line rather than a
   summary of them. Those belong with each game's `environment` stage, which is
@@ -182,16 +249,25 @@ party panel, bottom left.
   unfinished on purpose.
 - **Filter to one vs all.** Eleven tiles, and the grid should re-flow to fill
   the same page rather than leaving the bottom half empty.
-- **Open a game with controls** - anything from 1 to 12. Its controls should be
-  listed under the pitch.
-- **Open one without** - 13 upwards. It should say the controls are not written
-  down yet rather than showing an empty box.
+- **Open a game with controls** - anything from 1 to 12. It should open on
+  *how it plays*; the **controls** tab should list them, and flipping back and
+  forth should not move the play button.
+- **Open one without** - 13 upwards. The controls tab should say they are not
+  written down yet rather than showing an empty box.
+- **Press play.** A big three, then two, then one, over the top of the briefing
+  you were just reading - each for about a second - and then the round starts
+  and says it is empty, because nothing is built.
+- **Press play and then escape.** You should come back to the grid, and opening
+  the game again should give a fresh briefing rather than the round you left.
 - **Open a free slot.** It should open like any other tile and say a number is
   waiting for a game.
 - **Look at the pips on any named tile.** Three of them, all hollow, because
   nothing has been built. A free slot has none at all.
-- **Read the stages on a game's page.** Environment, controls, assets, in that
-  order, with an arrow against *environment* - the one owed next.
+- **Check no tile carries a description.** Number, name, pips. Nothing else.
+- **Read the stages on a game's screen.** Environment, controls, assets, in
+  that order, with an arrow against *environment* - the one owed next.
+- **Look at the whole thing.** Sand, sea and sun, round corners, nothing
+  monospace. If it looks like the debug panel, the palette did not take.
 - **Check the footer.** It should count each stage against the number of named
   games, and all three should read 0 of 26 today.
 - **Press escape twice.** The first takes you back to the grid, the second

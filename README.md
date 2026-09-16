@@ -78,8 +78,10 @@ lobby plays the same one. The host chooses:
   winding three times up to the treasure at the top. It is also where the
   **minigames** live: forty-one of them planned, thirty free-for-all and
   eleven one-vs-all, twenty-six named so far and none playable yet. Press
-  **minigames** in the party panel to see the lot on one screen; every tile
-  opens a template of the game that is coming.
+  **minigames** in the party panel to see the lot on one screen — sand and sea
+  rather than the dark HUD, a tile each, no descriptions to wade through.
+  Opening one gives you its own page: what it is, what you press, and a **play**
+  button that counts three, two, one into a round that is still empty.
 - **Garden Goofs** — a flat **2D** lane defence on an eight-by-twelve lawn.
   Starting it loads a page of its own, opaque and full screen, not a dialog
   over the world — a house on the left edge marks what you are defending. The

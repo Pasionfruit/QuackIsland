@@ -35,12 +35,16 @@ export {
 } from './internal/catalogue'
 
 export {
+  COUNT_FROM,
+  beginRun,
   buildFor,
   builtMinigames,
+  countShown,
   forgetBuilds,
   freshRun,
   isBuilt,
   registerMinigame,
+  tickRun,
   type MinigameBuild,
   type MinigameRun,
   type RunPhase,
@@ -52,6 +56,8 @@ export {
   getMinigameScreen,
   openDashboard,
   openMinigame,
+  playMinigame,
+  tickMinigame,
   useMinigameScreen,
   type MinigameScreenState,
 } from './internal/state'

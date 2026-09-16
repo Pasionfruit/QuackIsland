@@ -1,13 +1,24 @@
 /**
  * How the minigame screens are dressed, in one place.
  *
- * The dashboard and every game's panel are the same kind of thing - a page
+ * The dashboard and every game's screen are the same kind of thing - a page
  * that takes the whole window - so the chrome is shared rather than copied
  * into each. What a game draws *inside* its page is its own business; this is
  * only the frame around it.
  *
- * Two rules the whole screen is built on, both learned the hard way next door
- * in Garden Goofs:
+ * **It is meant to look like the island, not like the debug panel.** The rest
+ * of the interface is dark slate and monospace because it is instrumentation:
+ * a frame counter wants to be legible and ignorable. A wall of party games is
+ * the opposite thing, so this is sand, sea and sun, in a rounded face, with
+ * nothing square on it.
+ *
+ * No web font is loaded. `ui-rounded` is the real thing on Apple platforms and
+ * the stack falls back through Segoe UI on Windows, which is friendly without
+ * being round - a genuinely rounded face everywhere would mean shipping one,
+ * and that is a bigger decision than a colour scheme.
+ *
+ * Two rules the whole screen is built on, both learned next door in Garden
+ * Goofs:
  *
  * - **It is a page, not a panel.** Opaque, every edge of the window, nothing
  *   of the world showing through behind it.
@@ -16,6 +27,32 @@
  *   growing past the bottom of the window.
  */
 
+/** Sand, sea, sun and palm. The island, as a handful of numbers. */
+export const ISLAND = {
+  /** The sky behind everything, light at the top like a morning. */
+  sky: '#8ed3e8',
+  sea: '#3f9fc4',
+  deepSea: '#1f6d92',
+  sand: '#f6e4bf',
+  warmSand: '#ecd0a0',
+  palm: '#5eb85b',
+  sun: '#ffc94d',
+  coral: '#e8705a',
+  /** Writing. A warm brown rather than black, which reads as ink on sand. */
+  ink: '#4a3524',
+  /** Writing that is not the point: labels, counts, the small print. */
+  fadedInk: '#8a725c',
+} as const
+
+/**
+ * The face. Rounded where the platform has one, friendly where it does not.
+ *
+ * Deliberately not the `ui-monospace` the HUDs use. Monospace is for numbers
+ * you compare down a column; this is for names you read across.
+ */
+export const FONT =
+  "ui-rounded, 'Hiragino Maru Gothic ProN', 'Segoe UI', system-ui, -apple-system, sans-serif"
+
 export const screen: React.CSSProperties = {
   position: 'fixed',
   inset: 0,
@@ -23,9 +60,10 @@ export const screen: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   overflow: 'hidden',
-  background: 'radial-gradient(ellipse at 50% 25%, #221d2e 0%, #0d0e14 70%)',
-  color: '#f2ece2',
-  font: '12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace',
+  // Sky at the top down into the sea, which is the island seen from off shore.
+  background: `linear-gradient(180deg, ${ISLAND.sky} 0%, #6fc2dd 38%, ${ISLAND.sea} 100%)`,
+  color: ISLAND.ink,
+  font: `14px/1.5 ${FONT}`,
   userSelect: 'none',
 }
 
@@ -35,9 +73,10 @@ export const bar: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: 10,
-  padding: '8px 12px',
-  background: 'rgba(20, 22, 26, 0.55)',
-  borderBottom: '1px solid rgba(255,255,255,0.1)',
+  padding: '10px 16px',
+  background: ISLAND.sand,
+  borderBottom: `2px solid ${ISLAND.warmSand}`,
+  color: ISLAND.ink,
 }
 
 /** Everything under the bar. All the room there is, and never more. */
@@ -46,30 +85,40 @@ export const body: React.CSSProperties = {
   minHeight: 0,
   display: 'flex',
   flexDirection: 'column',
-  padding: '12px 16px',
+  padding: '14px 16px',
   boxSizing: 'border-box',
   overflow: 'hidden',
 }
 
+/** The screen's own name, in the bar. */
+export const wordmark: React.CSSProperties = {
+  fontSize: 17,
+  fontWeight: 700,
+  letterSpacing: 0.3,
+  color: ISLAND.deepSea,
+}
+
+/** Nothing on this screen has a square corner. */
 export const button: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.06)',
-  border: '1px solid rgba(255,255,255,0.14)',
-  borderRadius: 4,
-  color: '#f2ece2',
-  font: 'inherit',
-  padding: '3px 8px',
+  background: ISLAND.sand,
+  border: `2px solid ${ISLAND.warmSand}`,
+  borderRadius: 999,
+  color: ISLAND.ink,
+  font: `600 13px/1.4 ${FONT}`,
+  padding: '5px 14px',
   cursor: 'pointer',
 }
 
 export const buttonOn: React.CSSProperties = {
-  borderColor: '#b39ddb',
-  background: 'rgba(179,157,219,0.18)',
+  background: ISLAND.sun,
+  borderColor: '#e8a92f',
+  color: ISLAND.ink,
 }
 
 /** The two kinds, each with a colour it keeps everywhere on the screen. */
 export const KIND_COLOUR = {
-  'free-for-all': '#7fd1b9',
-  'one-vs-all': '#e0a05a',
+  'free-for-all': '#2f9e6f',
+  'one-vs-all': '#e0803a',
 } as const
 
 /**
@@ -80,10 +129,10 @@ export const KIND_COLOUR = {
  * a row rather than a sentence you have to find and parse.
  */
 export const STEP_LOOK = {
-  environment: { label: 'environment', short: 'env', colour: '#9fd8e6' },
-  controls: { label: 'controls', short: 'ctl', colour: '#e8d98a' },
-  assets: { label: 'assets', short: 'art', colour: '#7fd1b9' },
+  environment: { label: 'environment', short: 'env', colour: '#2f9e6f' },
+  controls: { label: 'controls', short: 'ctl', colour: '#e8a92f' },
+  assets: { label: 'assets', short: 'art', colour: '#d1604a' },
 } as const
 
 /** A slot nobody has named yet, drawn faint so the gaps read as gaps. */
-export const RESERVED_LOOK = { label: 'free slot', colour: '#6b7280', fade: 0.45 } as const
+export const RESERVED_LOOK = { label: 'free slot', colour: '#a08d78', fade: 0.55 } as const

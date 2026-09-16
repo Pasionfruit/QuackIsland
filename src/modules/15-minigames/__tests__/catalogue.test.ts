@@ -23,12 +23,16 @@ import {
   type MinigameKind,
 } from '../internal/catalogue'
 import {
+  COUNT_FROM,
+  beginRun,
   buildFor,
   builtMinigames,
+  countShown,
   forgetBuilds,
   freshRun,
   isBuilt,
   registerMinigame,
+  tickRun,
 } from '../internal/registry'
 
 const KINDS: readonly MinigameKind[] = ['free-for-all', 'one-vs-all']
@@ -61,14 +65,15 @@ describe('the catalogue', () => {
     expect(numbers).toEqual([...numbers].sort((a, b) => a - b))
   })
 
-  it('gives every named game a title and a pitch, and every free slot neither', () => {
+  it('gives every named game a title and a description, and every free slot neither', () => {
     for (const game of MINIGAMES) {
       expect(game.title.length).toBeGreaterThan(0)
       if (game.reserved) {
-        expect(game.pitch).toBe('')
+        expect(game.description).toHaveLength(0)
         expect(game.controls).toHaveLength(0)
       } else {
-        expect(game.pitch.length).toBeGreaterThan(0)
+        expect(game.description.length).toBeGreaterThan(0)
+        for (const para of game.description) expect(para.trim().length).toBeGreaterThan(0)
       }
     }
   })
@@ -267,5 +272,93 @@ describe('a run of a game', () => {
 
   it('has no state at all when there is no build to ask', () => {
     expect(freshRun('zombie-tag').game).toBeNull()
+  })
+})
+
+/**
+ * Three, two, one.
+ *
+ * The same countdown for all forty-one games, which is why it is here and not
+ * in any of them. Pure, so the whole of it can be checked by passing numbers
+ * in rather than by waiting three real seconds.
+ */
+describe('the countdown', () => {
+  afterEach(forgetBuilds)
+
+  it('does not run until play is pressed', () => {
+    const run = freshRun('zombie-tag')
+    expect(countShown(run)).toBeNull()
+    expect(tickRun(run, 1)).toBe(run)
+  })
+
+  it('starts at three and counts down to go', () => {
+    let run = beginRun(freshRun('zombie-tag'))
+    expect(run.phase).toBe('counting')
+    expect(countShown(run)).toBe(3)
+
+    run = tickRun(run, 1)
+    expect(countShown(run)).toBe(2)
+
+    run = tickRun(run, 1)
+    expect(countShown(run)).toBe(1)
+
+    run = tickRun(run, 1)
+    expect(run.phase).toBe('playing')
+    expect(countShown(run)).toBeNull()
+  })
+
+  it('holds each number for a whole second, not an instant', () => {
+    // Rounded up: a three that is only up for one frame is a three nobody saw.
+    let run = beginRun(freshRun('zombie-tag'))
+    expect(countShown(run)).toBe(3)
+    run = tickRun(run, 0.9)
+    expect(countShown(run)).toBe(3)
+    run = tickRun(run, 0.2)
+    expect(countShown(run)).toBe(2)
+  })
+
+  it('gets there in small steps as surely as in big ones', () => {
+    let run = beginRun(freshRun('zombie-tag'))
+    for (let i = 0; i < 40; i++) run = tickRun(run, 0.1)
+    expect(run.phase).toBe('playing')
+  })
+
+  it('never overshoots into a negative count', () => {
+    const run = tickRun(beginRun(freshRun('zombie-tag')), 99)
+    expect(run.phase).toBe('playing')
+    expect(run.countdown).toBe(0)
+  })
+
+  it('ignores a tick that goes backwards', () => {
+    const run = beginRun(freshRun('zombie-tag'))
+    expect(tickRun(run, -5).countdown).toBe(run.countdown)
+  })
+
+  it('cannot be started twice, and is not a restart', () => {
+    const counting = tickRun(beginRun(freshRun('zombie-tag')), 1.5)
+    expect(beginRun(counting)).toBe(counting)
+
+    const playing = tickRun(counting, 9)
+    expect(beginRun(playing)).toBe(playing)
+  })
+
+  it('builds the game its state when the count starts, not when it ends', () => {
+    // A game that wants to draw its board behind the numbers needs a board.
+    registerMinigame('zombie-tag', { newGame: () => ({ zombies: 6 }), Panel: () => null })
+    expect(beginRun(freshRun('zombie-tag')).game).toEqual({ zombies: 6 })
+  })
+
+  it('leaves the game state alone as it counts', () => {
+    registerMinigame('zombie-tag', { newGame: () => ({ zombies: 6 }), Panel: () => null })
+    const started = beginRun(freshRun('zombie-tag'))
+    expect(tickRun(started, 1).game).toBe(started.game)
+    expect(tickRun(started, 9).game).toBe(started.game)
+  })
+
+  it('runs for every game in the catalogue, the same way', () => {
+    for (const game of MINIGAMES) {
+      const run = tickRun(beginRun(freshRun(game.id)), COUNT_FROM)
+      expect(run.phase).toBe('playing')
+    }
   })
 })

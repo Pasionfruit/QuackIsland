@@ -1321,6 +1321,11 @@
           "status": "done"
         },
         {
+          "id": "15.8",
+          "title": "The island look, a description-and-controls panel per game, and a three-two-one on play",
+          "status": "done"
+        },
+        {
           "id": "15.7",
           "title": "The games themselves, one build at a time, three stages each",
           "status": "planned"
@@ -1329,7 +1334,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-15T23:46:28.384Z"
+          "at": "2026-09-16T01:29:32.143Z"
         },
         "human": {
           "status": "pending"
@@ -1341,9 +1346,9 @@
         "No minigame. Forty-one are named and none of them is playable",
         "No rules, scoring, rounds or win conditions - those arrive with each build",
         "No turn order for the one-vs-all games yet; the kind is recorded, the rotation is not",
-        "No host authority over which game is open: browsing is local, starting one will not be",
         "No 3D. The dashboard and the templates are DOM over the world, like Garden Goofs",
-        "No art, sound or characters"
+        "No art, sound or characters",
+        "No synced start: play runs the countdown on your own screen, not the party's"
       ],
       "budgets": {
         "drawCallsMax": 0,

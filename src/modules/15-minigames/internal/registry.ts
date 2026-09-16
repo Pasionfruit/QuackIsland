@@ -24,12 +24,21 @@
 import type { ReactNode } from 'react'
 import type { MinigameId } from './catalogue'
 
-/** Where a game is in its own life. The three every minigame has. */
-export type RunPhase = 'briefing' | 'playing' | 'over'
+/**
+ * Where a game is in its own life. The four every minigame has.
+ *
+ * `briefing` is reading about it, `counting` is the three-two-one, `playing`
+ * is the game itself, `over` is afterwards. Every game gets the same four, so
+ * a countdown is something the screen does rather than something forty-one
+ * games each have to remember to do.
+ */
+export type RunPhase = 'briefing' | 'counting' | 'playing' | 'over'
 
 export interface MinigameRun {
   id: MinigameId
   phase: RunPhase
+  /** Seconds left of the three-two-one. Only meaningful while `counting`. */
+  countdown: number
   /**
    * The game's own state, in whatever shape that game needs.
    *
@@ -38,6 +47,9 @@ export interface MinigameRun {
    */
   game: unknown
 }
+
+/** How long the three-two-one runs, in seconds. Three, counted down to go. */
+export const COUNT_FROM = 3
 
 export interface MinigameBuild {
   /** The state this game starts a run with. Its shape is the game's business. */
@@ -93,5 +105,50 @@ export function forgetBuilds(): void {
  */
 export function freshRun(id: MinigameId): MinigameRun {
   const build = buildFor(id)
-  return { id, phase: 'briefing', game: build ? build.newGame() : null }
+  return { id, phase: 'briefing', countdown: 0, game: build ? build.newGame() : null }
+}
+
+/**
+ * Press play: the briefing gives way to the three-two-one.
+ *
+ * The state is made **here**, at the start of the countdown, rather than when
+ * the game finally begins - so a game that wants to draw its board behind the
+ * numbers has a board to draw. Pressing play on a run that is already going is
+ * not a restart; it does nothing.
+ */
+export function beginRun(run: MinigameRun): MinigameRun {
+  if (run.phase !== 'briefing') return run
+  const build = buildFor(run.id)
+  return {
+    ...run,
+    phase: 'counting',
+    countdown: COUNT_FROM,
+    game: build ? build.newGame() : null,
+  }
+}
+
+/**
+ * Advances the countdown, and starts the game when it runs out.
+ *
+ * Pure, and the only thing that moves a run from `counting` to `playing` - so
+ * the whole of "three, two, one, go" can be tested by calling this with a few
+ * numbers instead of waiting three real seconds for it.
+ */
+export function tickRun(run: MinigameRun, dt: number): MinigameRun {
+  if (run.phase !== 'counting') return run
+  const left = run.countdown - Math.max(0, dt)
+  if (left <= 0) return { ...run, phase: 'playing', countdown: 0 }
+  return { ...run, countdown: left }
+}
+
+/**
+ * The number on the screen: 3, 2, 1, or `null` when there is none to show.
+ *
+ * Rounded **up**, so the three is up for the first second rather than for an
+ * instant - counting down from three should show three numbers for a second
+ * each, which is what anybody counting along expects.
+ */
+export function countShown(run: MinigameRun): number | null {
+  if (run.phase !== 'counting' || run.countdown <= 0) return null
+  return Math.ceil(run.countdown)
 }

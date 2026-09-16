@@ -10,7 +10,7 @@
  * party is doing.
  */
 import { createStore, useStore } from '../../00-core'
-import { freshRun, type MinigameRun } from './registry'
+import { beginRun, freshRun, tickRun, type MinigameRun } from './registry'
 import type { MinigameId } from './catalogue'
 
 export type MinigameScreenState =
@@ -40,6 +40,33 @@ export function openDashboard(): void {
 /** Opens one game, at the beginning of a run of it. */
 export function openMinigame(id: MinigameId): void {
   screen.set({ at: 'game', run: freshRun(id) })
+}
+
+/**
+ * Press play: the briefing gives way to the three-two-one.
+ *
+ * Local, like everything else in this store. When the games are real this is
+ * the call that becomes the host's - a minigame everybody is in has to start
+ * for everybody at once - and it is deliberately the single line that would
+ * have to change.
+ */
+export function playMinigame(): void {
+  const now = screen.get()
+  if (now.at !== 'game') return
+  screen.set({ at: 'game', run: beginRun(now.run) })
+}
+
+/**
+ * Advances the countdown by a slice of a second.
+ *
+ * Driven by the screen while it is counting and by nothing else - the store
+ * has no clock of its own, which is what keeps it testable.
+ */
+export function tickMinigame(dt: number): void {
+  const now = screen.get()
+  if (now.at !== 'game') return
+  const next = tickRun(now.run, dt)
+  if (next !== now.run) screen.set({ at: 'game', run: next })
 }
 
 /**
