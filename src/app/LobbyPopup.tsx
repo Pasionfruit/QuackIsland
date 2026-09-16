@@ -31,6 +31,7 @@ import {
   leaveLobby,
   makeCode,
   normaliseCode,
+  renameSelf,
   useNet,
   usePeers,
 } from '../modules/09-net'
@@ -222,9 +223,20 @@ export function LobbyPopup() {
             <span style={{ opacity: 0.5, width: 52 }}>you are</span>
             <input
               value={name}
-              onChange={(e) => setName(e.target.value.slice(0, 16))}
+              onChange={(e) => {
+                const typed = e.target.value.slice(0, 16)
+                setName(typed)
+                // In a lobby a name is live: everybody sees the change as it is
+                // typed. A field cleared on the way to a new name is left alone
+                // rather than calling you "duck" for a keystroke.
+                if (joined && typed.trim().length > 0) renameSelf(typed)
+              }}
+              onBlur={() => {
+                if (joined && name.trim().length === 0) setName(renameSelf(name))
+              }}
               placeholder="name"
               spellCheck={false}
+              title={joined ? 'Everybody in the lobby sees the change straight away' : undefined}
               style={{ ...field, flex: 1, minWidth: 40 }}
             />
           </div>

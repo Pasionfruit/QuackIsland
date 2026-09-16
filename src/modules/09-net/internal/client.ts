@@ -472,6 +472,29 @@ export function followWorld(dt: number): void {
   if (world.running) world.day += (dt * world.scale) / 3600
 }
 
+/**
+ * Changes what everybody else calls you, without leaving the lobby.
+ *
+ * Nothing new goes on the wire for it. The name already rides on every duck
+ * update, and a peer who hears a different one renames you on the spot - so a
+ * rename reaches the room with the next send, and somebody who arrives later
+ * hears the new name the same way. It is sent straight away as well, so the
+ * scoreboard does not wait out a tick.
+ *
+ * Returns the name as it will actually be shown, after `cleanName`.
+ */
+export function renameSelf(rawName: string): string {
+  myName = cleanName(rawName)
+  const ws = socket
+  if (ws && ws.readyState === WebSocket.OPEN && outgoing) ws.send(encodeState(myName, outgoing))
+  return myName
+}
+
+/** What this browser is called in a lobby, as last set by joining or renaming. */
+export function getMyName(): string {
+  return myName
+}
+
 /** Called by the renderer each frame with the local duck's state. */
 export function publish(state: DuckState): void {
   outgoing = state

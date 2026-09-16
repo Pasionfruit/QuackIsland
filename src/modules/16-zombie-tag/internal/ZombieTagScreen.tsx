@@ -362,7 +362,11 @@ const scoreRow: React.CSSProperties = {
 }
 
 const againButton: React.CSSProperties = {
+  display: 'block',
   width: '100%',
+  // A button is border-box already; the waiting note that borrows this style
+  // is a div, and without it the padding pushes it out past the card.
+  boxSizing: 'border-box',
   padding: '10px 16px',
   borderRadius: 999,
   border: 'none',

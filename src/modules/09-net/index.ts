@@ -43,6 +43,7 @@ export {
 export {
   createLobby,
   followWorld,
+  getMyName,
   getNet,
   getPeers,
   joinLobby,
@@ -52,6 +53,7 @@ export {
   publish,
   relayProblem,
   relayUrl,
+  renameSelf,
   sendToRoom,
   statusAfterClose,
   subscribeRoom,

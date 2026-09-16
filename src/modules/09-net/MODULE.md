@@ -25,6 +25,7 @@ syncing, that is the moment to split them.
 | `dayCorrection(mine, theirs, dt)` | How far to move a guest's clock. Pure |
 | `WorldState` | `{ day, scale, running, weather }` |
 | `joinLobby(code, name)` / `leaveLobby()` | What the panel calls |
+| `renameSelf(name)` / `getMyName()` | Change your name while in a lobby, and read it back |
 | `useNet()` / `getNet()` | Status, room, peer count. React-safe |
 | `makeCode()` | A fresh lobby code |
 | `normaliseCode(input)` | A code, or `null` if that is not one. Pure |
@@ -92,6 +93,9 @@ by `isHost` the moment the relay says who is in the room.
 - **The history is bounded.** `NET.history` snapshots per peer, oldest dropped.
 - **Late packets are dropped, not sorted in.** A snapshot older than the newest
   would rewind the player.
+- **A rename needs no message of its own and no rejoin.** The name is on every
+  duck update and peers adopt whatever they last heard, so `renameSelf` reaches
+  everybody within one send - including anybody who joins afterwards.
 - **Being offline changes nothing.** Not joining a lobby is the normal case and
   the world plays exactly the same.
 
