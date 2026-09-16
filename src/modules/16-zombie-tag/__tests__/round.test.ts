@@ -32,7 +32,7 @@ import {
   type Round,
   type Spawn,
 } from '../internal/round'
-import { DEFAULT_RUNNERS, ME, newRound } from '../internal/setup'
+import { ME, SOLO_RUNNERS, newRound } from '../internal/setup'
 import { crowdIntents, runnerIntent, zombieIntent } from '../internal/ai'
 
 const go = (x: number, y: number, push = false): Intent => ({ x, y, push })
@@ -140,7 +140,7 @@ describe('the chase', () => {
   it('opens with six zombies and everybody else running', () => {
     const round = newRound()
     expect(zombies(round)).toHaveLength(ARENA.zombies)
-    expect(survivors(round)).toHaveLength(DEFAULT_RUNNERS)
+    expect(survivors(round)).toHaveLength(SOLO_RUNNERS)
     expect(round.bodies.filter((b) => b.mine)).toHaveLength(1)
     expect(round.bodies.find((b) => b.mine)?.id).toBe(ME)
   })
@@ -430,7 +430,7 @@ describe('the end of a round', () => {
     const round = newRound()
     run(round, 0.2)
     expect(placings(round).map((b) => b.id)).not.toContain('zombie 1')
-    expect(placings(round)).toHaveLength(DEFAULT_RUNNERS)
+    expect(placings(round)).toHaveLength(SOLO_RUNNERS)
   })
 
   it('survives a whole round played out by itself', () => {

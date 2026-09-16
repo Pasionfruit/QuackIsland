@@ -29,6 +29,13 @@ export interface Body {
   /** Seconds until this body may push again. Players only. */
   cooldown: number
   /**
+   * Seconds left of becoming a zombie, or 0 for anybody who is not mid-turn.
+   *
+   * A turning body cannot catch and cannot move - see `ARENA.turnDelay` for
+   * why the beat exists at all.
+   */
+  turning: number
+  /**
    * How long this body lasted as a player, in seconds, or `null` while it is
    * still running. What the placings are worked out from.
    */
@@ -78,6 +85,7 @@ export function createBody({ id, at, side, mine = false }: Spawn): Body {
     facing: Math.atan2(-at.y, -at.x),
     stun: 0,
     cooldown: 0,
+    turning: 0,
     caughtAt: null,
     mine,
   }
@@ -115,6 +123,7 @@ function turn(body: Body, at: number): void {
   body.caughtAt = at
   body.cooldown = 0
   body.stun = 0
+  body.turning = ARENA.turnDelay
 }
 
 /**
@@ -144,6 +153,10 @@ export function stepRound(round: Round, intents: Map<string, Intent>, dt: number
       body.cooldown = Math.max(0, body.cooldown - step)
       if (body.cooldown < 1e-6) body.cooldown = 0
     }
+    if (body.turning > 0) {
+      body.turning = Math.max(0, body.turning - step)
+      if (body.turning < 1e-6) body.turning = 0
+    }
   }
 
   // Pushes first, so a push and the shove that follows it land on the same
@@ -157,8 +170,9 @@ export function stepRound(round: Round, intents: Map<string, Intent>, dt: number
   for (const body of round.bodies) {
     const intent = intents.get(body.id) ?? NO_INTENT
     // Stunned bodies are still solid and still catchable. They just cannot go
-    // anywhere, which is the whole point of stunning one.
-    if (body.stun > 0) continue
+    // anywhere, which is the whole point of stunning one. A body mid-turn is
+    // the same: still in the way, going nowhere.
+    if (body.stun > 0 || body.turning > 0) continue
 
     const length = Math.hypot(intent.x, intent.y)
     if (length === 0) continue
@@ -256,7 +270,10 @@ function separate(round: Round): void {
  * Everybody taken on one frame lasted exactly as long as each other.
  */
 function catchPlayers(round: Round): void {
-  const hunters = zombies(round)
+  // Anybody still mid-turn is not hunting yet. This is the delay doing its
+  // job: without it, one catch in a crowd cascades through everybody touching
+  // the person who was caught, on the frame it happens.
+  const hunters = zombies(round).filter((z) => z.turning === 0)
   if (hunters.length === 0) return
   const taken: Body[] = []
   for (const player of survivors(round)) {

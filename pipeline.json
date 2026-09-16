@@ -795,7 +795,8 @@
         "10-party",
         "13-modes",
         "14-garden",
-        "15-minigames"
+        "15-minigames",
+        "16-zombie-tag"
       ],
       "generation": 1,
       "contract": {
@@ -1377,6 +1378,7 @@
       "status": "ready_for_review",
       "dependsOn": [
         "02-player",
+        "09-net",
         "15-minigames"
       ],
       "dependents": [],
@@ -1420,7 +1422,7 @@
         {
           "id": "16.7",
           "title": "A round synced across the lobby, in place of the stand-in runners",
-          "status": "planned"
+          "status": "done"
         },
         {
           "id": "16.8",
@@ -1431,7 +1433,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-16T02:05:11.247Z"
+          "at": "2026-09-16T15:37:28.896Z"
         },
         "human": {
           "status": "pending"
@@ -1441,7 +1443,6 @@
       "freeze": null,
       "nonGoals": [
         "No models: the bodies are the island's capsule avatar and the crates are boxes",
-        "No multiplayer round yet - the other runners are stand-ins, not peers",
         "No moving camera, ever. The still overhead view is the game, not a limitation",
         "No pathfinding: zombies go at you and turn aside when a crate is in the way",
         "No zombie pushing - the push is for disrupting other runners, not for fighting back",

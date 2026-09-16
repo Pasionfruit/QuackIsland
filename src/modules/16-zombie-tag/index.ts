@@ -58,6 +58,29 @@ export {
 
 export { crowdIntents, runnerIntent, zombieIntent } from './internal/ai'
 
-export { DEFAULT_RUNNERS, ME, newRound, type RoundSetup } from './internal/setup'
+export {
+  ME,
+  SOLO_RUNNERS,
+  emptyRound,
+  lobbyRoster,
+  myId,
+  newRound,
+  type RoundSetup,
+} from './internal/setup'
+
+export {
+  INTENT_TAG,
+  SNAPSHOT_TAG,
+  SNAP_DISTANCE,
+  applySnapshot,
+  decodeIntent,
+  decodeSnapshot,
+  easeTowards,
+  encodeIntent,
+  encodeSnapshot,
+  hearIntent,
+  type Snapshot,
+  type WireBody,
+} from './internal/wire'
 
 export { ZombieTagScreen } from './internal/ZombieTagScreen'

@@ -7,6 +7,8 @@ spawning in the middle. Outrun them. Get caught and you become one and join the
 chase. The last player still running wins.
 
 It plugs into `15-minigames` and nothing else in the build knows it exists.
+In a lobby, everybody who was brought into the game by the host is in **one
+round** - the same arena, the same zombies, chasing the same people.
 Importing the module registers it — one line in `src/App.tsx` — and from that
 moment the dashboard's Zombie Tag tile leads somewhere real.
 
@@ -115,18 +117,55 @@ which is what makes it interesting that everybody has one.
 **A stunned player is still catchable.** Being down is a disadvantage, not a
 shield, and that is the entire reason pushing somebody is worth doing.
 
-## The other runners are stand-ins
+## One round, and it is the host's
+
+**The host runs the game; everybody else sends their keys and watches.** There
+is exactly one simulation in a lobby, in the host's browser. A guest sends what
+it is pressing (`zt-in`); the host sends where everything ended up (`zt`),
+twenty times a second. Two browsers cannot disagree about who was caught,
+because only one of them is deciding. The pure half is `wire.ts`; the half that
+touches a socket is `useRoundNet.ts`.
+
+**The rules cannot tell a guest from a keyboard.** `stepRound` takes a roster
+and a map of intents; whether an intent came from `ai.ts`, from WASD, or from
+another browser is not something it knows. That is why syncing a round changed
+who fills the map and nothing in the rules.
+
+**The roster is the lobby, read when the round is dealt.** Host first, then
+everybody else in id order. Somebody arriving mid-round waits for the next one.
+Anybody in the lobby who walked out of the game still has a body, and a stand-in
+runs it for them.
+
+The parts that are easy to get wrong, and what is done about each:
+
+- **A guest keeps listening after the round ends.** The screen calls `advance`
+  every frame, over or not, and the host keeps sending. Otherwise a guest never
+  sees the round end, and never sees **again** deal the next one.
+- **A guest's keys are repeated four times a second**, and forgotten by the host
+  after a second of silence. A missed message is a hiccup, not a body that never
+  moves, and a guest who drops out stops rather than running into a wall.
+- **Leaving a round sends "nothing pressed"** on the way out, for the same
+  reason.
+- **A push survives two messages landing in one frame.** `hearIntent` keeps it
+  until it is thrown. Tested.
+- **Push cooldown is on the wire**, so a guest's push meter counts down.
+- **A guest is eased towards the host**, and snapped when the gap is too big to
+  have walked, such as a fresh round.
+
+**Pausing is personal, the same as `15-minigames` says.** Alone, pausing stops
+the clock. In a lobby it stops only your hands: your body stands still and the
+round carries on, host or guest, because the round is everybody's.
+
+**Only the host can press again.** A guest's card says it is waiting for them.
+
+## Empty seats are filled, alone
 
 Zombie Tag is a game for two to eight, and pushing another player and
-outlasting them are half the rules. With nobody else in the arena there is
-nothing to push and nothing to outlast, so the empty seats are filled by
-runners that flee the nearest zombie.
-
-**The rules cannot tell them apart from a keyboard.** `stepRound` takes a
-roster and a map of intents; whether an intent came from `ai.ts`, from WASD, or
-one day from another browser is not something it knows. That is exactly how a
-real player gets dropped in later, and it is why `newRound` is the only thing
-that will have to change.
+outlasting them are half the rules. Alone there is nothing to push and nothing
+to outlast, so the empty seats are filled by runners that flee the nearest
+zombie. **A lobby with only you in it counts as alone.** A roster of one would
+end on its first frame, because one survivor has already won. With two or more
+people, nobody is added: real people are better opponents than these.
 
 They are opponents, not a benchmark. A runner flees the *nearest* zombie, which
 means it can and does back itself into corners. A runner that balanced every
@@ -147,7 +186,8 @@ else needs it. Nothing outside this module should be reaching for it.
 | `shove`, `speedOf`, `survivors`, `zombies` | The rules, individually. |
 | `placings`, `survivedFor` | The scoreboard. |
 | `zombieIntent`, `runnerIntent`, `crowdIntents` | What the bodies nobody drives decide. |
-| `newRound`, `ME`, `DEFAULT_RUNNERS` | Putting a round together. |
+| `newRound`, `emptyRound`, `lobbyRoster`, `myId`, `ME`, `SOLO_RUNNERS` | Putting a round together, from the lobby or alone. |
+| `encodeSnapshot`, `decodeSnapshot`, `applySnapshot`, `encodeIntent`, `decodeIntent`, `hearIntent`, `easeTowards`, `SNAP_DISTANCE`, `SNAPSHOT_TAG`, `INTENT_TAG` | A shared round on the wire. All pure. |
 | `frameArena`, `headingToYaw`, `TILT`, `FOV`, `FLOOR` | Where the camera stands, and which way a body faces. Pure. |
 | `ZombieTagScreen` | The panel the registry draws. |
 
@@ -170,21 +210,30 @@ else needs it. Nothing outside this module should be reaching for it.
 - **The whole room is in frame at any window shape.** Tested against a real
   camera frustum, corners and wall-tops, at eight aspect ratios.
 - **The camera is at sixty degrees and over the middle.** Tested.
+- **A snapshot comes back as the round that went out**, carries the end of a
+  round and the next one, moves a guest's bodies rather than rebuilding them,
+  and is refused whole if any part of it is wrong. Tested.
+- **A full arena fits in one relay message.** Tested.
+- **A lobby of one is not a finished round.** Tested.
 
 ## Deliberate non-goals
 
 - No models. Capsules and boxes, lit properly.
-- No multiplayer round. The other runners are stand-ins, not peers.
+- No authority. The host is trusted with the round, the same way the island
+  trusts the host with the clock.
 - No moving camera, ever. The still tilted view is the game.
 - No pathfinding — zombies go at you and turn aside when a crate is in the way.
 - No sound, no score kept between rounds, no ranking across a party.
 
 ## Known limitations
 
-- **A round is yours alone.** The host's *call* to start reaches everybody, so
-  a lobby enters and leaves a game together — but each browser then runs its
-  own copy against its own stand-in runners. Two people in one round are in two
-  rounds that look alike. Block 16.7.
+- **A guest is a round trip behind their own keys.** Their body moves when the
+  host says it moved: about 50 ms plus ping. That is fine for a chase and would
+  not be for anything twitchier. There is no prediction.
+- **A body is not handed to a new host.** If the host leaves, `15-minigames`
+  takes everybody out, so there is no round to carry on.
+- **Names are lobby names or ids.** The scoreboard uses the name somebody
+  joined with, and the id if there isn't one.
 - **The avoidance is shallow.** A body in a dead end will scrape along a wall
   rather than back out of it. It never gets stuck permanently, because whatever
   it is fleeing eventually moves, but it does not look clever.
@@ -229,9 +278,35 @@ party panel, and open **1 · Zombie Tag**. Read it, then press **play**.
 - **Let the round finish.** A card should list everybody who was ever a player,
   longest survival first, with the six zombies nowhere on it. **Again** should
   start a fresh round.
-- **Press escape mid-round.** The round should stop dead — nobody moving, no
-  timer climbing — with a card offering resume. Resume and it carries on from
-  exactly there.
+- **Press escape mid-round, alone.** The round should stop dead — nobody
+  moving, no timer climbing — with a card offering resume. Resume and it
+  carries on from exactly there.
+
+### With two browsers
+
+Make a lobby in one, join it from the other, and have the host open Zombie Tag
+and press play.
+
+- **Look for each other.** Each browser should show itself in blue and the
+  other person in green, **in the same place in both**, and no stand-in
+  runners. Six zombies in both, in the same places.
+- **Move in each.** The other browser should see you move, smoothly rather
+  than in steps. The guest's own body should respond within a blink.
+- **Guest: push the host.** The host should tip over in *both* browsers, and
+  the guest's push pill should count down from three.
+- **Get one of you caught.** They should turn purple in both, at the same
+  moment.
+- **Let the round finish.** Both should get the card with the same winner and
+  the same order, with names. The guest's card should say it is waiting for the
+  host. **Host: press again.** Both should go into the same new round.
+- **Guest: hold a direction and press escape.** Their body should stop in both
+  browsers, and the round should carry on. Resume, and it moves again.
+- **Host: press escape.** The round should carry on for the guest, and the
+  host's body should just stand there.
+- **Guest: leave the round** from the pause card. Their body should stop, not
+  run into a wall.
+- **Make a lobby, then play before anybody joins.** It should be a normal solo
+  round with stand-ins, not a card saying you won.
 
 ## Gate record
 

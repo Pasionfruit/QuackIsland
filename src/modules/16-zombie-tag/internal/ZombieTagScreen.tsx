@@ -17,16 +17,15 @@
  * reason - the rules are worth testing and the drawing is not.
  */
 import { Canvas } from '@react-three/fiber'
+import { getNet, useNet, usePeers } from '../../09-net'
 import { useEffect, useRef, useState } from 'react'
 import { ACESFilmicToneMapping, PCFSoftShadowMap } from 'three'
 import { ARENA } from './arena'
-import { crowdIntents } from './ai'
 import { FOV } from './camera'
 import { PALETTE, ZombieTagScene } from './ZombieTagScene'
 import {
   NO_INTENT,
   placings,
-  stepRound,
   survivedFor,
   survivors,
   zombies,
@@ -34,7 +33,8 @@ import {
   type Intent,
   type Round,
 } from './round'
-import { ME, newRound } from './setup'
+import { emptyRound, myId, newRound } from './setup'
+import { useRoundNet } from './useRoundNet'
 import type { MinigameRun } from '../../15-minigames'
 
 /** Text and chrome. The board's own colours live with the board, in the scene. */
@@ -50,15 +50,34 @@ const FONT =
   "ui-rounded, 'Hiragino Maru Gothic ProN', 'Segoe UI', system-ui, -apple-system, sans-serif"
 
 export function ZombieTagScreen({ run }: { run: MinigameRun }) {
-  const [round, setRound] = useState<Round>(() => newRound())
+  const [round, setRound] = useState<Round>(() => (getNet().host ? newRound() : emptyRound()))
   // Read in the frame callback rather than closed over, so pausing takes
   // effect on the very next frame instead of whenever the effect re-runs.
   const paused = useRef(run.paused)
   paused.current = run.paused
+
+  // The host simulates and sends; a guest sends its keys and follows. Alone,
+  // you are your own host and this is the same path with nobody listening.
+  const net = useNet()
+  const peers = usePeers()
+  const me = net.id ?? myId()
+  const wire = useRoundNet()
   // The round is stepped every frame and drawn every frame, so it lives in a
   // ref and React is told about it rather than asked to own it.
   const live = useRef(round)
   live.current = round
+
+  /** Somebody's name for the scoreboard: you, a lobby name, or a runner's. */
+  const nameOf = (id: string) =>
+    id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id)
+
+  // Dealt into the ref as well as the state, so the frame that follows the
+  // click steps the new round rather than handing React the old one back.
+  const again = () => {
+    const fresh = newRound()
+    live.current = fresh
+    setRound(fresh)
+  }
 
   const keys = useRef({ up: false, down: false, left: false, right: false })
   const pushEdge = useRef(false)
@@ -111,22 +130,23 @@ export function ZombieTagScreen({ run }: { run: MinigameRun }) {
       const dt = (now - last) / 1000
       last = now
       const current = live.current
-      // A paused round is stopped, not slowed: the clock is not read while the
-      // card is up, so coming back does not fast-forward through the gap.
-      if (!current.over && !paused.current) {
-        const intents = crowdIntents(current)
-        intents.set(ME, mine(keys.current, pushEdge.current))
-        pushEdge.current = false
+      // Called on every frame, over or paused or not: a guest has to keep
+      // hearing the host to see a round end and the next one dealt, and the
+      // host has to keep telling them. Whether the clock moves is `advance`'s
+      // call - see `useRoundNet` - and a solo pause still stops it dead.
+      if (wire.advance(current, dt, mine(keys.current, pushEdge.current), paused.current)) {
         // Stepped in place, then handed back as a new object so React draws it.
-        setRound({ ...stepRound(current, intents, dt) })
+        setRound({ ...current })
       }
+      // Spent or not, a push does not wait out a pause to be thrown later.
+      pushEdge.current = false
       frame = requestAnimationFrame(tick)
     }
     frame = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame)
   }, [])
 
-  const you = round.bodies.find((b) => b.id === ME) ?? null
+  const you = round.bodies.find((b) => b.mine) ?? null
   const left = survivors(round)
   const chase = zombies(round)
 
@@ -159,7 +179,11 @@ export function ZombieTagScreen({ run }: { run: MinigameRun }) {
         </Canvas>
       </div>
 
-      {round.over ? <Over round={round} onAgain={() => setRound(newRound())} /> : null}
+      {/* Only the host can deal a fresh round; a guest waits to be dealt one,
+          the same as they waited to be brought here. */}
+      {round.over ? (
+        <Over round={round} me={me} nameOf={nameOf} onAgain={net.host ? again : null} />
+      ) : null}
     </div>
   )
 }
@@ -194,9 +218,19 @@ function Pill({ colour, children }: { colour: string; children: React.ReactNode 
 }
 
 /** The scoreboard: who lasted longest, and how long you managed. */
-function Over({ round, onAgain }: { round: Round; onAgain: () => void }) {
+function Over({
+  round,
+  me,
+  nameOf,
+  onAgain,
+}: {
+  round: Round
+  me: string
+  nameOf: (id: string) => string
+  onAgain: (() => void) | null
+}) {
   const order = placings(round)
-  const won = round.winner === ME
+  const won = round.winner === me
   return (
     <div style={overBackdrop}>
       <div style={overCard}>
@@ -213,17 +247,23 @@ function Over({ round, onAgain }: { round: Round; onAgain: () => void }) {
           {order.slice(0, 8).map((body, i) => (
             <div key={body.id} style={scoreRow} data-place={i + 1}>
               <span style={{ opacity: 0.5, minWidth: 18 }}>{i + 1}</span>
-              <span style={{ flex: 1, fontWeight: body.id === ME ? 700 : 400 }}>
-                {body.id === ME ? 'you' : body.id}
+              <span style={{ flex: 1, fontWeight: body.id === me ? 700 : 400 }}>
+                {nameOf(body.id)}
               </span>
               <span style={{ opacity: 0.6 }}>{survivedFor(body, round).toFixed(1)}s</span>
             </div>
           ))}
         </div>
 
-        <button type="button" onClick={onAgain} style={againButton} data-again>
-          again
-        </button>
+        {onAgain ? (
+          <button type="button" onClick={onAgain} style={againButton} data-again>
+            again
+          </button>
+        ) : (
+          <div style={{ ...againButton, opacity: 0.55, textAlign: 'center' }}>
+            waiting for the host
+          </div>
+        )}
       </div>
     </div>
   )

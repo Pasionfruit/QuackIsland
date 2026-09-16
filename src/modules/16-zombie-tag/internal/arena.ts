@@ -58,6 +58,20 @@ export const ARENA = {
   /** How many zombies the round opens with. */
   zombies: 6,
 
+  /**
+   * How long somebody takes to turn, in seconds.
+   *
+   * A beat, and a load-bearing one. Without it a player caught in a crowd is a
+   * zombie on the same frame, standing inside a knot of runners it can now
+   * catch - so one catch cascades through everybody touching them before
+   * anybody can react. A tenth of a second is long enough to see the turn
+   * happen and long enough to get clear of it.
+   *
+   * While it runs, the body is neither use nor ornament: it cannot catch, and
+   * it cannot move. It is mid-transformation.
+   */
+  turnDelay: 0.1,
+
   /** How far from the middle the players start, in a ring. */
   spawnRing: 2.4,
 } as const
