@@ -21,6 +21,7 @@ import {
   createRace,
   goalOpen,
   placings,
+  spinnerActive,
   platformsTouched,
   stepRace,
   type Race,
@@ -212,17 +213,52 @@ describe('the spinning platforms', () => {
     expect(a.spins).toBe(1)
   })
 
-  it('spin you again if you step off and back on, but count it once', () => {
+  it('go inactive for you once they have spun you', () => {
     const race = twoRacers()
-    const [a] = race.racers
+    const [a, b] = race.racers
     const platform = mazeFor(SEED).platforms[0]
     standAt(race, a, platform.at)
     const first = a.binding
+    expect(spinnerActive(a, platform.id)).toBe(false)
+
+    for (let i = 0; i < 40; i++) stepRace(race, still, 1 / 60)
     standAt(race, a, away(a))
     standAt(race, a, platform.at)
-    expect(a.spins).toBe(2)
-    expect(a.binding).not.toBe(first)
+    expect(a.spins).toBe(1)
+    expect(a.binding).toBe(first)
+    expect(a.spin).toBe(0)
     expect(platformsTouched(a)).toBe(1)
+
+    // Spent for one racer, not for anybody else.
+    expect(spinnerActive(b, platform.id)).toBe(true)
+    standAt(race, b, platform.at)
+    expect(b.spins).toBe(1)
+  })
+
+  it('cannot be stood on twice to open the middle', () => {
+    const race = twoRacers()
+    const [a] = race.racers
+    const platform = mazeFor(SEED).platforms[0]
+    for (let visit = 0; visit < 5; visit++) {
+      standAt(race, a, platform.at)
+      for (let i = 0; i < 40; i++) stepRace(race, still, 1 / 60)
+      standAt(race, a, away(a))
+    }
+    standAt(race, a, { x: 0, y: 0 })
+    expect(goalOpen(a)).toBe(false)
+    expect(a.finishedAt).toBeNull()
+  })
+
+  it('still spin you on a third platform, once you have had your two', () => {
+    const race = twoRacers()
+    const [a] = race.racers
+    const { platforms } = mazeFor(SEED)
+    for (const p of [platforms[0], platforms[1], platforms[4]]) {
+      standAt(race, a, p.at)
+      for (let i = 0; i < 40; i++) stepRace(race, still, 1 / 60)
+    }
+    expect(a.spins).toBe(3)
+    expect(a.spins).toBe(platformsTouched(a))
   })
 
   it('make WASD stop working and the new letters start', () => {

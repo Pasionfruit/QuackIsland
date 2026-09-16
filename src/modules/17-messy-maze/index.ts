@@ -63,6 +63,7 @@ export {
   goalOpen,
   placings,
   platformsTouched,
+  spinnerActive,
   stepRace,
   stillRacing,
   type Entrant,

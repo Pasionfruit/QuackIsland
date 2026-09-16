@@ -50,6 +50,7 @@ the lobby draws whatever the catalogue holds.
 | `nextMode(id, step?)` | The next one along, wrapping both ways. Pure |
 | `decodeMode(raw)` / `encodeMode(m)` | The wire format, and its validation. Pure |
 | `hostChoice(tag, known, fallback)` | A setting the host decides and the lobby is told |
+| `CHOICE_ANSWER_MS`, `CHOICE_REPEAT_MS` | How long a host waits to answer a crowd, and how often it says every choice again |
 | `applyChoice(current, message, isHost)` | What a message means to whoever got it. Pure |
 | `Choice`, `ChoiceMessage` | What that returns, and what it sends |
 | `decodeChoice` / `encodeChoice` | The generic wire format underneath both. Pure |
@@ -108,6 +109,20 @@ mode.get()      // in a frame callback
 mode.set(id)    // host only
 mode.useSync()  // once, from something always mounted
 ```
+
+Two more, found with eight browsers in one lobby, and both now part of
+`hostChoice` rather than something each setting has to remember:
+
+- **One answer for a crowd of questions.** Seven people arriving together each
+  ask about every choice at once. Answered one by one, that took the host past
+  the relay's sixty messages a second - and the relay drops what is over the
+  limit silently. Questions are now answered once, `CHOICE_ANSWER_MS` after the
+  first. Tested.
+- **Said again every `CHOICE_REPEAT_MS`, while host.** A choice is state, not
+  an event, so a message that never arrived must not strand anybody. The one
+  that was lost in that lobby was the host pressing play, and every guest sat
+  on the briefing for good. Now it costs them two seconds. Hearing a value you
+  already have changes nothing. Tested.
 
 The `tag` is the message type on the room channel and **must be unique across
 the build** - it is what stops two choices reading each other's messages. There

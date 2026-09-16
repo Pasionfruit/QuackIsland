@@ -223,6 +223,24 @@ else needs it. Nothing outside this module should be reaching for it.
 - **A full arena fits in one relay message.** Tested.
 - **A lobby of one is not a finished round.** Tested.
 
+## Eight at once
+
+Eight is the most this is built for, and there is a test that plays a round
+out between a host and seven guests, every message through JSON the way the
+relay hands it over: all eight dealt in, every guest shown the same round with
+their own body in it, each guest's keys moving them and nobody else, a snapshot
+of all eight inside the relay's 4 KB, and the host's messages a second - duck,
+round, clock, and a pong for each of seven others' pings - inside its limit of
+sixty. See `lobby8.test.ts`.
+
+Running it for real, eight tabs in one lobby, found something no two-browser
+test would: **a guest who takes over as host before any snapshot has reached
+them holds an empty round**, and an empty round stepped is over on its first
+frame. Sent, it ended the game for everybody. So a host never runs or sends a
+round nobody was dealt into, and a guest refuses a snapshot with nobody in it.
+The takeover itself was `09-net` dropping a peer that was still there, fixed
+there.
+
 ## Deliberate non-goals
 
 - No models. Capsules and boxes, lit properly.

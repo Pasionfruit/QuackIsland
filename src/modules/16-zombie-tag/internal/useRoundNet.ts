@@ -123,6 +123,11 @@ export function useRoundNet(): RoundNet {
     const mineNow = paused ? NO_INTENT : mine
 
     if (net.host) {
+      // A round nobody was dealt into is not a round to run. This is a guest
+      // who has become host mid-round before any snapshot reached them:
+      // stepped, an empty arena is over on its first frame, and sent, it would
+      // end the game for everybody who is actually playing it.
+      if (round.bodies.length === 0) return false
       const shared = net.status === 'joined' && net.peers > 0
       let stepped = false
       if (!round.over && (!paused || shared)) {

@@ -108,6 +108,10 @@ describe('a snapshot', () => {
     expect(decodeSnapshot({ ...good, r: [racers[0].slice(0, 10)] })).toBeNull()
   })
 
+  it("refuses a race with nobody in it, which could only clear everybody else's", () => {
+    expect(decodeSnapshot(overTheWire(encodeSnapshot(waitingRace())))).toBeNull()
+  })
+
   it('fits in a relay message with a full lobby in it', () => {
     const full = createRace(
       SEED,

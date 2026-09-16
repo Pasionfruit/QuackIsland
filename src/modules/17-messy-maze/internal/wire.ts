@@ -93,6 +93,9 @@ export function decodeSnapshot(message: Record<string, unknown>): Snapshot | nul
     racers.push([id, x, y, facing, binding, spins, touched, on, spin, finishedAt, place])
   }
 
+  // A real race always has somebody in it; an empty one would clear everybody's.
+  if (racers.length === 0) return null
+
   return {
     seed: message.s as number,
     elapsed: message.e,

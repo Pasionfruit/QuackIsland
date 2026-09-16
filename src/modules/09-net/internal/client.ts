@@ -196,6 +196,26 @@ let outgoing: DuckState | null = null
 /** The host's clock and weather, as last heard. Null when you are the host. */
 let world: WorldState | null = null
 
+/**
+ * A track for somebody the relay has just told us about.
+ *
+ * Heard *now*, not at time zero. The relay saying "they are here" is as good a
+ * sign of life as anything they could send, and a track heard at zero is stale
+ * to the very next sweep - which dropped every peer on arrival, one frame after
+ * joining, and made the newcomer its own host until a duck came in.
+ */
+function freshTrack(name: string): Track {
+  const track = createTrack(name)
+  track.heard = performance.now() / 1000
+  return track
+}
+
+/** Marks a peer as heard from, if they are one we know. */
+function stillHere(id: string): void {
+  const track = tracks.get(id)
+  if (track) track.heard = Math.max(track.heard, performance.now() / 1000)
+}
+
 /** Recomputed whenever the room changes; nobody has to be told who is host. */
 function electHost(): void {
   const me = info.get().id
@@ -287,10 +307,16 @@ function open(rawCode: string, rawName: string, make: boolean): void {
       return
     }
 
+    // Anything a peer says proves they are still here - a ping as much as a
+    // duck. Ducks are sent from the render loop, and a tab that is not
+    // drawing (hidden, or busy) must not be taken for gone, or the lobby
+    // quietly elects a second host.
+    if (typeof message.from === 'string') stillHere(message.from)
+
     if (message.t === 'joined') {
       const peers = Array.isArray(message.peers) ? message.peers : []
       for (const id of peers) {
-        if (typeof id === 'string') tracks.set(id, createTrack('duck'))
+        if (typeof id === 'string') tracks.set(id, freshTrack('duck'))
       }
       set({
         status: 'joined',
@@ -305,7 +331,7 @@ function open(rawCode: string, rawName: string, make: boolean): void {
 
     if (message.t === 'peer' && typeof message.id === 'string') {
       if (!tracks.has(message.id)) {
-        tracks.set(message.id, createTrack(typeof message.name === 'string' ? message.name : 'duck'))
+        tracks.set(message.id, freshTrack(typeof message.name === 'string' ? message.name : 'duck'))
       }
       set({ peers: tracks.size })
       electHost()

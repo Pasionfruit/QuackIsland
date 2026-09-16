@@ -79,9 +79,13 @@ export function useRaceNet(): RaceNet {
     const mine = paused ? '' : held
 
     if (net.host) {
+      // A race nobody was dealt into is not one to run or to send: it is a
+      // guest who became host before any snapshot reached them, and sending
+      // it would clear everybody's race. See the same guard in Zombie Tag.
+      if (race.racers.length === 0) return false
       const shared = net.status === 'joined' && net.peers > 0
       let stepped = false
-      if (!race.over && race.racers.length > 0 && (!paused || shared)) {
+      if (!race.over && (!paused || shared)) {
         const directions: Map<string, Point> = botDirections(race)
         const me = myId()
         for (const racer of race.racers) {

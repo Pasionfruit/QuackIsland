@@ -93,6 +93,15 @@ by `isHost` the moment the relay says who is in the room.
 - **The history is bounded.** `NET.history` snapshots per peer, oldest dropped.
 - **Late packets are dropped, not sorted in.** A snapshot older than the newest
   would rewind the player.
+- **Anything a peer sends keeps them in the lobby**, not only ducks. Ducks are
+  sent from the render loop, so a tab too busy to draw - or hidden, and slowed
+  right down - used to be dropped after `NET.timeout` even though its pings
+  were still arriving, and whoever was left elected a second host. Found with
+  eight tabs open in one lobby. Tested.
+- **A peer the relay has just announced counts as heard from now.** Their
+  track used to start at time zero, which the very next sweep - one frame after
+  joining - read as eight seconds stale: every newcomer briefly dropped
+  everybody and believed itself host until a duck arrived. Tested.
 - **A rename needs no message of its own and no rejoin.** The name is on every
   duck update and peers adopt whatever they last heard, so `renameSelf` reaches
   everybody within one send - including anybody who joins afterwards.

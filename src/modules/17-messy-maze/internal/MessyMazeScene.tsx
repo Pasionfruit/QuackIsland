@@ -133,13 +133,14 @@ const Walls = memo(function Walls({ maze }: { maze: Maze }) {
 /**
  * One spinning platform: a disc with a cross on it, turning.
  *
- * Faded for you once you have stood on it, because the thing you want to know
- * at a glance is where the ones you still need are.
+ * Once it has spun you it is spent for you - it will not spin you again - so in
+ * your browser it stops and goes pale. What you want to know at a glance is
+ * which ones are still live for you.
  */
 function SpinningPlatform({ platform, done }: { platform: Platform; done: boolean }) {
   const spinner = useRef<Group>(null)
   useFrame((_state, delta) => {
-    if (spinner.current) spinner.current.rotation.y += delta * (done ? 0.8 : 2.6)
+    if (spinner.current && !done) spinner.current.rotation.y += delta * 2.6
   })
   const radius = MAZE.platformRadius * 0.92
   return (

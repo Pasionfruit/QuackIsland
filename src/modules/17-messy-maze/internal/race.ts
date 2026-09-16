@@ -26,7 +26,10 @@ import {
 } from './maze'
 
 export const RACE = {
-  /** Distinct platforms you must have stood on before the middle counts. */
+  /**
+   * Spins you must have had before the middle counts. Each platform spins each
+   * racer only once, so this many spins is this many different platforms.
+   */
   platformsNeeded: 2,
   /**
    * How long a spin holds you, in seconds.
@@ -63,11 +66,14 @@ export interface Racer {
   facing: number
   /** Up, left, down, right: four letters. `WASD` until the first spin. */
   binding: string
-  /** How many spins so far. Seeds the next binding, and tells a screen to flash. */
+  /**
+   * How many spins so far. Seeds the next binding, and tells a screen to
+   * flash. Always the number of platforms touched: none spins anybody twice.
+   */
   spins: number
   /** Which platforms have been stood on, as bits by platform id. */
   touched: number
-  /** The platform it is standing on now, or -1. A spin happens on arrival only. */
+  /** The platform it is standing on now, or -1. */
   on: number
   /** Seconds left of spinning. Nobody moves while they spin. */
   spin: number
@@ -207,18 +213,22 @@ export function stepRace(race: Race, directions: Map<string, Point>, dt: number)
 /**
  * Standing on a platform: spin, and take a new set of letters.
  *
- * **Only on arrival.** Standing still on one is not a spin a frame; stepping
- * off and back on again is a second spin, and costs a second set of letters.
- * Either platform on your route counts, and so does anybody else's - what the
- * middle wants is two different ones.
+ * **Each platform spins each racer once.** After that it is spent for them -
+ * still there, still turning for everybody else, but it does nothing to you
+ * and cannot be stood on twice to make up the two the middle wants. So getting
+ * in means being spun by two *different* platforms: yours, or anybody else's.
  */
+export function spinnerActive(racer: Racer, platform: number): boolean {
+  return (racer.touched & (1 << platform)) === 0
+}
+
 function land(race: Race, racer: Racer): void {
   const maze = mazeFor(race.seed)
   const under = maze.platforms.find(
     (p) => Math.hypot(p.at.x - racer.x, p.at.y - racer.y) <= MAZE.platformRadius,
   )
   const id = under ? under.id : -1
-  if (id !== -1 && id !== racer.on) {
+  if (id !== -1 && spinnerActive(racer, id)) {
     racer.spins += 1
     racer.binding = rebind(race.seed, racer.id, racer.spins, racer.binding)
     racer.touched |= 1 << id

@@ -24,6 +24,8 @@ export {
 } from './internal/modes'
 
 export {
+  CHOICE_ANSWER_MS,
+  CHOICE_REPEAT_MS,
   applyChoice,
   decodeChoice,
   encodeChoice,

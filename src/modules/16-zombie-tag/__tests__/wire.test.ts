@@ -121,6 +121,12 @@ describe('a snapshot', () => {
     expect(decodeSnapshot({ ...good, b: [['', ...bodies[0].slice(1)]] })).toBeNull()
   })
 
+  it("refuses a round with nobody in it, which could only wipe everybody else's", () => {
+    // What a guest that took over as host before being dealt anything would
+    // send: an empty arena, already over.
+    expect(decodeSnapshot(overTheWire(encodeSnapshot(emptyRound())))).toBeNull()
+  })
+
   it('fits in a relay message with a full arena in it', () => {
     const full = newRound({ ids: ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8'], me: 'p1' })
     expect(JSON.stringify(encodeSnapshot(full)).length).toBeLessThan(4096)

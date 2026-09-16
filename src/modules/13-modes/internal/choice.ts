@@ -103,6 +103,11 @@ export interface Choice<T extends string> {
   /** Start listening. Returns the unsubscribe. */
   listen(): () => void
   /**
+   * Start saying it again every `CHOICE_REPEAT_MS` while host. Returns the stop.
+   * What `useSync` runs while you are in a lobby.
+   */
+  repeat(): () => void
+  /**
    * Keep it in step with the lobby for as long as the interface is up.
    *
    * A hook: call it once, unconditionally, from something that is always
@@ -111,6 +116,28 @@ export interface Choice<T extends string> {
    */
   useSync(): void
 }
+
+/**
+ * How long the host waits after a question before answering it, in ms.
+ *
+ * Long enough to fold a crowd of questions into one answer. Seven people
+ * arriving together each ask about every choice there is; answered one by
+ * one, that burst took the host past the relay's sixty messages a second, and
+ * the relay drops whatever is over without a word - which is how a lobby of
+ * eight lost the host pressing play.
+ */
+export const CHOICE_ANSWER_MS = 150
+
+/**
+ * How often the host says every choice again anyway, in ms.
+ *
+ * A choice is state, not an event: what matters is that everybody ends up
+ * holding the host's value, not that they heard the one message that set it.
+ * Said again every couple of seconds, a message the relay dropped costs a
+ * couple of seconds rather than a guest stuck for good. Saying a value somebody
+ * already has changes nothing for them.
+ */
+export const CHOICE_REPEAT_MS = 2000
 
 /**
  * A setting the host of a lobby decides and everybody else is told.
@@ -129,6 +156,16 @@ export function hostChoice<T extends string>(
   const announce = (): void => {
     if (!getNet().host) return
     sendToRoom(encodeChoice<T>(tag, { value: store.get() }))
+  }
+
+  // One answer for however many questions arrive together.
+  let answering: ReturnType<typeof setTimeout> | null = null
+  const answerSoon = (): void => {
+    if (answering !== null) return
+    answering = setTimeout(() => {
+      answering = null
+      announce()
+    }, CHOICE_ANSWER_MS)
   }
 
   const choice: Choice<T> = {
@@ -155,8 +192,15 @@ export function hostChoice<T extends string>(
         // only the part that has to touch a store and a socket.
         const { value, answer } = applyChoice(store.get(), message, getNet().host)
         store.set(value)
-        if (answer) announce()
+        if (answer) answerSoon()
       })
+    },
+
+    repeat() {
+      // `announce` checks it is the host on every tick, so a guest who is
+      // handed the lobby starts repeating without being told to.
+      const timer = setInterval(announce, CHOICE_REPEAT_MS)
+      return () => clearInterval(timer)
     },
 
     useSync() {
@@ -172,6 +216,8 @@ export function hostChoice<T extends string>(
         // `room` is in here so that leaving one lobby for another asks again
         // rather than keeping the first one's answer.
       }, [joined, room])
+
+      useEffect(() => (joined ? choice.repeat() : undefined), [joined, room])
     },
   }
 

@@ -60,9 +60,12 @@ will not take you until you have stood on two different platforms. Any two -
 yours, or ones in somebody else's quarter. Grey and still while it will not
 have you, gold with a ring breathing round it once it will.
 
-A platform **spins you on arrival, not while you stand on it**. Stepping off and
-back on is a second spin with a second set of letters, and still only counts as
-one platform.
+**Each platform spins each racer once.** Once it has spun you it is spent for
+you: it stops turning and goes pale in your browser, and walking back onto it
+does nothing - no spin, no new letters, and no second tick towards the middle.
+It is still live for everybody else. So the middle's two spins are always two
+*different* platforms, and nobody can open it by stepping on and off one. A
+platform you have not used still spins you after you have your two.
 
 ## Spinning, and the letters
 
@@ -177,7 +180,8 @@ Exported because it is worth testing, not because anything else needs it.
 - **Nobody walks through a wall or out of the maze.** Tested.
 - **A spin deals four different letters, none from the last binding**, the same
   deal for the same race, racer and spin, reaching all 26 letters. Tested.
-- **One spin per arrival**, not per frame. Tested.
+- **A platform spins each racer once**, then is spent for them and not for
+  anybody else; stepping on and off one never opens the middle. Tested.
 - **The middle refuses anybody with fewer than two platforms**, and takes
   anybody with any two. Tested.
 - **Places are the order of arrival**; the last call ends the race; anybody not
@@ -189,6 +193,24 @@ Exported because it is worth testing, not because anything else needs it.
 - **Held letters are read through the host's binding, not the guest's.** Tested.
 - **A lobby of one gets stand-ins; a lobby of two or more does not.** Tested.
 - **The whole maze is in frame and fills it, at any window shape.** Tested.
+
+## Eight at once
+
+Eight is the most this is built for, and there is a test that plays a race
+out between a host and seven guests, every message through JSON the way the
+relay hands it over: all eight dealt in, every guest shown the same race with
+their own body in it, each guest's keys moving them and nobody else, a snapshot
+of all eight inside the relay's 4 KB, and the host's messages a second - duck,
+race, clock, and a pong for each of seven others' pings - inside its limit of
+sixty. See `lobby8.test.ts`.
+
+Running it for real, eight tabs in one lobby, found something no two-browser
+test would: **a guest who takes over as host before any snapshot has reached
+them holds an empty race**, and an empty race stepped is over on its first
+frame. Sent, it ended the game for everybody. So a host never runs or sends a
+race nobody was dealt into, and a guest refuses a snapshot with nobody in it.
+The takeover itself was `09-net` dropping a peer that was still there, fixed
+there.
 
 ## Deliberate non-goals
 
@@ -232,10 +254,11 @@ party panel, and open **2 · Messy Maze**. Read it, then press **play**.
   says *platforms 0 of 2*.
 - **Step on an orange spinning platform.** You whirl for a moment, a card shows
   four new letters, the HUD keys pulse and change, and WASD stops working. The
-  new letters should move you the way their arrows say. The platform goes pale
-  for you.
-- **Stand still on it.** No second spin. Step off and back on: a second spin,
-  new letters again, and still *1 of 2*.
+  new letters should move you the way their arrows say. The platform stops
+  turning and goes pale for you.
+- **Stand still on it, then step off and back on.** Nothing: it stopped
+  turning when it spun you, your letters stay the same, and the HUD still says
+  *1 of 2*.
 - **Get a second platform.** The HUD says *go to the middle!* and the middle
   turns gold with a pulsing ring. Walk in: a banner says what place you got.
 - **Watch the stand-ins.** They should find their platforms and the middle,

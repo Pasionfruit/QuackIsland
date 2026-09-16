@@ -98,6 +98,11 @@ export function decodeSnapshot(message: Record<string, unknown>): Snapshot | nul
     bodies.push([id, x, y, side, facing, stun, cooldown, turning, caughtAt])
   }
 
+  // A real round always has somebody in it. An empty one can only have come
+  // from a browser that took over as host before it had been dealt anything,
+  // and applying it would wipe the round everybody is in.
+  if (bodies.length === 0) return null
+
   return { elapsed: message.e, over: message.o === 1, winner: message.w || null, bodies }
 }
 
