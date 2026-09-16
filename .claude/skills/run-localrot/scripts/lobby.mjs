@@ -5,7 +5,7 @@
  *   node .claude/skills/run-localrot/scripts/lobby.mjs --players 8 --out <dir>
  *
  * --players   how many (default 8, the most the games are built for)
- * --games     comma list, in order (default zombie-tag,messy-maze,probable-stop,duck-hunt)
+ * --games     comma list, in order (default zombie-tag,messy-maze,probable-stop,duck-hunt,punch-buggy)
  * --app       dev server URL (default http://localhost:5199/)
  * --out       where screenshots go (default <temp>/localrot-run/lobby)
  * --software  render with SwiftShader instead of the GPU
@@ -23,7 +23,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { GAMES, args, duckHuntShot, gameState, launch, say, sleep } from './cdp.mjs'
 
-const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
+const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt,punch-buggy', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
 const count = Number(opt.players)
 const games = String(opt.games).split(',')
 const pages = []
@@ -77,8 +77,9 @@ try {
         p.eval(`(() => {
           const s = ${gameState(game)}
           // Probable Stop keeps its seed on the host - it decides the answers -
-          // so there the game's id is what every browser should share.
-          const which = ${JSON.stringify(game)} === 'probable-stop' ? s.id : (s.seed ?? null)
+          // and Punch Buggy never sends one; there the id is what every browser
+          // should share.
+          const which = ['probable-stop', 'punch-buggy'].includes(${JSON.stringify(game)}) ? s.id : (s.seed ?? null)
           return { game: which, layout: s.layout ?? null, people: s.${people}.length, mine: s.${people}.filter((b) => b.mine).map((b) => b.id).join(), me: window.__net.getNet().id }
         })()`),
       ),
@@ -87,6 +88,29 @@ try {
     const ownBody = seen.every((s) => s.mine === s.me)
     say(`${game}: same in every browser ${same}; each browser's own body right ${ownBody}`, JSON.stringify(seen[0]))
     if (!same || !ownBody) throw new Error(`${game}: browsers disagree - ${JSON.stringify(seen)}`)
+
+    if (game === 'punch-buggy') {
+      // A guest walks and throws a punch; the host should see both.
+      const guestOnHost = () => host.eval(`(() => { const r = ${gameState(game)}; const f = r.fighters.find((f) => f.id === ${JSON.stringify(moverId)}); return { x: +f.x.toFixed(2), y: +f.y.toFixed(2), clicks: f.clicks, punch: f.punch } })()`)
+      const before = await guestOnHost()
+      // Towards the middle of the platform, whichever way that is from its spot.
+      const code = before.x > 0 ? 'KeyA' : 'KeyD'
+      await mover.eval(`window.dispatchEvent(new KeyboardEvent('keydown', { code: '${code}', key: '${code.slice(3).toLowerCase()}' }))`)
+      await sleep(600)
+      await mover.eval(`window.dispatchEvent(new KeyboardEvent('keyup', { code: '${code}', key: '${code.slice(3).toLowerCase()}' }))`)
+      await mover.eval(`document.querySelector('[data-board]').dispatchEvent(new PointerEvent('pointerdown', { button: 0, bubbles: true }))`)
+      await sleep(800)
+      const after = await guestOnHost()
+      say(`${game}: guest ${moverId} walked and punched; host saw ${JSON.stringify(before)} -> ${JSON.stringify(after)}`)
+      await host.shot(`${game}-host.png`)
+      await mover.shot(`${game}-guest.png`)
+      if (Math.hypot(after.x - before.x, after.y - before.y) < 0.5 || after.clicks !== before.clicks + 1) {
+        throw new Error(`${game}: the host did not see the guest walk and punch`)
+      }
+      await host.eval('window.__mg.backOut()')
+      for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
+      continue
+    }
 
     if (game === 'duck-hunt') {
       // A guest shoots one of its own balloons; the host should see the shot and the pop.

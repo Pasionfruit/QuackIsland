@@ -45,7 +45,7 @@ describe('a shot', () => {
     expect(g.players[0].lastShot).toMatchObject({ hit: true, own: false })
   })
 
-  it('costs a second and a half, hit or miss', () => {
+  it('costs half a second, hit or miss', () => {
     const g = game()
     fire(g, { shooter: 0, balloon: null, point: origin })
     expect(g.players[0].cooldown).toBe(ARENA.cooldown)

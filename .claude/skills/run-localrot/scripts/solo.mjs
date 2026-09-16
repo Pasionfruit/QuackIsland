@@ -3,7 +3,7 @@
  *
  *   node .claude/skills/run-localrot/scripts/solo.mjs --game messy-maze --out <dir> [--steer] [--software]
  *
- * --game      messy-maze (default), zombie-tag, probable-stop or duck-hunt
+ * --game      messy-maze (default), zombie-tag, probable-stop, duck-hunt or punch-buggy
  * --app       dev server URL (default http://localhost:5199/)
  * --out       where screenshots go (default <temp>/localrot-run/solo)
  * --steer     Messy Maze: drive your racer to the middle with the stand-ins'
@@ -13,6 +13,9 @@
  *             round, confirmed - screenshotting a reveal, then the results.
  *             Duck Hunt: shoot one of your own balloons whenever the cooldown
  *             allows, for the whole minute, then the results.
+ *             Punch Buggy: walk at the nearest fighter, punch when facing them
+ *             within reach, pull back, repeat - screenshotting a punch in flight
+ *             and the results.
  * --software  render with SwiftShader instead of the GPU (slow; see cdp.mjs)
  *
  * Needs the dev server running; not the relay - alone you are your own host.
@@ -70,6 +73,62 @@ try {
     })()`)
     say('steered', JSON.stringify(log), await page.shot('3-in.png'))
     await page.waitFor(`!!document.querySelector('[data-again]')`, 120000)
+    say('results', await page.shot('4-results.png'))
+  } else if (opt.steer && opt.game === 'punch-buggy') {
+    const board = await page.eval(`(() => { const r = document.querySelector('[data-board]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } })()`)
+    const held = new Set()
+    const key = async (code, down) => {
+      if (down === held.has(code)) return
+      down ? held.add(code) : held.delete(code)
+      await page.eval(`window.dispatchEvent(new KeyboardEvent('${down ? 'keydown' : 'keyup'}', { code: '${code}', key: '${code.slice(3).toLowerCase()}' }))`)
+    }
+    const clickBoard = () => page.eval(`document.querySelector('[data-board]').dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX: ${board.x}, clientY: ${board.y}, bubbles: true }))`)
+    let clicks = 0
+    let shotPunch = false
+    for (let i = 0; i < 1000; i++) {
+      const s = await page.eval(`(() => {
+        const r = ${gameState('punch-buggy')}
+        const me = r.fighters.find((f) => f.mine)
+        const others = r.fighters.filter((f) => !f.mine && f.alive)
+        others.sort((a, b) => Math.hypot(a.x - me.x, a.y - me.y) - Math.hypot(b.x - me.x, b.y - me.y))
+        const t = others[0]
+        return { over: r.over, elapsed: r.elapsed, alive: me.alive, how: me.how, by: me.by, out: r.fighters.filter((f) => !f.alive).map((f) => f.id + ":" + f.how + ":" + f.by + "@" + (f.outAt ?? 0).toFixed(2)), punch: me.punch, x: me.x, y: me.y, facing: me.facing, target: t ? { x: t.x, y: t.y } : null, standing: r.fighters.filter((f) => f.alive).length }
+      })()`)
+      if (s.over || !s.alive) {
+        for (const code of [...held]) await key(code, false)
+        say('ended', JSON.stringify(s))
+        break
+      }
+      if (s.target) {
+        const dx = s.target.x - s.x
+        const dy = s.target.y - s.y
+        const distance = Math.hypot(dx, dy)
+        // Keep off the edge first.
+        const edge = Math.hypot(s.x, s.y) > 8
+        const wx = edge ? -s.x : dx
+        const wy = edge ? -s.y : dy
+        await key('KeyD', wx > 0.3 * Math.hypot(wx, wy))
+        await key('KeyA', wx < -0.3 * Math.hypot(wx, wy))
+        await key('KeyS', wy > 0.3 * Math.hypot(wx, wy))
+        await key('KeyW', wy < -0.3 * Math.hypot(wx, wy))
+        const off = Math.abs(Math.atan2(Math.sin(Math.atan2(dy, dx) - s.facing), Math.cos(Math.atan2(dy, dx) - s.facing)))
+        if (s.punch === 'in' && distance < 6.5 && off < 0.45) {
+          await clickBoard()
+          clicks += 1
+          if (!shotPunch) {
+            shotPunch = true
+            await sleep(90)
+            say('punch', JSON.stringify(s), await page.shot('3-punch.png'))
+          }
+        } else if (s.punch === 'held') {
+          await clickBoard()
+          clicks += 1
+        }
+      }
+      await sleep(60)
+    }
+    say('clicked', clicks, 'times')
+    await page.waitFor(`!!document.querySelector('[data-again]')`, 60000)
     say('results', await page.shot('4-results.png'))
   } else if (opt.steer && opt.game === 'duck-hunt') {
     let fired = 0

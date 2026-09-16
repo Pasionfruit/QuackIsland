@@ -3,7 +3,7 @@
  *
  * A minute of balloons. Each player has a colour and a shape, and a balloon in
  * them is theirs. Shoot one of yours: a point. Shoot somebody else's: no point
- * for you, one fewer for them - and either way, a second and a half before you
+ * for you, one fewer for them - and either way, half a second before you
  * can shoot again. Miss, and the same.
  *
  * No three.js, no React, no clock of its own. `fire` takes which balloon a shot

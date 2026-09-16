@@ -39,7 +39,7 @@ export const ARENA = {
   radius: 0.85,
 
   /** Seconds between one shot and the next, hit or miss. */
-  cooldown: 1.5,
+  cooldown: 0.5,
   /**
    * How early a shot may arrive and still count, in seconds.
    *
@@ -48,7 +48,7 @@ export const ARENA = {
    * host's has. Refusing that would make the fastest shooter the one whose
    * shots vanish.
    */
-  cooldownGrace: 0.2,
+  cooldownGrace: 0.15,
   /** How long after floating out of view a balloon can still be popped. Same reason. */
   escapeGrace: 0.3,
 } as const

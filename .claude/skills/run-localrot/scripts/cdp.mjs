@@ -190,6 +190,12 @@ export const GAMES = {
     anchor: `document.querySelector('[data-time-left]')`,
     people: 'players',
   },
+  'punch-buggy': {
+    title: 'Punch Buggy',
+    screen: 'PunchBuggyScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'fighters',
+  },
 }
 
 /**

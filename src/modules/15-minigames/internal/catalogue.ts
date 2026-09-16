@@ -162,7 +162,7 @@ const ENTRIES = [
     kind: 'free-for-all',
     description: [
       'Balloons drift up around the arena, each one wearing somebody\'s colour. Shoot the ones that are yours and leave everybody else\'s alone.',
-      'A second and a half between shots, so a miss actually costs you. Most correct pops wins.',
+      'Half a second between shots, so a miss still costs you. Most correct pops wins.',
     ],
     controls: [
       { input: 'Mouse', does: 'Aim' },
@@ -231,7 +231,9 @@ const ENTRIES = [
       { input: 'Left click', does: 'Extend or retract the punch' },
     ],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `20-punch-buggy`. The assets stage is still to do - the
+    // fighters are the island's capsule and the fists are spheres.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'time-it',

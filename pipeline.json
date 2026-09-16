@@ -108,7 +108,8 @@
         "16-zombie-tag",
         "17-messy-maze",
         "18-probable-stop",
-        "19-duck-hunt"
+        "19-duck-hunt",
+        "20-punch-buggy"
       ]
     }
   ],
@@ -137,7 +138,8 @@
         "15-minigames",
         "17-messy-maze",
         "18-probable-stop",
-        "19-duck-hunt"
+        "19-duck-hunt",
+        "20-punch-buggy"
       ],
       "generation": 1,
       "contract": {
@@ -310,7 +312,8 @@
         "16-zombie-tag",
         "17-messy-maze",
         "18-probable-stop",
-        "19-duck-hunt"
+        "19-duck-hunt",
+        "20-punch-buggy"
       ],
       "generation": 1,
       "contract": {
@@ -808,7 +811,8 @@
         "16-zombie-tag",
         "17-messy-maze",
         "18-probable-stop",
-        "19-duck-hunt"
+        "19-duck-hunt",
+        "20-punch-buggy"
       ],
       "generation": 1,
       "contract": {
@@ -1305,7 +1309,8 @@
         "16-zombie-tag",
         "17-messy-maze",
         "18-probable-stop",
-        "19-duck-hunt"
+        "19-duck-hunt",
+        "20-punch-buggy"
       ],
       "generation": 1,
       "contract": {
@@ -1687,7 +1692,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-16T20:53:30.159Z"
+          "at": "2026-09-16T21:27:05.941Z"
         },
         "human": {
           "status": "pending"
@@ -1700,6 +1705,90 @@
         "No moving camera, no zoom, no pointer lock",
         "No lag compensation beyond trusting the shooter's own screen",
         "No sound, no score kept between games"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "20-punch-buggy",
+      "phase": "P6",
+      "title": "Minigame 8, Punch Buggy: a floating platform, fists that shoot out and come back, and the last one standing",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "20.1",
+          "title": "The place: a round platform over the sea, and falling off it",
+          "status": "done"
+        },
+        {
+          "id": "20.2",
+          "title": "The punch: out on a click, back on a click, a direct hit knocks you out, an arm that is out shoves",
+          "status": "done"
+        },
+        {
+          "id": "20.3",
+          "title": "The round: thirty seconds, last one standing, placed by how long you lasted",
+          "status": "done"
+        },
+        {
+          "id": "20.4",
+          "title": "The controls: WASD to move, left click to punch and pull back",
+          "status": "done"
+        },
+        {
+          "id": "20.5",
+          "title": "A still camera over the platform, bodies, arms and fists drawn into it",
+          "status": "done"
+        },
+        {
+          "id": "20.6",
+          "title": "One round shared across the lobby, with stand-ins only when alone",
+          "status": "done"
+        },
+        {
+          "id": "20.7",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "20.8",
+          "title": "The assets: models, sprites and sound in place of capsules and spheres",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-16T21:31:09.275Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: players are the island's capsule, fists are spheres",
+        "No moving camera",
+        "No health: one direct hit is out",
+        "No sound, no score kept between rounds"
       ],
       "budgets": {
         "drawCallsMax": 0,

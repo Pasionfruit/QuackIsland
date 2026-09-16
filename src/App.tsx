@@ -14,13 +14,15 @@ import { PartyPanel } from './app/PartyPanel'
 import { LobbyPopup } from './app/LobbyPopup'
 import { useParty } from './modules/10-party'
 import { GardenScreen } from './modules/14-garden'
-import { MinigameScreen, useMinigameSync } from './modules/15-minigames'
+import { MinigameScreen, useMinigameScreen, useMinigameSync } from './modules/15-minigames'
+import { musicStopped } from './app/music'
 // Imported for the side effect: it registers itself with the minigame
 // registry, which is the whole of how a built game plugs in.
 import './modules/16-zombie-tag'
 import './modules/17-messy-maze'
 import './modules/18-probable-stop'
 import './modules/19-duck-hunt'
+import './modules/20-punch-buggy'
 import { Scoreboard } from './app/Scoreboard'
 import { Boundary } from './app/Boundary'
 import { Toasts } from './app/Toasts'
@@ -29,7 +31,9 @@ export default function App() {
   // Whatever the party is doing - background music has no other way to know
   // a game has started, and stopping it is the whole point of asking.
   const party = useParty()
-  const playingAGame = party.phase === 'playing'
+  // A minigame being played stops it too - see `musicStopped`.
+  const minigame = useMinigameScreen()
+  const quiet = musicStopped(party.phase, minigame)
 
   // Takes a guest wherever the host has gone. Live for everybody; the host's
   // own calls come back to them and are ignored.
@@ -54,7 +58,7 @@ export default function App() {
         </div>
 
         <div style={{ ...column, top: 10, right: 10, alignItems: 'flex-end' }}>
-          <MusicPlayer stopped={playingAGame} />
+          <MusicPlayer stopped={quiet} />
           <DebugPanel />
         </div>
 

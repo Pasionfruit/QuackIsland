@@ -5,7 +5,7 @@
 **Minigame 4.** A minute of balloons rising round a sandy arena. Every player
 has a colour and a shape, and every balloon wears somebody's. Shoot yours.
 Leave everybody else's - popping one scores you nothing, only takes it away
-from them. A second and a half between shots, hit or miss. Most of your own
+from them. Half a second between shots, hit or miss. Most of your own
 popped wins.
 
 It plugs into `15-minigames` and nothing else in the build knows it exists.
@@ -22,7 +22,7 @@ the island's capsule.
 | Balloons appearing around the arena | `schedule`, `balloonAt`, `ARENA.floor` |
 | Matching your colour or face | `COLOURS`, `EMBLEMS` - a colour and a shape per player |
 | Aim and shoot | `pickBalloon` - a ray from your camera through the pointer |
-| 1.5 s cooldown per shot | `ARENA.cooldown`, `fire` - spent hit or miss |
+| Shot cooldown - half a second | `ARENA.cooldown`, `fire` - spent hit or miss |
 | Most of your own balloons popped wins | `score`, `placings` |
 | Mouse - aim | the crosshair |
 | Left click - shoot | `Trigger` in the scene |
@@ -51,9 +51,11 @@ so nobody's are always on the same side. No wave lets go in the last two and a
 half seconds - a balloon nobody can reach is not a balloon.
 
 A balloon rises steadily, swaying side to side, and is gone about six seconds
-later. With a shot every second and a half at best, **you cannot get them all**,
-which is the point: which ones, and whether to take a harder one before it floats
-away.
+later. **Half a second between shots** is fast enough to reach every one of
+yours in principle, so what decides it is aim and speed: a miss still costs half
+a second, other players' balloons are in the way, and somebody else can pop
+yours first. (It was a second and a half; brought down to make it quicker to
+play.)
 
 ## A shot
 
@@ -93,7 +95,7 @@ else's shot reached that balloon first - it comes back when the answer does.
 
 **A guest's clock** runs on by itself between snapshots and is pulled towards
 the host's, and jumps if it is ever half a second out. Allowing for the round
-trip, the host takes a shot up to 0.2 s before the shooter's cooldown ends
+trip, the host takes a shot up to 0.15 s before the shooter's cooldown ends
 (`cooldownGrace`) and at a balloon up to 0.3 s after it floated away
 (`escapeGrace`) - the moments a guest's screen can be ahead of the host.
 
@@ -107,7 +109,7 @@ third of the time.
 - **Every player's shot** flashes a ring in their colour where it landed, misses
   included, so you can see who is shooting at what.
 - **The crosshair** replaces the pointer over the arena: a ring round it empties
-  when you shoot and fills back up over the cooldown, solid in your colour when
+  when you shoot and fills back up over the half-second cooldown, solid in your colour when
   you can fire. It is moved directly, not through React, so it never lags your
   hand.
 - **The HUD** has the clock (red for the last ten seconds), your colour and shape

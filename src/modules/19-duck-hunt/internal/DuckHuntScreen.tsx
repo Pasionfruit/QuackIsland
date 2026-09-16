@@ -4,7 +4,7 @@
  * The arena is drawn in its own canvas by `DuckHuntScene`; this is the shell:
  * the HUD with the clock and everybody's score in their colour and shape, and
  * a crosshair in place of the pointer that shows your cooldown - a ring that
- * fills back up over the second and a half, so you always know whether a click
+ * fills back up over the half second, so you always know whether a click
  * will fire before you make it.
  *
  * **Mouse to aim, left click to shoot.** Nothing else. The crosshair is drawn
