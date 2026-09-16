@@ -111,15 +111,17 @@ describe('the catalogue', () => {
     expect(far.steps.assets).toBeLessThanOrEqual(far.steps.controls)
   })
 
-  it('knows Zombie Tag is part built and nothing else has started', () => {
+  it('knows Zombie Tag and Messy Maze are part built and nothing else has started', () => {
     // The honest statement of where the build has got to. Meant to be edited
     // the day the next game starts, which is the point of writing it down.
-    const zombie = minigameById('zombie-tag')
-    expect(zombie.done).toEqual({ environment: true, controls: true, assets: false })
-    expect(nextStep(zombie)).toBe('assets')
+    for (const id of ['zombie-tag', 'messy-maze'] as const) {
+      const game = minigameById(id)
+      expect(game.done).toEqual({ environment: true, controls: true, assets: false })
+      expect(nextStep(game)).toBe('assets')
+    }
 
     const started = MINIGAMES.filter((game) => stepsDone(game) > 0).map((game) => game.id)
-    expect(started).toEqual(['zombie-tag'])
+    expect(started).toEqual(['zombie-tag', 'messy-maze'])
     expect(progress().playable).toBe(0)
   })
 

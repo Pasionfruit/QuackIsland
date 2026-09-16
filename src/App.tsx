@@ -18,6 +18,7 @@ import { MinigameScreen, useMinigameSync } from './modules/15-minigames'
 // Imported for the side effect: it registers itself with the minigame
 // registry, which is the whole of how a built game plugs in.
 import './modules/16-zombie-tag'
+import './modules/17-messy-maze'
 import { Scoreboard } from './app/Scoreboard'
 import { Boundary } from './app/Boundary'
 import { Toasts } from './app/Toasts'

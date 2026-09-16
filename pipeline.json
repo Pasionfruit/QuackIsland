@@ -105,7 +105,8 @@
         "13-modes",
         "14-garden",
         "15-minigames",
-        "16-zombie-tag"
+        "16-zombie-tag",
+        "17-messy-maze"
       ]
     }
   ],
@@ -131,7 +132,8 @@
         "12-rocks",
         "13-modes",
         "14-garden",
-        "15-minigames"
+        "15-minigames",
+        "17-messy-maze"
       ],
       "generation": 1,
       "contract": {
@@ -301,7 +303,8 @@
         "08-audio",
         "09-net",
         "10-party",
-        "16-zombie-tag"
+        "16-zombie-tag",
+        "17-messy-maze"
       ],
       "generation": 1,
       "contract": {
@@ -796,7 +799,8 @@
         "13-modes",
         "14-garden",
         "15-minigames",
-        "16-zombie-tag"
+        "16-zombie-tag",
+        "17-messy-maze"
       ],
       "generation": 1,
       "contract": {
@@ -1290,7 +1294,8 @@
         "13-modes"
       ],
       "dependents": [
-        "16-zombie-tag"
+        "16-zombie-tag",
+        "17-messy-maze"
       ],
       "generation": 1,
       "contract": {
@@ -1447,6 +1452,91 @@
         "No pathfinding: zombies go at you and turn aside when a crate is in the way",
         "No zombie pushing - the push is for disrupting other runners, not for fighting back",
         "No sound, no score kept between rounds, no ranking across a party"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "17-messy-maze",
+      "phase": "P6",
+      "title": "Minigame 2, Messy Maze: four corners, a maze, two spinning platforms that rebind your keys, and a race to the middle",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "17.1",
+          "title": "The environment: a seeded maze, fair to every corner, with walls you cannot pass",
+          "status": "done"
+        },
+        {
+          "id": "17.2",
+          "title": "The spinning platforms: two on every route, and a fresh set of letters on each",
+          "status": "done"
+        },
+        {
+          "id": "17.3",
+          "title": "The race: the middle only counts after two platforms, placed in the order you arrive",
+          "status": "done"
+        },
+        {
+          "id": "17.4",
+          "title": "The controls: letters rather than WASD, and a HUD that shows which",
+          "status": "done"
+        },
+        {
+          "id": "17.5",
+          "title": "A still tilted camera over the whole maze, and the race drawn into it",
+          "status": "done"
+        },
+        {
+          "id": "17.6",
+          "title": "One race shared across the lobby, with stand-in racers only when alone",
+          "status": "done"
+        },
+        {
+          "id": "17.7",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "17.8",
+          "title": "The assets: models, sprites and sound in place of capsules and boxes",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-16T16:12:38.921Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: the racers are the island's capsule avatar and the walls are boxes",
+        "No moving camera. The whole maze is in view for the whole race",
+        "No bodies blocking each other: racers pass through one another, so nobody can plug a corridor",
+        "No pushing, items or shortcuts beyond the maze itself",
+        "No sound, no score kept between races"
       ],
       "budgets": {
         "drawCallsMax": 0,

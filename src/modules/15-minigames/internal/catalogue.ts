@@ -132,7 +132,9 @@ const ENTRIES = [
     ],
     controls: [{ input: 'WASD / assigned keys', does: 'Move' }],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `17-messy-maze`. The assets stage is still to do - every
+    // racer is the island's capsule and every wall a box.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'probable-stop',
