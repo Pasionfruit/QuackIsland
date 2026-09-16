@@ -24,14 +24,16 @@ registerMinigame('messy-maze', {
 export {
   HALF,
   MAZE,
+  MAZES,
   MIDDLE,
-  buildMaze,
   cellAt,
   cellCentre,
   exits,
   inWall,
   isOpen,
   mazeFor,
+  parseLayout,
+  platformsOnRoute,
   pushOutOfBox,
   quarterOf,
   rotate,
@@ -73,7 +75,19 @@ export {
 
 export { botDirection, botDirections } from './internal/ai'
 
-export { ME, SOLO_RACERS, myId, newRace, nextSeed, raceRoster, waitingRace, type RaceSetup } from './internal/setup'
+export {
+  ME,
+  SOLO_RACERS,
+  myId,
+  newRace,
+  nextLayout,
+  nextSeed,
+  raceRoster,
+  waitingRace,
+  type RaceSetup,
+} from './internal/setup'
+
+export { LAYOUTS, type Layout } from './internal/layouts'
 
 export {
   KEYS_TAG,

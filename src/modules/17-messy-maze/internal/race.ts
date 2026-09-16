@@ -17,6 +17,7 @@ import {
   MAZE,
   cellAt,
   cellCentre,
+  MAZES,
   mazeFor,
   settle,
   stepsFrom,
@@ -28,7 +29,8 @@ import {
 export const RACE = {
   /**
    * Spins you must have had before the middle counts. Each platform spins each
-   * racer only once, so this many spins is this many different platforms.
+   * racer only once, so this many spins is this many different platforms - and
+   * the mazes are built so that no route to the middle crosses fewer.
    */
   platformsNeeded: 2,
   /**
@@ -90,8 +92,13 @@ export interface Racer {
 }
 
 export interface Race {
-  /** What the maze is built from. The only thing about the maze on the wire. */
+  /**
+   * What this race's randomness comes from: the letters every spin deals.
+   * Different every race, so the same maze never deals the same letters twice.
+   */
   seed: number
+  /** Which of the three mazes, by its number in `MAZES`. */
+  layout: number
   racers: Racer[]
   /** Seconds since the race began. */
   elapsed: number
@@ -109,12 +116,18 @@ export interface Entrant {
 /**
  * A race at its start: everybody in a corner, facing in, on WASD.
  *
+ * `layout` is which maze; left out, it follows from the seed.
+ *
  * Corners are dealt round in order, so two people are in opposite corners -
  * never side by side - and a fifth person shares with the first. Racers do not
  * collide with each other, so sharing a corner costs nothing.
  */
-export function createRace(seed: number, entrants: readonly Entrant[]): Race {
-  const maze = mazeFor(seed)
+export function createRace(
+  seed: number,
+  entrants: readonly Entrant[],
+  layout: number = seed % MAZES.length,
+): Race {
+  const maze = mazeFor(layout)
   // Opposite corners first, then the other two.
   const order = [0, 2, 1, 3]
   const racers = entrants.map((entrant, i): Racer => {
@@ -136,7 +149,7 @@ export function createRace(seed: number, entrants: readonly Entrant[]): Race {
       bot: entrant.bot ?? false,
     }
   })
-  return { seed, racers, elapsed: 0, over: false, firstIn: null }
+  return { seed, layout: maze.id, racers, elapsed: 0, over: false, firstIn: null }
 }
 
 /** How many platforms a racer has stood on. */
@@ -179,7 +192,7 @@ export function stepRace(race: Race, directions: Map<string, Point>, dt: number)
   if (race.over) return race
   const step = Math.min(Math.max(dt, 0), 0.05)
   race.elapsed += step
-  const maze = mazeFor(race.seed)
+  const maze = mazeFor(race.layout)
 
   for (const racer of race.racers) {
     if (racer.finishedAt !== null) continue
@@ -223,7 +236,7 @@ export function spinnerActive(racer: Racer, platform: number): boolean {
 }
 
 function land(race: Race, racer: Racer): void {
-  const maze = mazeFor(race.seed)
+  const maze = mazeFor(race.layout)
   const under = maze.platforms.find(
     (p) => Math.hypot(p.at.x - racer.x, p.at.y - racer.y) <= MAZE.platformRadius,
   )
@@ -256,7 +269,7 @@ function arrive(race: Race, racer: Racer): void {
  * but never as much as making it.
  */
 export function placings(race: Race): Racer[] {
-  const maze = mazeFor(race.seed)
+  const maze = mazeFor(race.layout)
   const toGoal = stepsTo(maze, [GOAL])
   const finished = race.racers
     .filter((r) => r.place !== null)

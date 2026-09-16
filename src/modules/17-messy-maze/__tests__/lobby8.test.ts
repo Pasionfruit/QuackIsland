@@ -9,7 +9,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import { directionFor } from '../internal/bindings'
-import { cellAt, cellCentre, exits, mazeFor, quarterOf, type Point } from '../internal/maze'
+import { cellAt, cellCentre, exits, MAZES, mazeFor, quarterOf, type Point } from '../internal/maze'
 import { createRace, stepRace, type Race } from '../internal/race'
 import { waitingRace } from '../internal/setup'
 import {
@@ -21,6 +21,8 @@ import {
 } from '../internal/wire'
 
 const SEED = 8888
+/** The maze a race with that seed is in, unless told otherwise. */
+const LAYOUT = SEED % MAZES.length
 const IDS = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8']
 const HOST = IDS[0]
 const GUESTS = IDS.slice(1)
@@ -32,7 +34,7 @@ const relay = (message: Record<string, unknown>) =>
 function letterOut(race: Race, id: string): { letter: string; toward: Point } {
   const racer = race.racers.find((r) => r.id === id)!
   const here = cellAt(racer)
-  const next = exits(mazeFor(race.seed), here)[0]
+  const next = exits(mazeFor(race.layout), here)[0]
   const step = { x: next.x - here.x, y: next.y - here.y }
   // Binding order is up, left, down, right.
   const index = step.y === -1 ? 0 : step.x === -1 ? 1 : step.y === 1 ? 2 : 3
@@ -103,7 +105,7 @@ describe('eight people in one race', () => {
     const { host, guests, frame, hold } = lobby()
     const id = 'p6'
     const racer = host.racers.find((r) => r.id === id)!
-    const platform = mazeFor(SEED).platforms[3]
+    const platform = mazeFor(LAYOUT).platforms[3]
     racer.x = platform.at.x
     racer.y = platform.at.y
     // Long enough for the spin to finish and a snapshot to arrive.
@@ -129,7 +131,7 @@ describe('eight people in one race', () => {
 
   it('places all eight when they all get in', () => {
     const { host, frame } = lobby()
-    const { platforms } = mazeFor(SEED)
+    const { platforms } = mazeFor(LAYOUT)
     for (const racer of host.racers) racer.touched = (1 << platforms[0].id) | (1 << platforms[1].id)
     // Into the middle one a frame, last in the roster first.
     const order = [...host.racers].reverse()

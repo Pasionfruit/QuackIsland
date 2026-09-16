@@ -7,19 +7,20 @@
  * the origin, so the middle cell's centre is (0, 0) and the corners are the
  * four cells furthest from it.
  *
- * **A maze is made from a seed and nothing else.** The host deals a seed, and
- * the walls, the platforms and the starting corners all follow from it. That
- * is what lets a guest draw the host's maze from one number on the wire rather
- * than from four hundred walls, and what lets a test ask for the same maze
- * twice and get it.
+ * **There are three mazes, drawn out in `layouts.ts`**, and a race is run in
+ * one of them. The host says which by number, which is all a guest needs to
+ * build the same walls.
  *
- * **It is fair by construction, not by luck.** The walls are carved for one
- * quarter of the grid and then turned through a right angle three times, so
- * every corner looks out on the same maze as every other, rotated. Nobody's
- * start is closer to the middle than anybody else's, and there is a test that
- * counts the steps.
+ * **Every route to the middle crosses two spinning platforms.** Not because
+ * anybody is told to, but because there is no gap in the walls that lets you
+ * past them - `platformsOnRoute` counts the fewest a racer can possibly cross,
+ * and the tests hold every corner of every maze to two.
+ *
+ * **Every maze is fair.** Each is one quarter turned four times, so every
+ * corner looks out on the same maze, rotated; nobody's start is closer to the
+ * middle than anybody else's.
  */
-import { createRng } from '../../00-core'
+import { LAYOUTS, type Layout } from './layouts'
 
 export const MAZE = {
   /** Cells along each side. Odd, so there is a middle cell to race to. */
@@ -38,27 +39,19 @@ export const MAZE = {
   speed: 7,
 
   /**
-   * How many extra walls come out of each quarter once it is a proper maze.
+   * How close to a platform's middle counts as standing on it.
    *
-   * A perfect maze - one route between any two cells - is a puzzle rather than
-   * a race: once you have found the way there is nothing left to decide. Loops
-   * are what make it messy, and what give a player who took a wrong turn a way
-   * back into it that is not the way they came.
-   */
-  loops: 5,
-  /**
-   * How many doorways each quarter opens into the next one round.
+   * Big enough that nobody can walk through a platform's cell without it, and
+   * worked out rather than guessed, because 1.2 looked plenty and was not. The
+   * closest a body's middle is forced to come to a cell's middle is on a turn,
+   * cut as tight as the walls allow: round the inner corner of the walls, which
+   * is 1.80 from the middle, at a body's radius of 0.55 - so 1.25. Anything
+   * under that and a racer hugging the corner slips past without spinning.
    *
-   * Without these the four quarters are four separate mazes that only meet in
-   * the middle, and nobody ever sees anybody else until the end. With them,
-   * routes cross, and somebody else's platform is a thing you can use.
+   * And small enough to stay in its own cell: through a wall a body is at
+   * least 2.28 from the middle, and through a doorway 1.5 before it is even in.
    */
-  crossings: 2,
-
-  /** How far along a corner's route each of its two platforms sits. */
-  platformsAt: [0.3, 0.68] as readonly number[],
-  /** How close to a platform's middle counts as standing on it. */
-  platformRadius: 1.2,
+  platformRadius: 1.35,
   /** How close to the very middle counts as having reached it. */
   goalRadius: 1.15,
 } as const
@@ -91,7 +84,9 @@ export interface Platform {
 }
 
 export interface Maze {
-  seed: number
+  /** Its index in `MAZES`, which is what goes on the wire. */
+  id: number
+  name: string
   size: number
   /** `openEast[y][x]`: whether you can walk from (x, y) to (x + 1, y). */
   openEast: boolean[][]
@@ -176,16 +171,6 @@ export function isOpen(maze: Maze, a: Cell, b: Cell): boolean {
   return false
 }
 
-function setOpen(open: { east: boolean[][]; south: boolean[][] }, a: Cell, b: Cell): void {
-  if (a.y === b.y) open.east[a.y][Math.min(a.x, b.x)] = true
-  else open.south[Math.min(a.y, b.y)][a.x] = true
-}
-
-/** Opens a wall and the same wall in the other three quarters. */
-function openAllFour(open: { east: boolean[][]; south: boolean[][] }, a: Cell, b: Cell): void {
-  for (let turn = 0; turn < 4; turn++) setOpen(open, rotate(a, turn), rotate(b, turn))
-}
-
 /** The cells you can step to from here. */
 export function exits(maze: Maze, cell: Cell): Cell[] {
   const out: Cell[] = []
@@ -229,109 +214,101 @@ export function stepsFrom(field: readonly number[], cell: Cell): number {
 }
 
 /**
- * Builds the maze a seed describes.
+ * The fewest spinning platforms anybody can cross getting from one cell to
+ * another, whatever way they go - or `Infinity` if they cannot get there.
  *
- * 1. **Carve quarter 0 as a perfect maze**, depth first from its corner, with
- *    every step taken in all four quarters at once. Each quarter is then a
- *    tree: one route from its corner to anywhere in it.
- * 2. **Open quarter 0 onto the middle**, and so every quarter.
- * 3. **Find the platforms** on that one route from corner to middle, before
- *    anything adds a second route - so they are on the way, not off to one
- *    side of it.
- * 4. **Make it messy**: knock out a few more walls inside the quarter, and a
- *    few between it and the next one round.
- *
- * Every random choice is made for quarter 0 and applied to all four, so the
- * randomness is in what the maze is, never in who it favours.
+ * A shortest-path search where stepping onto a platform costs one and
+ * anything else costs nothing. This is the number the mazes are designed
+ * around: from every corner to the middle it is two.
  */
-export function buildMaze(seed: number): Maze {
-  const random = createRng(seed)
+export function platformsOnRoute(maze: Maze, from: Cell, to: Cell): number {
+  const platforms = new Set(maze.platforms.map((p) => key(p.cell)))
+  const cost = new Array<number>(MAZE.size * MAZE.size).fill(Infinity)
+  cost[key(from)] = platforms.has(key(from)) ? 1 : 0
+  // Free steps go to the front of the queue and platform steps to the back,
+  // so cells come off in order of how many platforms it took to reach them.
+  const queue: Cell[] = [from]
+  while (queue.length > 0) {
+    const here = queue.shift()!
+    for (const next of exits(maze, here)) {
+      const onto = platforms.has(key(next)) ? 1 : 0
+      const through = cost[key(here)] + onto
+      if (through >= cost[key(next)]) continue
+      cost[key(next)] = through
+      if (onto) queue.push(next)
+      else queue.unshift(next)
+    }
+  }
+  return cost[key(to)]
+}
+
+/**
+ * Reads a maze from its drawing. See `layouts.ts` for what the characters mean.
+ *
+ * Strict, because a drawing is hand-editable: the wrong size, a missing post, a
+ * gap in the outer wall, or a marker anywhere it does not belong is an error
+ * saying where, not a maze with a hole in it.
+ */
+export function parseLayout(id: number, layout: Layout): Maze {
   const size = MAZE.size
+  const span = size * 2 + 1
+  const { rows, name } = layout
+  const fail = (why: string): never => {
+    throw new Error(`maze "${name}": ${why}`)
+  }
+  if (rows.length !== span || rows.some((r) => r.length !== span)) fail(`must be ${span} by ${span}`)
+
   const grid = () => Array.from({ length: size }, () => new Array<boolean>(size).fill(false))
-  const open = { east: grid(), south: grid() }
+  const openEast = grid()
+  const openSouth = grid()
+  const starts: Cell[] = []
+  const platformCells: Cell[] = []
 
-  const inQuarter = (c: Cell) => inGrid(c) && quarterOf(c) === 0
-  const corner: Cell = { x: 0, y: 0 }
-  // The one cell of quarter 0 that touches the middle.
-  const doorway: Cell = { x: MIDDLE - 1, y: MIDDLE }
-
-  // 1. Depth first, one quarter, mirrored into the rest.
-  const visited = new Set<number>([key(corner)])
-  const stack: Cell[] = [corner]
-  while (stack.length > 0) {
-    const here = stack[stack.length - 1]
-    const choices = NEIGHBOURS.map((s) => ({ x: here.x + s.x, y: here.y + s.y })).filter(
-      (c) => inQuarter(c) && !visited.has(key(c)),
-    )
-    if (choices.length === 0) {
-      stack.pop()
-      continue
-    }
-    const next = choices[Math.floor(random() * choices.length)]
-    openAllFour(open, here, next)
-    visited.add(key(next))
-    stack.push(next)
-  }
-
-  // 2. Into the middle.
-  openAllFour(open, doorway, { x: MIDDLE, y: MIDDLE })
-
-  const shell = (): Maze => ({
-    seed,
-    size,
-    openEast: open.east,
-    openSouth: open.south,
-    walls: [],
-    platforms: [],
-    corners: [0, 1, 2, 3].map((turn) => rotate(corner, turn)),
-  })
-
-  // 3. The route, while there is still exactly one.
-  const tree = shell()
-  const route = routeBetween(tree, corner, { x: MIDDLE, y: MIDDLE })
-  const platformCells = MAZE.platformsAt.map((along) => {
-    // Never the corner itself and never the middle: a platform you are
-    // standing on at the start, or on at the finish, is not one on the way.
-    const index = Math.max(1, Math.min(route.length - 2, Math.round((route.length - 1) * along)))
-    return route[index]
-  })
-
-  // 4. Messier. Walls inside quarter 0 first, then doorways into quarter 1.
-  const inside: [Cell, Cell][] = []
-  const across: [Cell, Cell][] = []
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const here = { x, y }
-      if (quarterOf(here) !== 0) continue
-      for (const step of [NEIGHBOURS[0], NEIGHBOURS[2]]) {
-        for (const sign of [1, -1]) {
-          const there = { x: x + step.x * sign, y: y + step.y * sign }
-          if (!inGrid(there) || isOpen(tree, here, there)) continue
-          const quarter = quarterOf(there)
-          if (quarter === 0 && sign === 1) inside.push([here, there])
-          if (quarter === 1) across.push([here, there])
-        }
+  for (let r = 0; r < span; r++) {
+    for (let c = 0; c < span; c++) {
+      const ch = rows[r][c]
+      const edge = r === 0 || c === 0 || r === span - 1 || c === span - 1
+      if (edge) {
+        if (ch !== '#') fail(`gap in the outer wall at row ${r}, column ${c}`)
+        continue
       }
-    }
-  }
-  for (const [pool, count] of [
-    [inside, MAZE.loops],
-    [across, MAZE.crossings],
-  ] as const) {
-    for (let i = 0; i < count && pool.length > 0; i++) {
-      const pick = Math.floor(random() * pool.length)
-      const [a, b] = pool.splice(pick, 1)[0]
-      openAllFour(open, a, b)
+      if (r % 2 === 0 && c % 2 === 0) {
+        if (ch !== '#') fail(`missing corner post at row ${r}, column ${c}`)
+        continue
+      }
+      if (r % 2 === 1 && c % 2 === 1) {
+        const cell = { x: (c - 1) / 2, y: (r - 1) / 2 }
+        if (ch === 'S') starts.push(cell)
+        else if (ch === 'O') platformCells.push(cell)
+        else if (ch === 'X') {
+          if (cell.x !== MIDDLE || cell.y !== MIDDLE) fail('the X is not in the middle')
+        } else if (ch !== ' ') fail(`unexpected "${ch}" in cell ${cell.x},${cell.y}`)
+        continue
+      }
+      if (ch !== ' ' && ch !== '#') fail(`unexpected "${ch}" in a wall at row ${r}, column ${c}`)
+      const open = ch === ' '
+      if (r % 2 === 1) openEast[(r - 1) / 2][c / 2 - 1] = open
+      else openSouth[r / 2 - 1][(c - 1) / 2] = open
     }
   }
 
-  const maze = shell()
-  maze.platforms = [0, 1, 2, 3].flatMap((quarter) =>
-    platformCells.map((cell, i) => {
-      const turned = rotate(cell, quarter)
-      return { id: quarter * 2 + i, cell: turned, at: cellCentre(turned), quarter }
-    }),
-  )
+  // Corners in quarter order, which is the order they are dealt out in.
+  const corners = [0, 1, 2, 3].map((turn) => rotate({ x: 0, y: 0 }, turn))
+  const isCorner = (cell: Cell) => corners.some((c) => c.x === cell.x && c.y === cell.y)
+  if (starts.length !== 4 || !starts.every(isCorner)) fail('needs an S in each of the four corners and nowhere else')
+
+  const maze: Maze = { id, name, size, openEast, openSouth, walls: [], platforms: [], corners }
+
+  // Platforms in quarter order, and within a quarter in the order its corner
+  // reaches them - so platform 0 is the first on quarter 0's way in.
+  maze.platforms = [0, 1, 2, 3].flatMap((quarter) => {
+    const fromCorner = stepsTo(maze, [corners[quarter]])
+    return platformCells
+      .filter((cell) => quarterOf(cell) === quarter)
+      .sort((a, b) => stepsFrom(fromCorner, a) - stepsFrom(fromCorner, b))
+      .map((cell, i) => ({ id: quarter * 2 + i, cell, at: cellCentre(cell), quarter }))
+  })
+
   maze.walls = wallsOf(maze)
   return maze
 }
@@ -439,20 +416,11 @@ export function inWall(maze: Maze, at: Point, radius = 0): boolean {
   )
 }
 
-/**
- * The same seed's maze, built once.
- *
- * A guest is handed a seed twenty times a second and the host steps the same
- * maze sixty; neither should be rebuilding four hundred walls to do it.
- */
-const built = new Map<number, Maze>()
-export function mazeFor(seed: number): Maze {
-  let maze = built.get(seed)
-  if (!maze) {
-    maze = buildMaze(seed)
-    // A handful of rounds a session. Kept small anyway, oldest out first.
-    if (built.size >= 8) built.delete(built.keys().next().value as number)
-    built.set(seed, maze)
-  }
-  return maze
+/** Every maze, read from its drawing once. */
+export const MAZES: readonly Maze[] = Object.freeze(LAYOUTS.map((layout, id) => parseLayout(id, layout)))
+
+/** A maze by its number. Wraps, so any whole number is one of them. */
+export function mazeFor(id: number): Maze {
+  const count = MAZES.length
+  return MAZES[((Math.trunc(id) % count) + count) % count]
 }

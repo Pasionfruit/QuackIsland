@@ -15,14 +15,26 @@ import {
   isBinding,
   rebind,
 } from '../internal/bindings'
-import { MAZE, cellAt, cellCentre, mazeFor, quarterOf, type Point } from '../internal/maze'
 import {
+  MAZE,
+  MAZES,
+  cellAt,
+  cellCentre,
+  exits,
+  mazeFor,
+  quarterOf,
+  stepsFrom,
+  stepsTo,
+  type Point,
+} from '../internal/maze'
+import {
+  GOAL,
   RACE,
   createRace,
   goalOpen,
   placings,
-  spinnerActive,
   platformsTouched,
+  spinnerActive,
   stepRace,
   type Race,
   type Racer,
@@ -30,6 +42,8 @@ import {
 import { SOLO_RACERS, newRace, raceRoster } from '../internal/setup'
 
 const SEED = 4242
+/** The maze a race with that seed is in, unless told otherwise. */
+const LAYOUT = SEED % MAZES.length
 const still = new Map<string, Point>()
 
 function twoRacers(): Race {
@@ -45,7 +59,7 @@ function standAt(race: Race, racer: Racer, at: Point): void {
 
 const away = (racer: Racer): Point => {
   // A cell next door, in whichever direction is not a platform.
-  const maze = mazeFor(SEED)
+  const maze = mazeFor(LAYOUT)
   const here = cellAt(racer)
   for (const step of [
     { x: 1, y: 0 },
@@ -143,8 +157,12 @@ describe('the start', () => {
     expect(race.racers.filter((r) => r.mine)).toHaveLength(1)
   })
 
-  it('deals a different maze each race', () => {
-    expect(newRace().seed).not.toBe(newRace().seed)
+  it('deals a different maze each race, round all three', () => {
+    const layouts = [newRace(), newRace(), newRace()].map((r) => r.layout)
+    expect(new Set(layouts).size).toBe(MAZES.length)
+    const [first, second] = [newRace(), newRace()]
+    expect(first.layout).not.toBe(second.layout)
+    expect(first.seed).not.toBe(second.seed)
   })
 })
 
@@ -185,7 +203,7 @@ describe('the spinning platforms', () => {
   it('spin you and change your letters when you step on one', () => {
     const race = twoRacers()
     const [a] = race.racers
-    const platform = mazeFor(SEED).platforms[0]
+    const platform = mazeFor(LAYOUT).platforms[0]
     standAt(race, a, platform.at)
 
     expect(a.spins).toBe(1)
@@ -198,7 +216,7 @@ describe('the spinning platforms', () => {
   it('hold you still while you spin', () => {
     const race = twoRacers()
     const [a] = race.racers
-    standAt(race, a, mazeFor(SEED).platforms[0].at)
+    standAt(race, a, mazeFor(LAYOUT).platforms[0].at)
     const before = { x: a.x, y: a.y }
     stepRace(race, new Map([['a', { x: 1, y: 0 }]]), 0.05)
     expect({ x: a.x, y: a.y }).toEqual(before)
@@ -207,7 +225,7 @@ describe('the spinning platforms', () => {
   it('spin you once for standing on one, not once a frame', () => {
     const race = twoRacers()
     const [a] = race.racers
-    const platform = mazeFor(SEED).platforms[0]
+    const platform = mazeFor(LAYOUT).platforms[0]
     standAt(race, a, platform.at)
     for (let i = 0; i < 120; i++) stepRace(race, still, 1 / 60)
     expect(a.spins).toBe(1)
@@ -216,7 +234,7 @@ describe('the spinning platforms', () => {
   it('go inactive for you once they have spun you', () => {
     const race = twoRacers()
     const [a, b] = race.racers
-    const platform = mazeFor(SEED).platforms[0]
+    const platform = mazeFor(LAYOUT).platforms[0]
     standAt(race, a, platform.at)
     const first = a.binding
     expect(spinnerActive(a, platform.id)).toBe(false)
@@ -238,7 +256,7 @@ describe('the spinning platforms', () => {
   it('cannot be stood on twice to open the middle', () => {
     const race = twoRacers()
     const [a] = race.racers
-    const platform = mazeFor(SEED).platforms[0]
+    const platform = mazeFor(LAYOUT).platforms[0]
     for (let visit = 0; visit < 5; visit++) {
       standAt(race, a, platform.at)
       for (let i = 0; i < 40; i++) stepRace(race, still, 1 / 60)
@@ -252,7 +270,7 @@ describe('the spinning platforms', () => {
   it('still spin you on a third platform, once you have had your two', () => {
     const race = twoRacers()
     const [a] = race.racers
-    const { platforms } = mazeFor(SEED)
+    const { platforms } = mazeFor(LAYOUT)
     for (const p of [platforms[0], platforms[1], platforms[4]]) {
       standAt(race, a, p.at)
       for (let i = 0; i < 40; i++) stepRace(race, still, 1 / 60)
@@ -264,7 +282,7 @@ describe('the spinning platforms', () => {
   it('make WASD stop working and the new letters start', () => {
     const race = twoRacers()
     const [a] = race.racers
-    standAt(race, a, mazeFor(SEED).platforms[0].at)
+    standAt(race, a, mazeFor(LAYOUT).platforms[0].at)
     expect(directionFor(a.binding, 'WASD')).toEqual({ x: 0, y: 0 })
     expect(directionFor(a.binding, a.binding[3])).toEqual({ x: 1, y: 0 })
   })
@@ -277,7 +295,7 @@ describe('the middle', () => {
     standAt(race, a, { x: 0, y: 0 })
     expect(a.finishedAt).toBeNull()
 
-    standAt(race, a, mazeFor(SEED).platforms[0].at)
+    standAt(race, a, mazeFor(LAYOUT).platforms[0].at)
     standAt(race, a, { x: 0, y: 0 })
     expect(goalOpen(a)).toBe(false)
     expect(a.finishedAt).toBeNull()
@@ -286,7 +304,7 @@ describe('the middle', () => {
   it('takes anybody who has, any two', () => {
     const race = twoRacers()
     const [a] = race.racers
-    const { platforms } = mazeFor(SEED)
+    const { platforms } = mazeFor(LAYOUT)
     // Somebody else's platforms count as much as your own.
     standAt(race, a, platforms[5].at)
     standAt(race, a, platforms[2].at)
@@ -298,7 +316,7 @@ describe('the middle', () => {
 
   it('places people in the order they get there', () => {
     const race = createRace(SEED, ['a', 'b', 'c'].map((id) => ({ id })))
-    const { platforms } = mazeFor(SEED)
+    const { platforms } = mazeFor(LAYOUT)
     for (const racer of race.racers) {
       racer.touched = (1 << platforms[0].id) | (1 << platforms[1].id)
     }
@@ -327,7 +345,7 @@ describe('the middle', () => {
   it('ranks anybody who did not make it by platforms, then by how far they had left', () => {
     const race = createRace(SEED, ['far', 'near', 'plat'].map((id) => ({ id })))
     const [far, near, plat] = race.racers
-    const { platforms } = mazeFor(SEED)
+    const { platforms } = mazeFor(LAYOUT)
     near.x = platforms[1].at.x + MAZE.cell * 0
     near.y = platforms[1].at.y
     near.touched = 0
@@ -337,6 +355,49 @@ describe('the middle', () => {
     // plat has a platform, which beats being close.
     expect(placings(race).map((r) => r.id)).toEqual(['plat', 'near', 'far'])
     expect(far.place).toBeNull()
+  })
+})
+
+describe('the mazes make everybody spin twice', () => {
+  /**
+   * Walks a racer straight for the middle, paying no attention to platforms at
+   * all - the way somebody would who had not read the rules. `tight` cuts every
+   * corner as close as the walls allow, which is the case that could slip past
+   * the edge of a platform if anything could.
+   */
+  function headForTheMiddle(layout: number, corner: number, tight: boolean): Racer {
+    const maze = mazeFor(layout)
+    const race = createRace(SEED, [{ id: 'a' }], layout)
+    const racer = race.racers[0]
+    const start = cellCentre(maze.corners[corner])
+    racer.x = start.x
+    racer.y = start.y
+    const field = stepsTo(maze, [GOAL])
+    for (let frame = 0; frame < 60 * 90 && !race.over; frame++) {
+      const here = cellAt(racer)
+      const middle = cellCentre(here)
+      let aim = middle
+      if (stepsFrom(field, here) > 0) {
+        const next = exits(maze, here).reduce((best, c) => (stepsFrom(field, c) < stepsFrom(field, best) ? c : best))
+        const lined = next.x !== here.x ? Math.abs(racer.y - middle.y) < 0.3 : Math.abs(racer.x - middle.x) < 0.3
+        if (tight || lined) aim = cellCentre(next)
+      }
+      stepRace(race, new Map([['a', { x: aim.x - racer.x, y: aim.y - racer.y }]]), 1 / 60)
+    }
+    return racer
+  }
+
+  it('from every corner of every maze, however tightly the corners are cut', () => {
+    for (const maze of MAZES) {
+      for (let corner = 0; corner < 4; corner++) {
+        for (const tight of [false, true]) {
+          const racer = headForTheMiddle(maze.id, corner, tight)
+          const where = `${maze.name}, corner ${corner}${tight ? ', cutting corners' : ''}`
+          expect(racer.place, where).toBe(1)
+          expect(platformsTouched(racer), where).toBeGreaterThanOrEqual(2)
+        }
+      }
+    }
   })
 })
 
@@ -351,11 +412,11 @@ describe('the stand-ins', () => {
     }
   })
 
-  it('do it on any maze, not just the one they were tested on', () => {
-    for (const seed of [1, 99, 31337, 8080]) {
-      const race = createRace(seed, [{ id: 'bot', bot: true }])
-      for (let t = 0; t < 120 && !race.over; t += 1 / 30) stepRace(race, botDirections(race), 1 / 30)
-      expect(race.racers[0].place, `seed ${seed}`).toBe(1)
+  it('do it in every maze, from every corner', () => {
+    for (const maze of MAZES) {
+      const race = createRace(7, ['a', 'b', 'c', 'd'].map((id) => ({ id, bot: true })), maze.id)
+      for (let t = 0; t < 150 && !race.over; t += 1 / 30) stepRace(race, botDirections(race), 1 / 30)
+      for (const racer of race.racers) expect(racer.place, `${maze.name}, ${racer.id}`).not.toBeNull()
     }
   })
 

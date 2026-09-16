@@ -20,6 +20,7 @@ import type { MinigameRun } from '../../15-minigames'
 import { ARROWS, heldLetters } from './bindings'
 import { FOV } from './camera'
 import { MessyMazeScene, PALETTE } from './MessyMazeScene'
+import { mazeFor } from './maze'
 import { RACE, goalOpen, placings, platformsTouched, stillRacing, type Race, type Racer } from './race'
 import { myId, newRace, waitingRace } from './setup'
 import { useRaceNet } from './useRaceNet'
@@ -132,6 +133,11 @@ export function MessyMazeScreen({ run }: { run: MinigameRun }) {
       <style>{KEYFRAMES}</style>
       <div style={hud}>
         <span style={{ fontWeight: 700, fontSize: 16 }}>Messy Maze</span>
+        {race.racers.length > 0 ? (
+          <span style={{ color: LOOK.faded, whiteSpace: 'nowrap' }} data-maze={race.layout}>
+            {mazeFor(race.layout).name}
+          </span>
+        ) : null}
         {you ? <PlatformPill racer={you} /> : null}
         <Pill colour={LOOK.ink}>
           {inCount} of {race.racers.length} in

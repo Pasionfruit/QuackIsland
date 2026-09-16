@@ -118,7 +118,7 @@ const Walls = memo(function Walls({ maze }: { maze: Maze }) {
 
   return (
     <instancedMesh
-      // Keyed on the seed by the parent, so a new maze gets a mesh sized for it.
+      // Keyed on the maze by the parent, so a new maze gets a mesh sized for it.
       ref={mesh}
       args={[undefined, undefined, maze.walls.length]}
       castShadow
@@ -239,7 +239,7 @@ export function MessyMazeScene({ race }: { race: Race }) {
   // A guest with no snapshot yet has no maze to draw - only the floor, rather
   // than a guessed maze that would jump when the real one arrived.
   const ready = race.racers.length > 0
-  const maze = ready ? mazeFor(race.seed) : null
+  const maze = ready ? mazeFor(race.layout) : null
 
   return (
     <>
@@ -250,7 +250,7 @@ export function MessyMazeScene({ race }: { race: Race }) {
       <Floor />
       {maze ? (
         <>
-          <Walls key={maze.seed} maze={maze} />
+          <Walls key={maze.id} maze={maze} />
           {maze.platforms.map((platform) => (
             <SpinningPlatform
               key={platform.id}

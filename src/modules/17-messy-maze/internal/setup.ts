@@ -8,6 +8,7 @@
  */
 import { CONVENTIONS, hashSeed } from '../../00-core'
 import { getNet, getPeers } from '../../09-net'
+import { MAZES } from './maze'
 import { createRace, type Race } from './race'
 
 /** What this browser's racer is called when there is no lobby to name it. */
@@ -40,34 +41,52 @@ export function raceRoster(): { id: string; bot: boolean }[] {
   return [mine, ...others].map((id) => ({ id, bot: false }))
 }
 
-/** Races dealt this session, so the next one is a different maze. */
+/** Races dealt this session. */
 let dealt = 0
+/** The maze the last race was in, so the next one is a different one. */
+let lastLayout: number | null = null
 
 /**
- * A seed for the next race.
+ * A seed for the next race: what its spins deal.
  *
  * Derived from the world seed through `hashSeed`, like everything else, and
- * made different per race by what is different about it: the lobby, how many
- * races came before, and when. The maze a seed makes is exactly reproducible;
- * which seed comes up next is meant not to be, or the first maze of every
- * session would be the same one and people would learn it.
+ * made different per race by the lobby, how many races came before, and when
+ * - so the letters a spin deals cannot be learned from one race to the next.
  */
 export function nextSeed(): number {
   dealt += 1
   return hashSeed(CONVENTIONS.worldSeed, `messy-maze:${getNet().room ?? 'solo'}:${dealt}:${Date.now()}`)
 }
 
+/**
+ * Which maze the next race is in.
+ *
+ * Round the three in turn, starting wherever the seed says, so a session opens
+ * on any of them and two races in a row are never the same maze.
+ */
+export function nextLayout(seed: number): number {
+  lastLayout = lastLayout === null ? seed % MAZES.length : (lastLayout + 1) % MAZES.length
+  return lastLayout
+}
+
 export interface RaceSetup {
   seed?: number
+  layout?: number
   roster?: readonly { id: string; bot: boolean }[]
   me?: string
 }
 
-/** A fresh race: a new maze, the lobby in its corners, everybody on WASD. */
-export function newRace({ seed = nextSeed(), roster = raceRoster(), me = myId() }: RaceSetup = {}): Race {
+/** A fresh race: the next maze, the lobby in its corners, everybody on WASD. */
+export function newRace({
+  seed = nextSeed(),
+  layout = nextLayout(seed),
+  roster = raceRoster(),
+  me = myId(),
+}: RaceSetup = {}): Race {
   return createRace(
     seed,
     roster.map((entry) => ({ id: entry.id, bot: entry.bot, mine: entry.id === me })),
+    layout,
   )
 }
 
@@ -76,5 +95,5 @@ export function newRace({ seed = nextSeed(), roster = raceRoster(), me = myId() 
  * snapshot says which maze and who is where.
  */
 export function waitingRace(): Race {
-  return { seed: 0, racers: [], elapsed: 0, over: false, firstIn: null }
+  return { seed: 0, layout: 0, racers: [], elapsed: 0, over: false, firstIn: null }
 }

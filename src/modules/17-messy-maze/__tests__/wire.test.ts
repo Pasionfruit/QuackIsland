@@ -8,7 +8,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import { directionFor } from '../internal/bindings'
-import { mazeFor } from '../internal/maze'
+import { MAZES, mazeFor } from '../internal/maze'
 import { createRace, stepRace, type Race } from '../internal/race'
 import { waitingRace } from '../internal/setup'
 import {
@@ -20,6 +20,8 @@ import {
 } from '../internal/wire'
 
 const SEED = 9001
+/** The maze a race with that seed is in, unless told otherwise. */
+const LAYOUT = SEED % MAZES.length
 const overTheWire = (message: Record<string, unknown>) =>
   JSON.parse(JSON.stringify(message)) as Record<string, unknown>
 
@@ -27,8 +29,8 @@ function hostRace(): Race {
   const race = createRace(SEED, [{ id: 'p1', mine: true }, { id: 'p2' }, { id: 'p3' }])
   // Somebody spun, somebody is in: the state that is easiest to garble.
   const [p1, p2] = race.racers
-  p1.x = mazeFor(SEED).platforms[0].at.x
-  p1.y = mazeFor(SEED).platforms[0].at.y
+  p1.x = mazeFor(LAYOUT).platforms[0].at.x
+  p1.y = mazeFor(LAYOUT).platforms[0].at.y
   stepRace(race, new Map(), 1 / 60)
   p2.touched = 0b101
   p2.x = 0

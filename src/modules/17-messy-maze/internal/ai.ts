@@ -27,21 +27,21 @@ import { GOAL, goalOpen, type Race, type Racer } from './race'
  * Distance fields, kept per maze and per set of platforms already stood on.
  *
  * A stand-in asks sixty times a second, and the answer only changes when it
- * steps on something. A handful of mazes a session, eight platforms each.
+ * steps on something. Three mazes, eight platforms each.
  */
 const fields = new Map<string, number[]>()
 
 function fieldFor(race: Race, racer: Racer): number[] {
-  const maze = mazeFor(race.seed)
+  const maze = mazeFor(race.layout)
   const wanted = goalOpen(racer)
-  const name = `${race.seed}:${wanted ? 'goal' : racer.touched}`
+  const name = `${race.layout}:${wanted ? 'goal' : racer.touched}`
   let field = fields.get(name)
   if (!field) {
     const targets: Cell[] = wanted
       ? [GOAL]
       : maze.platforms.filter((p) => (racer.touched & (1 << p.id)) === 0).map((p) => p.cell)
     field = stepsTo(maze, targets)
-    if (fields.size > 256) fields.clear()
+    if (fields.size > 64) fields.clear()
     fields.set(name, field)
   }
   return field
@@ -59,7 +59,7 @@ const ON_LINE = 0.3
  * yet lined up with its corridor lines up first and turns second.
  */
 export function botDirection(race: Race, racer: Racer): Point {
-  const maze = mazeFor(race.seed)
+  const maze = mazeFor(race.layout)
   const field = fieldFor(race, racer)
   const here = cellAt(racer)
   const middle = cellCentre(here)

@@ -18,54 +18,75 @@ not: the racers are the island's capsule avatar and the walls are boxes.
 
 | The brief said | Where it is |
 | --- | --- |
-| A chaotic maze | `buildMaze` - carved from a seed, then loops and crossings knocked through |
+| A chaotic maze | `LAYOUTS` - three drawn mazes, loops and crossings between quarters in all of them |
 | Each player starts in a different corner | `createRace` - corners dealt opposite first, then the other two |
 | Reach the center first | `arrive`, `MAZE.goalRadius`, `GOAL` |
-| Must step on two spinning platforms | `RACE.platformsNeeded`, `goalOpen` - the middle refuses you until you have |
+| Must step on two spinning platforms | the walls - `platformsOnRoute` is two from every corner - and `goalOpen` as well |
 | Platforms randomly change your bindings to different letters | `rebind` - four letters, none of them the ones you had |
 | Adapt quickly | the HUD's keys, the spin card, and `RACE.spinTime` |
 | Placement is the order you reach the center | `place`, `placings` |
 | WASD / assigned keys to move | `START_BINDING`, `directionFor` |
 
-## The maze is fair by construction
+## Three mazes, drawn out
 
-A race where one corner is closer to the middle is decided before it starts.
-So the maze is **carved for one quarter and turned three times**: every wall
-decision is made once and applied to all four quarters at once, rotated about
-the middle. Every corner looks out on the same maze as every other, turned.
+There are three mazes - **The Long Way**, **Switchbacks** and **Tangle** - and
+each race is in one of them. They are drawn as ASCII in `layouts.ts`, 35
+characters square: `#` wall, `S` start, `X` middle, `O` spinning platform. The
+host deals them round in turn, starting from a random one, so two races in a
+row are never the same maze; the HUD names the one you are in.
 
-`quarterOf` splits the grid into four shapes that are each other rotated and
-between them cover every cell but the middle. `rotate` is a quarter turn. Those
-two functions are the whole of the fairness, and there are tests that check
-the maze really is symmetric, and that every corner is exactly the same number
-of steps from the middle, for eight seeds.
+**Fixed rather than generated each race**, because the property that matters
+below is something to check, not something to hope a random maze has. Each
+was carved once, looked at, and kept - and `maze.test.ts` holds all three to
+every property, so a drawing can be edited by hand as long as the tests still
+pass. `parseLayout` refuses a drawing with a gap in the outer wall, a missing
+post or a marker out of place, and says where.
 
-**It is messy on purpose.** A perfect maze - one route between any two
-points - is a puzzle rather than a race: once you have found the way there is
-nothing left to decide. So after carving, a few more walls come out inside each
-quarter (`MAZE.loops`) and a few doorways open into the next quarter round
-(`MAZE.crossings`). Routes cross, you see other racers, and somebody else's
-platform is a thing you can use. The knocking-through is rotated too, so it
-never favours anybody.
+| | shortest route | platforms at step | character |
+| --- | --- | --- | --- |
+| The Long Way | 38 cells | 13 and 31 | one long winding route, platforms far apart |
+| Switchbacks | 36 cells | 10 and 26 | corridors that double back, plenty of dead ends |
+| Tangle | 30 cells | 14 and 22 | the loopiest, the most ways between quarters |
 
-## Two platforms on every route
+**Every maze is fair.** Each is one quarter turned four times about the middle,
+so every corner looks out on the same maze, rotated, and is the same distance
+from the middle. `quarterOf` and `rotate` are the whole of that, and it is
+tested.
 
-The platforms are placed **before** the loops go in, while each quarter still
-has exactly one route from its corner to the middle - at 30% and 68% of the way
-along it. That is what puts them on the way rather than off to one side.
+**Every maze is messy.** A perfect maze - one route between any two points - is
+a puzzle rather than a race: once you have found the way there is nothing left
+to decide. All three have loops, and doorways from one quarter into the next,
+so routes cross and you see other racers on the way.
 
-Once the loops are in, that route is no longer the only one, so being on it is
-not enough to make you stand on them. **The middle enforces it instead**: it
-will not take you until you have stood on two different platforms. Any two -
-yours, or ones in somebody else's quarter. Grey and still while it will not
-have you, gold with a ring breathing round it once it will.
+## You cannot reach the middle without two spins
+
+**The walls make you.** From every corner of every maze, every route to the
+middle crosses at least two different spinning platforms - there is no gap
+that lets you round one. `platformsOnRoute` works out the fewest a racer can
+possibly cross: a shortest-path search where stepping onto a platform costs one
+and everything else costs nothing. It is two for all twelve corners, and a
+test fails if an edit to a drawing makes it one.
+
+The mazes were made that way: a random maze carved for one quarter and turned,
+platforms placed on its one route to the middle, and then every extra loop or
+doorway tried and **kept only if it did not open a way round a platform**.
+
+That is only worth anything if walking through a platform's cell always
+counts, however the cell is crossed. `MAZE.platformRadius` is worked out for
+the worst case, a corner cut as tight as the walls allow: 1.35, where the
+closest a body is forced to come is 1.25. It was 1.2 until a test walking every
+corner of every maze, cutting every corner, reached the middle having been
+spun once. That test stays.
+
+**The middle checks as well**, as a second line: it will not take anybody with
+fewer than two platforms. Grey and still while it will not have you, gold with
+a ring breathing round it once it will.
 
 **Each platform spins each racer once.** Once it has spun you it is spent for
 you: it stops turning and goes pale in your browser, and walking back onto it
 does nothing - no spin, no new letters, and no second tick towards the middle.
-It is still live for everybody else. So the middle's two spins are always two
-*different* platforms, and nobody can open it by stepping on and off one. A
-platform you have not used still spins you after you have your two.
+It is still live for everybody else. A platform you have not used still spins
+you after you have your two.
 
 ## Spinning, and the letters
 
@@ -115,8 +136,9 @@ The same arrangement as Zombie Tag, with the lessons already learned from it:
 - **The host runs the race.** Guests send held letters (`mm-in`); the host sends
   the race (`mm`) twenty times a second. Nobody disagrees about who got in first
   or which keys anybody has.
-- **The maze goes as its seed.** A guest builds the same walls from the same
-  number (`mazeFor`), so a snapshot is who is where, never what the maze is.
+- **The maze goes as its number.** A guest builds the same walls from the same
+  drawing (`mazeFor`), so a snapshot is who is where, never what the maze is.
+  The race's seed goes too, for the letters its spins deal.
 - **Held letters are repeated four times a second** and forgotten after a second
   of silence. Leaving a race sends "nothing held".
 - **A guest keeps listening after the race ends**, so it sees the results and
@@ -134,8 +156,8 @@ Walk downhill on a distance field to the nearest platform they still need, then
 to the middle, lining up with a corridor before turning into it so they do not
 catch the corner. **They cannot be confused**, because their controls are not
 letters, so they pay in other ways: they run at `RACE.botPace` (80%) and stand
-still for `RACE.botDaze` after each spin. On a 17-cell maze a clean human run is
-7 to 13 seconds; a stand-in takes 11 to 18.
+still for `RACE.botDaze` after each spin. A clean run to the middle is 13 to 16
+seconds, depending on the maze; stand-ins come in a few seconds behind.
 
 ## The camera does not move
 
@@ -155,24 +177,30 @@ Exported because it is worth testing, not because anything else needs it.
 | Export | What it is |
 | --- | --- |
 | `MAZE`, `HALF`, `MIDDLE` | The maze, as numbers. |
-| `buildMaze`, `mazeFor` | A maze from a seed, and the same one again without rebuilding it. |
+| `LAYOUTS`, `Layout`, `parseLayout`, `MAZES` | The three mazes as drawn, and as read. |
+| `mazeFor`, `platformsOnRoute` | A maze by number, and the fewest platforms anybody can cross between two cells. |
 | `rotate`, `quarterOf` | The quarter turn, and the quarters it makes. |
 | `isOpen`, `exits`, `stepsTo`, `stepsFrom`, `routeBetween`, `cellAt`, `cellCentre` | Walking the maze. |
 | `settle`, `pushOutOfBox`, `inWall` | The walls. |
 | `START_BINDING`, `LETTERS`, `ARROWS`, `directionFor`, `heldLetters`, `isBinding`, `rebind` | Keys and spins. All pure. |
 | `RACE`, `GOAL`, `createRace`, `stepRace`, `goalOpen`, `platformsTouched`, `stillRacing`, `placings` | The race. All pure. |
 | `botDirection`, `botDirections` | The stand-ins. |
-| `newRace`, `raceRoster`, `nextSeed`, `waitingRace`, `myId`, `ME`, `SOLO_RACERS` | Dealing a race from the lobby. |
+| `newRace`, `raceRoster`, `nextSeed`, `nextLayout`, `waitingRace`, `myId`, `ME`, `SOLO_RACERS` | Dealing a race from the lobby. |
 | `encodeSnapshot`, `decodeSnapshot`, `applySnapshot`, `encodeKeys`, `decodeKeys`, `SNAPSHOT_TAG`, `KEYS_TAG` | A shared race on the wire. All pure. |
 | `frameMaze`, `headingToYaw`, `TILT`, `FOV`, `FILL`, `WALL_HEIGHT` | Where the camera stands. Pure. |
 | `MessyMazeScreen` | The panel the registry draws. |
 
 ## Invariants you may rely on
 
-- **A seed makes the same maze every time**, and different seeds make different
-  mazes. Tested.
-- **The maze is the same from every corner, turned**, and every corner is the
-  same number of steps from the middle. Tested for eight seeds.
+- **Every route from every corner of every maze crosses two different
+  platforms.** Tested, and tested that the check can fail. Tested again by
+  walking a racer to the middle from every corner, cutting corners as tight as
+  the walls allow: it is spun twice every time.
+- **Each maze is the same from every corner, turned**, and every corner is the
+  same number of steps from the middle. Tested for all three.
+- **Two races in a row are never the same maze**, and all three come round.
+  Tested.
+- **A drawing with a hole in it is refused, saying where.** Tested.
 - **Every cell is reachable**, there is more than one way through, and routes
   cross between quarters. Tested.
 - **Eight platforms, two per quarter, the same distance along every corner's
@@ -186,7 +214,7 @@ Exported because it is worth testing, not because anything else needs it.
   anybody with any two. Tested.
 - **Places are the order of arrival**; the last call ends the race; anybody not
   in ranks below everybody who is. Tested.
-- **Stand-ins finish on any maze**, through two platforms. Tested on five seeds.
+- **Stand-ins finish in every maze from every corner**, through two platforms. Tested.
 - **A snapshot comes back as the race that went out**, bindings included, moves
   a guest's racers rather than rebuilding them, deals a new race on a new seed,
   and is refused whole if any of it is wrong. Tested.
@@ -227,9 +255,9 @@ there.
   no prediction. Fine for a maze; worth knowing.
 - **More than four racers share corners.** A fifth starts where the first did.
   Fair - they are the same distance - but crowded.
-- **Which maze comes up is not reproducible**, by design: `nextSeed` mixes in
-  the time, so a session does not always open on the same maze and people
-  cannot learn it. The maze *from* a seed is exactly reproducible.
+- **Three mazes can be learned.** People who play a lot will know them; the
+  spins deal different letters every race, which is the part meant not to be
+  learnable. A fourth is a new drawing in `layouts.ts` and nothing else.
 - **Stand-in pacing is a guess.** 80% pace and a 1.1 s daze per spin are worth
   tuning once people have played it.
 - **Much of the plumbing is Zombie Tag's again**: the fixed-camera fit, the
@@ -247,11 +275,13 @@ party panel, and open **2 · Messy Maze**. Read it, then press **play**.
 - **Find yourself.** The blue capsule with a ring under it, in a corner. Three
   green stand-ins in the other three.
 - **Look at the corners.** Turn your head: the maze from each corner should be
-  the same maze, rotated.
+  the same maze, rotated. The HUD names which maze it is.
+- **Press again twice.** A different maze each time, and all three come round.
 - **Walk with WASD.** Arrow keys should do nothing. Walls should stop you
   without sticking.
-- **Walk into the middle first.** The grey disc should not take you. The HUD
-  says *platforms 0 of 2*.
+- **Try to reach the middle without a platform.** You cannot: every way in
+  crosses one, and then another. Look for a way round one on the map - there
+  should not be one.
 - **Step on an orange spinning platform.** You whirl for a moment, a card shows
   four new letters, the HUD keys pulse and change, and WASD stops working. The
   new letters should move you the way their arrows say. The platform stops

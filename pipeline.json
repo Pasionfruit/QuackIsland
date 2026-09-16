@@ -1481,12 +1481,12 @@
       "blocks": [
         {
           "id": "17.1",
-          "title": "The environment: a seeded maze, fair to every corner, with walls you cannot pass",
+          "title": "The environment: three drawn mazes, fair to every corner, with walls you cannot pass",
           "status": "done"
         },
         {
           "id": "17.2",
-          "title": "The spinning platforms: two on every route, and a fresh set of letters on each",
+          "title": "The spinning platforms: two on every route, placed so no route goes round them",
           "status": "done"
         },
         {
@@ -1523,7 +1523,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-16T16:40:38.025Z"
+          "at": "2026-09-16T17:00:39.140Z"
         },
         "human": {
           "status": "pending"

@@ -6,15 +6,16 @@
  * through the racer's binding at that moment, so a spin on the host changes
  * what a guest's keys do on the very next frame, with nothing to reconcile.
  *
- * **The maze goes as its seed.** A guest builds the same walls from the same
- * number - see `mazeFor` - so a snapshot is who is where, never what the maze
- * looks like.
+ * **The maze goes as its number.** A guest builds the same walls from the same
+ * one of three drawings - see `mazeFor` - so a snapshot is who is where, never
+ * what the maze looks like.
  *
  * All pure: what a message is, reading one back without trusting it, and
  * bringing a guest's copy into line with it. The half that touches a socket is
  * `useRaceNet`.
  */
 import { heldLetters, isBinding } from './bindings'
+import { MAZES } from './maze'
 import type { Race, Racer } from './race'
 
 /** Host to everybody: the race. Unique across the build. */
@@ -34,6 +35,7 @@ export type WireRacer = [string, number, number, number, string, number, number,
 
 export interface Snapshot {
   seed: number
+  layout: number
   elapsed: number
   over: boolean
   firstIn: number | null
@@ -48,6 +50,7 @@ export function encodeSnapshot(race: Race): Record<string, unknown> {
   return {
     t: SNAPSHOT_TAG,
     s: race.seed,
+    l: race.layout,
     e: round2(race.elapsed),
     o: race.over ? 1 : 0,
     f: race.firstIn === null ? -1 : round2(race.firstIn),
@@ -79,6 +82,9 @@ export function encodeSnapshot(race: Race): Record<string, unknown> {
 export function decodeSnapshot(message: Record<string, unknown>): Snapshot | null {
   if (message.t !== SNAPSHOT_TAG) return null
   if (!Number.isInteger(message.s) || (message.s as number) < 0) return null
+  if (!Number.isInteger(message.l) || (message.l as number) < 0 || (message.l as number) >= MAZES.length) {
+    return null
+  }
   if (!isNumber(message.e) || !isNumber(message.f) || !Array.isArray(message.r)) return null
   if (message.o !== 0 && message.o !== 1) return null
 
@@ -98,6 +104,7 @@ export function decodeSnapshot(message: Record<string, unknown>): Snapshot | nul
 
   return {
     seed: message.s as number,
+    layout: message.l as number,
     elapsed: message.e,
     over: message.o === 1,
     firstIn: message.f < 0 ? null : message.f,
@@ -120,11 +127,13 @@ export function decodeKeys(message: Record<string, unknown>): string | null {
  *
  * **Racers are moved, not replaced**, because the scene holds a body per racer
  * and rebuilding them twenty times a second would be building avatars twenty
- * times a second. A new seed is a new race, so the racers are dealt afresh.
+ * times a second. A new seed is a new race - maybe in the same maze - so the
+ * racers are dealt afresh.
  */
 export function applySnapshot(race: Race, snap: Snapshot, me: string): Race {
   if (race.seed !== snap.seed) race.racers = []
   race.seed = snap.seed
+  race.layout = snap.layout
   race.elapsed = snap.elapsed
   race.over = snap.over
   race.firstIn = snap.firstIn
