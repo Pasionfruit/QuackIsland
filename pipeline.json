@@ -106,7 +106,8 @@
         "14-garden",
         "15-minigames",
         "16-zombie-tag",
-        "17-messy-maze"
+        "17-messy-maze",
+        "18-probable-stop"
       ]
     }
   ],
@@ -133,7 +134,8 @@
         "13-modes",
         "14-garden",
         "15-minigames",
-        "17-messy-maze"
+        "17-messy-maze",
+        "18-probable-stop"
       ],
       "generation": 1,
       "contract": {
@@ -304,7 +306,8 @@
         "09-net",
         "10-party",
         "16-zombie-tag",
-        "17-messy-maze"
+        "17-messy-maze",
+        "18-probable-stop"
       ],
       "generation": 1,
       "contract": {
@@ -800,7 +803,8 @@
         "14-garden",
         "15-minigames",
         "16-zombie-tag",
-        "17-messy-maze"
+        "17-messy-maze",
+        "18-probable-stop"
       ],
       "generation": 1,
       "contract": {
@@ -1295,7 +1299,8 @@
       ],
       "dependents": [
         "16-zombie-tag",
-        "17-messy-maze"
+        "17-messy-maze",
+        "18-probable-stop"
       ],
       "generation": 1,
       "contract": {
@@ -1537,6 +1542,80 @@
         "No bodies blocking each other: racers pass through one another, so nobody can plug a corridor",
         "No pushing, items or shortcuts beyond the maze itself",
         "No sound, no score kept between races"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "18-probable-stop",
+      "phase": "P6",
+      "title": "Minigame 3, Probable Stop: six rounds, three paths, and the odds against you",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "18.1",
+          "title": "The rules: six rounds, three paths, two safe then one, decided only at the reveal",
+          "status": "done"
+        },
+        {
+          "id": "18.2",
+          "title": "The controls: WASD between paths, click to pick, Space to confirm, change until time runs out",
+          "status": "done"
+        },
+        {
+          "id": "18.3",
+          "title": "The place: three bridges over the sea, a fixed camera, bridges that drop on the reveal",
+          "status": "done"
+        },
+        {
+          "id": "18.4",
+          "title": "One game shared across the lobby, with stand-ins only when alone",
+          "status": "done"
+        },
+        {
+          "id": "18.5",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "18.6",
+          "title": "The assets: models, sprites and sound in place of capsules and planks",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-16T17:36:07.100Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: players are the island's capsule avatar and the bridges are planks",
+        "No skill in which path is safe - it is chance, decided by the host at the reveal",
+        "No second chances: fall once and you watch the rest",
+        "No sound, no score kept between games"
       ],
       "budgets": {
         "drawCallsMax": 0,

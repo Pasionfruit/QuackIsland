@@ -5,7 +5,7 @@
  *   node .claude/skills/run-localrot/scripts/lobby.mjs --players 8 --out <dir>
  *
  * --players   how many (default 8, the most the games are built for)
- * --games     comma list, in order (default zombie-tag,messy-maze)
+ * --games     comma list, in order (default zombie-tag,messy-maze,probable-stop)
  * --app       dev server URL (default http://localhost:5199/)
  * --out       where screenshots go (default <temp>/localrot-run/lobby)
  * --software  render with SwiftShader instead of the GPU
@@ -23,7 +23,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { GAMES, args, gameState, launch, say, sleep } from './cdp.mjs'
 
-const opt = args({ players: '8', games: 'zombie-tag,messy-maze', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
+const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
 const count = Number(opt.players)
 const games = String(opt.games).split(',')
 const pages = []
@@ -76,14 +76,35 @@ try {
       pages.map((p) =>
         p.eval(`(() => {
           const s = ${gameState(game)}
-          return { seed: s.seed ?? null, layout: s.layout ?? null, people: s.${people}.length, mine: s.${people}.filter((b) => b.mine).map((b) => b.id).join(), me: window.__net.getNet().id }
+          // Probable Stop keeps its seed on the host - it decides the answers -
+          // so there the game's id is what every browser should share.
+          const which = ${JSON.stringify(game)} === 'probable-stop' ? s.id : (s.seed ?? null)
+          return { game: which, layout: s.layout ?? null, people: s.${people}.length, mine: s.${people}.filter((b) => b.mine).map((b) => b.id).join(), me: window.__net.getNet().id }
         })()`),
       ),
     )
-    const same = new Set(seen.map((s) => `${s.seed}:${s.layout}:${s.people}`)).size === 1
+    const same = new Set(seen.map((s) => `${s.game}:${s.layout}:${s.people}`)).size === 1
     const ownBody = seen.every((s) => s.mine === s.me)
     say(`${game}: same in every browser ${same}; each browser's own body right ${ownBody}`, JSON.stringify(seen[0]))
     if (!same || !ownBody) throw new Error(`${game}: browsers disagree - ${JSON.stringify(seen)}`)
+
+    if (game === 'probable-stop') {
+      // A guest steps to another path and confirms; the host should see both.
+      const guestAt = (p) => p.eval(`(() => { const g = ${gameState(game)}; const b = g.players.find((b) => b.id === ${JSON.stringify(moverId)}); return { pick: b.pick, confirmed: b.confirmed } })()`)
+      const before = await guestAt(host)
+      const key = before.pick < 2 ? { code: 'KeyD', key: 'd' } : { code: 'KeyA', key: 'a' }
+      await mover.eval(`window.dispatchEvent(new KeyboardEvent('keydown', ${JSON.stringify(key)}))`)
+      await mover.eval(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ' }))`)
+      await sleep(1500)
+      const after = await guestAt(host)
+      say(`${game}: guest ${moverId} moved and confirmed; host saw ${JSON.stringify(before)} -> ${JSON.stringify(after)}`)
+      await host.shot(`${game}-host.png`)
+      await mover.shot(`${game}-guest.png`)
+      if (after.pick === before.pick || !after.confirmed) throw new Error(`${game}: the host never saw the guest choose`)
+      await host.eval('window.__mg.backOut()')
+      for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
+      continue
+    }
 
     // A guest holds a key that walks it somewhere, and the host watches.
     const where = (p) => p.eval(`(() => { const s = ${gameState(game)}; const b = s.${people}.find((b) => b.id === ${JSON.stringify(moverId)}); return { x: +b.x.toFixed(2), y: +b.y.toFixed(2) } })()`)

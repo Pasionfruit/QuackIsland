@@ -48,7 +48,10 @@ Opens the minigames dashboard, opens the game, presses play, and screenshots
 the briefing and the game. `--steer` plays Messy Maze to the finish - routing
 with the stand-ins' pathfinding and pressing whatever letters the racer's
 current binding says, so the spins and rebinding are exercised for real - and
-screenshots the results. For Zombie Tag it holds D for two seconds. Prints the
+screenshots the results. For Zombie Tag it holds D for two seconds. For
+Probable Stop (`--game probable-stop`) it plays all six rounds with the keys -
+a different path each round, confirmed with Space - screenshotting a reveal
+and the results, and prints each round's pick and whether it held. Prints the
 race's layout and seed, each spin, the finishing place, and console errors.
 About 30 seconds.
 
@@ -59,11 +62,12 @@ node .claude/skills/run-localrot/scripts/lobby.mjs --players 8 --out <dir>
 ```
 
 Starts N **separate** headless Chromes, puts them in one lobby, then for each
-game (default `zombie-tag,messy-maze`): the host opens and starts it, and it
+game (default `zombie-tag,messy-maze,probable-stop`): the host opens and starts it, and it
 checks every browser has the same round (same seed, maze and headcount - Zombie
 Tag has no seed or maze, so there it is headcount alone) with exactly one body
 marked as its own, then that a guest holding a key moves on
-the host's screen. Screenshots the host and a guest per game. Exits non-zero on
+the host's screen - or, in Probable Stop, that a guest stepping to another path
+and confirming shows up on the host's. Screenshots the host and a guest per game. Exits non-zero on
 any disagreement. Needs the relay. About a minute for eight.
 
 **Look at the screenshots.** A blank sky with a HUD over it is a canvas that is

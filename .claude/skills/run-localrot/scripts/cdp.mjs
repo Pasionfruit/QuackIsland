@@ -178,6 +178,12 @@ export const GAMES = {
     anchor: `document.querySelector('[data-binding]')`,
     people: 'racers',
   },
+  'probable-stop': {
+    title: 'Probable Stop',
+    screen: 'ProbableStopScreen',
+    anchor: `document.querySelector('[data-path]')`,
+    people: 'players',
+  },
 }
 
 /**

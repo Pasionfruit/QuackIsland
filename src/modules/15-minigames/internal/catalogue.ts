@@ -151,7 +151,9 @@ const ENTRIES = [
       { input: 'Space', does: 'Confirm' },
     ],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `18-probable-stop`. The assets stage is still to do - the
+    // players are the island's capsule and the bridges are planks.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'duck-hunt',
