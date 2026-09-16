@@ -75,7 +75,7 @@ function FixedCamera() {
       return
     }
     camera.position.set(shot.x, shot.y, shot.z)
-    camera.lookAt(0, 0, 0)
+    camera.lookAt(shot.target.x, shot.target.y, shot.target.z)
     camera.updateProjectionMatrix()
   })
   return null

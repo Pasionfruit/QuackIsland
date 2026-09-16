@@ -42,23 +42,28 @@ everything has a visible side as well as a top, the crates are things you get
 *behind* rather than shapes you go around, and a body is a body rather than a
 dot.
 
-`frameArena(aspect)` works out where to stand. It frames against the smallest
-sphere containing the arena rather than against its corners, which is
-deliberately a little generous: one number then works at every window shape,
-and the cost is some sky at the edges rather than somebody being caught out of
-frame. The limiting angle is whichever of the vertical and horizontal fields of
-view is narrower — get that backwards and the arena spills off the sides of a
-narrow window.
+`frameArena(aspect)` works out where to stand, and **the room fills the
+window.** It fits the room as drawn - slab, walls and wall tops - exactly into
+the frame, leaving only the sliver `FILL` keeps back, rather than framing a
+generous sphere round it. That sphere left a wide border of sky on every
+landscape window; fitting the box brings the camera in by about 1.7x at 16:10.
+
+**It aims a little nearer than the middle.** At sixty degrees the near half of
+the room comes out bigger than the far half, so aiming at the centre leaves
+more sky above the far wall than below the near one. The aim slides along the
+depth until the two are even, which is also what keeps the room centred on a
+narrow window where the width, not the height, decides the distance.
 
 There is a test that builds a real `PerspectiveCamera` from those numbers and
-asserts every corner of the room, floor and wall-top, is inside its frustum, at
-eight window shapes from half-width to ultrawide. That is the failure worth
-catching by arithmetic: a corner off the edge of the screen is somewhere a
-player can be caught out of sight.
+asserts every corner of the room, slab to wall-top, is inside its frustum, at
+eight window shapes from half-width to ultrawide - and another that the room
+actually reaches the edge of the frame at each of them, so the fit cannot
+quietly go back to leaving a border. That is the failure worth catching by
+arithmetic: a corner off the edge of the screen is somewhere a player can be
+caught out of sight.
 
-Widening the window past square does not change the distance — a landscape
-window is limited by its height — so making the browser wider gives you more
-sky at the sides rather than a smaller arena.
+Widening the window comes closer until the height is what limits it, and from
+there more width gives you more sky at the sides rather than a bigger room.
 
 ## It is lit and dressed like the island
 
@@ -207,8 +212,10 @@ else needs it. Nothing outside this module should be reaching for it.
   never running, and an uncaught body sorts as having lasted forever.
 - **A huge frame delta is clamped**, so a backgrounded tab cannot make a zombie
   step over somebody instead of catching them.
-- **The whole room is in frame at any window shape.** Tested against a real
-  camera frustum, corners and wall-tops, at eight aspect ratios.
+- **The whole room is in frame at any window shape, and fills it.** Tested
+  against a real camera frustum, corners and wall-tops, at eight aspect ratios:
+  every corner inside, one side reaching the edge, and the sky even top and
+  bottom.
 - **The camera is at sixty degrees and over the middle.** Tested.
 - **A snapshot comes back as the round that went out**, carries the end of a
   round and the next one, moves a guest's bodies rather than rebuilding them,
@@ -253,8 +260,9 @@ party panel, and open **1 · Zombie Tag**. Read it, then press **play**.
   and in front, not straight down at it — the crates should have visible sides
   and cast shadows across the sand, and the far wall should be behind the
   arena rather than around it.
-- **Look at the whole board.** Every wall and every crate at once, and it
-  should not move, ever — not when you run to the edge, not when you resize the
+- **Look at the whole board.** Every wall and every crate at once, filling the
+  window edge to edge on one side with only a sliver of sky, and it should not
+  move, ever — not when you run to the edge, not when you resize the
   window. Drag the window narrow and tall: the camera should back off so it all
   still fits, and nothing should ever leave the frame.
 - **Find yourself.** The blue capsule with the ring under it. It should be the
