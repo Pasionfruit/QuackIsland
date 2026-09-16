@@ -12,7 +12,7 @@
  * never lags a frame behind your hand.
  */
 import { Canvas } from '@react-three/fiber'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
 import type { MinigameRun } from '../../15-minigames'
@@ -133,18 +133,7 @@ export function DuckHuntScreen({ run }: { run: MinigameRun }) {
         onPointerMove={moveCrosshair}
         onPointerLeave={() => crosshair.current && (crosshair.current.style.opacity = '0')}
       >
-        <Canvas
-          shadows={{ type: PCFShadowMap }}
-          dpr={[1, 2]}
-          camera={{ fov: FOV, near: 1, far: 400, position: [0, 12, 40] }}
-          gl={{ antialias: true, powerPreference: 'high-performance' }}
-          onCreated={({ gl }) => {
-            gl.toneMapping = ACESFilmicToneMapping
-            gl.toneMappingExposure = 1.05
-          }}
-        >
-          <DuckHuntScene game={game} onShoot={onShoot} />
-        </Canvas>
+        <Stage live={live} onShoot={onShoot} />
 
         {ready && !game.over ? (
           <div ref={crosshair} style={crosshairBox} data-cooldown={mine ? mine.cooldown.toFixed(2) : '0'}>
@@ -159,6 +148,45 @@ export function DuckHuntScreen({ run }: { run: MinigameRun }) {
     </div>
   )
 }
+
+/**
+ * The canvas, rendered once.
+ *
+ * **Not re-rendered with the HUD every frame, on purpose.** react-three-fiber
+ * re-runs its setup each time `<Canvas>` renders and finishes it a moment
+ * later; rendered sixty times a second, the last of those was still finishing
+ * when a guest's game closed, and it tried to attach to a canvas that was gone
+ * - an error in every guest's console, every game. So the canvas takes only
+ * things that never change - the live game's ref and a stable callback - and
+ * the scene inside redraws itself from the ref each frame.
+ */
+const Stage = memo(function Stage({
+  live,
+  onShoot,
+}: {
+  live: RefObject<Game>
+  onShoot: (trigger: Trigger) => void
+}) {
+  return (
+    <Canvas
+      shadows={SHADOWS}
+      dpr={DPR}
+      camera={CAMERA}
+      gl={GL}
+      onCreated={({ gl }) => {
+        gl.toneMapping = ACESFilmicToneMapping
+        gl.toneMappingExposure = 1.05
+      }}
+    >
+      <DuckHuntScene live={live} onShoot={onShoot} />
+    </Canvas>
+  )
+})
+
+const SHADOWS = { type: PCFShadowMap }
+const DPR: [number, number] = [1, 2]
+const CAMERA = { fov: FOV, near: 1, far: 400, position: [0, 12, 40] as [number, number, number] }
+const GL = { antialias: true, powerPreference: 'high-performance' as const }
 
 /**
  * The crosshair: four ticks and a dot, with a ring round it that empties when

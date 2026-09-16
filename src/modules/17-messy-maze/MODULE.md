@@ -72,11 +72,19 @@ platforms placed on its one route to the middle, and then every extra loop or
 doorway tried and **kept only if it did not open a way round a platform**.
 
 That is only worth anything if walking through a platform's cell always
-counts, however the cell is crossed. `MAZE.platformRadius` is worked out for
-the worst case, a corner cut as tight as the walls allow: 1.35, where the
-closest a body is forced to come is 1.25. It was 1.2 until a test walking every
-corner of every maze, cutting every corner, reached the middle having been
-spun once. That test stays.
+counts, however the cell is crossed. **You are on a platform when your middle is
+in its cell** (`platformUnder`) - not within some distance of its middle. A body
+cannot pass through a cell without its middle being in it, so the graph's
+guarantee and the game's rule are the same thing, whatever size a racer is and
+however tight a corner is cut. The one gap - diagonally through the point where
+four cells meet - only skips a platform if the two cells beside that point are
+both platforms, and a test holds every maze to never putting two platforms
+corner to corner.
+
+It used to be a distance, and a distance went wrong twice: 1.2 could be cut past
+on a tight corner, and when the racers were made their proper size, 1.35 could
+too. The test that walks every corner of every maze to the middle, cutting
+corners as tight as the walls allow, stays.
 
 **The middle checks as well**, as a second line: it will not take anybody with
 fewer than two platforms. Grey and still while it will not have you, gold with
@@ -112,6 +120,16 @@ whatever the keyboard layout. Arrow keys do nothing.
 After a spin a card comes up over the maze with the four new keys large, and
 the keys in the HUD pulse. The card lets clicks and keys through: it is there to
 be read while you play, not dismissed.
+
+## The walls are where they are drawn
+
+**A racer bumps into a wall exactly where its pill touches it.** The racer's
+size to the rules is the island pill's own radius (`PLAYER.radius`), not a
+number of its own. It was 0.55 against a pill drawn 0.4 across, so every racer
+stopped a hand's width short of every wall and caught on corners it had plainly
+cleared: invisible walls. Every doorway in all three mazes is also checked to be
+walkable, and a racer walked into a wall is checked to stop a pill's width from
+its face.
 
 ## Racers pass through each other
 
@@ -205,7 +223,10 @@ Exported because it is worth testing, not because anything else needs it.
   cross between quarters. Tested.
 - **Eight platforms, two per quarter, the same distance along every corner's
   route**, never on a corner or the middle. Tested.
-- **Nobody walks through a wall or out of the maze.** Tested.
+- **Nobody walks through a wall or out of the maze, and a wall stops you where
+  your pill touches it - no sooner.** Tested.
+- **You are on a platform when you are in its cell**, and no two platforms are
+  corner to corner. Tested.
 - **A spin deals four different letters, none from the last binding**, the same
   deal for the same race, racer and spin, reaching all 26 letters. Tested.
 - **A platform spins each racer once**, then is spent for them and not for

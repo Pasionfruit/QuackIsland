@@ -12,7 +12,7 @@
  * cameras; what counts is what was under the crosshair on the screen that fired.
  */
 import { useFrame, useThree } from '@react-three/fiber'
-import { memo, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useReducer, useRef, type RefObject } from 'react'
 import {
   CircleGeometry,
   Color,
@@ -331,7 +331,15 @@ function Trigger({ game, onShoot }: { game: Game; onShoot: (trigger: Trigger) =>
   return null
 }
 
-export function DuckHuntScene({ game, onShoot }: { game: Game; onShoot: (trigger: Trigger) => void }) {
+/**
+ * Everything in the canvas. Handed the live game as a ref and redraws itself
+ * from it every frame - see `Stage` in the screen for why the canvas itself is
+ * not re-rendered.
+ */
+export function DuckHuntScene({ live, onShoot }: { live: RefObject<Game>; onShoot: (trigger: Trigger) => void }) {
+  const [, redraw] = useReducer((n: number) => n + 1, 0)
+  useFrame(() => redraw())
+  const game = live.current
   const background = useMemo(() => new Color(PALETTE.background), [])
   const up = game.balloons.filter((b) => !game.popped.has(b.id) && balloonAt(b, game.elapsed) !== null)
   return (

@@ -33,6 +33,7 @@ export {
   isOpen,
   mazeFor,
   parseLayout,
+  platformUnder,
   platformsOnRoute,
   pushOutOfBox,
   quarterOf,

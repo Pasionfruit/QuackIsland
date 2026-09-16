@@ -6,6 +6,7 @@
  * reach the middle.
  */
 import { describe, expect, it } from 'vitest'
+import { PLAYER } from '../../02-player'
 import { botDirections } from '../internal/ai'
 import {
   LETTERS,
@@ -22,6 +23,7 @@ import {
   cellCentre,
   exits,
   mazeFor,
+  platformUnder,
   quarterOf,
   stepsFrom,
   stepsTo,
@@ -70,7 +72,7 @@ const away = (racer: Racer): Point => {
     const next = { x: here.x + step.x, y: here.y + step.y }
     if (next.x < 0 || next.y < 0 || next.x >= MAZE.size || next.y >= MAZE.size) continue
     const at = cellCentre(next)
-    if (maze.platforms.every((p) => Math.hypot(p.at.x - at.x, p.at.y - at.y) > MAZE.platformRadius)) {
+    if (!platformUnder(maze, at)) {
       return at
     }
   }
@@ -355,6 +357,34 @@ describe('the middle', () => {
     // plat has a platform, which beats being close.
     expect(placings(race).map((r) => r.id)).toEqual(['plat', 'near', 'far'])
     expect(far.place).toBeNull()
+  })
+})
+
+describe('the walls are where they are drawn', () => {
+  it('stop a racer exactly as far from a wall as the pill is wide', () => {
+    // Walk into the first closed wall east of a corner and see where it stops.
+    let tested = 0
+    for (const maze of MAZES) {
+      const corner = maze.corners[0]
+      const race = createRace(SEED, [{ id: 'a' }], maze.id)
+      const racer = race.racers[0]
+      // Along the corner's row until the first closed wall to the east.
+      let wall = null as null | { x: number }
+      for (let x = corner.x; x < MAZE.size - 1 && !wall; x++) {
+        if (!exits(maze, { x, y: corner.y }).some((c) => c.x === x + 1)) wall = { x: cellCentre({ x, y: corner.y }).x + MAZE.cell / 2 }
+      }
+      tested += 1
+      expect(wall, maze.name).not.toBeNull()
+      if (!wall) continue
+      for (let i = 0; i < 120; i++) stepRace(race, new Map([['a', { x: 1, y: 0 }]]), 1 / 30)
+      const face = wall.x - MAZE.wall / 2
+      expect(face - racer.x, maze.name).toBeCloseTo(PLAYER.radius, 2)
+    }
+    expect(tested).toBe(MAZES.length)
+  })
+
+  it('are as wide to the rules as the pill is drawn', () => {
+    expect(MAZE.radius).toBe(PLAYER.radius)
   })
 })
 

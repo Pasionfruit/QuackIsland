@@ -19,6 +19,7 @@ import {
   cellCentre,
   MAZES,
   mazeFor,
+  platformUnder,
   settle,
   stepsFrom,
   stepsTo,
@@ -236,10 +237,7 @@ export function spinnerActive(racer: Racer, platform: number): boolean {
 }
 
 function land(race: Race, racer: Racer): void {
-  const maze = mazeFor(race.layout)
-  const under = maze.platforms.find(
-    (p) => Math.hypot(p.at.x - racer.x, p.at.y - racer.y) <= MAZE.platformRadius,
-  )
+  const under = platformUnder(mazeFor(race.layout), racer)
   const id = under ? under.id : -1
   if (id !== -1 && spinnerActive(racer, id)) {
     racer.spins += 1

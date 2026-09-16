@@ -113,6 +113,16 @@ third of the time.
 - **The HUD** has the clock (red for the last ten seconds), your colour and shape
   ("shoot ● only"), and everybody's score in theirs.
 
+## The canvas renders once
+
+The HUD re-renders every frame; `<Canvas>` must not. react-three-fiber re-runs
+its setup each time the canvas renders and finishes it a moment later, and with
+the canvas re-rendering sixty times a second, the last of those was still
+finishing when a guest's game closed - it tried to attach to a canvas that was
+gone, and logged an error in every guest's console, every game. So the canvas
+(`Stage`) takes only a ref to the live game and a stable callback, and the scene
+inside redraws itself from the ref each frame. Found by the eight-browser run.
+
 ## The camera does not move
 
 Low at the near end, looking across the arena rather than down on it - a

@@ -20,6 +20,7 @@
  * corner looks out on the same maze, rotated; nobody's start is closer to the
  * middle than anybody else's.
  */
+import { PLAYER } from '../../02-player'
 import { LAYOUTS, type Layout } from './layouts'
 
 export const MAZE = {
@@ -31,27 +32,26 @@ export const MAZE = {
   wall: 0.45,
 
   /**
-   * How big a racer is. Smaller than the corridor by a comfortable margin, so
-   * turning a corner is a matter of the keys and not of lining up to a pixel.
+   * How big a racer is, to the walls: exactly the island pill's own radius.
+   *
+   * Not a number of its own. It was 0.55 against a body drawn 0.4 across, and
+   * every racer stopped a hand's width short of every wall and caught on
+   * corners it could plainly see it had cleared - walls that were not there.
+   * What you bump into is what you can see.
    */
-  radius: 0.55,
+  radius: PLAYER.radius,
   /** How fast a racer runs, in units a second. */
   speed: 7,
 
   /**
-   * How close to a platform's middle counts as standing on it.
+   * How big a platform is drawn: most of the corridor it sits in.
    *
-   * Big enough that nobody can walk through a platform's cell without it, and
-   * worked out rather than guessed, because 1.2 looked plenty and was not. The
-   * closest a body's middle is forced to come to a cell's middle is on a turn,
-   * cut as tight as the walls allow: round the inner corner of the walls, which
-   * is 1.80 from the middle, at a body's radius of 0.55 - so 1.25. Anything
-   * under that and a racer hugging the corner slips past without spinning.
-   *
-   * And small enough to stay in its own cell: through a wall a body is at
-   * least 2.28 from the middle, and through a doorway 1.5 before it is even in.
+   * Only for drawing. Whether you are on a platform is whether you are in its
+   * cell - see `platformUnder` - which is exactly what the mazes guarantee every
+   * route crosses. A distance from the middle can always be cut past on a tight
+   * corner by a small enough body; a cell cannot.
    */
-  platformRadius: 1.35,
+  platformRadius: 1.2,
   /** How close to the very middle counts as having reached it. */
   goalRadius: 1.15,
 } as const
@@ -405,6 +405,20 @@ export function settle(maze: Maze, at: Point, radius = MAZE.radius): Point {
     for (const box of maze.walls) where = pushOutOfBox(where, radius, box)
   }
   return where
+}
+
+/**
+ * The platform whose cell a point is in, if any.
+ *
+ * Standing on a platform means being in its cell, not within some distance of
+ * its middle: every route to the middle is guaranteed to cross two platform
+ * cells (`platformsOnRoute`), and a body cannot pass through a cell without its
+ * middle being in it - so a platform can never be slipped past, whatever size
+ * a racer is or however tight a corner is cut.
+ */
+export function platformUnder(maze: Maze, at: Point): Platform | null {
+  const cell = cellAt(at)
+  return maze.platforms.find((p) => p.cell.x === cell.x && p.cell.y === cell.y) ?? null
 }
 
 /** Whether a circle overlaps any wall. For tests, and for checking a spawn. */

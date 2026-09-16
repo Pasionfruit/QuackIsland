@@ -151,6 +151,19 @@ export interface PlayerProps {
    * both that rocks exist and that a player does.
    */
   collide?: (x: number, z: number, feetY: number, radius: number) => { x: number; z: number }
+  /**
+   * Whether something else has the keyboard right now, read every frame.
+   *
+   * A minigame or a board drawn over the world uses the same keys - WASD,
+   * Space - and without this the body behind the screen walks and jumps with
+   * them, footsteps and all. While it says yes, keys going down are left alone
+   * and the body stands still; keys coming up are always heard, so nothing is
+   * left held down when the screen closes.
+   *
+   * Passed in for the same reason as the ground: this module has never heard
+   * of a minigame.
+   */
+  inputBlocked?: () => boolean
 }
 
 export function Player({
@@ -160,6 +173,7 @@ export function Player({
   groundAt = heightAt,
   bounds: given,
   collide,
+  inputBlocked,
 }: PlayerProps) {
   const camera = useThree((s) => s.camera)
   const domElement = useThree((s) => s.gl.domElement)
@@ -253,10 +267,15 @@ export function Player({
     }
   }, [domElement])
 
+  const blocked = useRef(inputBlocked)
+  blocked.current = inputBlocked
+
   useEffect(() => {
     const set = (e: KeyboardEvent, down: boolean) => {
       const el = e.target as HTMLElement | null
       if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
+      // Somebody else's keys: not ours to take, and not ours to swallow.
+      if (down && blocked.current?.()) return
       const k = keys.current
       switch (e.code) {
         case 'KeyW':
@@ -338,6 +357,12 @@ export function Player({
   }, [surfaceAt])
 
   useGameFrame((frame, delta) => {
+    // While something else has the keyboard, let go of everything - a key held
+    // as the screen opened must not keep walking the body behind it.
+    if (blocked.current?.()) {
+      keys.current = { ...IDLE_INPUT }
+      jumpEdge.current = false
+    }
     const k = keys.current
     const input: PlayerInput = { ...k, jump: jumpEdge.current, cameraYaw: rig.yaw }
     jumpEdge.current = false

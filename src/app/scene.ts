@@ -19,8 +19,9 @@ import { Shore } from '../modules/07-shore'
 import { Rocks, getSolidRocks, onRockAt, resolveRocks, standHeightAt } from '../modules/12-rocks'
 import { AudioCues } from '../modules/08-audio'
 import { NetPlayers } from '../modules/09-net'
-import { ISLAND, Party, groundWithIsland } from '../modules/10-party'
+import { ISLAND, Party, getParty, groundWithIsland } from '../modules/10-party'
 import { getGameMode } from '../modules/13-modes'
+import { getMinigameScreen } from '../modules/15-minigames'
 
 /**
  * The player, floating on the actual swell rather than on a flat mean level -
@@ -43,7 +44,21 @@ const PlayerOnSea = () =>
     groundAt: standOn,
     bounds: currentBounds(),
     collide: pushOutOfRocks,
+    inputBlocked: somethingOverTheWorld,
   })
+
+/**
+ * Whether a screen is drawn over the world and has the keyboard: a minigame -
+ * its dashboard, briefing or game - or a round of Garden Goofs.
+ *
+ * Both use WASD and Space, and the world's body used to walk and jump behind
+ * them, footsteps and all. Decided here because this file is the one place
+ * that knows about the player, the minigames and the garden at once.
+ */
+function somethingOverTheWorld(): boolean {
+  if (getMinigameScreen().at !== 'closed') return true
+  return getGameMode() === 'garden' && getParty().phase === 'playing'
+}
 
 /**
  * The volcano race, when the volcano race is the game being played.

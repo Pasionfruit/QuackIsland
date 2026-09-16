@@ -20,6 +20,7 @@ import {
   isOpen,
   mazeFor,
   parseLayout,
+  platformUnder,
   platformsOnRoute,
   pushOutOfBox,
   quarterOf,
@@ -151,6 +152,32 @@ describe('the three mazes', () => {
           for (const p of mine) {
             expect(quarterOf(p.cell)).toBe(quarter)
             expect(p.cell).not.toEqual(maze.corners[quarter])
+          }
+        }
+      })
+
+      it('never puts two platforms corner to corner, where a body could slip between both', () => {
+        // Cell-to-cell, every route crosses two platform cells. The one way
+        // round that is diagonally through the point where four cells meet,
+        // which only skips a platform if the two cells beside that point are
+        // both platforms.
+        for (const a of maze.platforms) {
+          for (const b of maze.platforms) {
+            expect(Math.abs(a.cell.x - b.cell.x) === 1 && Math.abs(a.cell.y - b.cell.y) === 1).toBe(false)
+          }
+        }
+      })
+
+      it('counts you on a platform anywhere in its cell, and nowhere else', () => {
+        for (const p of maze.platforms) {
+          const half = MAZE.cell / 2 - 0.01
+          for (const [dx, dy] of [[0, 0], [half, half], [-half, half], [half, -half], [-half, -half]]) {
+            expect(platformUnder(maze, { x: p.at.x + dx, y: p.at.y + dy })?.id).toBe(p.id)
+          }
+          const next = { x: p.at.x + MAZE.cell / 2 + 0.02, y: p.at.y }
+          const onEdge = p.cell.x === MAZE.size - 1
+          if (!onEdge && !maze.platforms.some((q) => q.cell.x === p.cell.x + 1 && q.cell.y === p.cell.y)) {
+            expect(platformUnder(maze, next)?.id).not.toBe(p.id)
           }
         }
       })

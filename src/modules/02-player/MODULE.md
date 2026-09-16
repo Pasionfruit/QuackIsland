@@ -26,7 +26,7 @@ three.js in it, so how the player moves is tested in Node rather than by eye.
 | Export | Meaning |
 | --- | --- |
 | `Player` | The R3F component. Registered in `src/app/scene.ts` |
-| `PlayerProps` | `{ spawnX?, spawnZ?, surfaceAt?, groundAt?, bounds?, collide? }` |
+| `PlayerProps` | `{ spawnX?, spawnZ?, surfaceAt?, groundAt?, bounds?, collide?, inputBlocked? }` |
 | `toggleViewMode()` / `setViewMode(m)` / `useViewMode()` | First or third person |
 | `placeCamera(mode, rig, player, eyeHeight, groundAt?)` | Where the camera goes. Pure |
 | `lookDirection(yaw, pitch)` | The way it looks. Pure, shared by both views |
@@ -66,6 +66,13 @@ ground under the body would be the top of the thing it is standing inside.
 
 `seaLevel` and `surfaceAt` are passed in the same way, and for a stronger
 reason — see **Why the water module does not own swimming** below.
+
+`inputBlocked` is passed in for the same reason again: whether a minigame or a
+board has the keyboard is not this module's business. While it says yes, keys
+going down are ignored and not swallowed, the body stands still, and keys held
+when it started are let go - so the pill does not walk and jump on the island,
+footsteps and all, behind a minigame using the same WASD and Space. Keys coming
+up are always heard, so nothing is left held down when the screen closes.
 
 ## Invariants you may rely on
 
