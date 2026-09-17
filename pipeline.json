@@ -115,7 +115,8 @@
         "23-lady-luck",
         "24-make-the-cut",
         "25-wack-attack",
-        "26-sprint-triathlon"
+        "26-sprint-triathlon",
+        "27-find-yourself"
       ]
     }
   ],
@@ -151,7 +152,8 @@
         "23-lady-luck",
         "24-make-the-cut",
         "25-wack-attack",
-        "26-sprint-triathlon"
+        "26-sprint-triathlon",
+        "27-find-yourself"
       ],
       "generation": 1,
       "contract": {
@@ -330,7 +332,8 @@
         "22-let-him-cook",
         "24-make-the-cut",
         "25-wack-attack",
-        "26-sprint-triathlon"
+        "26-sprint-triathlon",
+        "27-find-yourself"
       ],
       "generation": 1,
       "contract": {
@@ -835,7 +838,8 @@
         "23-lady-luck",
         "24-make-the-cut",
         "25-wack-attack",
-        "26-sprint-triathlon"
+        "26-sprint-triathlon",
+        "27-find-yourself"
       ],
       "generation": 1,
       "contract": {
@@ -1339,7 +1343,8 @@
         "23-lady-luck",
         "24-make-the-cut",
         "25-wack-attack",
-        "26-sprint-triathlon"
+        "26-sprint-triathlon",
+        "27-find-yourself"
       ],
       "generation": 1,
       "contract": {
@@ -2291,6 +2296,85 @@
         "No moving camera",
         "No authority over a player's own clicks, presses and typing: their screen counts them",
         "No sound, no score kept between races"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "27-find-yourself",
+      "phase": "P6",
+      "title": "Minigame 12, Find Yourself: faces under cups, three shuffles each faster than the last, pick your own cup for 1, 2 and 3 points",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "27.1",
+          "title": "The table: a cup for every player and a spare, faces dealt under them, and a seeded shuffle per stage",
+          "status": "done"
+        },
+        {
+          "id": "27.2",
+          "title": "The stages: show, cover, shuffle faster each time, pick, reveal - 1, 2 and 3 points",
+          "status": "done"
+        },
+        {
+          "id": "27.3",
+          "title": "The controls: aim with the mouse, left click to pick a cup",
+          "status": "done"
+        },
+        {
+          "id": "27.4",
+          "title": "A still camera over the table, cups lifting, sliding past each other, faces underneath",
+          "status": "done"
+        },
+        {
+          "id": "27.5",
+          "title": "One table shared across the lobby, picks kept hidden until the reveal, stand-ins only when alone",
+          "status": "done"
+        },
+        {
+          "id": "27.6",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "27.7",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-17T03:42:59.132Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: faces are the island capsule, cups are cylinders",
+        "No moving camera",
+        "No hiding the shuffle from a browser that has to animate it",
+        "No sound, no score kept between games"
       ],
       "budgets": {
         "drawCallsMax": 0,

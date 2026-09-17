@@ -292,15 +292,17 @@ const ENTRIES = [
     title: 'Find Yourself',
     kind: 'free-for-all',
     description: [
-      'Your face goes under a cup, and then the cups shuffle. Three stages, each one faster than the last, and you pick your cup at the end of each.',
-      'The first stage is worth a point, the second two, the third three.',
+      "Everybody's face goes under a cup, and then the cups shuffle around the table. Three stages, each one faster and harder to follow than the last, and after each you pick the cup hiding your face.",
+      'The first stage is worth a point, the second two, the third three. Most points wins.',
     ],
     controls: [
       { input: 'Mouse', does: 'Aim' },
-      { input: 'Left click', does: 'Pick a cup' },
+      { input: 'Left click', does: 'Select a cup' },
     ],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `27-find-yourself`. The assets stage is still to do - the
+    // faces are the island's capsule and the cups are cylinders.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'make-the-cut',

@@ -21,9 +21,9 @@
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, cloverClick, cookPick, cutterMove, duckHuntShot, gameState, launch, lightMove, say, sleep, triathlonMove, whackMove } from './cdp.mjs'
+import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, gameState, launch, lightMove, say, sleep, triathlonMove, whackMove } from './cdp.mjs'
 
-const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt,sprint-triathlon,punch-buggy,wack-attack,lady-luck,make-the-cut,let-him-cook,i-see-the-light', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
+const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt,sprint-triathlon,punch-buggy,wack-attack,lady-luck,find-yourself,make-the-cut,let-him-cook,i-see-the-light', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
 const count = Number(opt.players)
 const games = String(opt.games).split(',')
 const pages = []
@@ -107,6 +107,29 @@ try {
       if (Math.hypot(after.x - before.x, after.y - before.y) < 0.5 || after.clicks !== before.clicks + 1) {
         throw new Error(`${game}: the host did not see the guest walk and punch`)
       }
+      await host.eval('window.__mg.backOut()')
+      for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
+      continue
+    }
+
+    if (game === 'find-yourself') {
+      // The first stage: every browser picks the cup its own face is under;
+      // once the cups come up, every browser should agree on the picks and
+      // scores, and everybody should have a point.
+      await host.waitFor(`(() => { const g = ${gameState(game)}; return g && g.phase === 'pick' })()`, 60000)
+      await sleep(400)
+      const picked = await Promise.all(pages.map((p) => p.eval(cupPick())))
+      say(`${game}: picks ${JSON.stringify(picked.map((d) => d && d.slot))}`)
+      await host.waitFor(`(() => { const g = ${gameState(game)}; return g && g.phase === 'result' })()`, 30000)
+      await sleep(800)
+      const views = await Promise.all(pages.map((p) => p.eval(`(() => { const g = ${gameState(game)}; return JSON.stringify(g.players.map((x) => [x.id, x.score, x.picks[0]])) })()`)))
+      const agree = new Set(views).size === 1
+      const scores = JSON.parse(views[0]).map((x) => x[1])
+      say(`${game}: every browser agrees on picks and scores ${agree}; scores ${JSON.stringify(scores)}`)
+      await host.shot(`${game}-host.png`)
+      await mover.shot(`${game}-guest.png`)
+      if (!agree) throw new Error(`${game}: browsers disagree - ${views.join(' | ')}`)
+      if (!scores.every((s) => s === 1)) throw new Error(`${game}: somebody who picked their own cup did not score`)
       await host.eval('window.__mg.backOut()')
       for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
       continue

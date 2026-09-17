@@ -196,6 +196,12 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'fighters',
   },
+  'find-yourself': {
+    title: 'Find Yourself',
+    screen: 'FindYourselfScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
   'sprint-triathlon': {
     title: 'Sprint Triathlon',
     screen: 'TriathlonScreen',
@@ -232,6 +238,49 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'racers',
   },
+}
+
+/**
+ * An expression that, in a page showing Find Yourself while picking, clicks a
+ * cup the way a player does - a pointer move and a pointerdown on the canvas at
+ * the cup, projected with the game's own camera fit - and evaluates to what it
+ * picked, or null when there is nothing to pick. `right` picks the cup this
+ * player's face is really under (worked out from the seed, as the page's own
+ * shuffle is); otherwise the cup next to it.
+ */
+export function cupPick({ right = true, hoverOnly = false } = {}) {
+  return `(async () => {
+    const rules = await import('/src/modules/27-find-yourself/internal/rules.ts')
+    const cam = await import('/src/modules/27-find-yourself/internal/camera.ts')
+    const g = ${gameState('find-yourself')}
+    if (!g || g.phase !== 'pick') return null
+    const me = g.players.findIndex((p) => p.mine)
+    if (me < 0 || g.players[me].picks[g.stage] !== null) return null
+    const cups = rules.cupCount(g.players.length)
+    const own = rules.facesBySlot(rules.currentStage(g)).indexOf(me)
+    const slot = ${right} ? own : (own + 1) % cups
+    const canvas = document.querySelector('[data-board] canvas')
+    const rect = canvas.getBoundingClientRect()
+    const aspect = rect.width / rect.height
+    const shot = cam.frameScene(aspect, cups)
+    const at = { x: rules.slotX(slot, cups), y: cam.TOP + 0.5, z: 0 }
+    const sub = (p, q) => ({ x: p.x - q.x, y: p.y - q.y, z: p.z - q.z })
+    const dot = (p, q) => p.x * q.x + p.y * q.y + p.z * q.z
+    const norm = (p) => { const l = Math.hypot(p.x, p.y, p.z); return { x: p.x / l, y: p.y / l, z: p.z / l } }
+    const cross = (p, q) => ({ x: p.y * q.z - p.z * q.y, y: p.z * q.x - p.x * q.z, z: p.x * q.y - p.y * q.x })
+    const eye = { x: shot.x, y: shot.y, z: shot.z }
+    const forward = norm(sub(shot.target, eye))
+    const rightAxis = norm(cross(forward, { x: 0, y: 1, z: 0 }))
+    const up = cross(rightAxis, forward)
+    const rel = sub(at, eye)
+    const depth = dot(rel, forward)
+    const half = Math.tan((cam.FOV * Math.PI) / 360)
+    const clientX = rect.left + ((dot(rel, rightAxis) / (depth * half * aspect) + 1) / 2) * rect.width
+    const clientY = rect.top + ((1 - dot(rel, up) / (depth * half)) / 2) * rect.height
+    canvas.dispatchEvent(new PointerEvent('pointermove', { clientX, clientY, bubbles: true }))
+    if (!${hoverOnly}) canvas.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX, clientY, bubbles: true }))
+    return { stage: g.stage, slot, own, right: ${right} }
+  })()`
 }
 
 /**

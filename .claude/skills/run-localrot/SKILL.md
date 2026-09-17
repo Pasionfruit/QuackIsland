@@ -58,7 +58,11 @@ spot on screen, projected with the game's own camera fit, so it goes through
 the real aiming - and screenshots mid-game and the results. For Punch Buggy
 (`--game punch-buggy`) it walks at the nearest fighter with WASD, clicks to
 punch when facing them within reach and again to pull back, and screenshots a
-punch in flight and the results. For Sprint Triathlon
+punch in flight and the results. For Find Yourself
+(`--game find-yourself`) it picks the cup its face is really under in stages 1
+and 3 and the one next to it in stage 2 - clicking the cup on the canvas - and
+fails unless that scores 4; screenshots the faces, a shuffle, a hovered cup, a
+result and the results. For Sprint Triathlon
 (`--game sprint-triathlon`) it clicks to swim, presses Space to bike and types
 the sentence to run - read from the page's `data-task` - to the finish,
 screenshotting the countdown and each leg; `--slip` types a wrong key on the run
@@ -94,14 +98,15 @@ node .claude/skills/run-localrot/scripts/lobby.mjs --players 8 --out <dir>
 ```
 
 Starts N **separate** headless Chromes, puts them in one lobby, then for each
-game (default `zombie-tag,messy-maze,probable-stop,duck-hunt,sprint-triathlon,punch-buggy,wack-attack,lady-luck,make-the-cut,let-him-cook,i-see-the-light`): the host opens and starts it, and it
+game (default `zombie-tag,messy-maze,probable-stop,duck-hunt,sprint-triathlon,punch-buggy,wack-attack,lady-luck,find-yourself,make-the-cut,let-him-cook,i-see-the-light`): the host opens and starts it, and it
 checks every browser has the same round (same seed, maze and headcount - Zombie
 Tag has no seed or maze, so there it is headcount alone) with exactly one body
 marked as its own, then that a guest holding a key moves on
 the host's screen - or, in Probable Stop, that a guest stepping to another path
 and confirming shows up on the host's; in Duck Hunt, that a guest's shot at one
 of its own balloons counts on the host; in Punch Buggy, that a guest walking and
-clicking moves and throws a punch on the host; in Sprint Triathlon, every browser races for twelve
+clicking moves and throws a punch on the host; in Find Yourself, every browser picks its own cup in
+the first stage, then that all agree on the picks and everybody scored; in Sprint Triathlon, every browser races for twelve
 seconds, then that guests' progress reached the host and all agree on where
 everybody got to; in Wack-Attack, every browser walks and swings for
 fifteen seconds, then that guests' whacks landed on the host and all agree on

@@ -114,14 +114,14 @@ describe('the catalogue', () => {
   it('knows the built games are part built and nothing else has started', () => {
     // The honest statement of where the build has got to. Meant to be edited
     // the day the next game starts, which is the point of writing it down.
-    for (const id of ['zombie-tag', 'messy-maze', 'probable-stop', 'duck-hunt', 'sprint-triathlon', 'punch-buggy', 'wack-attack', 'lady-luck', 'make-the-cut', 'let-him-cook', 'i-see-the-light'] as const) {
+    for (const id of ['zombie-tag', 'messy-maze', 'probable-stop', 'duck-hunt', 'sprint-triathlon', 'punch-buggy', 'wack-attack', 'lady-luck', 'find-yourself', 'make-the-cut', 'let-him-cook', 'i-see-the-light'] as const) {
       const game = minigameById(id)
       expect(game.done).toEqual({ environment: true, controls: true, assets: false })
       expect(nextStep(game)).toBe('assets')
     }
 
     const started = MINIGAMES.filter((game) => stepsDone(game) > 0).map((game) => game.id)
-    expect(started).toEqual(['zombie-tag', 'messy-maze', 'probable-stop', 'duck-hunt', 'sprint-triathlon', 'punch-buggy', 'wack-attack', 'lady-luck', 'make-the-cut', 'let-him-cook', 'i-see-the-light'])
+    expect(started).toEqual(['zombie-tag', 'messy-maze', 'probable-stop', 'duck-hunt', 'sprint-triathlon', 'punch-buggy', 'wack-attack', 'lady-luck', 'find-yourself', 'make-the-cut', 'let-him-cook', 'i-see-the-light'])
     expect(progress().playable).toBe(0)
   })
 

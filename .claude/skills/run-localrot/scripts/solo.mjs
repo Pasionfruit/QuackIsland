@@ -4,7 +4,7 @@
  *   node .claude/skills/run-localrot/scripts/solo.mjs --game messy-maze --out <dir> [--steer] [--software]
  *
  * --game      messy-maze (default), zombie-tag, probable-stop, duck-hunt, punch-buggy
- *             sprint-triathlon, wack-attack, lady-luck, make-the-cut, let-him-cook
+ *             find-yourself, sprint-triathlon, wack-attack, lady-luck, make-the-cut, let-him-cook
  *             or i-see-the-light
  * --app       dev server URL (default http://localhost:5199/)
  * --out       where screenshots go (default <temp>/localrot-run/solo)
@@ -18,6 +18,9 @@
  *             Punch Buggy: walk at the nearest fighter, punch when facing them
  *             within reach, pull back, repeat - screenshotting a punch in flight
  *             and the results.
+ *             Find Yourself: pick the right cup in stages 1 and 3 and the wrong
+ *             one in stage 2, failing unless that scores 4; screenshots the
+ *             faces, a shuffle, a hovered cup, a result and the results.
  *             Sprint Triathlon: click to swim, press Space to bike and type the
  *             sentence to run, about fourteen times a second, to the finish,
  *             screenshotting the countdown and each leg. With --slip, type a
@@ -48,7 +51,7 @@
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, cloverClick, cookPick, cutterMove, duckHuntShot, gameState, launch, lightMove, say, sleep, triathlonMove, whackMove } from './cdp.mjs'
+import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, gameState, launch, lightMove, say, sleep, triathlonMove, whackMove } from './cdp.mjs'
 
 const opt = args({ game: 'messy-maze', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'solo'), port: '9400' })
 const game = GAMES[opt.game]
@@ -100,6 +103,46 @@ try {
     say('steered', JSON.stringify(log), await page.shot('3-in.png'))
     await page.waitFor(`!!document.querySelector('[data-again]')`, 120000)
     say('results', await page.shot('4-results.png'))
+  } else if (opt.steer && opt.game === 'find-yourself') {
+    const state = () => page.eval(`(() => { const g = ${gameState('find-yourself')}; const me = g.players.find((p) => p.mine); return { stage: g.stage, phase: g.phase, clock: +g.clock.toFixed(2), score: me.score, picks: me.picks, scores: g.players.map((p) => p.score) } })()`)
+    const shots = new Set()
+    const log = []
+    for (let i = 0; i < 4000; i++) {
+      const s = await state()
+      if (s.phase === 'over') break
+      const key = `${s.stage}:${s.phase}`
+      if (s.phase === 'show' && s.stage === 0 && s.clock > 1 && !shots.has(key)) {
+        shots.add(key)
+        say('faces', JSON.stringify(s), await page.shot('3-faces.png'))
+      }
+      if (s.phase === 'shuffle' && s.stage === 2 && s.clock > 1.5 && !shots.has(key)) {
+        shots.add(key)
+        say('shuffling', JSON.stringify(s), await page.shot('4-shuffle.png'))
+      }
+      if (s.phase === 'pick' && s.clock > 0.5 && !shots.has(key)) {
+        shots.add(key)
+        // Stage 2 (worth 2) deliberately wrong; stages 1 and 3 right.
+        const right = s.stage !== 1
+        if (s.stage === 0) {
+          await page.eval(cupPick({ hoverOnly: true }))
+          await sleep(150)
+          say('hovering', await page.shot('5-hover.png'))
+        }
+        const did = await page.eval(cupPick({ right }))
+        log.push(did)
+        say('picked', JSON.stringify(did))
+      }
+      if (s.phase === 'result' && s.clock > 1 && !shots.has(key)) {
+        shots.add(key)
+        say('result', JSON.stringify(s), s.stage === 0 ? await page.shot('6-result.png') : '')
+      }
+      await sleep(80)
+    }
+    const end = await state()
+    say('picks', JSON.stringify(log), 'final', JSON.stringify(end))
+    if (end.score !== 1 + 3) throw new Error(`expected 4 points for stages 1 and 3 right and 2 wrong, got ${end.score}`)
+    await page.waitFor(`!!document.querySelector('[data-again]')`, 30000)
+    say('results', await page.shot('7-results.png'))
   } else if (opt.steer && opt.game === 'sprint-triathlon') {
     const state = () => page.eval(`(() => { const r = ${gameState('sprint-triathlon')}; const me = r.racers.find((x) => x.mine); return { over: r.over, elapsed: +r.elapsed.toFixed(2), strokes: me.strokes, pedals: me.pedals, typed: me.typed, mistakes: me.mistakes, swimAt: me.swimAt, bikeAt: me.bikeAt, finishAt: me.finishAt, place: me.place, others: r.racers.filter((x) => !x.mine).map((x) => x.id + ':' + [x.strokes, x.pedals, x.typed].join('/')) } })()`)
     await page.waitFor(`!!document.querySelector('[data-countdown]')`, 10000)
