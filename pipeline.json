@@ -124,7 +124,8 @@
         "32-hes-one-shot",
         "33-keyboard-warrior",
         "34-sharing-is-caring",
-        "35-chef-caricature"
+        "35-chef-caricature",
+        "36-musical-mayhem"
       ]
     }
   ],
@@ -3077,6 +3078,94 @@
         "No moving camera",
         "No erasing part of a drawing, no undo",
         "No sound, no score kept between games"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "36-musical-mayhem",
+      "phase": "P6",
+      "title": "Minigame 23, Musical Mayhem: run round a ring of chairs while the music plays, sit when it stops, push to knock others off, one chair fewer than players, the last one sitting wins",
+      "status": "in_progress",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "36.1",
+          "title": "The floor: a round arena, a ring of chairs one fewer than the players still in, bodies that bump and cannot walk through chairs",
+          "status": "planned"
+        },
+        {
+          "id": "36.2",
+          "title": "The music: plays for a time nobody can know, then stops; sit in an empty chair only once it has",
+          "status": "planned"
+        },
+        {
+          "id": "36.3",
+          "title": "The push: whoever is in front of you, knocked back and stunned a moment, off their chair if they were sitting",
+          "status": "planned"
+        },
+        {
+          "id": "36.4",
+          "title": "The rounds: once the chairs have stayed full a second, whoever is standing is out, a chair goes, until one is left",
+          "status": "planned"
+        },
+        {
+          "id": "36.5",
+          "title": "The controls: WASD to move, space to sit, left click to push",
+          "status": "planned"
+        },
+        {
+          "id": "36.6",
+          "title": "A still camera over the floor, chairs that close up as they go, the tune itself played while the music plays",
+          "status": "planned"
+        },
+        {
+          "id": "36.7",
+          "title": "One floor shared across the lobby, the host moving everybody from what they press, stand-ins only when alone",
+          "status": "planned"
+        },
+        {
+          "id": "36.8",
+          "title": "Contract, tests, MODULE.md",
+          "status": "planned"
+        },
+        {
+          "id": "36.9",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "pending"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: players are the island capsule, chairs are boxes",
+        "No moving camera",
+        "No music files: the tune is made in the browser",
+        "No score kept between games"
       ],
       "budgets": {
         "drawCallsMax": 0,
