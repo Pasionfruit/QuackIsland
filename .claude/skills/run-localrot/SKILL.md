@@ -107,7 +107,13 @@ view by exactly its `movementX`/`movementY` times the sensitivity, W walks the
 way you look, a click fires and a second click inside the cooldown does not -
 and then hunts for the rest of the game, turning onto whoever it has a clear line
 to and shooting. It aims perfectly, so its games are short. It screenshots the
-countdown, a shot, a hit, being a hunter and the results. Prints the
+countdown, a shot, a hit, being a hunter and the results. For Keyboard Warrior
+(`--game keyboard-warrior`) it presses a key in the pause before the first
+letter and fails if that counts, then types each letter 0.35 s after the page
+shows it (`data-letter`) with real keydowns - a wrong letter and then the right
+one on the second, which must stay wrong, and nothing on the fourth - failing if
+a right letter is not taken, if the reaction the page timed is not about 0.35 s,
+or if it never wins a letter. Prints the
 race's layout and seed, each spin, the finishing place, and console errors.
 About 30 seconds.
 
@@ -118,7 +124,7 @@ node .claude/skills/run-localrot/scripts/lobby.mjs --players 8 --out <dir>
 ```
 
 Starts N **separate** headless Chromes, puts them in one lobby, then for each
-game (default `zombie-tag,messy-maze,probable-stop,duck-hunt,feeding-time,sprint-triathlon,punch-buggy,time-it,wack-attack,lady-luck,find-yourself,make-the-cut,let-him-cook,i-see-the-light,helping-dad,synchronize-steps,hes-one-shot`): the host opens and starts it, and it
+game (default `zombie-tag,messy-maze,probable-stop,duck-hunt,feeding-time,sprint-triathlon,punch-buggy,time-it,wack-attack,lady-luck,find-yourself,make-the-cut,let-him-cook,i-see-the-light,helping-dad,synchronize-steps,hes-one-shot,keyboard-warrior`): the host opens and starts it, and it
 checks every browser has the same round (same seed, maze and headcount - Zombie
 Tag has no seed or maze, so there it is headcount alone) with exactly one body
 marked as its own, then that a guest holding a key moves on
@@ -148,7 +154,11 @@ reveal every browser must agree on the picks and steps, and each pick must be th
 one its browser meant. In He's One Shot, that a guest holding W walks on the
 host's screen, then every browser hunts for twenty seconds with the real
 controls, and every browser must agree on who is out, by whom, and the kills -
-with at least one elimination a guest's own shot made.
+with at least one elimination a guest's own shot made. In Keyboard Warrior,
+every browser types each of five letters after its own delay, the last guest
+quickest and the host slowest, and the last guest must win at least four of the
+five - reactions are timed on each screen, so being furthest from the host must
+not matter - with every browser agreeing on the scores.
 The other browsers are left idle there, so they go out on the first red for a
 pointer that was never in the circle - that is the rules, not a failure. Screenshots the host and a guest per game. Exits non-zero on
 any disagreement. Needs the relay. About a minute for eight.

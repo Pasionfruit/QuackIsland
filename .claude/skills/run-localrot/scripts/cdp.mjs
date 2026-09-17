@@ -268,6 +268,44 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'players',
   },
+  'keyboard-warrior': {
+    title: 'Keyboard Warrior',
+    screen: 'KeyboardWarriorScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
+}
+
+/**
+ * An expression that, in a page showing Keyboard Warrior, waits in the page for
+ * the next letter to be up on the screen (the arena's `data-letter`), waits
+ * `delay` ms more - a reaction - and types it with a real `keydown`: the letter
+ * itself, or with `wrong` some other letter. With `twice` it then types the
+ * right letter as well, which must not count. Evaluates to what it saw and did,
+ * and the banner after, or null if no letter came up within ten seconds.
+ */
+export function typeLetter({ delay = 350, wrong = false, twice = false } = {}) {
+  return `(async () => {
+    const board = () => document.querySelector('[data-board]')
+    const frame = () => new Promise((r) => requestAnimationFrame(r))
+    const press = (k) => window.dispatchEvent(new KeyboardEvent('keydown', { key: k.toLowerCase(), code: 'Key' + k }))
+    const start = performance.now()
+    while (!board()?.dataset.letter) {
+      if (performance.now() - start > 10000 || board()?.dataset.phase === 'over') return null
+      await frame()
+    }
+    const letter = board().dataset.letter
+    const round = +(document.querySelector('[data-round]')?.dataset.round ?? 0)
+    await new Promise((r) => setTimeout(r, ${delay}))
+    const key = ${wrong} ? (letter === 'Q' ? 'Z' : 'Q') : letter
+    press(key)
+    if (${twice}) {
+      await new Promise((r) => setTimeout(r, 60))
+      press(letter)
+    }
+    await new Promise((r) => setTimeout(r, 90))
+    return { letter, key, round, banner: document.querySelector('[data-banner]')?.dataset.banner ?? null }
+  })()`
 }
 
 /**

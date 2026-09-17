@@ -5,7 +5,7 @@
  *
  * --game      messy-maze (default), zombie-tag, probable-stop, duck-hunt, punch-buggy
  *             time-it, feeding-time, find-yourself, sprint-triathlon, wack-attack, lady-luck, make-the-cut, let-him-cook
- *             i-see-the-light, synchronize-steps, helping-dad or hes-one-shot
+ *             i-see-the-light, synchronize-steps, helping-dad, hes-one-shot or keyboard-warrior
  * --app       dev server URL (default http://localhost:5199/)
  * --out       where screenshots go (default <temp>/localrot-run/solo)
  * --steer     Messy Maze: drive your racer to the middle with the stand-ins'
@@ -73,13 +73,22 @@
  *             to. Fails unless every control does what it says and the game
  *             ends. Screenshots the countdown, a shot, a hit, being a hunter
  *             and the results.
+ *             Keyboard Warrior: presses a key in the pause before the first
+ *             letter and fails if that counts; then types each letter 0.35 s
+ *             after it is on the screen, with real keydowns - except the second,
+ *             where it types a wrong letter then the right one and fails unless
+ *             that stays a wrong attempt, and the fourth, which it sits out.
+ *             Fails if a right letter is not taken as right, if the reaction
+ *             the screen timed is not about 0.35 s, or if it never wins one.
+ *             Screenshots the countdown, a letter typed, a wrong key, a letter
+ *             decided and the results.
  * --software  render with SwiftShader instead of the GPU (slow; see cdp.mjs)
  *
  * Needs the dev server running; not the relay - alone you are your own host.
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, oneShotPlay, say, sleep, stepsPick, timeItStop, torchMove, triathlonMove, whackMove } from './cdp.mjs'
+import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, oneShotPlay, say, sleep, stepsPick, timeItStop, torchMove, triathlonMove, typeLetter, whackMove } from './cdp.mjs'
 
 const opt = args({ game: 'messy-maze', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'solo'), port: '9400' })
 const game = GAMES[opt.game]
@@ -501,6 +510,58 @@ try {
     const places = await page.eval(`(() => { const g = ${gameState('hes-one-shot')}; return JSON.stringify(g.players.map((p) => [p.id, p.out, p.by, p.kills])) })()`)
     say('results [id, out, by, kills]', places, await page.shot('7-results.png'))
     if (fired === 0) throw new Error('never got a shot off while hunting')
+  } else if (opt.steer && opt.game === 'keyboard-warrior') {
+    const state = () =>
+      page.eval(`(() => { const g = ${gameState('keyboard-warrior')}; const me = g.players.findIndex((p) => p.mine); const l = g.letter; const own = l.attempts.find((a) => a.player === me); return { over: g.over, index: l.index, char: l.char, closed: l.closedAt !== null, winner: l.winner, mine: own ? { key: own.key, reaction: +own.reaction.toFixed(3) } : null, scores: g.players.map((p) => p.score) } })()`)
+    const phaseNow = () => page.eval(`document.querySelector('[data-board]')?.dataset.phase ?? null`)
+    await sleep(600)
+    say('countdown', await page.shot('3-countdown.png'))
+    // A key in the pause before a letter is not an attempt.
+    await page.waitFor(`document.querySelector('[data-board]')?.dataset.phase === 'waiting'`, 10000)
+    await page.eval(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'q', code: 'KeyQ' }))`)
+    await page.waitFor(`document.querySelector('[data-board]')?.dataset.phase === 'up'`, 10000)
+    const early = await state()
+    say('pressed Q in the pause', JSON.stringify(early.mine))
+    if (early.mine) throw new Error('a key pressed before the letter appeared counted as an attempt')
+
+    const log = []
+    let shotUp = false
+    for (let n = 0; n < 20; n++) {
+      // Letter 2: wrong, then right - the right one must not count. Letter 4: sit it out. Otherwise type it in 0.35 s.
+      const which = (await state()).index
+      if (which === 3) {
+        await page.waitFor(`(() => { const g = ${gameState('keyboard-warrior')}; return g.over || g.letter.index !== 3 })()`, 15000)
+        log.push([which, 'sat out'])
+        continue
+      }
+      const did = await page.eval(typeLetter({ delay: 350, wrong: which === 1, twice: which === 1 }))
+      if (!did) break
+      const s = await state()
+      if (!shotUp) {
+        shotUp = true
+        say('typed', JSON.stringify(did), await page.shot('4-typed.png'))
+      }
+      if (which === 1) {
+        say('wrong then right', JSON.stringify({ did, mine: s.mine }), await page.shot('5-wrong.png'))
+        if (did.banner !== 'wrong' || !s.mine || s.mine.key === s.char) throw new Error(`a wrong key then the right one was not a wrong attempt: ${JSON.stringify(s.mine)}`)
+      } else {
+        if (!s.mine || s.mine.key !== did.letter || did.banner !== 'right') throw new Error(`typing ${did.letter} was not a right attempt: ${JSON.stringify({ did, s })}`)
+        if (s.mine.reaction < 0.33 || s.mine.reaction > 0.6) throw new Error(`typed 0.35 s after seeing it, but the reaction was ${s.mine.reaction}`)
+      }
+      await page.waitFor(`(() => { const g = ${gameState('keyboard-warrior')}; return g.over || g.letter.closedAt !== null })()`, 10000)
+      const after = await state()
+      if (which === 2) say('decided', JSON.stringify(after), await page.shot('6-decided.png'))
+      log.push([which, did.letter, did.key, after.mine && after.mine.reaction, after.winner])
+      if (after.over) break
+      await page.waitFor(`(() => { const g = ${gameState('keyboard-warrior')}; return g.over || g.letter.closedAt === null })()`, 10000)
+      if ((await phaseNow()) === 'over') break
+    }
+    say('letters [index, letter, typed, reaction, winner]', JSON.stringify(log))
+    await page.waitFor(`!!document.querySelector('[data-again]')`, 60000)
+    await sleep(400)
+    const end = await state()
+    say('results', JSON.stringify(end.scores), await page.shot('7-results.png'))
+    if (end.scores[0] === 0) throw new Error('typing every letter in 0.35 s never won one')
   } else if (opt.steer && opt.game === 'helping-dad') {
     let end = null
     await sleep(800)

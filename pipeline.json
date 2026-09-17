@@ -121,7 +121,9 @@
         "29-time-it",
         "30-synchronize-steps",
         "31-helping-dad",
-        "32-hes-one-shot"
+        "32-hes-one-shot",
+        "33-keyboard-warrior",
+        "34-sharing-is-caring"
       ]
     }
   ],
@@ -163,7 +165,9 @@
         "29-time-it",
         "30-synchronize-steps",
         "31-helping-dad",
-        "32-hes-one-shot"
+        "32-hes-one-shot",
+        "33-keyboard-warrior",
+        "34-sharing-is-caring"
       ],
       "generation": 1,
       "contract": {
@@ -348,7 +352,9 @@
         "29-time-it",
         "30-synchronize-steps",
         "31-helping-dad",
-        "32-hes-one-shot"
+        "32-hes-one-shot",
+        "33-keyboard-warrior",
+        "34-sharing-is-caring"
       ],
       "generation": 1,
       "contract": {
@@ -859,7 +865,9 @@
         "29-time-it",
         "30-synchronize-steps",
         "31-helping-dad",
-        "32-hes-one-shot"
+        "32-hes-one-shot",
+        "33-keyboard-warrior",
+        "34-sharing-is-caring"
       ],
       "generation": 1,
       "contract": {
@@ -1369,7 +1377,9 @@
         "29-time-it",
         "30-synchronize-steps",
         "31-helping-dad",
-        "32-hes-one-shot"
+        "32-hes-one-shot",
+        "33-keyboard-warrior",
+        "34-sharing-is-caring"
       ],
       "generation": 1,
       "contract": {
@@ -2798,6 +2808,174 @@
       "nonGoals": [
         "No models: players are the island capsule, cover is boxes",
         "No health, ammo, reloading, jumping or crouching",
+        "No sound, no score kept between games"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "33-keyboard-warrior",
+      "phase": "P6",
+      "title": "Minigame 21, Keyboard Warrior: letters float into the arena one at a time, one attempt each, the fastest correct key takes the point, the most points wins",
+      "status": "in_progress",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "33.1",
+          "title": "The letters: fifteen from the seed, never the same twice running, a pause you cannot guess before each, four seconds up",
+          "status": "done"
+        },
+        {
+          "id": "33.2",
+          "title": "One attempt each: the first key after a letter appears; the fastest correct takes the point, timed on your own screen",
+          "status": "done"
+        },
+        {
+          "id": "33.3",
+          "title": "The end: the most points wins, level scores share a place",
+          "status": "done"
+        },
+        {
+          "id": "33.4",
+          "title": "The controls: type the letter",
+          "status": "done"
+        },
+        {
+          "id": "33.5",
+          "title": "A still camera on an arena, the letter floating somewhere new each time, everybody lined up watching",
+          "status": "done"
+        },
+        {
+          "id": "33.6",
+          "title": "One contest across the lobby, each reaction timed on its own screen and compared by the host, stand-ins only when alone",
+          "status": "done"
+        },
+        {
+          "id": "33.7",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "33.8",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "red",
+          "at": "2026-09-17T16:20:06.757Z",
+          "failed": "typecheck"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: players are the island capsule, letters are tiles",
+        "No moving camera",
+        "No words, only single letters",
+        "No sound, no score kept between games"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "34-sharing-is-caring",
+      "phase": "P6",
+      "title": "Minigame 22, Sharing Is Caring: a crown in the center, grab it to earn points, bump to steal it, most points after one minute wins",
+      "status": "planned",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "34.1",
+          "title": "The arena: a flat round platform with a crown in the center",
+          "status": "planned"
+        },
+        {
+          "id": "34.2",
+          "title": "The crown: grab it, hold it and earn points over time, bump to steal it",
+          "status": "planned"
+        },
+        {
+          "id": "34.3",
+          "title": "The rules: one minute to play, whoever has the most points wins, ties share first",
+          "status": "planned"
+        },
+        {
+          "id": "34.4",
+          "title": "The controls: WASD to move and collide",
+          "status": "planned"
+        },
+        {
+          "id": "34.5",
+          "title": "A still camera over the arena, crown highlighted, scores shown",
+          "status": "planned"
+        },
+        {
+          "id": "34.6",
+          "title": "One game shared across the lobby, crown ownership and scores synced, stand-ins when alone",
+          "status": "planned"
+        },
+        {
+          "id": "34.7",
+          "title": "Contract, tests, MODULE.md",
+          "status": "planned"
+        },
+        {
+          "id": "34.8",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "pending"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: players are the island's capsule, crown is a sphere",
+        "No moving camera",
+        "No collision with the platform edge - everyone stays on",
         "No sound, no score kept between games"
       ],
       "budgets": {

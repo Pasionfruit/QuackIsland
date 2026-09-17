@@ -21,9 +21,9 @@
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, oneShotPlay, say, sleep, stepsPick, timeItStop, torchMove, triathlonMove, whackMove } from './cdp.mjs'
+import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, oneShotPlay, say, sleep, stepsPick, timeItStop, torchMove, triathlonMove, typeLetter, whackMove } from './cdp.mjs'
 
-const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt,feeding-time,sprint-triathlon,punch-buggy,time-it,wack-attack,lady-luck,find-yourself,make-the-cut,let-him-cook,i-see-the-light,helping-dad,synchronize-steps,hes-one-shot', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
+const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt,feeding-time,sprint-triathlon,punch-buggy,time-it,wack-attack,lady-luck,find-yourself,make-the-cut,let-him-cook,i-see-the-light,helping-dad,synchronize-steps,hes-one-shot,keyboard-warrior', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
 const count = Number(opt.players)
 const games = String(opt.games).split(',')
 const pages = []
@@ -385,6 +385,41 @@ try {
       await host.shot(`${game}-host.png`)
       await mover.shot(`${game}-guest.png`)
       if (views.some((h) => h !== before + 1)) throw new Error(`${game}: not every browser saw the wall touched once`)
+      await host.eval('window.__mg.backOut()')
+      for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
+      continue
+    }
+
+    if (game === 'keyboard-warrior') {
+      // For five letters every browser types the letter after its own delay -
+      // the last guest quickest, the host slowest - and the last guest should get
+      // every one: reactions are timed on each screen, so who is nearer the host
+      // does not matter. Every browser should agree on the scores.
+      const letters = 5
+      for (let n = 0; n < letters; n++) {
+        const did = await Promise.all(pages.map((p, i) => p.eval(typeLetter({ delay: 300 + (count - 1 - i) * 70 }))))
+        if (did.some((d) => !d)) throw new Error(`${game}: a letter never came up in some browser`)
+        await host.waitFor(`(() => { const g = ${gameState(game)}; return g.over || g.letter.closedAt !== null })()`, 10000)
+        const winner = await host.eval(`(() => { const g = ${gameState(game)}; return g.letter.winner === null ? null : g.players[g.letter.winner].id })()`)
+        say(`${game}: letter ${did[0].round} ${did[0].letter}: typed ${JSON.stringify(did.map((d) => d.banner))}; point to ${winner}`)
+        if (n === 1) {
+          await host.shot(`${game}-host.png`)
+          await mover.shot(`${game}-guest.png`)
+        }
+        await host.waitFor(`(() => { const g = ${gameState(game)}; return g.over || g.letter.closedAt === null })()`, 10000)
+      }
+      let views = []
+      for (let tries = 0; tries < 6; tries++) {
+        await sleep(300)
+        views = await Promise.all(pages.map((p) => p.eval(`(() => { const g = ${gameState(game)}; return JSON.stringify(g.players.map((x) => [x.id, x.score])) })()`)))
+        if (new Set(views).size === 1) break
+      }
+      const agree = new Set(views).size === 1
+      const scores = JSON.parse(views[0])
+      const moverScore = scores.find((s) => s[0] === moverId)[1]
+      say(`${game}: scores ${views[0]}; every browser agrees ${agree}`)
+      if (!agree) throw new Error(`${game}: browsers disagree - ${views.join(' | ')}`)
+      if (moverScore < letters - 1) throw new Error(`${game}: the quickest browser, ${moverId}, won only ${moverScore} of ${letters}`)
       await host.eval('window.__mg.backOut()')
       for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
       continue

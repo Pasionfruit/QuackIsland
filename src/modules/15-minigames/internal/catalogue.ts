@@ -451,9 +451,11 @@ const ENTRIES = [
       'Letters float into the arena one at a time.',
       'Each is worth a point to whoever types it correctly first, and you get exactly one attempt at each.',
     ],
-    controls: [],
+    controls: [{ input: 'Keyboard', does: 'Type the displayed letter' }],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `33-keyboard-warrior`. The assets stage is still to do - the
+    // players are the island's capsule and the letters are tiles.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'tetris-master',
