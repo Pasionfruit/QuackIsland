@@ -103,15 +103,18 @@ function headingToYaw(heading: number): number {
   return Math.atan2(Math.cos(heading), Math.sin(heading))
 }
 
+/** One player: the pill in their colour, reeling on the spot while dazed. */
 function PlayerBody({ player, index }: { player: Wearer; index: number }) {
   const holder = useRef<Group>(null)
   const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
-  useFrame(() => {
+  useFrame(({ clock }) => {
     const group = holder.current
     if (!group) return
+    const t = clock.elapsedTime
+    const reel = player.dazed > 0 ? Math.min(1, player.dazed * 3) : 0
     group.position.set(player.x, 0, player.y)
-    group.rotation.set(0, headingToYaw(player.facing), 0)
+    group.rotation.set(Math.sin(t * 17) * 0.22 * reel, headingToYaw(player.facing) + reel * t * 9, Math.cos(t * 13) * 0.22 * reel)
   })
   return (
     <group ref={holder}>
@@ -158,7 +161,7 @@ const CrownModel = memo(function CrownModel() {
 
 /**
  * The crown, where it belongs: spinning over the middle until somebody takes it,
- * then on their head. Blinks while it cannot be taken, so a player can see why
+ * then on their head. Throbs while it cannot be taken, so a player can see why
  * a bump just now did nothing.
  */
 function Crown({ live }: { live: RefObject<Round> }) {
@@ -189,8 +192,8 @@ function Crown({ live }: { live: RefObject<Round> }) {
     const s = scale.current
     if (s) {
       const size = wearer ? 1 : 1.5
-      s.scale.setScalar(size)
-      s.visible = canTake(round) || Math.floor(t * 10) % 2 === 0
+      // Throbs while it cannot be taken. Blinking it out hid it for half the grace.
+      s.scale.setScalar(size * (canTake(round) ? 1 : 0.8 + 0.25 * Math.abs(Math.sin(t * 9))))
     }
   })
   return (

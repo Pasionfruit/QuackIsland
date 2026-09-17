@@ -21,9 +21,9 @@
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, oneShotPlay, say, sleep, stepsPick, timeItStop, torchMove, triathlonMove, typeLetter, whackMove } from './cdp.mjs'
+import { GAMES, args, chefTrace, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, oneShotPlay, say, sleep, stepsPick, timeItStop, torchMove, triathlonMove, typeLetter, whackMove } from './cdp.mjs'
 
-const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt,feeding-time,sprint-triathlon,punch-buggy,time-it,wack-attack,lady-luck,find-yourself,make-the-cut,let-him-cook,i-see-the-light,helping-dad,synchronize-steps,hes-one-shot,keyboard-warrior', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
+const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt,feeding-time,sprint-triathlon,punch-buggy,time-it,wack-attack,lady-luck,find-yourself,make-the-cut,let-him-cook,i-see-the-light,helping-dad,synchronize-steps,hes-one-shot,keyboard-warrior,chef-caricature', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
 const count = Number(opt.players)
 const games = String(opt.games).split(',')
 const pages = []
@@ -385,6 +385,42 @@ try {
       await host.shot(`${game}-host.png`)
       await mover.shot(`${game}-guest.png`)
       if (views.some((h) => h !== before + 1)) throw new Error(`${game}: not every browser saw the wall touched once`)
+      await host.eval('window.__mg.backOut()')
+      for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
+      continue
+    }
+
+    if (game === 'chef-caricature') {
+      // Whoever draws first traces three outlines with real pointer events while
+      // everybody else watches; every browser should see the ink as it is drawn
+      // and agree on the dishes, the host's among them.
+      await host.waitFor(`(() => { const g = ${gameState(game)}; return g && g.elapsed > g.startsAt + 0.2 })()`, 30000)
+      const drawerId = await host.eval(`(() => { const g = ${gameState(game)}; return g.players[g.order[g.turn]].id })()`)
+      const drawerPage = pages[ids.indexOf(drawerId)]
+      const watcher = pages.find((p) => p !== drawerPage)
+      let traced = 0
+      let sawInk = false
+      for (let n = 0; n < 3; n++) {
+        const going = drawerPage.eval(chefTrace({ wait: 5000, speed: 1.6 }))
+        await sleep(700)
+        const ink = await watcher.eval(`(() => { const g = ${gameState(game)}; return g.stroke ? g.stroke.points.length / 2 : 0 })()`)
+        if (ink > 3) sawInk = true
+        if (n === 0) {
+          await watcher.shot(`${game}-watcher.png`)
+          await drawerPage.shot(`${game}-drawer.png`)
+        }
+        const did = await going
+        if (did && did.accepted) traced += 1
+        say(`${game}: ${drawerId} traced ${did && did.name}: ${JSON.stringify(did)}; a watcher saw ${ink} points of ink mid-stroke`)
+      }
+      await sleep(800)
+      const views = await Promise.all(pages.map((p) => p.eval(`(() => { const g = ${gameState(game)}; return JSON.stringify([g.turn, g.outline, g.players.map((x) => x.score)]) })()`)))
+      const agree = new Set(views).size === 1
+      say(`${game}: ${traced} accepted; every browser ${agree ? 'agrees' : 'disagrees'}: ${views[0]}`)
+      if (!sawInk) throw new Error(`${game}: no watcher saw the drawing as it was made`)
+      if (traced < 2) throw new Error(`${game}: careful tracing fed the duck only ${traced}`)
+      if (!agree) throw new Error(`${game}: browsers disagree - ${views.join(' | ')}`)
+      if (JSON.parse(views[0])[2][ids.indexOf(drawerId)] !== traced) throw new Error(`${game}: the drawer traced ${traced} but the score is ${views[0]}`)
       await host.eval('window.__mg.backOut()')
       for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
       continue

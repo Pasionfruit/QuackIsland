@@ -5,7 +5,7 @@
  *
  * --game      messy-maze (default), zombie-tag, probable-stop, duck-hunt, punch-buggy
  *             time-it, feeding-time, find-yourself, sprint-triathlon, wack-attack, lady-luck, make-the-cut, let-him-cook
- *             i-see-the-light, synchronize-steps, helping-dad, hes-one-shot or keyboard-warrior
+ *             i-see-the-light, synchronize-steps, helping-dad, hes-one-shot, keyboard-warrior or chef-caricature
  * --app       dev server URL (default http://localhost:5199/)
  * --out       where screenshots go (default <temp>/localrot-run/solo)
  * --steer     Messy Maze: drive your racer to the middle with the stand-ins'
@@ -82,13 +82,21 @@
  *             the screen timed is not about 0.35 s, or if it never wins one.
  *             Screenshots the countdown, a letter typed, a wrong key, a letter
  *             decided and the results.
+ *             Chef Caricature: watches whoever draws before you, then on your
+ *             turn, with real pointer events at the board positions the game's
+ *             camera fit gives - lets go of an outline part way and fails unless
+ *             it is wiped, scribbles over the whole board and fails if that is
+ *             accepted, then traces outlines for the rest of the turn and fails
+ *             unless at least four are accepted, a dish each. Screenshots a
+ *             stand-in drawing, a wiped attempt, drawing, the duck fed and the
+ *             results. Takes the length of every turn: a few minutes.
  * --software  render with SwiftShader instead of the GPU (slow; see cdp.mjs)
  *
  * Needs the dev server running; not the relay - alone you are your own host.
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, oneShotPlay, say, sleep, stepsPick, timeItStop, torchMove, triathlonMove, typeLetter, whackMove } from './cdp.mjs'
+import { GAMES, args, chefTrace, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, oneShotPlay, say, sleep, stepsPick, timeItStop, torchMove, triathlonMove, typeLetter, whackMove } from './cdp.mjs'
 
 const opt = args({ game: 'messy-maze', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'solo'), port: '9400' })
 const game = GAMES[opt.game]
@@ -510,6 +518,60 @@ try {
     const places = await page.eval(`(() => { const g = ${gameState('hes-one-shot')}; return JSON.stringify(g.players.map((p) => [p.id, p.out, p.by, p.kills])) })()`)
     say('results [id, out, by, kills]', places, await page.shot('7-results.png'))
     if (fired === 0) throw new Error('never got a shot off while hunting')
+  } else if (opt.steer && opt.game === 'chef-caricature') {
+    const state = () =>
+      page.eval(`(async () => { const rules = await import('/src/modules/35-chef-caricature/internal/rules.ts'); const g = ${gameState('chef-caricature')}; return { over: g.over, phase: rules.phase(g), turn: g.turn, drawer: g.players[rules.drawer(g)].id, mine: g.players[rules.drawer(g)].mine, outline: g.outline, scores: g.players.map((p) => p.score) } })()`)
+    let s = await state()
+    say('order', JSON.stringify(s))
+    // Watch whoever goes before us, and take a picture of a stand-in at work.
+    let shotWatching = false
+    while (!s.over && !(s.mine && s.phase === 'drawing')) {
+      if (!shotWatching && !s.mine && s.phase === 'drawing') {
+        await sleep(6000)
+        shotWatching = true
+        say('watching a stand-in', JSON.stringify(await state()), await page.shot('3-watching.png'))
+      }
+      await sleep(250)
+      s = await state()
+    }
+    // Let go part way: wiped, and nothing scored.
+    const slipped = await page.eval(chefTrace({ share: 0.4, wait: 5000 }))
+    say('let go part way', JSON.stringify(slipped), await page.shot('4-wiped.png'))
+    if (!slipped || slipped.accepted || !slipped.wiped || slipped.dishes !== 0) throw new Error(`letting go part way was not a wiped attempt: ${JSON.stringify(slipped)}`)
+    // Scribble over the whole board: it covers the outline but is not accepted.
+    const scribble = await page.eval(chefTrace({ scribble: true, speed: 12, wait: 5000 }))
+    say('scribbled over the board', JSON.stringify(scribble))
+    if (!scribble || scribble.accepted || scribble.dishes !== 0 || scribble.peak < 0.75) throw new Error(`a scribble over the whole board was accepted, or did not cover it: ${JSON.stringify(scribble)}`)
+    // Then trace for the rest of the turn.
+    const log = []
+    let shotDrawing = false
+    for (let i = 0; i < 40; i++) {
+      const phaseNow = await page.eval(`document.querySelector('[data-board]')?.dataset.myTurn`)
+      if (phaseNow !== '1') break
+      if (!shotDrawing) {
+        shotDrawing = true
+        const going = page.eval(chefTrace({ wait: 3000, speed: 1.5 }))
+        await sleep(900)
+        say('drawing', await page.shot('5-drawing.png'))
+        const did = await going
+        if (did) log.push([did.name, did.accepted, did.peak, did.dishes])
+        await sleep(250)
+        say('fed the duck', await page.shot('6-fed.png'))
+        continue
+      }
+      const did = await page.eval(chefTrace({ wait: 3000 }))
+      if (!did) break
+      log.push([did.name, did.accepted, did.peak, did.dishes])
+    }
+    say('traced [outline, accepted, coverage, dishes]', JSON.stringify(log))
+    const accepted = log.filter((l) => l[1]).length
+    if (accepted < 4) throw new Error(`careful tracing fed the duck only ${accepted} dishes`)
+    if (log.some((l) => l[1] && l[3] !== 1)) throw new Error('an accepted drawing did not score exactly one')
+    const mine = (await state()).scores
+    say('scores after my turn', JSON.stringify(mine))
+    await page.waitFor(`!!document.querySelector('[data-again]')`, 200000)
+    await sleep(400)
+    say('results', JSON.stringify((await state()).scores), await page.shot('7-results.png'))
   } else if (opt.steer && opt.game === 'keyboard-warrior') {
     const state = () =>
       page.eval(`(() => { const g = ${gameState('keyboard-warrior')}; const me = g.players.findIndex((p) => p.mine); const l = g.letter; const own = l.attempts.find((a) => a.player === me); return { over: g.over, index: l.index, char: l.char, closed: l.closedAt !== null, winner: l.winner, mine: own ? { key: own.key, reaction: +own.reaction.toFixed(3) } : null, scores: g.players.map((p) => p.score) } })()`)

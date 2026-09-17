@@ -438,9 +438,11 @@ const ENTRIES = [
       'Tag, backwards. A crown sits in the middle, and the first player to grab it starts scoring.',
       'Bump into whoever is wearing it to take it off them. After a minute, whoever held it longest wins.',
     ],
-    controls: [],
+    controls: [{ input: 'WASD', does: 'Move' }],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `34-sharing-is-caring`. The assets stage is still to do - the
+    // players are the island's capsule and the crown is primitives.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'keyboard-warrior',
@@ -539,9 +541,14 @@ const ENTRIES = [
       'Cover at least three quarters of an outline and a duck accepts the drawing and eats it for a point.',
       'There is no erasing, and letting go before an outline is finished wipes what you had.',
     ],
-    controls: [],
+    controls: [
+      { input: 'Left click + drag', does: 'Draw - trace the outline' },
+      { input: 'Mouse', does: 'Aim' },
+    ],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `35-chef-caricature`. The assets stage is still to do - the duck
+    // and the chef are primitives and the outlines are drawn paths.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'reserved-29',

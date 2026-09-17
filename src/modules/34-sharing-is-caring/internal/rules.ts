@@ -29,9 +29,9 @@ export const ARENA = {
    * How much of that the wearer keeps. At full pace, one person running round
    * a circle can never be caught by one chaser; a crown has to cost something.
    */
-  crownPace: 0.88,
-  /** How much a stand-in gets. They never mistime a key, so they pay in speed. */
-  botPace: 0.8,
+  crownPace: 0.85,
+  /** How much a stand-in gets. Enough to catch a person wearing the crown, never enough to outrun one chasing. */
+  botPace: 0.9,
   /** How close to the crown's middle a body has to get to pick it up. */
   crown: 0.6,
   /** Points a second while wearing it. */
@@ -40,12 +40,24 @@ export const ARENA = {
    * Seconds after the crown changes hands before it can change again. Without
    * it, two bodies still touching pass it back and forth every frame.
    */
-  grace: 1,
+  grace: 1.5,
   /**
-   * How far apart a steal knocks the two bodies. A bump should look like a
-   * bump, and it gives the new wearer a head start on the grace.
+   * How far from the new wearer a steal knocks everybody crowding them. A bump
+   * should look like a bump, and it gives the new wearer a head start.
    */
-  bump: 1.6,
+  bump: 3,
+  /**
+   * Seconds whoever loses the crown stands dazed, unable to walk. Without it the
+   * loser is still touching the new wearer when the grace runs out and takes it
+   * straight back, and the crown changes hands every second for a minute.
+   */
+  daze: 1.2,
+  /**
+   * Seconds everybody else knocked back by a steal staggers. Knocked back but
+   * free to walk, a ring of chasers closes on the new wearer before the grace is
+   * out, and every hold lasts exactly as long as the grace.
+   */
+  stagger: 0.8,
 } as const
 
 export interface Wearer {
@@ -58,6 +70,8 @@ export interface Wearer {
   score: number
   /** How many times they took the crown, the first grab included. */
   takes: number
+  /** Seconds left standing dazed after losing the crown. Zero when free to walk. */
+  dazed: number
   mine: boolean
   bot: boolean
 }
@@ -120,6 +134,7 @@ export function createRound(seed: number, entrants: readonly Entrant[], id = 1):
       facing: starts[i].facing,
       score: 0,
       takes: 0,
+      dazed: 0,
       mine: e.mine ?? false,
       bot: e.bot ?? false,
     })),
@@ -147,7 +162,7 @@ function give(round: Round, to: Wearer): void {
  * Mutates and returns the same round. `dt` is clamped, so a tab that comes back
  * from the background does not hand somebody thirty seconds of crown.
  *
- * In order: the wearer scores for the time just gone; everybody walks; the
+ * In order: the wearer scores for the time just gone; everybody not dazed walks; the
  * crown is picked up or stolen; bodies push each other apart; the wall keeps
  * everybody in; and the round ends at a minute.
  */
@@ -160,6 +175,10 @@ export function stepRound(round: Round, intents: ReadonlyMap<string, Intent>, dt
   if (wearer) wearer.score += ARENA.rate * step
 
   for (const p of round.players) {
+    if (p.dazed > 0) {
+      p.dazed = Math.max(0, p.dazed - step)
+      continue
+    }
     const intent = intents.get(p.id)
     const length = intent ? Math.hypot(intent.x, intent.y) : 0
     if (!intent || length === 0) continue
@@ -191,26 +210,38 @@ export function stepRound(round: Round, intents: ReadonlyMap<string, Intent>, dt
   return round
 }
 
-/** Anybody touching the wearer takes the crown - the closest, if several are - and the two are knocked apart. */
+/**
+ * Anybody touching the wearer takes the crown - the closest, if several are, and
+ * never somebody still dazed from losing it: the wearer running back into the
+ * person they just took it from would otherwise hand it straight back.
+ */
 function steal(round: Round): void {
   const from = holderOf(round)
   if (!from) return
   const touch = ARENA.body * 2 + 0.05
   const thief = round.players
-    .filter((p) => p !== from)
+    .filter((p) => p !== from && p.dazed === 0)
     .map((p) => ({ p, d: Math.hypot(p.x - from.x, p.y - from.y) }))
     .filter((each) => each.d <= touch)
     .sort((a, b) => a.d - b.d)[0]
   if (!thief) return
-  give(round, thief.p)
-  const d = thief.d
-  const nx = d === 0 ? Math.cos(thief.p.facing) : (thief.p.x - from.x) / d
-  const ny = d === 0 ? Math.sin(thief.p.facing) : (thief.p.y - from.y) / d
-  const push = Math.max(0, ARENA.bump - d) / 2
-  from.x -= nx * push
-  from.y -= ny * push
-  thief.p.x += nx * push
-  thief.p.y += ny * push
+  const wearer = thief.p
+  give(round, wearer)
+  from.dazed = ARENA.daze
+  // Everybody crowding the new wearer is knocked back, not only the loser: in a
+  // scrum somebody else is always touching, and the crown would change hands the
+  // moment the grace ran out.
+  for (const p of round.players) {
+    if (p === wearer) continue
+    const dx = p.x - wearer.x
+    const dy = p.y - wearer.y
+    const d = Math.hypot(dx, dy)
+    if (d >= ARENA.bump) continue
+    if (p !== from) p.dazed = Math.max(p.dazed, ARENA.stagger)
+    const away = d === 0 ? wearer.facing + Math.PI : Math.atan2(dy, dx)
+    p.x = wearer.x + Math.cos(away) * ARENA.bump
+    p.y = wearer.y + Math.sin(away) * ARENA.bump
+  }
 }
 
 /** Bodies are solid: anybody overlapping is pushed apart, half each. */

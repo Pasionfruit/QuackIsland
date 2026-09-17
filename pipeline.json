@@ -123,7 +123,8 @@
         "31-helping-dad",
         "32-hes-one-shot",
         "33-keyboard-warrior",
-        "34-sharing-is-caring"
+        "34-sharing-is-caring",
+        "35-chef-caricature"
       ]
     }
   ],
@@ -167,7 +168,8 @@
         "31-helping-dad",
         "32-hes-one-shot",
         "33-keyboard-warrior",
-        "34-sharing-is-caring"
+        "34-sharing-is-caring",
+        "35-chef-caricature"
       ],
       "generation": 1,
       "contract": {
@@ -354,7 +356,8 @@
         "31-helping-dad",
         "32-hes-one-shot",
         "33-keyboard-warrior",
-        "34-sharing-is-caring"
+        "34-sharing-is-caring",
+        "35-chef-caricature"
       ],
       "generation": 1,
       "contract": {
@@ -867,7 +870,8 @@
         "31-helping-dad",
         "32-hes-one-shot",
         "33-keyboard-warrior",
-        "34-sharing-is-caring"
+        "34-sharing-is-caring",
+        "35-chef-caricature"
       ],
       "generation": 1,
       "contract": {
@@ -1379,7 +1383,8 @@
         "31-helping-dad",
         "32-hes-one-shot",
         "33-keyboard-warrior",
-        "34-sharing-is-caring"
+        "34-sharing-is-caring",
+        "35-chef-caricature"
       ],
       "generation": 1,
       "contract": {
@@ -2821,7 +2826,7 @@
       "id": "33-keyboard-warrior",
       "phase": "P6",
       "title": "Minigame 21, Keyboard Warrior: letters float into the arena one at a time, one attempt each, the fastest correct key takes the point, the most points wins",
-      "status": "in_progress",
+      "status": "ready_for_review",
       "dependsOn": [
         "00-core",
         "02-player",
@@ -2879,9 +2884,8 @@
       ],
       "gate": {
         "machine": {
-          "status": "red",
-          "at": "2026-09-17T16:20:06.757Z",
-          "failed": "typecheck"
+          "status": "green",
+          "at": "2026-09-17T16:45:30.311Z"
         },
         "human": {
           "status": "pending"
@@ -2905,8 +2909,8 @@
     {
       "id": "34-sharing-is-caring",
       "phase": "P6",
-      "title": "Minigame 22, Sharing Is Caring: a crown in the center, grab it to earn points, bump to steal it, most points after one minute wins",
-      "status": "planned",
+      "title": "Minigame 20, Sharing Is Caring: a crown in the middle of a walled arena, a point a second while you wear it, bump the wearer to take it, most points after a minute wins",
+      "status": "ready_for_review",
       "dependsOn": [
         "00-core",
         "02-player",
@@ -2923,48 +2927,59 @@
       "blocks": [
         {
           "id": "34.1",
-          "title": "The arena: a flat round platform with a crown in the center",
-          "status": "planned"
+          "title": "The arena: a walled round of sand over the sea, a crown in the middle, spawns round a ring",
+          "status": "done"
         },
         {
           "id": "34.2",
-          "title": "The crown: grab it, hold it and earn points over time, bump to steal it",
-          "status": "planned"
+          "title": "The crown: walk into it to pick it up, a point a second while you wear it, the wearer a step slower",
+          "status": "done"
         },
         {
           "id": "34.3",
-          "title": "The rules: one minute to play, whoever has the most points wins, ties share first",
-          "status": "planned"
+          "title": "The steal: bump the wearer to take it, knocked apart, a second of grace before it can change hands again",
+          "status": "done"
         },
         {
           "id": "34.4",
-          "title": "The controls: WASD to move and collide",
-          "status": "planned"
+          "title": "The end: one minute, most points wins, level scores share a place",
+          "status": "done"
         },
         {
           "id": "34.5",
-          "title": "A still camera over the arena, crown highlighted, scores shown",
-          "status": "planned"
+          "title": "The controls: WASD to move, and nothing else",
+          "status": "done"
         },
         {
           "id": "34.6",
-          "title": "One game shared across the lobby, crown ownership and scores synced, stand-ins when alone",
-          "status": "planned"
+          "title": "A still camera over the arena, the crown hopping heads, a ring under the wearer, a running scoreboard",
+          "status": "done"
         },
         {
           "id": "34.7",
-          "title": "Contract, tests, MODULE.md",
-          "status": "planned"
+          "title": "One round shared across the lobby, the host deciding who has it, stand-ins that chase and run only when alone",
+          "status": "done"
+        },
+        {
+          "id": "34.10",
+          "title": "Breaking the scrum: knock back everybody crowding a new wearer, daze the loser, stagger the rest",
+          "status": "done"
         },
         {
           "id": "34.8",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "34.9",
           "title": "The assets: models, sprites and sound in place of primitives",
           "status": "planned"
         }
       ],
       "gate": {
         "machine": {
-          "status": "pending"
+          "status": "green",
+          "at": "2026-09-17T16:41:30.805Z"
         },
         "human": {
           "status": "pending"
@@ -2973,9 +2988,94 @@
       },
       "freeze": null,
       "nonGoals": [
-        "No models: players are the island's capsule, crown is a sphere",
+        "No models: players are the island capsule, the crown is primitives",
         "No moving camera",
-        "No collision with the platform edge - everyone stays on",
+        "No falling off: the edge is a wall",
+        "No pushing, dashing or items - bumping is walking into somebody",
+        "No sound, no score kept between games"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "35-chef-caricature",
+      "phase": "P6",
+      "title": "Minigame 28, Chef Caricature: turn by turn, forty-five seconds to trace as many outlines as you can, three quarters covered without letting go feeds the duck a point, everybody else watches",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "35.1",
+          "title": "The outlines: ingredients and dishes as paths, in an order from the seed, the same for everybody",
+          "status": "done"
+        },
+        {
+          "id": "35.2",
+          "title": "The pen: hold to draw, three quarters of the outline covered - with the ink mostly on it - is accepted, letting go wipes it, no undo",
+          "status": "done"
+        },
+        {
+          "id": "35.3",
+          "title": "The turns: each player in a seeded order, forty-five seconds each, most dishes wins",
+          "status": "done"
+        },
+        {
+          "id": "35.4",
+          "title": "The controls: hold left click and drag to trace",
+          "status": "done"
+        },
+        {
+          "id": "35.5",
+          "title": "A still camera square on to an easel, the hungry duck beside it, the drawing flying into its beak",
+          "status": "done"
+        },
+        {
+          "id": "35.6",
+          "title": "One kitchen across the lobby, the drawer's pen sent to everybody and replayed by the host to decide, stand-ins only when alone",
+          "status": "done"
+        },
+        {
+          "id": "35.7",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "35.8",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-17T16:44:59.663Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: the duck and the chef are primitives, the outlines are paths",
+        "No moving camera",
+        "No erasing part of a drawing, no undo",
         "No sound, no score kept between games"
       ],
       "budgets": {

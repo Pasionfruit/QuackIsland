@@ -274,6 +274,83 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'players',
   },
+  'chef-caricature': {
+    title: 'Chef Caricature',
+    screen: 'ChefCaricatureScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
+}
+
+/**
+ * An expression that, in a page showing Chef Caricature, waits in the page
+ * until it is this browser's turn to draw with the pen free, then draws on the
+ * board with real pointer events - `pointerdown`, a `pointermove` every few
+ * milliseconds, `pointerup` - at the board position projected with the game's
+ * own camera fit. By default it traces the outline on the board from a random
+ * point, `share` of the way round, at `speed` board units a second; with
+ * `scribble` it zigzags over the whole board instead. It lets go at the end, or
+ * as soon as the duck takes the drawing. Evaluates to what happened: whether it
+ * was accepted, the most coverage it reached, whether it was wiped, and the
+ * dishes it added - or null if the turn never came.
+ */
+export function chefTrace({ share = 1.2, speed = 2.5, scribble = false, wait = 200000 } = {}) {
+  return `(async () => {
+    const outlines = await import('/src/modules/35-chef-caricature/internal/outlines.ts')
+    const cam = await import('/src/modules/35-chef-caricature/internal/camera.ts')
+    const rules = await import('/src/modules/35-chef-caricature/internal/rules.ts')
+    const state = () => ${gameState('chef-caricature')}
+    const frame = () => new Promise((r) => requestAnimationFrame(r))
+    const started = performance.now()
+    for (;;) {
+      const g = state()
+      if (!g || g.over) return null
+      if (rules.phase(g) === 'drawing' && g.players[rules.drawer(g)]?.mine && !g.stroke && !g.lift) break
+      if (performance.now() - started > ${wait}) return null
+      await frame()
+    }
+    const board = document.querySelector('[data-board]')
+    const g0 = state()
+    const me = rules.drawer(g0)
+    const before = { score: g0.players[me].score, outline: g0.outline, erasedAt: g0.erasedAt }
+    const outline = outlines.outlineFor(g0.seed, g0.outline)
+    const r = board.getBoundingClientRect()
+    const aspect = r.width / r.height
+    const fire = (type, p) => {
+      const s = cam.boardToScreen(p, aspect)
+      board.dispatchEvent(new PointerEvent(type, { clientX: r.left + ((s.x + 1) / 2) * r.width, clientY: r.top + ((1 - s.y) / 2) * r.height, button: 0, buttons: type === 'pointerup' ? 0 : 1, pointerId: 1, pointerType: 'mouse', bubbles: true }))
+    }
+    const path = []
+    if (${scribble}) {
+      for (let row = 0; row <= 24; row++) {
+        const y = -0.95 + row * (1.9 / 24)
+        for (let i = 0; i <= 40; i++) path.push({ x: (row % 2 ? 1 : -1) * (-0.95 + i * (1.9 / 40)), y })
+      }
+    } else {
+      const from = Math.random() * outline.length
+      for (let d = 0; d <= outline.length * ${share}; d += 0.02) path.push(outlines.pointAlong(outline, from + d))
+    }
+    fire('pointerdown', path[0])
+    let peak = 0
+    let accepted = false
+    for (const p of path.slice(1)) {
+      fire('pointermove', p)
+      const g = state()
+      peak = Math.max(peak, rules.coverage(g.stroke))
+      if (g.outline !== before.outline) {
+        accepted = true
+        break
+      }
+      await new Promise((resolve) => setTimeout(resolve, ${Math.round((1000 * 0.02) / speed)}))
+    }
+    const last = state()
+    const tidy = +rules.tidiness(last.stroke).toFixed(2)
+    fire('pointerup', path[path.length - 1])
+    await frame()
+    await frame()
+    const g1 = state()
+    return { name: outline.name, accepted, peak: +peak.toFixed(2), tidy, wiped: g1.erasedAt !== before.erasedAt, dishes: g1.players[me].score - before.score, outline: g1.outline }
+  })()`
 }
 
 /**

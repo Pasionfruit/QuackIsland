@@ -11,8 +11,8 @@ import type { Intent, Round, Wearer } from './rules'
 export const SNAPSHOT_TAG = 'sc'
 export const INTENT_TAG = 'sc-in'
 
-/** `[id, x, y, facing, score, takes]`. */
-export type WirePlayer = [string, number, number, number, number, number]
+/** `[id, x, y, facing, score, takes, dazed]`. */
+export type WirePlayer = [string, number, number, number, number, number, number]
 
 export interface Snapshot {
   id: number
@@ -35,7 +35,7 @@ export function encodeSnapshot(round: Round): Record<string, unknown> {
     o: round.over ? 1 : 0,
     h: round.holder ?? '',
     s: r2(round.heldSince),
-    p: round.players.map((p): WirePlayer => [p.id, r2(p.x), r2(p.y), r2(p.facing), r2(p.score), p.takes]),
+    p: round.players.map((p): WirePlayer => [p.id, r2(p.x), r2(p.y), r2(p.facing), r2(p.score), p.takes, r2(p.dazed)]),
   }
 }
 
@@ -47,12 +47,12 @@ export function decodeSnapshot(message: Record<string, unknown>): Snapshot | nul
   if (!Array.isArray(message.p) || message.p.length === 0 || message.p.length > 8) return null
   const players: WirePlayer[] = []
   for (const raw of message.p) {
-    if (!Array.isArray(raw) || raw.length !== 6) return null
-    const [id, x, y, facing, score, takes] = raw
+    if (!Array.isArray(raw) || raw.length !== 7) return null
+    const [id, x, y, facing, score, takes, dazed] = raw
     if (typeof id !== 'string' || id.length === 0) return null
-    if (![x, y, facing, score].every(isNumber) || score < 0) return null
+    if (![x, y, facing, score, dazed].every(isNumber) || score < 0 || dazed < 0) return null
     if (!isCount(takes)) return null
-    players.push([id, x, y, facing, score, takes])
+    players.push([id, x, y, facing, score, takes, dazed])
   }
   const holder = message.h === '' ? null : message.h
   if (holder !== null && !players.some(([id]) => id === holder)) return null
@@ -88,14 +88,14 @@ export function applySnapshot(round: Round, snap: Snapshot, me: string): Round {
   round.holder = snap.holder
   round.heldSince = snap.heldSince
   const seen = new Set<string>()
-  for (const [id, x, y, facing, score, takes] of snap.players) {
+  for (const [id, x, y, facing, score, takes, dazed] of snap.players) {
     seen.add(id)
     let p: Wearer | undefined = round.players.find((each) => each.id === id)
     if (!p) {
-      p = { id, x, y, facing, score: 0, takes: 0, mine: false, bot: false }
+      p = { id, x, y, facing, score: 0, takes: 0, dazed: 0, mine: false, bot: false }
       round.players.push(p)
     }
-    Object.assign(p, { x, y, facing, score, takes, mine: id === me })
+    Object.assign(p, { x, y, facing, score, takes, dazed, mine: id === me })
   }
   round.players = round.players.filter((p) => seen.has(p.id))
   return round
