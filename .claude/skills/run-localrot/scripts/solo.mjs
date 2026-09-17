@@ -5,7 +5,7 @@
  *
  * --game      messy-maze (default), zombie-tag, probable-stop, duck-hunt, punch-buggy
  *             time-it, feeding-time, find-yourself, sprint-triathlon, wack-attack, lady-luck, make-the-cut, let-him-cook
- *             i-see-the-light or synchronize-steps
+ *             i-see-the-light, synchronize-steps or helping-dad
  * --app       dev server URL (default http://localhost:5199/)
  * --out       where screenshots go (default <temp>/localrot-run/solo)
  * --steer     Messy Maze: drive your racer to the middle with the stand-ins'
@@ -58,13 +58,19 @@
  *             pick is not the one counted, if the sat-out round is not picked
  *             for it, or if a key in the reveal carries into the next round.
  *             Screenshots a pick, a reveal and the results.
+ *             Helping Dad: pick the torch up and lead it along the way out with
+ *             the mouse; once, a few seconds in, fling the mouse two cells
+ *             across a closed side of the cell it is in, through the wall. Fails unless that is a wall touched and
+ *             a stun - not a torch through a wall - the torch stays put while
+ *             stunned and is down after, and the torch reaches the finish.
+ *             Screenshots the countdown, the dark, Dad yelling and the results.
  * --software  render with SwiftShader instead of the GPU (slow; see cdp.mjs)
  *
  * Needs the dev server running; not the relay - alone you are your own host.
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, say, sleep, stepsPick, timeItStop, triathlonMove, whackMove } from './cdp.mjs'
+import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, say, sleep, stepsPick, timeItStop, torchMove, triathlonMove, whackMove } from './cdp.mjs'
 
 const opt = args({ game: 'messy-maze', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'solo'), port: '9400' })
 const game = GAMES[opt.game]
@@ -409,6 +415,60 @@ try {
     say('my turns', JSON.stringify(log))
     await page.waitFor(`!!document.querySelector('[data-again]')`, 300000)
     say('results', await page.shot('7-results.png'))
+  } else if (opt.steer && opt.game === 'helping-dad') {
+    let end = null
+    await sleep(800)
+    say('countdown', await page.shot('3-countdown.png'))
+    let flung = false
+    let shotDark = false
+    for (let i = 0; i < 6000; i++) {
+      const s = await page.eval(torchMove())
+      if (!s || s.over || s.finished !== null) {
+        say('ended', JSON.stringify(s))
+        break
+      }
+      if (!shotDark && s.clock > 3 && s.held) {
+        shotDark = true
+        say('in the dark', JSON.stringify(s), await page.shot('4-dark.png'))
+      }
+      if (!flung && s.clock > 5 && s.held && s.stunned === 0) {
+        flung = true
+        const before = s
+        // Two cells across a closed side of the cell the torch is in: straight through a wall.
+        const wall = await page.eval(`(async () => {
+          const mz = await import('/src/modules/31-helping-dad/internal/maze.ts')
+          const g = ${gameState('helping-dad')}
+          const me = g.players.find((p) => p.mine)
+          const maze = mz.mazeFor(g.seed)
+          const cell = mz.cellAt(me)
+          const side = [[1, 0], [-1, 0], [0, 1], [0, -1]].find(([dc, dr]) => !mz.isOpen(maze, cell, dc, dr))
+          return { x: me.x + side[0] * 2 * mz.GRID.cell, z: me.z + side[1] * 2 * mz.GRID.cell }
+        })()`)
+        end = wall
+        await page.eval(torchMove({ at: end }))
+        await sleep(700)
+        const hitWall = await page.eval(torchMove({ at: end }))
+        const banner = await page.eval(`document.querySelector('[data-banner]')?.dataset.banner ?? null`)
+        say('flung through a wall', JSON.stringify({ before, after: hitWall, banner }), await page.shot('5-dad-yells.png'))
+        if (hitWall.hits !== before.hits + 1 || hitWall.stunned <= 0 || banner !== 'yell') throw new Error('flinging the mouse through the walls was not a wall touched')
+        if (Math.hypot(hitWall.x - end.x, hitWall.z - end.z) < 1) throw new Error('the torch went through the walls')
+        await sleep(300)
+        const still = await page.eval(torchMove({ at: end }))
+        if (Math.hypot(still.x - hitWall.x, still.z - hitWall.z) > 1e-3) throw new Error('the torch moved while stunned')
+        await page.waitFor(`(() => { const g = ${gameState('helping-dad')}; return g.players.find((p) => p.mine).stunned === 0 })()`, 4000)
+        const after = await page.eval(torchMove({ at: end }))
+        await sleep(200)
+        const down = await page.eval(torchMove({ at: end }))
+        say('after the stun', JSON.stringify(down))
+        if (down.held || Math.hypot(down.x - after.x, down.z - after.z) > 1e-3) throw new Error('the torch was not left down after the stun')
+      }
+      await sleep(25)
+    }
+    await page.waitFor(`!!document.querySelector('[data-again]')`, 150000)
+    await sleep(500)
+    const places = await page.eval(`(() => { const g = ${gameState('helping-dad')}; return g.players.map((p) => [p.id, p.finished, p.hits]) })()`)
+    say('results', JSON.stringify(places), await page.shot('6-results.png'))
+    if (places[0][1] === null) throw new Error('never reached the finish')
   } else if (opt.steer && opt.game === 'synchronize-steps') {
     const state = () => page.eval(`(() => { const g = ${gameState('synchronize-steps')}; const me = g.players.find((p) => p.mine); return { round: g.round, phase: g.phase, clock: +g.clock.toFixed(2), step: me.step, pick: me.pick, last: me.last, out: me.out, all: g.players.map((p) => p.step) } })()`)
     const waitPhase = (phase, round) => page.waitFor(`(() => { const g = ${gameState('synchronize-steps')}; return g.phase === 'over' || (g.phase === ${JSON.stringify(phase)} && g.round === ${round}) })()`, 15000)

@@ -21,9 +21,9 @@
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, say, sleep, stepsPick, timeItStop, triathlonMove, whackMove } from './cdp.mjs'
+import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, say, sleep, stepsPick, timeItStop, torchMove, triathlonMove, whackMove } from './cdp.mjs'
 
-const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt,feeding-time,sprint-triathlon,punch-buggy,time-it,wack-attack,lady-luck,find-yourself,make-the-cut,let-him-cook,i-see-the-light,synchronize-steps', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
+const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt,feeding-time,sprint-triathlon,punch-buggy,time-it,wack-attack,lady-luck,find-yourself,make-the-cut,let-him-cook,i-see-the-light,helping-dad,synchronize-steps', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
 const count = Number(opt.players)
 const games = String(opt.games).split(',')
 const pages = []
@@ -336,6 +336,45 @@ try {
       await host.shot(`${game}-host.png`)
       await pages[ids.indexOf(landed.id)].shot(`${game}-guest.png`)
       if (!agree) throw new Error(`${game}: browsers disagree - ${views.join(' | ')}`)
+      await host.eval('window.__mg.backOut()')
+      for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
+      continue
+    }
+
+    if (game === 'helping-dad') {
+      // Every browser leads its torch along the way out for ten seconds; then
+      // the last guest flings its mouse into a wall. The host should have every
+      // guest's torch where that guest's own screen has it, and the wall.
+      await host.waitFor(`(() => { const g = ${gameState(game)}; return g && g.elapsed > 3.2 })()`, 30000)
+      const until = Date.now() + 10000
+      while (Date.now() < until) {
+        await Promise.all(pages.map((p) => p.eval(torchMove())))
+        await sleep(40)
+      }
+      await sleep(600)
+      const own = await Promise.all(pages.map((p) => p.eval(`(() => { const g = ${gameState(game)}; const me = g.players.find((x) => x.mine); return [me.id, me.x, me.z, me.hits] })()`)))
+      const onHost = JSON.parse(await host.eval(`(() => { const g = ${gameState(game)}; return JSON.stringify(g.players.map((x) => [x.id, x.x, x.z, x.hits])) })()`))
+      const start = await host.eval(`(async () => { const r = await import('/src/modules/31-helping-dad/internal/rules.ts'); return r.startPoint(${gameState(game)}.seed) })()`)
+      own.forEach(([id, x, z]) => {
+        const h = onHost.find((t) => t[0] === id)
+        const off = Math.hypot(h[1] - x, h[2] - z)
+        const went = Math.hypot(x - start.x, z - start.z)
+        say(`${game}: ${id} own screen (${x.toFixed(2)}, ${z.toFixed(2)}) host (${h[1].toFixed(2)}, ${h[2].toFixed(2)}), ${off.toFixed(3)} apart, ${went.toFixed(1)} m from the start`)
+        if (went < 2) throw new Error(`${game}: ${id} never got going`)
+        if (off > 0.05) throw new Error(`${game}: the host has ${id}'s torch somewhere else`)
+      })
+      const end = await host.eval(`(async () => { const r = await import('/src/modules/31-helping-dad/internal/rules.ts'); return r.finishPoint(${gameState(game)}.seed) })()`)
+      const before = own[own.length - 1][3]
+      for (let i = 0; i < 20; i++) {
+        await mover.eval(torchMove({ at: end }))
+        await sleep(40)
+      }
+      await sleep(600)
+      const views = await Promise.all(pages.map((p) => p.eval(`(() => { const g = ${gameState(game)}; return g.players.find((x) => x.id === ${JSON.stringify(moverId)}).hits })()`)))
+      say(`${game}: guest ${moverId} flung into a wall: hits ${before} -> ${JSON.stringify(views)}`)
+      await host.shot(`${game}-host.png`)
+      await mover.shot(`${game}-guest.png`)
+      if (views.some((h) => h !== before + 1)) throw new Error(`${game}: not every browser saw the wall touched once`)
       await host.eval('window.__mg.backOut()')
       for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
       continue

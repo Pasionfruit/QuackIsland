@@ -398,9 +398,11 @@ const ENTRIES = [
       'A torch in your own colour, and a puzzle in the dark. Go slowly.',
       'Walk into a wall and you get shouted at, and stand there stunned for a second and a half while everybody else gets on with it.',
     ],
-    controls: [],
+    controls: [{ input: 'Mouse', does: 'Move throughout maze' }],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `31-helping-dad`. The assets stage is still to do - the torches
+    // are rings and glows, Dad is the island's capsule and the walls are boxes.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'synchronize-steps',

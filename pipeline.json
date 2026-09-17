@@ -119,7 +119,8 @@
         "27-find-yourself",
         "28-feeding-time",
         "29-time-it",
-        "30-synchronize-steps"
+        "30-synchronize-steps",
+        "31-helping-dad"
       ]
     }
   ],
@@ -2626,6 +2627,84 @@
         "No models: players are the island capsule, steps are boxes",
         "No moving camera",
         "No showing picks before the reveal",
+        "No sound, no score kept between games"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "31-helping-dad",
+      "phase": "P6",
+      "title": "Minigame 18, Helping Dad: a maze in the dark, a torch in your colour on the mouse, a wall touched is Dad yelling and a second and a half stunned",
+      "status": "in_progress",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "31.1",
+          "title": "The maze: seeded, one way through, walls as boxes, how far every cell is from the finish",
+          "status": "done"
+        },
+        {
+          "id": "31.2",
+          "title": "The torch: picked up with the mouse, follows it no faster than a walk, a wall touched drops it and stuns for 1.5 s",
+          "status": "in_progress"
+        },
+        {
+          "id": "31.3",
+          "title": "The end: placed in the order you reach the finish, then by how far you had left, two minutes at most",
+          "status": "planned"
+        },
+        {
+          "id": "31.4",
+          "title": "A still camera over the maze in the dark, lit only by your own torch, Dad at the top",
+          "status": "planned"
+        },
+        {
+          "id": "31.5",
+          "title": "One maze shared across the lobby, your torch judged on your own screen, stand-ins only when alone",
+          "status": "planned"
+        },
+        {
+          "id": "31.6",
+          "title": "Contract, tests, MODULE.md",
+          "status": "planned"
+        },
+        {
+          "id": "31.7",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "pending"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: players are torches and the island capsule, walls are boxes",
+        "No moving camera",
+        "No torch lighting the maze but your own",
         "No sound, no score kept between games"
       ],
       "budgets": {

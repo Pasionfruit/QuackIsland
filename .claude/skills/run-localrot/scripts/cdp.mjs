@@ -256,6 +256,62 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'players',
   },
+  'helping-dad': {
+    title: 'Helping Dad',
+    screen: 'HelpingDadScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
+}
+
+/**
+ * An expression that, in a page showing Helping Dad, moves the mouse the way a
+ * careful player does: onto your torch if it is down, and otherwise a little
+ * ahead of it along the way to the finish - the middle of this cell, then the
+ * middle of the next - with a real pointermove at that spot on the screen,
+ * projected with the game's own camera fit. With `at` it moves the mouse to that
+ * point in the maze instead, wherever it is. Evaluates to your torch as it was.
+ */
+export function torchMove({ ahead = 0.25, at = null } = {}) {
+  return `(async () => {
+    const cam = await import('/src/modules/31-helping-dad/internal/camera.ts')
+    const mz = await import('/src/modules/31-helping-dad/internal/maze.ts')
+    const g = ${gameState('helping-dad')}
+    if (!g || g.players.length === 0) return null
+    const me = g.players.find((p) => p.mine)
+    const state = { x: +me.x.toFixed(3), z: +me.z.toFixed(3), held: me.held, stunned: +me.stunned.toFixed(2), hits: me.hits, finished: me.finished, over: g.over, clock: +(g.elapsed - 3).toFixed(2) }
+    if (g.over || me.finished !== null) return state
+    let target = ${JSON.stringify(at)}
+    if (!target) {
+      if (!me.held) target = { x: me.x, z: me.z }
+      else {
+        const goal = mz.routeTarget(mz.mazeFor(g.seed), me)
+        const d = Math.hypot(goal.x - me.x, goal.z - me.z)
+        const go = Math.min(d, ${ahead})
+        target = d < 1e-6 ? goal : { x: me.x + ((goal.x - me.x) / d) * go, z: me.z + ((goal.z - me.z) / d) * go }
+      }
+    }
+    const canvas = document.querySelector('[data-board] canvas')
+    const rect = canvas.getBoundingClientRect()
+    const aspect = rect.width / rect.height
+    const shot = cam.frameScene(aspect)
+    const point = { x: target.x, y: cam.HOLD, z: target.z }
+    const sub = (p, q) => ({ x: p.x - q.x, y: p.y - q.y, z: p.z - q.z })
+    const dot = (p, q) => p.x * q.x + p.y * q.y + p.z * q.z
+    const norm = (p) => { const l = Math.hypot(p.x, p.y, p.z); return { x: p.x / l, y: p.y / l, z: p.z / l } }
+    const cross = (p, q) => ({ x: p.y * q.z - p.z * q.y, y: p.z * q.x - p.x * q.z, z: p.x * q.y - p.y * q.x })
+    const eye = { x: shot.x, y: shot.y, z: shot.z }
+    const forward = norm(sub(shot.target, eye))
+    const right = norm(cross(forward, { x: 0, y: 1, z: 0 }))
+    const up = cross(right, forward)
+    const rel = sub(point, eye)
+    const depth = dot(rel, forward)
+    const half = Math.tan((cam.FOV * Math.PI) / 360)
+    const clientX = rect.left + ((dot(rel, right) / (depth * half * aspect) + 1) / 2) * rect.width
+    const clientY = rect.top + ((1 - dot(rel, up) / (depth * half)) / 2) * rect.height
+    canvas.dispatchEvent(new PointerEvent('pointermove', { clientX, clientY, bubbles: true }))
+    return state
+  })()`
 }
 
 /**
