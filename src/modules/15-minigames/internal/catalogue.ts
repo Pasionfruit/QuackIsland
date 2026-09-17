@@ -336,9 +336,15 @@ const ENTRIES = [
       'First person, everybody against everybody, with a gun that needs a moment between shots. A minute and fifteen on the clock.',
       'Being eliminated does not take you out of it - you stay in and keep hunting. The last player to go wins.',
     ],
-    controls: [],
+    controls: [
+      { input: 'WASD', does: 'Move' },
+      { input: 'Mouse', does: 'Aim' },
+      { input: 'Left click', does: 'Shoot' },
+    ],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `32-hes-one-shot`. The assets stage is still to do - players
+    // are the island's capsule, the cover is boxes and the gun is three more.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'wheres-midnight',

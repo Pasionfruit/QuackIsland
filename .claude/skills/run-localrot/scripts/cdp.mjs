@@ -262,6 +262,87 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'players',
   },
+  'hes-one-shot': {
+    title: "He's One Shot",
+    screen: 'HesOneShotScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
+}
+
+/**
+ * An expression that, in a page showing He's One Shot, plays a moment of it
+ * through the real controls, and evaluates to your player as it was.
+ *
+ * Headless Chrome will not lock the pointer, so the first call stands in for
+ * the lock: `document.pointerLockElement` is made to answer with the arena and
+ * a `pointerlockchange` is sent - the screen then reads the mouse exactly as it
+ * does under a real lock. After that, everything goes through real events:
+ * `mousemove` with `movementX`/`movementY` to turn, `keydown`/`keyup` on W to
+ * walk, `pointerdown` on the arena to shoot.
+ *
+ * `mode: 'lock'` only takes the mouse and lets go of the keys. `mode: 'play'`
+ * turns to the nearest player still standing that it has a clear line to - no
+ * faster than a hand turns - and shoots when on them and the gun is ready; with
+ * nobody in sight it walks towards somewhere open, somewhere new every few
+ * seconds. With `fire: false` it never pulls the trigger.
+ */
+export function oneShotPlay({ mode = 'play', fire = true } = {}) {
+  return `(async () => {
+    const arena = await import('/src/modules/32-hes-one-shot/internal/arena.ts')
+    const rules = await import('/src/modules/32-hes-one-shot/internal/rules.ts')
+    const screen = await import('/src/modules/32-hes-one-shot/internal/HesOneShotScreen.tsx')
+    const w = (window.__hos ??= { goal: null, goalAt: 0, held: new Set() })
+    const press = (code, down) => {
+      if (down === w.held.has(code)) return
+      down ? w.held.add(code) : w.held.delete(code)
+      window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, key: code.slice(3).toLowerCase() }))
+    }
+    if (!w.locked) {
+      Object.defineProperty(document, 'pointerLockElement', { configurable: true, get: () => document.querySelector('[data-board]') })
+      document.dispatchEvent(new Event('pointerlockchange'))
+      w.locked = true
+    }
+    const g = ${gameState('hes-one-shot')}
+    if (!g || g.players.length === 0) return null
+    const me = g.players.find((p) => p.mine)
+    const state = { clock: +(g.elapsed - 3).toFixed(2), over: g.over, x: +me.x.toFixed(3), z: +me.z.toFixed(3), yaw: +me.yaw.toFixed(4), pitch: +me.pitch.toFixed(4), out: me.out, kills: me.kills, shotAt: me.shotAt, fired: false, target: null }
+    if (${JSON.stringify(mode)} === 'lock' || g.over || g.elapsed < 3) {
+      for (const code of [...w.held]) press(code, false)
+      return state
+    }
+    const A = arena.arenaFor(g.seed)
+    const eye = rules.eyeOf(me)
+    let target = null
+    let best = Infinity
+    for (const p of g.players) {
+      if (p === me || !rules.isStanding(p)) continue
+      const d = Math.hypot(p.x - me.x, p.z - me.z)
+      if (d < best && arena.lineClear(A, eye, { x: p.x, y: 1.2, z: p.z })) { best = d; target = p }
+    }
+    let wantYaw
+    let wantPitch = 0
+    if (target) {
+      wantYaw = Math.atan2(-(target.x - me.x), -(target.z - me.z))
+      wantPitch = Math.atan2(1.2 - rules.BODY.eye, best)
+      state.target = target.id
+    } else {
+      if (!w.goal || performance.now() - w.goalAt > 3000) { w.goal = arena.openPoint(A, Math.random, 0.5); w.goalAt = performance.now() }
+      wantYaw = Math.atan2(-(w.goal.x - me.x), -(w.goal.z - me.z))
+    }
+    const turn = Math.max(-0.35, Math.min(0.35, rules.wrapAngle(wantYaw - me.yaw)))
+    const mx = Math.round(-turn / screen.SENSITIVITY)
+    const my = Math.round((me.pitch - wantPitch) / screen.SENSITIVITY)
+    if (mx || my) document.dispatchEvent(new MouseEvent('mousemove', { movementX: mx, movementY: my, bubbles: true }))
+    press('KeyW', !target)
+    const board = document.querySelector('[data-board]')
+    if (target && ${fire} && Math.abs(rules.wrapAngle(wantYaw - me.yaw)) < 0.025 && rules.cooldownLeft(g, me) <= 0) {
+      board.dispatchEvent(new PointerEvent('pointerdown', { button: 0, bubbles: true }))
+      board.dispatchEvent(new PointerEvent('pointerup', { button: 0, bubbles: true }))
+      state.fired = true
+    }
+    return state
+  })()`
 }
 
 /**

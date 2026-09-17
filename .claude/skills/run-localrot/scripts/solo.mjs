@@ -5,7 +5,7 @@
  *
  * --game      messy-maze (default), zombie-tag, probable-stop, duck-hunt, punch-buggy
  *             time-it, feeding-time, find-yourself, sprint-triathlon, wack-attack, lady-luck, make-the-cut, let-him-cook
- *             i-see-the-light, synchronize-steps or helping-dad
+ *             i-see-the-light, synchronize-steps, helping-dad or hes-one-shot
  * --app       dev server URL (default http://localhost:5199/)
  * --out       where screenshots go (default <temp>/localrot-run/solo)
  * --steer     Messy Maze: drive your racer to the middle with the stand-ins'
@@ -64,13 +64,22 @@
  *             a stun - not a torch through a wall - the torch stays put while
  *             stunned and is down after, and the torch reaches the finish.
  *             Screenshots the countdown, the dark, Dad yelling and the results.
+ *             He's One Shot: stands in for the pointer lock (see oneShotPlay), then
+ *             checks the controls one at a time - a click in the countdown
+ *             shoots nothing, the mouse turns you by exactly what it moved, W
+ *             walks you the way you look, a click shoots and a second click
+ *             straight after does not - and then hunts for the rest of the game,
+ *             turning with the mouse and shooting whoever it has a clear line
+ *             to. Fails unless every control does what it says and the game
+ *             ends. Screenshots the countdown, a shot, a hit, being a hunter
+ *             and the results.
  * --software  render with SwiftShader instead of the GPU (slow; see cdp.mjs)
  *
  * Needs the dev server running; not the relay - alone you are your own host.
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, say, sleep, stepsPick, timeItStop, torchMove, triathlonMove, whackMove } from './cdp.mjs'
+import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, oneShotPlay, say, sleep, stepsPick, timeItStop, torchMove, triathlonMove, whackMove } from './cdp.mjs'
 
 const opt = args({ game: 'messy-maze', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'solo'), port: '9400' })
 const game = GAMES[opt.game]
@@ -415,6 +424,83 @@ try {
     say('my turns', JSON.stringify(log))
     await page.waitFor(`!!document.querySelector('[data-again]')`, 300000)
     say('results', await page.shot('7-results.png'))
+  } else if (opt.steer && opt.game === 'hes-one-shot') {
+    const S = await page.eval(`(async () => (await import('/src/modules/32-hes-one-shot/internal/HesOneShotScreen.tsx')).SENSITIVITY)()`)
+    const state = () =>
+      page.eval(`(() => { const g = ${gameState('hes-one-shot')}; const me = g.players.find((p) => p.mine); return { clock: +(g.elapsed - 3).toFixed(2), over: g.over, x: me.x, z: me.z, yaw: me.yaw, pitch: me.pitch, out: me.out, kills: me.kills, shotAt: me.shotAt, shots: g.shots.length, cooldown: +(document.querySelector('[data-cooldown]')?.dataset.cooldown ?? -1) } })()`)
+    const click = () => page.eval(`(() => { const b = document.querySelector('[data-board]'); b.dispatchEvent(new PointerEvent('pointerdown', { button: 0, bubbles: true })); b.dispatchEvent(new PointerEvent('pointerup', { button: 0, bubbles: true })) })()`)
+    const walkKey = (down) => page.eval(`window.dispatchEvent(new KeyboardEvent('${down ? 'keydown' : 'keyup'}', { code: 'KeyW', key: 'w' }))`)
+    await page.eval(oneShotPlay({ mode: 'lock' }))
+    await sleep(500)
+    await click()
+    say('countdown', await page.shot('3-countdown.png'))
+    await page.waitFor(`(() => { const g = ${gameState('hes-one-shot')}; return g.elapsed > 3.3 })()`, 10000)
+    const s0 = await state()
+    if (s0.shotAt >= 0) throw new Error('a click in the countdown fired a shot')
+
+    await page.eval(`document.dispatchEvent(new MouseEvent('mousemove', { movementX: 150, movementY: -40, bubbles: true }))`)
+    await sleep(150)
+    const s1 = await state()
+    const turned = Math.atan2(Math.sin(s0.yaw - s1.yaw), Math.cos(s0.yaw - s1.yaw))
+    say('mouse 150 right, 40 up: turned', turned.toFixed(4), 'rad right, pitch', s1.pitch.toFixed(4))
+    if (Math.abs(turned - 150 * S) > 0.002 || Math.abs(s1.pitch - 40 * S) > 0.002) throw new Error(`the mouse did not turn the view by what it moved: ${JSON.stringify({ s0, s1 })}`)
+
+    await walkKey(true)
+    await sleep(700)
+    await walkKey(false)
+    await sleep(100)
+    const s2 = await state()
+    const moved = { x: s2.x - s1.x, z: s2.z - s1.z }
+    const along = moved.x * -Math.sin(s1.yaw) + moved.z * -Math.cos(s1.yaw)
+    say('held W 0.7 s: moved', Math.hypot(moved.x, moved.z).toFixed(2), 'm,', along.toFixed(2), 'of it forward')
+    if (Math.hypot(moved.x, moved.z) < 0.8 || along < 0.5 * Math.hypot(moved.x, moved.z)) throw new Error('W did not walk the way the view looks')
+
+    await click()
+    const shotFile = await page.shot('4-shot.png')
+    await sleep(100)
+    const s3 = await state()
+    await click()
+    await sleep(100)
+    const s4 = await state()
+    say('clicked twice', JSON.stringify({ first: s3.shotAt > s2.shotAt, cooldown: s3.cooldown, second: s4.shotAt !== s3.shotAt }), shotFile)
+    if (!(s3.shotAt > s2.shotAt) || s3.cooldown <= 0) throw new Error('a click did not fire')
+    if (s4.shotAt !== s3.shotAt) throw new Error('a second click inside the cooldown fired again')
+
+    let fired = 0
+    let firedAsHunter = 0
+    let kills = 0
+    let outAt = null
+    let last = null
+    for (let i = 0; i < 4000; i++) {
+      const s = await page.eval(oneShotPlay())
+      if (!s) break
+      last = s
+      if (s.over) break
+      if (s.fired) {
+        fired += 1
+        if (s.out !== null) firedAsHunter += 1
+      }
+      if (s.kills > kills) {
+        kills = s.kills
+        if (kills === 1) {
+          await sleep(60)
+          say('got somebody', JSON.stringify(s), await page.shot('5-hit.png'))
+        }
+      }
+      if (s.out !== null && outAt === null) {
+        outAt = s.out
+        await sleep(400)
+        say('shot down', JSON.stringify(s), await page.shot('6-hunter.png'))
+      }
+      await sleep(30)
+    }
+    await page.eval(oneShotPlay({ mode: 'lock' }))
+    say('hunted', JSON.stringify({ fired, firedAsHunter, kills, outAt, end: last && last.clock }))
+    await page.waitFor(`!!document.querySelector('[data-again]')`, 100000)
+    await sleep(400)
+    const places = await page.eval(`(() => { const g = ${gameState('hes-one-shot')}; return JSON.stringify(g.players.map((p) => [p.id, p.out, p.by, p.kills])) })()`)
+    say('results [id, out, by, kills]', places, await page.shot('7-results.png'))
+    if (fired === 0) throw new Error('never got a shot off while hunting')
   } else if (opt.steer && opt.game === 'helping-dad') {
     let end = null
     await sleep(800)

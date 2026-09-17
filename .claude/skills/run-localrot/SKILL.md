@@ -100,7 +100,14 @@ picks every round with a number key or the buttons - once changing its mind - si
 round 3 out, and presses a key in each reveal. It fails if a pick is not the one
 counted, if the sat-out round is not picked for it, or if a key pressed in the
 reveal carries into the next round. It screenshots a pick, the others' ticks, a
-reveal and the results. Prints the
+reveal and the results. For He's One Shot (`--game hes-one-shot`) it stands in
+for the pointer lock (see the gotcha below), then checks each control through
+real events - a click in the countdown shoots nothing, a `mousemove` turns the
+view by exactly its `movementX`/`movementY` times the sensitivity, W walks the
+way you look, a click fires and a second click inside the cooldown does not -
+and then hunts for the rest of the game, turning onto whoever it has a clear line
+to and shooting. It aims perfectly, so its games are short. It screenshots the
+countdown, a shot, a hit, being a hunter and the results. Prints the
 race's layout and seed, each spin, the finishing place, and console errors.
 About 30 seconds.
 
@@ -111,7 +118,7 @@ node .claude/skills/run-localrot/scripts/lobby.mjs --players 8 --out <dir>
 ```
 
 Starts N **separate** headless Chromes, puts them in one lobby, then for each
-game (default `zombie-tag,messy-maze,probable-stop,duck-hunt,feeding-time,sprint-triathlon,punch-buggy,time-it,wack-attack,lady-luck,find-yourself,make-the-cut,let-him-cook,i-see-the-light,synchronize-steps`): the host opens and starts it, and it
+game (default `zombie-tag,messy-maze,probable-stop,duck-hunt,feeding-time,sprint-triathlon,punch-buggy,time-it,wack-attack,lady-luck,find-yourself,make-the-cut,let-him-cook,i-see-the-light,helping-dad,synchronize-steps,hes-one-shot`): the host opens and starts it, and it
 checks every browser has the same round (same seed, maze and headcount - Zombie
 Tag has no seed or maze, so there it is headcount alone) with exactly one body
 marked as its own, then that a guest holding a key moves on
@@ -138,7 +145,10 @@ running through a green and a red shows its steps on the host and is still in;
 in Synchronize Steps, every browser picks for three rounds, in twos so there are
 pairs and crowds, with keys or buttons and some changing their minds. At each
 reveal every browser must agree on the picks and steps, and each pick must be the
-one its browser meant.
+one its browser meant. In He's One Shot, that a guest holding W walks on the
+host's screen, then every browser hunts for twenty seconds with the real
+controls, and every browser must agree on who is out, by whom, and the kills -
+with at least one elimination a guest's own shot made.
 The other browsers are left idle there, so they go out on the first red for a
 pointer that was never in the circle - that is the rules, not a failure. Screenshots the host and a guest per game. Exits non-zero on
 any disagreement. Needs the relay. About a minute for eight.
@@ -180,5 +190,9 @@ the lobby popup eight times.
   first: copy `server/relay.mjs` somewhere, log inside the rate-limit branch,
   run it on another port, and start a dev server with
   `VITE_RELAY_URL=ws://localhost:<port>`.
+- **Headless Chrome will not lock the pointer.** He's One Shot reads the mouse
+  only while `document.pointerLockElement` is its arena, so `oneShotPlay` makes
+  that property answer with the arena and sends `pointerlockchange`. Everything
+  after that is the real code path; only the lock itself is stood in for.
 - **Screenshots at 480x300** (what `lobby.mjs` uses, to keep eight browsers
   light) cut off the results card. That is the window, not the layout.

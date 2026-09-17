@@ -120,7 +120,8 @@
         "28-feeding-time",
         "29-time-it",
         "30-synchronize-steps",
-        "31-helping-dad"
+        "31-helping-dad",
+        "32-hes-one-shot"
       ]
     }
   ],
@@ -161,7 +162,8 @@
         "28-feeding-time",
         "29-time-it",
         "30-synchronize-steps",
-        "31-helping-dad"
+        "31-helping-dad",
+        "32-hes-one-shot"
       ],
       "generation": 1,
       "contract": {
@@ -345,7 +347,8 @@
         "28-feeding-time",
         "29-time-it",
         "30-synchronize-steps",
-        "31-helping-dad"
+        "31-helping-dad",
+        "32-hes-one-shot"
       ],
       "generation": 1,
       "contract": {
@@ -855,7 +858,8 @@
         "28-feeding-time",
         "29-time-it",
         "30-synchronize-steps",
-        "31-helping-dad"
+        "31-helping-dad",
+        "32-hes-one-shot"
       ],
       "generation": 1,
       "contract": {
@@ -1364,7 +1368,8 @@
         "28-feeding-time",
         "29-time-it",
         "30-synchronize-steps",
-        "31-helping-dad"
+        "31-helping-dad",
+        "32-hes-one-shot"
       ],
       "generation": 1,
       "contract": {
@@ -2710,6 +2715,89 @@
         "No models: players are torches and the island capsule, walls are boxes",
         "No moving camera",
         "No torch lighting the maze but your own",
+        "No sound, no score kept between games"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "32-hes-one-shot",
+      "phase": "P6",
+      "title": "Minigame 14, He's One Shot: first person, everybody against everybody, one shot eliminates, the eliminated keep hunting, the last to go wins, a minute and fifteen",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "32.1",
+          "title": "The arena: a walled square, seeded cover taller than anybody, a ring to start on, no walking through anything",
+          "status": "done"
+        },
+        {
+          "id": "32.2",
+          "title": "The gun: one shot eliminates, a second and a half between shots, cover stops a shot, the eliminated keep shooting",
+          "status": "done"
+        },
+        {
+          "id": "32.3",
+          "title": "The end: the last eliminated wins, anybody standing at 1:15 shares first",
+          "status": "done"
+        },
+        {
+          "id": "32.4",
+          "title": "The controls: WASD to move, the mouse to aim, left click to shoot",
+          "status": "done"
+        },
+        {
+          "id": "32.5",
+          "title": "First person in the arena: a gun in your colour, tracers, hunters in grey, a crosshair that shows the cooldown",
+          "status": "done"
+        },
+        {
+          "id": "32.6",
+          "title": "One arena shared across the lobby, your moves and shots judged on your own screen and checked by the host, stand-ins only when alone",
+          "status": "done"
+        },
+        {
+          "id": "32.7",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "32.8",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-17T16:03:07.578Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: players are the island capsule, cover is boxes",
+        "No health, ammo, reloading, jumping or crouching",
         "No sound, no score kept between games"
       ],
       "budgets": {

@@ -21,9 +21,9 @@
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, say, sleep, stepsPick, timeItStop, torchMove, triathlonMove, whackMove } from './cdp.mjs'
+import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, oneShotPlay, say, sleep, stepsPick, timeItStop, torchMove, triathlonMove, whackMove } from './cdp.mjs'
 
-const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt,feeding-time,sprint-triathlon,punch-buggy,time-it,wack-attack,lady-luck,find-yourself,make-the-cut,let-him-cook,i-see-the-light,helping-dad,synchronize-steps', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
+const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt,feeding-time,sprint-triathlon,punch-buggy,time-it,wack-attack,lady-luck,find-yourself,make-the-cut,let-him-cook,i-see-the-light,helping-dad,synchronize-steps,hes-one-shot', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
 const count = Number(opt.players)
 const games = String(opt.games).split(',')
 const pages = []
@@ -385,6 +385,54 @@ try {
       await host.shot(`${game}-host.png`)
       await mover.shot(`${game}-guest.png`)
       if (views.some((h) => h !== before + 1)) throw new Error(`${game}: not every browser saw the wall touched once`)
+      await host.eval('window.__mg.backOut()')
+      for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
+      continue
+    }
+
+    if (game === 'hes-one-shot') {
+      // Every browser takes the mouse; a guest walks and the host should see it.
+      // Then everybody hunts for twenty seconds, with the real controls, and
+      // every browser should agree on who is out, by whom, and on the kills -
+      // with guests' own shots among the hits the host counted.
+      await host.waitFor(`(() => { const g = ${gameState(game)}; return g && g.elapsed > 3.2 })()`, 30000)
+      await Promise.all(pages.map((p) => p.eval(oneShotPlay({ mode: 'lock' }))))
+      const where = () => host.eval(`(() => { const g = ${gameState(game)}; const p = g.players.find((x) => x.id === ${JSON.stringify(moverId)}); return { x: p.x, z: p.z } })()`)
+      const before = await where()
+      await mover.eval(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW', key: 'w' }))`)
+      await sleep(1500)
+      await mover.eval(`window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyW', key: 'w' }))`)
+      await sleep(400)
+      const after = await where()
+      const moved = Math.hypot(after.x - before.x, after.z - before.z)
+      say(`${game}: guest ${moverId} held W; host saw it move ${moved.toFixed(2)} m`)
+      if (moved < 1) throw new Error(`${game}: the host never saw the guest walk`)
+
+      const until = Date.now() + 20000
+      let fired = 0
+      while (Date.now() < until) {
+        const states = await Promise.all(pages.map((p) => p.eval(oneShotPlay())))
+        fired += states.filter((s) => s && s.fired).length
+        if (states[0] && states[0].over) break
+        await sleep(40)
+      }
+      await Promise.all(pages.map((p) => p.eval(oneShotPlay({ mode: 'lock' }))))
+      let views = []
+      for (let tries = 0; tries < 6; tries++) {
+        await sleep(600)
+        views = await Promise.all(pages.map((p) => p.eval(`(() => { const g = ${gameState(game)}; return JSON.stringify(g.players.map((x) => [x.id, x.out, x.by, x.kills])) })()`)))
+        if (new Set(views).size === 1) break
+      }
+      const agree = new Set(views).size === 1
+      const table = JSON.parse(views[0])
+      const out = table.filter((r) => r[1] !== null)
+      const byGuests = out.filter((r) => r[2] !== null && r[2] > 0)
+      say(`${game}: ${fired} shots fired; ${out.length} eliminated, ${byGuests.length} by guests; every browser agrees ${agree}`, views[0])
+      await host.shot(`${game}-host.png`)
+      await mover.shot(`${game}-guest.png`)
+      if (!agree) throw new Error(`${game}: browsers disagree - ${views.join(' | ')}`)
+      if (out.length === 0) throw new Error(`${game}: nobody was eliminated`)
+      if (byGuests.length === 0) throw new Error(`${game}: no guest's shot ever counted on the host`)
       await host.eval('window.__mg.backOut()')
       for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
       continue
