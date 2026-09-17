@@ -123,6 +123,11 @@ turn together - a few minutes. Prints the
 race's layout and seed, each spin, the finishing place, and console errors.
 About 30 seconds.
 
+**Musical Mayhem** (`--game musical-mayhem`) and **Where's Midnight?**
+(`--game wheres-midnight`) are opened and screenshotted but have no `--steer`
+yet: the briefing and the round, and nothing played. Both read their state the
+usual way, so `gameState` gives you the floor or the search to drive by hand.
+
 ### A full lobby
 
 ```bash

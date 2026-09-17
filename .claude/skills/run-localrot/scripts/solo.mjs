@@ -5,7 +5,8 @@
  *
  * --game      messy-maze (default), zombie-tag, probable-stop, duck-hunt, punch-buggy
  *             time-it, feeding-time, find-yourself, sprint-triathlon, wack-attack, lady-luck, make-the-cut, let-him-cook
- *             i-see-the-light, synchronize-steps, helping-dad, hes-one-shot, keyboard-warrior or chef-caricature
+ *             i-see-the-light, synchronize-steps, helping-dad, hes-one-shot, keyboard-warrior, chef-caricature,
+ *             musical-mayhem or wheres-midnight (the last two open and screenshot only - no --steer yet)
  * --app       dev server URL (default http://localhost:5199/)
  * --out       where screenshots go (default <temp>/localrot-run/solo)
  * --steer     Messy Maze: drive your racer to the middle with the stand-ins'

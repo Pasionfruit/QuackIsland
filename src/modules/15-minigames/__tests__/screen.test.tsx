@@ -169,7 +169,7 @@ describe('a game briefing', () => {
 
   it('says so when a game has no controls written down', () => {
     const where = mount()
-    act(() => openMinigame('wheres-midnight'))
+    act(() => openMinigame('tetris-master'))
     click(where.querySelector('[data-leaf="controls"]'))
     expect(where.textContent).toContain('Not written down yet')
   })
@@ -197,8 +197,8 @@ describe('a game briefing', () => {
 
   it('opens a free slot like any other, and says a number is waiting', () => {
     const where = mount()
-    act(() => openMinigame('reserved-23'))
-    expect(where.textContent).toContain('23')
+    act(() => openMinigame('reserved-24'))
+    expect(where.textContent).toContain('24')
     expect(where.textContent).toContain('waiting for a game')
     expect(where.querySelector('[data-play]')).not.toBeNull()
   })

@@ -355,9 +355,15 @@ const ENTRIES = [
       'A junkyard at night, and an all-black cat called Midnight somewhere in it.',
       'Drag and zoom around the scene until you find her. You place in the order everybody does.',
     ],
-    controls: [],
+    controls: [
+      { input: 'Left drag', does: 'Turn - the scene follows the pointer' },
+      { input: 'Wheel', does: 'Zoom towards the pointer' },
+      { input: 'Left click', does: 'Say that is her - a wrong one costs you a second and a half' },
+    ],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `37-wheres-midnight`. The assets stage is still to do - the
+    // junkyard is primitives and the cat is three spheres and a tail.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'let-him-cook',
@@ -473,14 +479,23 @@ const ENTRIES = [
     done: { environment: false, controls: false, assets: false },
   },
   {
-    id: 'reserved-23',
+    id: 'musical-mayhem',
     number: 23,
-    title: 'Free slot',
+    title: 'Musical Mayhem',
     kind: 'free-for-all',
-    description: [],
-    controls: [],
-    reserved: true,
-    done: { environment: false, controls: false, assets: false },
+    description: [
+      'Musical chairs, with shoving. A ring of chairs one fewer than the players still in, and a tune that plays for a time nobody can know.',
+      'Run while it plays, sit the moment it stops, and push whoever is in front of you - off their chair, if they have not been sitting a whole second. Whoever is left standing is out and a chair goes, until one player is left.',
+    ],
+    controls: [
+      { input: 'WASD', does: 'Run' },
+      { input: 'Space', does: 'Sit in the chair you are next to' },
+      { input: 'Left click', does: 'Push whoever is in front of you' },
+    ],
+    reserved: false,
+    // Built: see `36-musical-mayhem`. The assets stage is still to do - the
+    // players are the island's capsule and the chairs are boxes.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'reserved-24',

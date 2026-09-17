@@ -125,7 +125,8 @@
         "33-keyboard-warrior",
         "34-sharing-is-caring",
         "35-chef-caricature",
-        "36-musical-mayhem"
+        "36-musical-mayhem",
+        "37-wheres-midnight"
       ]
     }
   ],
@@ -171,7 +172,8 @@
         "33-keyboard-warrior",
         "34-sharing-is-caring",
         "35-chef-caricature",
-        "36-musical-mayhem"
+        "36-musical-mayhem",
+        "37-wheres-midnight"
       ],
       "generation": 1,
       "contract": {
@@ -875,7 +877,8 @@
         "33-keyboard-warrior",
         "34-sharing-is-caring",
         "35-chef-caricature",
-        "36-musical-mayhem"
+        "36-musical-mayhem",
+        "37-wheres-midnight"
       ],
       "generation": 1,
       "contract": {
@@ -1389,7 +1392,8 @@
         "33-keyboard-warrior",
         "34-sharing-is-caring",
         "35-chef-caricature",
-        "36-musical-mayhem"
+        "36-musical-mayhem",
+        "37-wheres-midnight"
       ],
       "generation": 1,
       "contract": {
@@ -3094,7 +3098,7 @@
       "id": "36-musical-mayhem",
       "phase": "P6",
       "title": "Minigame 23, Musical Mayhem: run round a ring of chairs while the music plays, sit when it stops, push to knock others off, one chair fewer than players, the last one sitting wins",
-      "status": "in_progress",
+      "status": "ready_for_review",
       "dependsOn": [
         "00-core",
         "02-player",
@@ -3112,42 +3116,42 @@
         {
           "id": "36.1",
           "title": "The floor: a round arena, a ring of chairs one fewer than the players still in, bodies that bump and cannot walk through chairs",
-          "status": "planned"
+          "status": "done"
         },
         {
           "id": "36.2",
           "title": "The music: plays for a time nobody can know, then stops; sit in an empty chair only once it has",
-          "status": "planned"
+          "status": "done"
         },
         {
           "id": "36.3",
           "title": "The push: whoever is in front of you, knocked back and stunned a moment, off their chair if they were sitting",
-          "status": "planned"
+          "status": "done"
         },
         {
           "id": "36.4",
           "title": "The rounds: once the chairs have stayed full a second, whoever is standing is out, a chair goes, until one is left",
-          "status": "planned"
+          "status": "done"
         },
         {
           "id": "36.5",
           "title": "The controls: WASD to move, space to sit, left click to push",
-          "status": "planned"
+          "status": "done"
         },
         {
           "id": "36.6",
           "title": "A still camera over the floor, chairs that close up as they go, the tune itself played while the music plays",
-          "status": "planned"
+          "status": "done"
         },
         {
           "id": "36.7",
           "title": "One floor shared across the lobby, the host moving everybody from what they press, stand-ins only when alone",
-          "status": "planned"
+          "status": "done"
         },
         {
           "id": "36.8",
           "title": "Contract, tests, MODULE.md",
-          "status": "planned"
+          "status": "done"
         },
         {
           "id": "36.9",
@@ -3157,7 +3161,8 @@
       ],
       "gate": {
         "machine": {
-          "status": "pending"
+          "status": "green",
+          "at": "2026-09-17T21:08:46.904Z"
         },
         "human": {
           "status": "pending"
@@ -3170,6 +3175,89 @@
         "No moving camera",
         "No music files: the tune is made in the browser",
         "No score kept between games"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "37-wheres-midnight",
+      "phase": "P6",
+      "title": "Minigame 15, Where's Midnight?: a junkyard at night and an all-black cat hidden in it, everybody at the same spot with their own camera, drag and zoom until you find her, click her to say so, and you place in the order everybody does",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "37.1",
+          "title": "The junkyard: wrecks, tyres, drums, crates and bin bags scattered in a fan from the seed, the same in every browser, each with the boxes that stop a click",
+          "status": "done"
+        },
+        {
+          "id": "37.2",
+          "title": "The cat: all black, beside or on top of a piece of junk, her head always in sight and never all of her, at every seed",
+          "status": "done"
+        },
+        {
+          "id": "37.3",
+          "title": "The search: click her and you have found her, at that moment; click anything else and wait a second and a half",
+          "status": "done"
+        },
+        {
+          "id": "37.4",
+          "title": "The controls: drag turns and keeps what you grabbed under the pointer, the wheel zooms towards it, left click says that is her",
+          "status": "done"
+        },
+        {
+          "id": "37.5",
+          "title": "A camera that never walks, and a yard dark enough to hide her: three lamps, a low moon, and the junk instanced",
+          "status": "done"
+        },
+        {
+          "id": "37.6",
+          "title": "One yard across the lobby, each with their own camera, the host settling every click and a find timed on the finder, stand-ins only when alone",
+          "status": "done"
+        },
+        {
+          "id": "37.7",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "37.8",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-17T21:09:16.174Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: the junk is boxes, cylinders, tyres and blobs, and the cat is spheres",
+        "No walking: the camera turns and zooms and never leaves the spot",
+        "No hints, no highlighting, no warmer-and-colder - looking is the whole game",
+        "No sound, no score kept between games"
       ],
       "budgets": {
         "drawCallsMax": 0,

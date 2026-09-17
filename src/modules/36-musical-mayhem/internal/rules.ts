@@ -21,8 +21,16 @@
 import { createRng, hashSeed } from '../../00-core'
 
 export const FLOOR = {
-  /** The floor's radius: nobody leaves it. */
-  radius: 8.5,
+  /**
+   * The floor's radius: nobody leaves it.
+   *
+   * Sized to the ring rather than picked: the chairs have to stand close enough
+   * together that nobody can slip between them, which makes for a small ring, and
+   * a floor much wider than that leaves the game happening in a dot in the middle
+   * of it. This is the tightest floor that still holds the widest ring, everybody
+   * running round the outside of it, and a push from any of them.
+   */
+  radius: 5.5,
 } as const
 
 export const BODY = {
@@ -36,8 +44,14 @@ export const CHAIR = {
   radius: 0.42,
   /** How near its middle you must be to sit on it. */
   reach: 1.3,
-  /** The space round the ring each chair takes, metres. */
-  spacing: 1.35,
+  /**
+   * The space round the ring each chair takes, metres.
+   *
+   * The ceiling is what makes the ring a ring: two neighbours must be nearer than
+   * a body is wide (`CHAIR.radius * 2 + BODY.radius * 2`, 1.74 m) or somebody
+   * could cut straight across instead of running round.
+   */
+  spacing: 1.6,
   /** The smallest ring: small enough that from three chairs up nobody slips between them. */
   ring: 0.95,
 } as const

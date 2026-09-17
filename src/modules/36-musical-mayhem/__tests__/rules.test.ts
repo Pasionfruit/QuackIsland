@@ -126,16 +126,18 @@ describe('the push', () => {
   it('knocks back and stuns whoever is in front, and nobody behind', () => {
     const g = game(3)
     until(g, 'music')
-    Object.assign(g.players[0], { x: 0, z: 6, facing: 0 })
-    Object.assign(g.players[1], { x: 0, z: 7 })
-    Object.assign(g.players[2], { x: 0, z: 5 })
+    // Three in a line out towards the camera, the middle one facing away from it.
+    const mid = FLOOR.radius / 2
+    Object.assign(g.players[0], { x: 0, z: mid, facing: 0 })
+    Object.assign(g.players[1], { x: 0, z: mid + 1 })
+    Object.assign(g.players[2], { x: 0, z: mid - 1 })
     expect(push(g, 0)).toEqual([1])
     expect(g.players[1].stunned).toBe(PUSH.stun)
     expect(g.players[2].stunned).toBe(0)
     wait(g, 0.3)
-    expect(g.players[1].z).toBeGreaterThan(7.5)
+    expect(g.players[1].z).toBeGreaterThan(mid + 1.5)
     // Not again until the cooldown is over.
-    Object.assign(g.players[1], { x: 0, z: 7 })
+    Object.assign(g.players[1], { x: 0, z: mid + 1 })
     expect(push(g, 0)).toEqual([])
     wait(g, PUSH.cooldown)
     expect(push(g, 0)).toEqual([1])

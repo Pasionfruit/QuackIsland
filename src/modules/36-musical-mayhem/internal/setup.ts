@@ -34,10 +34,22 @@ export function gameRoster(): { id: string; bot: boolean }[] {
 
 let dealt = 0
 
-/** A seed for how long the music plays, and so an id to tell games apart. */
+/** A seed for how long the music plays. It is a secret: it never goes on the wire. */
 export function nextSeed(): number {
   dealt += 1
   return hashSeed(CONVENTIONS.worldSeed, `musical-mayhem:${getNet().room ?? 'solo'}:${dealt}:${Date.now()}`)
+}
+
+/**
+ * The id copies of one game agree on.
+ *
+ * A hash of the seed rather than the seed itself, because the id is sent and the
+ * seed must not be: `musicFor` turns the seed into the exact moment the music
+ * stops, and a guest able to work that out has no game left to play. A hash runs
+ * one way only, so copies can still tell one game from the next.
+ */
+export function gameId(seed: number): number {
+  return hashSeed(seed, 'musical-mayhem:id') || 1
 }
 
 export interface GameSetup {
@@ -50,7 +62,7 @@ export function newGame({ seed = nextSeed(), roster = gameRoster(), me = myId() 
   return createGame(
     seed,
     roster.map((entry) => ({ id: entry.id, bot: entry.bot, mine: entry.id === me })),
-    seed || 1,
+    gameId(seed),
   )
 }
 

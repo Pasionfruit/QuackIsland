@@ -166,6 +166,18 @@ export class Page {
 
 /** Each game's screen component, and an element inside it to start the search from. */
 export const GAMES = {
+  'musical-mayhem': {
+    title: 'Musical Mayhem',
+    screen: 'MusicalMayhemScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
+  'wheres-midnight': {
+    title: "Where's Midnight?",
+    screen: 'WheresMidnightScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
   'zombie-tag': {
     title: 'Zombie Tag',
     screen: 'ZombieTagScreen',

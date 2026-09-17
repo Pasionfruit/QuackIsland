@@ -7,8 +7,15 @@
  * second: the clock, the round, the phase and when it began, how many chairs,
  * and every player - where, facing which way, on which chair, how long they have
  * sat, how stunned, how long since they pushed, when they went out, whether they
- * have left. It never sends how long the music will play: nobody else can know
- * when it stops until it has.
+ * have left.
+ *
+ * **The seed never goes on the wire.** How long the music plays is the seed and
+ * the round put through `musicFor`, so a guest holding the seed could work out
+ * the exact moment it will stop and sit on it - which is the one thing this game
+ * cannot allow. A game's id is a hash of its seed rather than the seed itself,
+ * so copies can agree on which game they are in without anybody being able to
+ * run the clock backwards. A guest's `seed` stays zero and it never needs it:
+ * the music stopping reaches it as a phase that has already changed.
  *
  * **A guest sends its hands**: which way its keys point, twenty times a second,
  * with a running count of how many times it has pressed sit and pushed - so a
@@ -27,7 +34,6 @@ export type WirePlayer = [string, number, number, number, number, number, number
 
 export interface Snapshot {
   id: number
-  seed: number
   elapsed: number
   over: boolean
   round: number
@@ -57,7 +63,6 @@ export function encodeSnapshot(game: Game): Record<string, unknown> {
   return {
     t: SNAPSHOT_TAG,
     g: game.id,
-    s: game.seed,
     e: cs(game.elapsed) / 100,
     o: game.over ? 1 : 0,
     r: game.round,
@@ -83,7 +88,7 @@ export function encodeSnapshot(game: Game): Record<string, unknown> {
 
 export function decodeSnapshot(message: Record<string, unknown>): Snapshot | null {
   if (message.t !== SNAPSHOT_TAG) return null
-  if (!isCount(message.g) || !isCount(message.s) || !isNumber(message.e) || message.e < 0) return null
+  if (!isCount(message.g) || !isNumber(message.e) || message.e < 0) return null
   if ((message.o !== 0 && message.o !== 1) || !isCount(message.r) || !isCount(message.a)) return null
   if (!Number.isInteger(message.h) || (message.h as number) < 0 || (message.h as number) >= PHASES.length) return null
   if (!Array.isArray(message.p) || message.p.length === 0 || message.p.length > MAX_PLAYERS) return null
@@ -102,7 +107,6 @@ export function decodeSnapshot(message: Record<string, unknown>): Snapshot | nul
   }
   return {
     id: message.g as number,
-    seed: message.s as number,
     elapsed: message.e,
     over: message.o === 1,
     round: message.r,
@@ -119,7 +123,8 @@ export function applySnapshot(game: Game, snap: Snapshot, me: string): Game {
     game.players = []
     game.elapsed = snap.elapsed
   }
-  Object.assign(game, { id: snap.id, seed: snap.seed, over: snap.over, round: snap.round, phase: snap.phase, phaseAt: snap.phaseAt, chairs: snap.chairs })
+  // The seed is left alone on purpose - see the note at the top. A guest's is zero.
+  Object.assign(game, { id: snap.id, over: snap.over, round: snap.round, phase: snap.phase, phaseAt: snap.phaseAt, chairs: snap.chairs })
   const before = game.players
   const at = game.elapsed
   game.players = snap.players.map(
