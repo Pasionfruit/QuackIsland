@@ -117,7 +117,8 @@
         "25-wack-attack",
         "26-sprint-triathlon",
         "27-find-yourself",
-        "28-feeding-time"
+        "28-feeding-time",
+        "29-time-it"
       ]
     }
   ],
@@ -155,7 +156,8 @@
         "25-wack-attack",
         "26-sprint-triathlon",
         "27-find-yourself",
-        "28-feeding-time"
+        "28-feeding-time",
+        "29-time-it"
       ],
       "generation": 1,
       "contract": {
@@ -336,7 +338,8 @@
         "25-wack-attack",
         "26-sprint-triathlon",
         "27-find-yourself",
-        "28-feeding-time"
+        "28-feeding-time",
+        "29-time-it"
       ],
       "generation": 1,
       "contract": {
@@ -843,7 +846,8 @@
         "25-wack-attack",
         "26-sprint-triathlon",
         "27-find-yourself",
-        "28-feeding-time"
+        "28-feeding-time",
+        "29-time-it"
       ],
       "generation": 1,
       "contract": {
@@ -1349,7 +1353,8 @@
         "25-wack-attack",
         "26-sprint-triathlon",
         "27-find-yourself",
-        "28-feeding-time"
+        "28-feeding-time",
+        "29-time-it"
       ],
       "generation": 1,
       "contract": {
@@ -2458,6 +2463,85 @@
         "No models: players are the island capsule, ducks and crackers are primitives",
         "No moving camera",
         "No landing marker: aiming is the game",
+        "No sound, no score kept between rounds"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "29-time-it",
+      "phase": "P6",
+      "title": "Minigame 9, Time It: a target time, a stopwatch you can see for two and a half seconds, click to stop, closest wins",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "29.1",
+          "title": "The round: a seeded target of at least six and a half seconds, a countdown, a stopwatch shown for two and a half seconds",
+          "status": "done"
+        },
+        {
+          "id": "29.2",
+          "title": "The stop: a click stops your own timer, timed on your own screen, the round over when everybody has stopped or at thirty seconds, closest wins",
+          "status": "done"
+        },
+        {
+          "id": "29.3",
+          "title": "The controls: left click to stop the stopwatch",
+          "status": "done"
+        },
+        {
+          "id": "29.4",
+          "title": "A still camera on a stage with a big stopwatch that covers its face, and everybody at a button",
+          "status": "done"
+        },
+        {
+          "id": "29.5",
+          "title": "One round shared across the lobby, stops hidden until the end, stand-ins only when alone",
+          "status": "done"
+        },
+        {
+          "id": "29.6",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "29.7",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-17T04:20:25.002Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: players are the island capsule, the stopwatch is primitives",
+        "No moving camera",
+        "No authority over a player's own stop time: their screen times it",
         "No sound, no score kept between rounds"
       ],
       "budgets": {

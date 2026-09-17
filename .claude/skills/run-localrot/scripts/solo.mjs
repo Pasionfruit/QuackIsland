@@ -4,7 +4,7 @@
  *   node .claude/skills/run-localrot/scripts/solo.mjs --game messy-maze --out <dir> [--steer] [--software]
  *
  * --game      messy-maze (default), zombie-tag, probable-stop, duck-hunt, punch-buggy
- *             feeding-time, find-yourself, sprint-triathlon, wack-attack, lady-luck, make-the-cut, let-him-cook
+ *             time-it, feeding-time, find-yourself, sprint-triathlon, wack-attack, lady-luck, make-the-cut, let-him-cook
  *             or i-see-the-light
  * --app       dev server URL (default http://localhost:5199/)
  * --out       where screenshots go (default <temp>/localrot-run/solo)
@@ -18,6 +18,10 @@
  *             Punch Buggy: walk at the nearest fighter, punch when facing them
  *             within reach, pull back, repeat - screenshotting a punch in flight
  *             and the results.
+ *             Time It: a click in the countdown (must not stop), then a click on
+ *             the target by the page's own clock, failing unless the stop is
+ *             within 0.15 s of it; screenshots countdown, running, covered and
+ *             results.
  *             Feeding Time: a slow drag first (must not throw), then flicks at
  *             the nearest hungry duck for the minute - every fourth one spoiled
  *             - failing unless crackers are thrown and ducks fed.
@@ -54,7 +58,7 @@
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, say, sleep, triathlonMove, whackMove } from './cdp.mjs'
+import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, say, sleep, timeItStop, triathlonMove, whackMove } from './cdp.mjs'
 
 const opt = args({ game: 'messy-maze', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'solo'), port: '9400' })
 const game = GAMES[opt.game]
@@ -106,6 +110,26 @@ try {
     say('steered', JSON.stringify(log), await page.shot('3-in.png'))
     await page.waitFor(`!!document.querySelector('[data-again]')`, 120000)
     say('results', await page.shot('4-results.png'))
+  } else if (opt.steer && opt.game === 'time-it') {
+    const state = () => page.eval(`(() => { const g = ${gameState('time-it')}; const me = g.players.find((p) => p.mine); return { over: g.over, elapsed: +g.elapsed.toFixed(2), stopped: me.stopped, all: g.players.map((p) => p.stopped) } })()`)
+    // A click during the countdown does nothing.
+    await page.eval(`(() => { const b = document.querySelector('[data-board]'); const r = b.getBoundingClientRect(); b.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX: r.left + 10, clientY: r.top + 10, bubbles: true })) })()`)
+    await sleep(150)
+    const early = await state()
+    say('clicked in the countdown', JSON.stringify({ elapsed: early.elapsed, stopped: early.stopped }), await page.shot('3-countdown.png'))
+    if (early.stopped !== null) throw new Error('a click in the countdown stopped the timer')
+    await page.waitFor(`(() => { const g = ${gameState('time-it')}; return g.elapsed > 4 })()`, 10000)
+    say('running', await page.shot('4-running.png'))
+    await page.waitFor(`(() => { const g = ${gameState('time-it')}; return g.elapsed > 6.2 })()`, 10000)
+    say('covered', await page.shot('5-covered.png'))
+    const did = await page.eval(timeItStop())
+    await sleep(200)
+    const after = await state()
+    say('stopped', JSON.stringify(did), JSON.stringify(after))
+    if (!did || after.stopped === null || Math.abs(after.stopped - did.target) > 0.15) throw new Error('the stop did not land on the target: ' + JSON.stringify({ did, after }))
+    await page.waitFor(`!!document.querySelector('[data-again]')`, 40000)
+    await sleep(600)
+    say('results', JSON.stringify(await state()), await page.shot('6-results.png'))
   } else if (opt.steer && opt.game === 'feeding-time') {
     const state = () => page.eval(`(() => { const g = ${gameState('feeding-time')}; const me = g.players.find((p) => p.mine); return { over: g.over, elapsed: +g.elapsed.toFixed(2), score: me.score, throws: me.throws, scores: g.players.map((p) => p.score), crackers: g.crackers.length } })()`)
     let flicks = 0

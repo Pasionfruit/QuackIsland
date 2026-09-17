@@ -196,6 +196,12 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'fighters',
   },
+  'time-it': {
+    title: 'Time It',
+    screen: 'TimeItScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
   'feeding-time': {
     title: 'Feeding Time',
     screen: 'FeedingTimeScreen',
@@ -244,6 +250,32 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'racers',
   },
+}
+
+/**
+ * An expression that, in a page showing Time It, waits in the page until its own
+ * stopwatch reads `at` seconds past the target - watching the game's clock, as
+ * a player with a perfect sense of time would - and then clicks the stage.
+ * Evaluates to the reading it clicked at, or null if the round ended first.
+ */
+export function timeItStop({ at = 0 } = {}) {
+  return `(async () => {
+    const rules = await import('/src/modules/29-time-it/internal/rules.ts')
+    for (let i = 0; i < 4000; i++) {
+      const g = ${gameState('time-it')}
+      if (!g || g.over) return null
+      const reading = rules.stopwatch(g)
+      const aim = rules.targetFor(g.seed) + ${at}
+      if (reading >= aim) {
+        const board = document.querySelector('[data-board]')
+        const r = board.getBoundingClientRect()
+        board.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, bubbles: true }))
+        return { reading: +reading.toFixed(3), target: rules.targetFor(g.seed) }
+      }
+      await new Promise((res) => setTimeout(res, Math.max(1, Math.min(50, (aim - reading) * 1000 - 5))))
+    }
+    return null
+  })()`
 }
 
 /**

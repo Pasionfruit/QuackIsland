@@ -245,12 +245,14 @@ const ENTRIES = [
     title: 'Time It',
     kind: 'free-for-all',
     description: [
-      'A stopwatch runs and you have to stop it on the target. You can watch it for the first two and a half seconds, and then it shuts and you are on your own.',
-      'The target is never under six and a half seconds. Closest wins. The round ends when everybody has stopped, or at thirty seconds, whichever comes first.',
+      'A stopwatch runs and you have to stop it as close to the target as you can. Everybody can watch it for the first two and a half seconds, and then it is covered and you are on your sense of time alone.',
+      'The target is never under six and a half seconds. Click to stop your timer. The round ends when everybody has stopped, or at thirty seconds, whichever comes first. Closest wins.',
     ],
-    controls: [{ input: 'Left click', does: 'Stop the stopwatch' }],
+    controls: [{ input: 'Left click', does: 'Stop stopwatch' }],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `29-time-it`. The assets stage is still to do - the players are
+    // the island's capsule and the stopwatch is primitives.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'wack-attack',
