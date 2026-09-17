@@ -341,12 +341,17 @@ const ENTRIES = [
     title: 'Let Him Cook',
     kind: 'free-for-all',
     description: [
-      'One player is the chef and picks a dish out of fifteen, made from six ingredients. Everybody else has to remember what went into it.',
-      'Then you take turns choosing ingredients. Choose one that was not in the recipe, or one that has already been taken as many times as it appears, and you are out. Survive your turn and you go back in the line.',
+      'Watch the chef cook a recipe from fifteen items across six ingredients, and remember what went into the pot.',
+      'Then take turns, in a random order, choosing an ingredient. Choose one that was not in the recipe, or one whose every copy has already been claimed, and you are out. Choose right and you go to the back of the line. Last cook standing wins.',
     ],
-    controls: [],
+    controls: [
+      { input: 'Mouse', does: 'Aim' },
+      { input: 'Left click', does: 'Select an ingredient' },
+    ],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `22-let-him-cook`. The assets stage is still to do - the chef
+    // is the island's capsule in a hat and the ingredients are primitives.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'i-see-the-light',
@@ -357,9 +362,14 @@ const ENTRIES = [
       'Red light, green light. On green, hammer space to get yourself forward.',
       'On red, hold your cursor inside a floating circle that will not stay still. Let it slip out, or touch space while the light is red, and you are out.',
     ],
-    controls: [],
+    controls: [
+      { input: 'Space', does: 'Move forward during green light' },
+      { input: 'Mouse', does: 'Keep the cursor inside the circle during red light' },
+    ],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `21-i-see-the-light`. The assets stage is still to do - the
+    // racers are the island's capsule and the light is two discs.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'helping-dad',

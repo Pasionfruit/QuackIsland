@@ -3,7 +3,8 @@
  *
  *   node .claude/skills/run-localrot/scripts/solo.mjs --game messy-maze --out <dir> [--steer] [--software]
  *
- * --game      messy-maze (default), zombie-tag, probable-stop, duck-hunt or punch-buggy
+ * --game      messy-maze (default), zombie-tag, probable-stop, duck-hunt, punch-buggy
+ *             let-him-cook or i-see-the-light
  * --app       dev server URL (default http://localhost:5199/)
  * --out       where screenshots go (default <temp>/localrot-run/solo)
  * --steer     Messy Maze: drive your racer to the middle with the stand-ins'
@@ -16,13 +17,23 @@
  *             Punch Buggy: walk at the nearest fighter, punch when facing them
  *             within reach, pull back, repeat - screenshotting a punch in flight
  *             and the results.
+ *             Let Him Cook: watch the chef, then on each of your turns pick an
+ *             item this browser saw go in and nobody has claimed, screenshotting
+ *             the cooking, the turn order, a hovered item, a result and the
+ *             results. With --slip, pick an ingredient it never saw go in on
+ *             your second turn and check it is out for it.
+ *             I See The Light: press space every tick on green, follow the
+ *             circle with the pointer on red, screenshotting the 3-2-1
+ *             countdown, a red, then the
+ *             results. With --slip, press space in the second red and check it
+ *             is out for it.
  * --software  render with SwiftShader instead of the GPU (slow; see cdp.mjs)
  *
  * Needs the dev server running; not the relay - alone you are your own host.
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, duckHuntShot, gameState, launch, say, sleep } from './cdp.mjs'
+import { GAMES, args, cookPick, duckHuntShot, gameState, launch, lightMove, say, sleep } from './cdp.mjs'
 
 const opt = args({ game: 'messy-maze', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'solo'), port: '9400' })
 const game = GAMES[opt.game]
@@ -73,6 +84,95 @@ try {
     })()`)
     say('steered', JSON.stringify(log), await page.shot('3-in.png'))
     await page.waitFor(`!!document.querySelector('[data-again]')`, 120000)
+    say('results', await page.shot('4-results.png'))
+  } else if (opt.steer && opt.game === 'let-him-cook') {
+    const state = () => page.eval(`(() => { const g = ${gameState('let-him-cook')}; const me = g.players.findIndex((p) => p.mine); return { phase: g.phase, clock: +g.clock.toFixed(2), recipe: g.recipe, turn: g.turn, up: g.queue[0], me, out: g.players[me].out, claims: g.players[me].claims, last: g.last, left: g.players.filter((p) => !p.out).length, picks: g.picks.length } })()`)
+    const shots = new Set()
+    const log = []
+    let myTurns = 0
+    let lastTurn = -1
+    for (let i = 0; i < 6000; i++) {
+      const s = await state()
+      if (s.phase === 'over') break
+      if (s.phase === 'cooking' && s.clock > 4.3 && !shots.has('cooking')) {
+        shots.add('cooking')
+        say('cooking', JSON.stringify(s), await page.shot('3-cooking.png'))
+      }
+      if (s.phase === 'order' && !shots.has('order')) {
+        shots.add('order')
+        say('order', JSON.stringify(s), await page.shot('4-order.png'))
+      }
+      if (s.phase === 'result' && s.last && !shots.has(`result-${s.last.ok}`)) {
+        shots.add(`result-${s.last.ok}`)
+        say('result', JSON.stringify(s.last), await page.shot(`6-result-${s.last.ok ? 'right' : 'out'}.png`))
+      }
+      if (s.phase === 'turns' && s.up === s.me && s.turn !== lastTurn && s.clock > 0.6) {
+        lastTurn = s.turn
+        myTurns += 1
+        const choose = opt.slip && myTurns === 2 ? 'wrong' : 'safe'
+        if (!shots.has('hover')) {
+          shots.add('hover')
+          await page.eval(cookPick('safe', { hoverOnly: true }))
+          await sleep(250)
+          say('your turn', await page.shot('5-your-turn.png'))
+        }
+        let did = await page.eval(cookPick(choose))
+        if (did?.none === 'wrong') did = await page.eval(cookPick('gone'))
+        await sleep(400)
+        const after = await state()
+        log.push({ choose, did, ok: after.last?.ok, why: after.last?.why })
+        say('picked', JSON.stringify(log[log.length - 1]))
+        if (choose === 'safe' && did?.slot !== undefined && after.last?.ok !== true) throw new Error('a copy seen going in was not accepted')
+        if (choose === 'wrong' && did?.slot !== undefined && after.last?.ok !== false) throw new Error('a wrong pick was not out')
+      }
+      await sleep(80)
+    }
+    say('my turns', JSON.stringify(log))
+    await page.waitFor(`!!document.querySelector('[data-again]')`, 300000)
+    say('results', await page.shot('7-results.png'))
+  } else if (opt.steer && opt.game === 'i-see-the-light') {
+    const state = () => page.eval(`(() => { const r = ${gameState('i-see-the-light')}; const me = r.racers.find((x) => x.mine); return { over: r.over, elapsed: +r.elapsed.toFixed(2), steps: me.steps, out: me.out, place: me.place, others: r.racers.filter((x) => !x.mine).map((x) => x.id + ':' + x.steps + (x.out ? ':' + x.out.why : '') + (x.place ? ':#' + x.place : '')) } })()`)
+    let reds = 0
+    let wasRed = false
+    let shotRed = false
+    let shotCount = false
+    let slipped = false
+    let presses = 0
+    for (let i = 0; i < 4000; i++) {
+      const s = await state()
+      if (s.over || s.out || s.place) {
+        say('ended', JSON.stringify(s))
+        break
+      }
+      const count = await page.eval(`document.querySelector('[data-countdown]')?.dataset.countdown ?? null`)
+      if (count !== null && !shotCount) {
+        shotCount = true
+        say('countdown', count, await page.shot('3-countdown.png'))
+      }
+      const did = await page.eval(lightMove())
+      if (did?.pressed) presses += 1
+      const red = did?.light === 'red'
+      if (red && !wasRed) reds += 1
+      wasRed = red
+      if (red && !shotRed && did.circle) {
+        shotRed = true
+        await sleep(1200)
+        await page.eval(lightMove())
+        say('red', JSON.stringify(s), await page.shot('3-red.png'))
+      }
+      if (opt.slip && red && reds === 2 && !slipped) {
+        slipped = true
+        await sleep(1000)
+        await page.eval(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ' }))`)
+        await sleep(100)
+        const after = await state()
+        say('pressed space on red', JSON.stringify(after.out))
+        if (after.out?.why !== 'space') throw new Error('space on red did not put us out')
+      }
+      await sleep(red ? 25 : 90)
+    }
+    say('pressed space', presses, 'times across', reds, 'reds')
+    await page.waitFor(`!!document.querySelector('[data-again]')`, 150000)
     say('results', await page.shot('4-results.png'))
   } else if (opt.steer && opt.game === 'punch-buggy') {
     const board = await page.eval(`(() => { const r = document.querySelector('[data-board]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } })()`)

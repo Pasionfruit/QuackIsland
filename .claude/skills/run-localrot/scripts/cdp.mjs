@@ -196,6 +196,94 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'fighters',
   },
+  'let-him-cook': {
+    title: 'Let Him Cook',
+    screen: 'LetHimCookScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
+  'i-see-the-light': {
+    title: 'I See The Light',
+    screen: 'ISeeTheLightScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'racers',
+  },
+}
+
+/**
+ * An expression that, in a page showing Let Him Cook on this player's turn,
+ * picks an item the way a player does - a pointer move and a pointerdown on the
+ * canvas at the item's spot on screen, projected with the game's own camera fit
+ * - and evaluates to what it picked, or null when it is not this player's turn.
+ *
+ * `choose` is what kind of item, judged only from what this browser was shown
+ * of the chef's cooking: 'safe' (a copy it saw go in and nobody has claimed),
+ * 'wrong' (an ingredient it never saw go in) or 'gone' (every copy it saw go in
+ * is claimed). `hoverOnly` moves the pointer there without clicking.
+ */
+export function cookPick(choose = 'safe', { hoverOnly = false } = {}) {
+  return `(async () => {
+    const cam = await import('/src/modules/22-let-him-cook/internal/camera.ts')
+    const g = ${gameState('let-him-cook')}
+    if (!g || g.phase !== 'turns' || !g.players[g.queue[0]]?.mine) return null
+    const used = [0, 0, 0, 0, 0, 0]
+    for (const s of g.picks) used[g.counter[s]] += 1
+    const taken = (kind) => g.served.filter((k, s) => k === kind && g.claimed[s] !== null).length
+    const open = g.served.map((_, s) => s).filter((s) => g.claimed[s] === null)
+    const lists = {
+      safe: open.filter((s) => used[g.served[s]] > taken(g.served[s])),
+      wrong: open.filter((s) => used[g.served[s]] === 0),
+      gone: open.filter((s) => used[g.served[s]] > 0 && used[g.served[s]] <= taken(g.served[s])),
+    }
+    const list = lists[${JSON.stringify(choose)}]
+    if (list.length === 0) return { none: ${JSON.stringify(choose)}, seen: g.picks.length }
+    const slot = list[0]
+    const canvas = document.querySelector('[data-board] canvas')
+    const rect = canvas.getBoundingClientRect()
+    const aspect = rect.width / rect.height
+    const shot = cam.frameScene(aspect)
+    const at = cam.slotAt(slot)
+    const sub = (p, q) => ({ x: p.x - q.x, y: p.y - q.y, z: p.z - q.z })
+    const dot = (p, q) => p.x * q.x + p.y * q.y + p.z * q.z
+    const norm = (p) => { const l = Math.hypot(p.x, p.y, p.z); return { x: p.x / l, y: p.y / l, z: p.z / l } }
+    const cross = (p, q) => ({ x: p.y * q.z - p.z * q.y, y: p.z * q.x - p.x * q.z, z: p.x * q.y - p.y * q.x })
+    const eye = { x: shot.x, y: shot.y, z: shot.z }
+    const forward = norm(sub(shot.target, eye))
+    const right = norm(cross(forward, { x: 0, y: 1, z: 0 }))
+    const up = cross(right, forward)
+    const rel = sub(at, eye)
+    const depth = dot(rel, forward)
+    const half = Math.tan((cam.FOV * Math.PI) / 360)
+    const clientX = rect.left + ((dot(rel, right) / (depth * half * aspect) + 1) / 2) * rect.width
+    const clientY = rect.top + ((1 - dot(rel, up) / (depth * half)) / 2) * rect.height
+    canvas.dispatchEvent(new PointerEvent('pointermove', { clientX, clientY, bubbles: true }))
+    if (!${hoverOnly}) canvas.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX, clientY, bubbles: true }))
+    return { slot, kind: g.served[slot], choose: ${JSON.stringify(choose)}, turn: g.turn, x: Math.round(clientX), y: Math.round(clientY) }
+  })()`
+}
+
+/**
+ * An expression that, in a page showing I See The Light, does what a careful
+ * player does this moment: on green, one press of space; on red, the pointer to
+ * the middle of the circle. Evaluates to what it did and the light it saw.
+ */
+export function lightMove({ press = true } = {}) {
+  return `(() => {
+    const board = document.querySelector('[data-board]')
+    if (!board) return null
+    const r = board.getBoundingClientRect()
+    const light = document.querySelector('[data-light]')?.dataset.light ?? null
+    const circle = board.querySelector('[data-circle]')?.dataset.circle
+    let at = { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+    if (circle) {
+      const [x, y] = circle.split(',').map(Number)
+      at = { x: r.left + x * r.width, y: r.top + y * r.height }
+    }
+    window.dispatchEvent(new PointerEvent('pointermove', { clientX: at.x, clientY: at.y, bubbles: true }))
+    const pressed = light === 'green' && ${press}
+    if (pressed) window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ', bubbles: true }))
+    return { light, pressed, circle: circle ?? null }
+  })()`
 }
 
 /**

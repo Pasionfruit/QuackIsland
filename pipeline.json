@@ -109,7 +109,9 @@
         "17-messy-maze",
         "18-probable-stop",
         "19-duck-hunt",
-        "20-punch-buggy"
+        "20-punch-buggy",
+        "21-i-see-the-light",
+        "22-let-him-cook"
       ]
     }
   ],
@@ -139,7 +141,9 @@
         "17-messy-maze",
         "18-probable-stop",
         "19-duck-hunt",
-        "20-punch-buggy"
+        "20-punch-buggy",
+        "21-i-see-the-light",
+        "22-let-him-cook"
       ],
       "generation": 1,
       "contract": {
@@ -313,7 +317,9 @@
         "17-messy-maze",
         "18-probable-stop",
         "19-duck-hunt",
-        "20-punch-buggy"
+        "20-punch-buggy",
+        "21-i-see-the-light",
+        "22-let-him-cook"
       ],
       "generation": 1,
       "contract": {
@@ -812,7 +818,9 @@
         "17-messy-maze",
         "18-probable-stop",
         "19-duck-hunt",
-        "20-punch-buggy"
+        "20-punch-buggy",
+        "21-i-see-the-light",
+        "22-let-him-cook"
       ],
       "generation": 1,
       "contract": {
@@ -1310,7 +1318,9 @@
         "17-messy-maze",
         "18-probable-stop",
         "19-duck-hunt",
-        "20-punch-buggy"
+        "20-punch-buggy",
+        "21-i-see-the-light",
+        "22-let-him-cook"
       ],
       "generation": 1,
       "contract": {
@@ -1789,6 +1799,164 @@
         "No moving camera",
         "No health: one direct hit is out",
         "No sound, no score kept between rounds"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "21-i-see-the-light",
+      "phase": "P6",
+      "title": "Minigame 17, I See The Light: mash space on green, hold the pointer in a wandering circle on red, first to the line",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "21.1",
+          "title": "The light: a seeded pattern of greens and reds, and the circle that wanders on red",
+          "status": "done"
+        },
+        {
+          "id": "21.2",
+          "title": "The race: a step a press on green, out for space or a slipped pointer on red, placed at the line",
+          "status": "done"
+        },
+        {
+          "id": "21.3",
+          "title": "The controls: space to step, the pointer in the circle, judged on your own screen",
+          "status": "done"
+        },
+        {
+          "id": "21.4",
+          "title": "A still camera down a lane per player to a finish line and a traffic light",
+          "status": "done"
+        },
+        {
+          "id": "21.5",
+          "title": "One race shared across the lobby, with stand-ins only when alone",
+          "status": "done"
+        },
+        {
+          "id": "21.6",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "21.7",
+          "title": "The assets: models, sprites and sound in place of capsules and discs",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-17T00:56:03.305Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: racers are the island's capsule, the light is two spheres",
+        "No moving camera",
+        "No authority over a player's own presses and pointer: their screen decides",
+        "No sound, no score kept between races"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "22-let-him-cook",
+      "phase": "P6",
+      "title": "Minigame 16, Let Him Cook: watch the chef cook from fifteen items, then take turns naming what went in, last cook standing",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "22.1",
+          "title": "The kitchen: fifteen items of six ingredients on a counter, and a chef who cooks a seeded recipe from them",
+          "status": "done"
+        },
+        {
+          "id": "22.2",
+          "title": "The turns: a random order, a pick each, back of the line if it was in the recipe, out if it was not or its copies are gone",
+          "status": "done"
+        },
+        {
+          "id": "22.3",
+          "title": "The controls: aim with the mouse, left click to pick an ingredient",
+          "status": "done"
+        },
+        {
+          "id": "22.4",
+          "title": "A still camera over the counter, the chef, the pot, the items and who claimed them",
+          "status": "done"
+        },
+        {
+          "id": "22.5",
+          "title": "One kitchen shared across the lobby, the recipe kept on the host, stand-ins only when alone",
+          "status": "done"
+        },
+        {
+          "id": "22.6",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "22.7",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-17T00:55:45.292Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: the chef is the island capsule in a hat, ingredients are primitives",
+        "No moving camera",
+        "No recipe secrecy from the host browser: it runs the kitchen",
+        "No sound, no score kept between games"
       ],
       "budgets": {
         "drawCallsMax": 0,

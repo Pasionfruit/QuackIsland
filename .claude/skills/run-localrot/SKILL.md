@@ -58,7 +58,17 @@ spot on screen, projected with the game's own camera fit, so it goes through
 the real aiming - and screenshots mid-game and the results. For Punch Buggy
 (`--game punch-buggy`) it walks at the nearest fighter with WASD, clicks to
 punch when facing them within reach and again to pull back, and screenshots a
-punch in flight and the results. Prints the
+punch in flight and the results. For Let Him Cook
+(`--game let-him-cook`) it watches the cooking and, on each of your turns, clicks
+an item this browser saw go in that nobody has claimed - a real pointer event at
+the item's spot, projected with the game's camera fit - failing if one is not
+accepted; `--slip` picks one it never saw go in on the second turn and fails
+unless that is out. Screenshots the cooking, the order, a hovered item, results
+and the end. For I See The Light (`--game i-see-the-light`)
+it presses space once a tick on green and moves the pointer onto the middle of
+the circle (read from the page's `data-circle`) on red, screenshotting a red and
+the results; `--slip` also presses space a second into the second red and fails
+unless that puts it out. Prints the
 race's layout and seed, each spin, the finishing place, and console errors.
 About 30 seconds.
 
@@ -69,14 +79,19 @@ node .claude/skills/run-localrot/scripts/lobby.mjs --players 8 --out <dir>
 ```
 
 Starts N **separate** headless Chromes, puts them in one lobby, then for each
-game (default `zombie-tag,messy-maze,probable-stop,duck-hunt,punch-buggy`): the host opens and starts it, and it
+game (default `zombie-tag,messy-maze,probable-stop,duck-hunt,punch-buggy,let-him-cook,i-see-the-light`): the host opens and starts it, and it
 checks every browser has the same round (same seed, maze and headcount - Zombie
 Tag has no seed or maze, so there it is headcount alone) with exactly one body
 marked as its own, then that a guest holding a key moves on
 the host's screen - or, in Probable Stop, that a guest stepping to another path
 and confirming shows up on the host's; in Duck Hunt, that a guest's shot at one
 of its own balloons counts on the host; in Punch Buggy, that a guest walking and
-clicking moves and throws a punch on the host. Screenshots the host and a guest per game. Exits non-zero on
+clicking moves and throws a punch on the host; in Let Him Cook, every browser plays its own turns
+with what it saw the chef take until a guest's pick is claimed on the host, then
+that all agree on the plates and the line; in I See The Light, that a guest
+running through a green and a red shows its steps on the host and is still in.
+The other browsers are left idle there, so they go out on the first red for a
+pointer that was never in the circle - that is the rules, not a failure. Screenshots the host and a guest per game. Exits non-zero on
 any disagreement. Needs the relay. About a minute for eight.
 
 **Look at the screenshots.** A blank sky with a HUD over it is a canvas that is

@@ -5,7 +5,7 @@
  *   node .claude/skills/run-localrot/scripts/lobby.mjs --players 8 --out <dir>
  *
  * --players   how many (default 8, the most the games are built for)
- * --games     comma list, in order (default zombie-tag,messy-maze,probable-stop,duck-hunt,punch-buggy)
+ * --games     comma list, in order (default zombie-tag,messy-maze,probable-stop,duck-hunt,punch-buggy,i-see-the-light)
  * --app       dev server URL (default http://localhost:5199/)
  * --out       where screenshots go (default <temp>/localrot-run/lobby)
  * --software  render with SwiftShader instead of the GPU
@@ -21,9 +21,9 @@
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, duckHuntShot, gameState, launch, say, sleep } from './cdp.mjs'
+import { GAMES, args, cookPick, duckHuntShot, gameState, launch, lightMove, say, sleep } from './cdp.mjs'
 
-const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt,punch-buggy', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
+const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt,punch-buggy,let-him-cook,i-see-the-light', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
 const count = Number(opt.players)
 const games = String(opt.games).split(',')
 const pages = []
@@ -77,9 +77,9 @@ try {
         p.eval(`(() => {
           const s = ${gameState(game)}
           // Probable Stop keeps its seed on the host - it decides the answers -
-          // and Punch Buggy never sends one; there the id is what every browser
+          // and Let Him Cook's, and Punch Buggy never sends one; there the id is what every browser
           // should share.
-          const which = ['probable-stop', 'punch-buggy'].includes(${JSON.stringify(game)}) ? s.id : (s.seed ?? null)
+          const which = ['probable-stop', 'punch-buggy', 'let-him-cook'].includes(${JSON.stringify(game)}) ? s.id : (s.seed ?? null)
           return { game: which, layout: s.layout ?? null, people: s.${people}.length, mine: s.${people}.filter((b) => b.mine).map((b) => b.id).join(), me: window.__net.getNet().id }
         })()`),
       ),
@@ -107,6 +107,64 @@ try {
       if (Math.hypot(after.x - before.x, after.y - before.y) < 0.5 || after.clicks !== before.clicks + 1) {
         throw new Error(`${game}: the host did not see the guest walk and punch`)
       }
+      await host.eval('window.__mg.backOut()')
+      for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
+      continue
+    }
+
+    if (game === 'let-him-cook') {
+      // Everybody plays their turns, picking what their own browser saw go in,
+      // until a guest's pick has landed on the host - then every browser should
+      // agree on the plates and the line.
+      const onHost = () => host.eval(`(() => { const g = ${gameState(game)}; return { phase: g.phase, up: g.players[g.queue[0]]?.id ?? null, claimed: g.claimed } })()`)
+      let landed = null
+      for (let i = 0; i < 1500 && !landed; i++) {
+        const h = await onHost()
+        if (h.phase === 'over') break
+        if (h.phase === 'turns' && h.up) {
+          const page = pages[ids.indexOf(h.up)]
+          const did = await page.eval(cookPick('safe'))
+          if (did && did.slot !== undefined) {
+            await sleep(900)
+            const after = await onHost()
+            say(`${game}: ${h.up} picked slot ${did.slot} on turn ${did.turn}; host has it claimed by ${after.claimed[did.slot]}`)
+            if (after.claimed[did.slot] === null) throw new Error(`${game}: a copy ${h.up} saw go in was not claimed on the host`)
+            if (page !== host) landed = { id: h.up, slot: did.slot }
+          }
+        }
+        await sleep(150)
+      }
+      if (!landed) throw new Error(`${game}: no guest's pick landed on the host`)
+      await sleep(400)
+      const views = await Promise.all(pages.map((p) => p.eval(`(() => { const g = ${gameState(game)}; return JSON.stringify([g.claimed, g.queue, g.turn]) })()`)))
+      const agree = new Set(views).size === 1
+      say(`${game}: every browser agrees on the plates and the line ${agree}`)
+      await host.shot(`${game}-host.png`)
+      await pages[ids.indexOf(landed.id)].shot(`${game}-guest.png`)
+      if (!agree) throw new Error(`${game}: browsers disagree - ${views.join(' | ')}`)
+      await host.eval('window.__mg.backOut()')
+      for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
+      continue
+    }
+
+    if (game === 'i-see-the-light') {
+      // A guest runs on green and follows the circle on red; the host should
+      // see its steps go up, and it still in, through a red.
+      const guestOnHost = () => host.eval(`(() => { const r = ${gameState(game)}; const x = r.racers.find((x) => x.id === ${JSON.stringify(moverId)}); return { steps: x.steps, out: x.out, elapsed: +r.elapsed.toFixed(2) } })()`)
+      const before = await guestOnHost()
+      let sawRed = false
+      for (let i = 0; i < 400; i++) {
+        const did = await mover.eval(lightMove())
+        if (did?.light === 'red') sawRed = true
+        if (sawRed && did?.light === 'green') break
+        await sleep(did?.light === 'red' ? 25 : 110)
+      }
+      await sleep(800)
+      const after = await guestOnHost()
+      say(`${game}: guest ${moverId} ran through a red (${sawRed}); host saw ${JSON.stringify(before)} -> ${JSON.stringify(after)}`)
+      await host.shot(`${game}-host.png`)
+      await mover.shot(`${game}-guest.png`)
+      if (after.steps <= before.steps || after.out) throw new Error(`${game}: the host did not see the guest run, or saw it out`)
       await host.eval('window.__mg.backOut()')
       for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
       continue
