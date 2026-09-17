@@ -4,7 +4,7 @@
  *   node .claude/skills/run-localrot/scripts/solo.mjs --game messy-maze --out <dir> [--steer] [--software]
  *
  * --game      messy-maze (default), zombie-tag, probable-stop, duck-hunt, punch-buggy
- *             find-yourself, sprint-triathlon, wack-attack, lady-luck, make-the-cut, let-him-cook
+ *             feeding-time, find-yourself, sprint-triathlon, wack-attack, lady-luck, make-the-cut, let-him-cook
  *             or i-see-the-light
  * --app       dev server URL (default http://localhost:5199/)
  * --out       where screenshots go (default <temp>/localrot-run/solo)
@@ -18,6 +18,9 @@
  *             Punch Buggy: walk at the nearest fighter, punch when facing them
  *             within reach, pull back, repeat - screenshotting a punch in flight
  *             and the results.
+ *             Feeding Time: a slow drag first (must not throw), then flicks at
+ *             the nearest hungry duck for the minute - every fourth one spoiled
+ *             - failing unless crackers are thrown and ducks fed.
  *             Find Yourself: pick the right cup in stages 1 and 3 and the wrong
  *             one in stage 2, failing unless that scores 4; screenshots the
  *             faces, a shuffle, a hovered cup, a result and the results.
@@ -51,7 +54,7 @@
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, gameState, launch, lightMove, say, sleep, triathlonMove, whackMove } from './cdp.mjs'
+import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, say, sleep, triathlonMove, whackMove } from './cdp.mjs'
 
 const opt = args({ game: 'messy-maze', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'solo'), port: '9400' })
 const game = GAMES[opt.game]
@@ -103,6 +106,43 @@ try {
     say('steered', JSON.stringify(log), await page.shot('3-in.png'))
     await page.waitFor(`!!document.querySelector('[data-again]')`, 120000)
     say('results', await page.shot('4-results.png'))
+  } else if (opt.steer && opt.game === 'feeding-time') {
+    const state = () => page.eval(`(() => { const g = ${gameState('feeding-time')}; const me = g.players.find((p) => p.mine); return { over: g.over, elapsed: +g.elapsed.toFixed(2), score: me.score, throws: me.throws, scores: g.players.map((p) => p.score), crackers: g.crackers.length } })()`)
+    let flicks = 0
+    let shotThrow = false
+    let shotMid = false
+    // A slow drag first: not a throw.
+    const before = await state()
+    await page.eval(`(async () => { const b = document.querySelector('[data-board]'); const r = b.getBoundingClientRect(); const at = (y) => ({ clientX: r.left + r.width / 2, clientY: r.top + y * r.height, bubbles: true, pointerId: 1, button: 0 }); b.dispatchEvent(new PointerEvent('pointerdown', at(0.9))); await new Promise((res) => setTimeout(res, 1000)); b.dispatchEvent(new PointerEvent('pointermove', at(0.2))); b.dispatchEvent(new PointerEvent('pointerup', at(0.2))) })()`)
+    await sleep(200)
+    const afterSlow = await state()
+    say('a slow drag', JSON.stringify({ throwsBefore: before.throws, throwsAfter: afterSlow.throws }))
+    if (afterSlow.throws !== before.throws) throw new Error('a slow drag threw a cracker')
+    for (let i = 0; i < 3000; i++) {
+      const s = await state()
+      if (s.over) break
+      // Every few throws, spoil the aim.
+      const did = await page.eval(feedFlick({ off: flicks % 4 === 3 ? 0.35 : 0 }))
+      if (did && did.duck !== undefined) {
+        flicks += 1
+        if (!shotThrow) {
+          shotThrow = true
+          await sleep(250)
+          say('throw', JSON.stringify(did), await page.shot('3-throw.png'))
+        }
+      }
+      if (!shotMid && s.elapsed > 30) {
+        shotMid = true
+        say('mid-round', JSON.stringify(s), await page.shot('4-pond.png'))
+      }
+      await sleep(120)
+    }
+    const end = await state()
+    say('flicked', flicks, 'times;', JSON.stringify(end))
+    if (end.throws === 0) throw new Error('no flick threw a cracker')
+    if (end.score === 0) throw new Error('never fed a duck')
+    await page.waitFor(`!!document.querySelector('[data-again]')`, 90000)
+    say('results', await page.shot('5-results.png'))
   } else if (opt.steer && opt.game === 'find-yourself') {
     const state = () => page.eval(`(() => { const g = ${gameState('find-yourself')}; const me = g.players.find((p) => p.mine); return { stage: g.stage, phase: g.phase, clock: +g.clock.toFixed(2), score: me.score, picks: me.picks, scores: g.players.map((p) => p.score) } })()`)
     const shots = new Set()

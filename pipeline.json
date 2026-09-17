@@ -116,7 +116,8 @@
         "24-make-the-cut",
         "25-wack-attack",
         "26-sprint-triathlon",
-        "27-find-yourself"
+        "27-find-yourself",
+        "28-feeding-time"
       ]
     }
   ],
@@ -153,7 +154,8 @@
         "24-make-the-cut",
         "25-wack-attack",
         "26-sprint-triathlon",
-        "27-find-yourself"
+        "27-find-yourself",
+        "28-feeding-time"
       ],
       "generation": 1,
       "contract": {
@@ -333,7 +335,8 @@
         "24-make-the-cut",
         "25-wack-attack",
         "26-sprint-triathlon",
-        "27-find-yourself"
+        "27-find-yourself",
+        "28-feeding-time"
       ],
       "generation": 1,
       "contract": {
@@ -839,7 +842,8 @@
         "24-make-the-cut",
         "25-wack-attack",
         "26-sprint-triathlon",
-        "27-find-yourself"
+        "27-find-yourself",
+        "28-feeding-time"
       ],
       "generation": 1,
       "contract": {
@@ -1344,7 +1348,8 @@
         "24-make-the-cut",
         "25-wack-attack",
         "26-sprint-triathlon",
-        "27-find-yourself"
+        "27-find-yourself",
+        "28-feeding-time"
       ],
       "generation": 1,
       "contract": {
@@ -2375,6 +2380,85 @@
         "No moving camera",
         "No hiding the shuffle from a browser that has to animate it",
         "No sound, no score kept between games"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "28-feeding-time",
+      "phase": "P6",
+      "title": "Minigame 6, Feeding Time: ducks on a pond, crackers thrown by flicking the mouse upward, most ducks fed wins",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "28.1",
+          "title": "The pond: ducks swimming seeded loops, a spot on the bank for every player",
+          "status": "done"
+        },
+        {
+          "id": "28.2",
+          "title": "The throw: a flick from the bottom third to the top third, its lean the aim and its speed the distance; a cracker near a duck feeds it",
+          "status": "done"
+        },
+        {
+          "id": "28.3",
+          "title": "The controls: hold the left button and drag upward quickly",
+          "status": "done"
+        },
+        {
+          "id": "28.4",
+          "title": "A still camera over the pond, crackers arcing out, ducks eating",
+          "status": "done"
+        },
+        {
+          "id": "28.5",
+          "title": "One pond shared across the lobby, feeding settled by the host, stand-ins only when alone",
+          "status": "done"
+        },
+        {
+          "id": "28.6",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "28.7",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-17T04:04:49.589Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: players are the island capsule, ducks and crackers are primitives",
+        "No moving camera",
+        "No landing marker: aiming is the game",
+        "No sound, no score kept between rounds"
       ],
       "budgets": {
         "drawCallsMax": 0,

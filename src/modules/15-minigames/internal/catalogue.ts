@@ -192,12 +192,14 @@ const ENTRIES = [
     title: 'Feeding Time',
     kind: 'free-for-all',
     description: [
-      'Ducks on a pond and a handful of crackers. Hold the button and flick the mouse from the bottom of the screen to the top to throw one.',
-      'Whoever feeds the most ducks wins.',
+      'Ducks on a pond and a pocket of crackers. Hold the left button in the bottom third of the screen and flick the mouse up into the top third to throw one - the faster the flick, the further it goes, and the way it leans is where.',
+      'A cracker that lands near a duck feeds it. The faster you throw the more you can feed, but only good aim feeds anything. Whoever feeds the most ducks wins.',
     ],
-    controls: [{ input: 'Left click + drag', does: 'Throw a cracker' }],
+    controls: [{ input: 'Left click + mouse drag', does: 'Hold and rapidly drag upward to throw crackers' }],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `28-feeding-time`. The assets stage is still to do - the ducks
+    // and crackers are primitives.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'sprint-triathlon',

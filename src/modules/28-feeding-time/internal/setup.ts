@@ -1,0 +1,61 @@
+/**
+ * Putting a round together: who stands on the bank.
+ *
+ * **The people in the lobby are the players**, host first - roster order is
+ * colour order and bank order - up to eight. Stand-ins fill in only when there
+ * is nobody else, the same rule as the other minigames.
+ */
+import { CONVENTIONS, hashSeed } from '../../00-core'
+import { getNet, getPeers } from '../../09-net'
+import { createGame, type Game } from './rules'
+
+export const ME = 'you'
+export const SOLO_FEEDERS = 4
+/** Eight colours, eight spots on the bank. */
+export const MAX_FEEDERS = 8
+
+export function myId(): string {
+  return getNet().id ?? ME
+}
+
+export function gameRoster(): { id: string; bot: boolean }[] {
+  const net = getNet()
+  const mine = myId()
+  const others = getPeers().map((p) => p.id)
+  if (net.status !== 'joined' || others.length === 0) {
+    return [
+      { id: mine, bot: false },
+      ...Array.from({ length: SOLO_FEEDERS - 1 }, (_, i) => ({ id: `feeder ${i + 2}`, bot: true })),
+    ]
+  }
+  return [mine, ...others].slice(0, MAX_FEEDERS).map((id) => ({ id, bot: false }))
+}
+
+let dealt = 0
+
+/** A seed for the ducks, and so an id to tell rounds apart. Not a secret: every browser draws the ducks. */
+export function nextSeed(): number {
+  dealt += 1
+  return hashSeed(CONVENTIONS.worldSeed, `feeding-time:${getNet().room ?? 'solo'}:${dealt}:${Date.now()}`)
+}
+
+export interface GameSetup {
+  seed?: number
+  roster?: readonly { id: string; bot: boolean }[]
+  me?: string
+}
+
+export function newGame({ seed = nextSeed(), roster = gameRoster(), me = myId() }: GameSetup = {}): Game {
+  return createGame(
+    seed,
+    roster.map((entry) => ({ id: entry.id, bot: entry.bot, mine: entry.id === me })),
+    seed || 1,
+  )
+}
+
+/** A pond with nobody at it yet, for a guest to hold until the host's first snapshot. */
+export function waitingGame(): Game {
+  const game = createGame(0, [], 0)
+  game.over = false
+  return game
+}

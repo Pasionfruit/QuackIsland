@@ -58,7 +58,11 @@ spot on screen, projected with the game's own camera fit, so it goes through
 the real aiming - and screenshots mid-game and the results. For Punch Buggy
 (`--game punch-buggy`) it walks at the nearest fighter with WASD, clicks to
 punch when facing them within reach and again to pull back, and screenshots a
-punch in flight and the results. For Find Yourself
+punch in flight and the results. For Feeding Time
+(`--game feeding-time`) it first drags up slowly and fails if that throws, then
+flicks at the nearest hungry duck for the minute - a real pointerdown in the
+bottom third and pointermoves up into the top third, timed for the distance -
+spoiling every fourth, and fails unless ducks are fed. For Find Yourself
 (`--game find-yourself`) it picks the cup its face is really under in stages 1
 and 3 and the one next to it in stage 2 - clicking the cup on the canvas - and
 fails unless that scores 4; screenshots the faces, a shuffle, a hovered cup, a
@@ -98,14 +102,16 @@ node .claude/skills/run-localrot/scripts/lobby.mjs --players 8 --out <dir>
 ```
 
 Starts N **separate** headless Chromes, puts them in one lobby, then for each
-game (default `zombie-tag,messy-maze,probable-stop,duck-hunt,sprint-triathlon,punch-buggy,wack-attack,lady-luck,find-yourself,make-the-cut,let-him-cook,i-see-the-light`): the host opens and starts it, and it
+game (default `zombie-tag,messy-maze,probable-stop,duck-hunt,feeding-time,sprint-triathlon,punch-buggy,wack-attack,lady-luck,find-yourself,make-the-cut,let-him-cook,i-see-the-light`): the host opens and starts it, and it
 checks every browser has the same round (same seed, maze and headcount - Zombie
 Tag has no seed or maze, so there it is headcount alone) with exactly one body
 marked as its own, then that a guest holding a key moves on
 the host's screen - or, in Probable Stop, that a guest stepping to another path
 and confirming shows up on the host's; in Duck Hunt, that a guest's shot at one
 of its own balloons counts on the host; in Punch Buggy, that a guest walking and
-clicking moves and throws a punch on the host; in Find Yourself, every browser picks its own cup in
+clicking moves and throws a punch on the host; in Feeding Time, every browser flicks at ducks for
+twelve seconds, then that guests' throws reached the host and all agree on the
+scores; in Find Yourself, every browser picks its own cup in
 the first stage, then that all agree on the picks and everybody scored; in Sprint Triathlon, every browser races for twelve
 seconds, then that guests' progress reached the host and all agree on where
 everybody got to; in Wack-Attack, every browser walks and swings for

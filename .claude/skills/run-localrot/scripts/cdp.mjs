@@ -196,6 +196,12 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'fighters',
   },
+  'feeding-time': {
+    title: 'Feeding Time',
+    screen: 'FeedingTimeScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
   'find-yourself': {
     title: 'Find Yourself',
     screen: 'FindYourselfScreen',
@@ -238,6 +244,60 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'racers',
   },
+}
+
+/**
+ * An expression that, in a page showing Feeding Time, throws a cracker at a duck
+ * the way a player does: works out the lean and distance that would land on the
+ * nearest duck that is not eating - leading it - and then flicks for it, a real
+ * pointerdown in the bottom third of the board and pointermoves up into the top
+ * third over the time that throw takes. `off` spoils the aim by that many
+ * radians. Evaluates to the throw it meant, or null with nothing to throw at.
+ */
+export function feedFlick({ off = 0 } = {}) {
+  return `(async () => {
+    const rules = await import('/src/modules/28-feeding-time/internal/rules.ts')
+    const g = ${gameState('feeding-time')}
+    if (!g || g.over) return null
+    const me = g.players.findIndex((p) => p.mine)
+    if (me < 0 || !rules.canThrow(g, me)) return null
+    const from = rules.spotOf(me, g.players.length)
+    const ducks = rules.ducksFor(g.seed, g.eating.length)
+    const hungry = ducks.map((d, i) => ({ d, i })).filter(({ i }) => g.eating[i] <= g.elapsed + 0.8)
+    if (hungry.length === 0) return null
+    const lead = (d) => {
+      let at = rules.duckAt(d, g.elapsed)
+      for (let n = 0; n < 5; n++) at = rules.duckAt(d, g.elapsed + 0.25 + rules.flightTime(Math.hypot(at.x - from.x, at.z - from.z)))
+      return at
+    }
+    hungry.sort((a, b) => { const pa = lead(a.d); const pb = lead(b.d); return Math.hypot(pa.x - from.x, pa.z - from.z) - Math.hypot(pb.x - from.x, pb.z - from.z) })
+    const target = lead(hungry[0].d)
+    const angle = Math.atan2(target.x - from.x, from.z - target.z) + ${off}
+    const distance = Math.hypot(target.x - from.x, target.z - from.z)
+    // The flick for that throw: up from 0.9 to 0.2 of the board, leaning, at the speed that gives the distance.
+    const board = document.querySelector('[data-board]')
+    const rect = board.getBoundingClientRect()
+    const aspect = rect.width / rect.height
+    const t = Math.min(1, Math.max(0, (distance - rules.POND.distance[0]) / (rules.POND.distance[1] - rules.POND.distance[0])))
+    const speed = rules.FLICK.slowSpeed + t * (rules.FLICK.fastSpeed - rules.FLICK.slowSpeed)
+    const up = 0.7
+    const across = Math.tan(angle) * up
+    const seconds = Math.hypot(up, across) / speed
+    if (seconds > rules.FLICK.slowest) return { tooSlow: true, distance }
+    const at = (x, y) => ({ clientX: rect.left + x * rect.width, clientY: rect.top + y * rect.height, bubbles: true, pointerId: 1, button: 0 })
+    const x0 = 0.5
+    const x1 = 0.5 + across / aspect
+    board.dispatchEvent(new PointerEvent('pointerdown', at(x0, 0.9)))
+    const started = performance.now()
+    for (const f of [0.35, 0.7]) {
+      await new Promise((r) => setTimeout(r, Math.max(0, seconds * 1000 * f - (performance.now() - started))))
+      board.dispatchEvent(new PointerEvent('pointermove', at(x0 + (x1 - x0) * f, 0.9 - up * f)))
+    }
+    await new Promise((r) => setTimeout(r, Math.max(0, seconds * 1000 - (performance.now() - started))))
+    board.dispatchEvent(new PointerEvent('pointermove', at(x1, 0.9 - up)))
+    board.dispatchEvent(new PointerEvent('pointerup', at(x1, 0.9 - up)))
+    return { duck: hungry[0].i, angle: +angle.toFixed(3), distance: +distance.toFixed(2), seconds: +seconds.toFixed(3) }
+  })()`
 }
 
 /**
