@@ -124,6 +124,23 @@ export function hit(torch: Torch): void {
 export type SteerResult = 'grabbed' | 'moved' | 'hit' | 'finished' | null
 
 /**
+ * Whether the mouse is on a dropped torch: near enough, and with no wall between.
+ * A mouse left resting in the wall the torch just touched is not on it - or the
+ * torch would be picked straight back up into that wall when the stun wears off.
+ */
+function onTorch(game: Game, torch: Torch, target: Point): boolean {
+  const d = Math.hypot(target.x - torch.x, target.z - torch.z)
+  if (d > TORCH.grab) return false
+  const maze = mazeFor(game.seed)
+  const steps = Math.max(1, Math.ceil(d / TORCH.check))
+  for (let i = 1; i <= steps; i++) {
+    const at = { x: torch.x + ((target.x - torch.x) * i) / steps, z: torch.z + ((target.z - torch.z) * i) / steps }
+    if (touchesWall(maze, at, 0.02)) return false
+  }
+  return true
+}
+
+/**
  * A player's mouse is at `target` for `dt` seconds. Picks the torch up if the
  * mouse is on it; moves a held torch towards the mouse, no faster than the torch
  * goes, stopping at - and stunned by - the first wall it touches.
@@ -132,7 +149,7 @@ export function steer(game: Game, player: number, target: Point | null, dt: numb
   const torch = game.players[player]
   if (!torch || !target || !canMove(game, torch)) return null
   if (!torch.held) {
-    if (Math.hypot(target.x - torch.x, target.z - torch.z) > TORCH.grab) return null
+    if (!onTorch(game, torch, target)) return null
     torch.held = true
     return 'grabbed'
   }

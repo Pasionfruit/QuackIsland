@@ -2644,7 +2644,7 @@
       "id": "31-helping-dad",
       "phase": "P6",
       "title": "Minigame 18, Helping Dad: a maze in the dark, a torch in your colour on the mouse, a wall touched is Dad yelling and a second and a half stunned",
-      "status": "in_progress",
+      "status": "ready_for_review",
       "dependsOn": [
         "00-core",
         "02-player",
@@ -2667,27 +2667,27 @@
         {
           "id": "31.2",
           "title": "The torch: picked up with the mouse, follows it no faster than a walk, a wall touched drops it and stuns for 1.5 s",
-          "status": "in_progress"
+          "status": "done"
         },
         {
           "id": "31.3",
           "title": "The end: placed in the order you reach the finish, then by how far you had left, two minutes at most",
-          "status": "planned"
+          "status": "done"
         },
         {
           "id": "31.4",
           "title": "A still camera over the maze in the dark, lit only by your own torch, Dad at the top",
-          "status": "planned"
+          "status": "done"
         },
         {
           "id": "31.5",
           "title": "One maze shared across the lobby, your torch judged on your own screen, stand-ins only when alone",
-          "status": "planned"
+          "status": "done"
         },
         {
           "id": "31.6",
           "title": "Contract, tests, MODULE.md",
-          "status": "planned"
+          "status": "done"
         },
         {
           "id": "31.7",
@@ -2697,7 +2697,8 @@
       ],
       "gate": {
         "machine": {
-          "status": "pending"
+          "status": "green",
+          "at": "2026-09-17T15:29:03.950Z"
         },
         "human": {
           "status": "pending"

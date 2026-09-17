@@ -342,19 +342,29 @@ try {
     }
 
     if (game === 'helping-dad') {
-      // Every browser leads its torch along the way out for ten seconds; then
-      // the last guest flings its mouse into a wall. The host should have every
-      // guest's torch where that guest's own screen has it, and the wall.
+      // Every browser leads its torch along the way out until it is four metres
+      // from the start - short of the finish in any maze, which is further than
+      // that as the crow flies, so a torch is still inside to touch a wall - or
+      // for ten seconds; then the last guest flings its mouse into a wall. The
+      // host should have every guest's torch where that guest's own screen has
+      // it, and the wall.
       await host.waitFor(`(() => { const g = ${gameState(game)}; return g && g.elapsed > 3.2 })()`, 30000)
+      const start = await host.eval(`(async () => { const r = await import('/src/modules/31-helping-dad/internal/rules.ts'); return r.startPoint(${gameState(game)}.seed) })()`)
       const until = Date.now() + 10000
-      while (Date.now() < until) {
-        await Promise.all(pages.map((p) => p.eval(torchMove())))
+      const far = pages.map(() => false)
+      while (Date.now() < until && far.some((f) => !f)) {
+        await Promise.all(
+          pages.map(async (p, i) => {
+            if (far[i]) return
+            const s = await p.eval(torchMove())
+            if (s && Math.hypot(s.x - start.x, s.z - start.z) >= 4) far[i] = true
+          }),
+        )
         await sleep(40)
       }
       await sleep(600)
       const own = await Promise.all(pages.map((p) => p.eval(`(() => { const g = ${gameState(game)}; const me = g.players.find((x) => x.mine); return [me.id, me.x, me.z, me.hits] })()`)))
       const onHost = JSON.parse(await host.eval(`(() => { const g = ${gameState(game)}; return JSON.stringify(g.players.map((x) => [x.id, x.x, x.z, x.hits])) })()`))
-      const start = await host.eval(`(async () => { const r = await import('/src/modules/31-helping-dad/internal/rules.ts'); return r.startPoint(${gameState(game)}.seed) })()`)
       own.forEach(([id, x, z]) => {
         const h = onHost.find((t) => t[0] === id)
         const off = Math.hypot(h[1] - x, h[2] - z)

@@ -222,6 +222,8 @@ function TorchView({ index, live, aim }: { index: number; live: RefObject<Game>;
   })
   const g = live.current
   const mine = g.players[index]?.mine ?? false
+  // Everybody starts in the same cell and often walks the same way: your own ring is drawn over theirs.
+  const over = mine ? 3 : 0
   return (
     <group ref={group}>
       {mine ? <pointLight ref={lamp} position={[0, 1.2, 0]} intensity={7} distance={LIT + 0.8} decay={1.6} color={lampColour} /> : null}
@@ -229,16 +231,16 @@ function TorchView({ index, live, aim }: { index: number; live: RefObject<Game>;
         <planeGeometry args={mine ? [LIT * 1.6, LIT * 1.6] : [1.3, 1.3]} />
         <meshBasicMaterial map={glow()} color={colour} transparent blending={AdditiveBlending} depthWrite={false} opacity={0.5} />
       </mesh>
-      <mesh ref={ring} position={[0, HOLD + 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={3}>
+      <mesh ref={ring} position={[0, HOLD + 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={3 + over}>
         <ringGeometry args={[TORCH.radius - 0.05, TORCH.radius, 40]} />
         <meshBasicMaterial color={colour} transparent depthTest={false} />
       </mesh>
-      <mesh position={[0, HOLD + 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={3}>
+      <mesh position={[0, HOLD + 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={3 + over}>
         <circleGeometry args={[0.06, 16]} />
         <meshBasicMaterial color="#ffffff" transparent depthTest={false} />
       </mesh>
       {mine ? (
-        <mesh ref={cursor} rotation={[-Math.PI / 2, 0, 0]} renderOrder={4} visible={false}>
+        <mesh ref={cursor} rotation={[-Math.PI / 2, 0, 0]} renderOrder={4 + over} visible={false}>
           <ringGeometry args={[0.05, 0.075, 20]} />
           <meshBasicMaterial color={PALETTE.aim} transparent opacity={0.7} depthTest={false} />
         </mesh>

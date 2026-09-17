@@ -95,7 +95,7 @@ export function HelpingDadScreen({ run }: { run: MinigameRun }) {
   if (ready && !game.over && mine) {
     if (t < 0) banner = { text: String(Math.ceil(-t)), sub: 'Your torch is in the bottom-left corner', tone: 'count' }
     else if (mine.finished !== null) banner = { text: `You made it - ${ordinal(myPlace ?? 1)}`, sub: 'waiting for the others', tone: 'done' }
-    else if (mine.stunned > 0) banner = { text: `DAD: ${YELLS[(mine.hits - 1 + YELLS.length) % YELLS.length]}`, sub: `stunned ${mine.stunned.toFixed(1)}s`, tone: 'yell' }
+    else if (mine.stunned > 0) banner = { text: `DAD: ${YELLS[(mine.hits - 1 + YELLS.length) % YELLS.length]}`, sub: `stunned ${(Math.ceil(mine.stunned * 10) / 10).toFixed(1)}s`, tone: 'yell' }
     else if (!mine.held) banner = { text: 'Put the mouse on your torch to pick it up', tone: 'hint' }
   }
 

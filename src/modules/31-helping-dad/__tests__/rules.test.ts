@@ -139,6 +139,29 @@ describe('the torch', () => {
     expect(steer(g, 0, at, 0.1)).toBe('grabbed')
   })
 
+  it('is not picked up again, after a stun, by a mouse left in the wall it touched', () => {
+    const g = started(game())
+    const maze = mazeFor(SEED)
+    const s = startPoint(SEED)
+    steer(g, 0, s, 0.1)
+    // The middle of a closed side of the start cell: a mouse resting in the wall.
+    const [dc, dr] = ([[1, 0], [0, -1], [-1, 0], [0, 1]] as const).find(([c, r]) => !isOpen(maze, maze.start, c, r))!
+    const wall = { x: s.x + (dc * GRID.cell) / 2, z: s.z + (dr * GRID.cell) / 2 }
+    let result = null
+    for (let i = 0; i < 20 && result !== 'hit'; i++) result = steer(g, 0, wall, 1 / 60)
+    expect(result).toBe('hit')
+    const torch = g.players[0]
+    expect(Math.hypot(wall.x - torch.x, wall.z - torch.z)).toBeLessThan(TORCH.grab)
+    while (torch.stunned > 0) stepGame(g, 0.25)
+    for (let i = 0; i < 30; i++) {
+      expect(steer(g, 0, wall, 1 / 60)).toBeNull()
+      stepGame(g, 1 / 60)
+    }
+    expect(torch).toMatchObject({ hits: 1, held: false })
+    // Moved onto the torch, it is picked up.
+    expect(steer(g, 0, { x: torch.x, z: torch.z }, 1 / 60)).toBe('grabbed')
+  })
+
   it('reaches the finish along the way out without touching a wall, and places', () => {
     const g = started(game(2))
     walk(g, 0, 60)
