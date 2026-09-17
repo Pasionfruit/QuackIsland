@@ -196,6 +196,12 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'fighters',
   },
+  'wack-attack': {
+    title: 'Wack-Attack',
+    screen: 'WackAttackScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
   'make-the-cut': {
     title: 'Make The Cut',
     screen: 'MakeTheCutScreen',
@@ -220,6 +226,48 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'racers',
   },
+}
+
+/**
+ * An expression that, in a page showing Wack-Attack, plays one moment the way a
+ * player does: holds the WASD keys towards the nearest mole that is up and not
+ * whacked until the hammer will land on it, then lets go and clicks the field to
+ * swing. Evaluates to what it did, or null with nothing to go for.
+ */
+export function whackMove() {
+  return `(async () => {
+    const rules = await import('/src/modules/25-wack-attack/internal/rules.ts')
+    const g = ${gameState('wack-attack')}
+    const held = (window.__waKeys ??= new Set())
+    const press = (code, down) => {
+      if (down === held.has(code)) return
+      down ? held.add(code) : held.delete(code)
+      window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, key: code.slice(3).toLowerCase() }))
+    }
+    const letGo = () => ['KeyW', 'KeyA', 'KeyS', 'KeyD'].forEach((c) => press(c, false))
+    if (!g || g.over) { letGo(); return null }
+    const me = g.players.find((p) => p.mine)
+    if (!me) return null
+    const up = rules.molesFor(g.seed).filter((m) => rules.isUp(m, g.elapsed) && m.at + m.up - g.elapsed > 0.25 && !rules.whackOf(g, m.id))
+    if (up.length === 0) { letGo(); return null }
+    const far = (m) => { const h = rules.holeAt(m.hole); return Math.hypot(h.x - me.x, h.y - me.y) }
+    up.sort((a, b) => far(a) - far(b))
+    const target = up[0]
+    const hole = rules.holeAt(target.hole)
+    const dx = hole.x - me.x
+    const dy = hole.y - me.y
+    const distance = Math.hypot(dx, dy)
+    if (distance > rules.FIELD.strike * 0.9) {
+      press('KeyD', dx > distance * 0.3); press('KeyA', dx < -distance * 0.3)
+      press('KeyS', dy > distance * 0.3); press('KeyW', dy < -distance * 0.3)
+      return { walking: target.id, far: +distance.toFixed(2) }
+    }
+    letGo()
+    const board = document.querySelector('[data-board]')
+    const rect = board.getBoundingClientRect()
+    board.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2, bubbles: true }))
+    return { swing: target.id, golden: target.golden, score: me.score }
+  })()`
 }
 
 /**

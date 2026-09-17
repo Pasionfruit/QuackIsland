@@ -58,7 +58,10 @@ spot on screen, projected with the game's own camera fit, so it goes through
 the real aiming - and screenshots mid-game and the results. For Punch Buggy
 (`--game punch-buggy`) it walks at the nearest fighter with WASD, clicks to
 punch when facing them within reach and again to pull back, and screenshots a
-punch in flight and the results. For Make The Cut
+punch in flight and the results. For Wack-Attack
+(`--game wack-attack`) it walks with WASD to the nearest mole that is up and
+clicks to swing once over it, for the whole minute, failing if it never whacks
+one; screenshots a swing, the field and the results. For Make The Cut
 (`--game make-the-cut`) it plays each of your turns - holding WASD towards the
 nearest string until it is in reach, then aiming at the string and clicking -
 failing if a cut in reach does not count, and screenshots the draw, walking, a
@@ -87,14 +90,16 @@ node .claude/skills/run-localrot/scripts/lobby.mjs --players 8 --out <dir>
 ```
 
 Starts N **separate** headless Chromes, puts them in one lobby, then for each
-game (default `zombie-tag,messy-maze,probable-stop,duck-hunt,punch-buggy,lady-luck,make-the-cut,let-him-cook,i-see-the-light`): the host opens and starts it, and it
+game (default `zombie-tag,messy-maze,probable-stop,duck-hunt,punch-buggy,wack-attack,lady-luck,make-the-cut,let-him-cook,i-see-the-light`): the host opens and starts it, and it
 checks every browser has the same round (same seed, maze and headcount - Zombie
 Tag has no seed or maze, so there it is headcount alone) with exactly one body
 marked as its own, then that a guest holding a key moves on
 the host's screen - or, in Probable Stop, that a guest stepping to another path
 and confirming shows up on the host's; in Duck Hunt, that a guest's shot at one
 of its own balloons counts on the host; in Punch Buggy, that a guest walking and
-clicking moves and throws a punch on the host; in Make The Cut, every browser plays its own turns with
+clicking moves and throws a punch on the host; in Wack-Attack, every browser walks and swings for
+fifteen seconds, then that guests' whacks landed on the host and all agree on
+the scores; in Make The Cut, every browser plays its own turns with
 the keys and the mouse until a guest's cut lands on the host, then that all agree
 on the cuts and who is out; in Lady Luck, that a guest's click on a four-leaf
 clover is its claim on the host, that two guests clicking the same one at once

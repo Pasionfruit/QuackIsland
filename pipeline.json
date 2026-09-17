@@ -113,7 +113,8 @@
         "21-i-see-the-light",
         "22-let-him-cook",
         "23-lady-luck",
-        "24-make-the-cut"
+        "24-make-the-cut",
+        "25-wack-attack"
       ]
     }
   ],
@@ -147,7 +148,8 @@
         "21-i-see-the-light",
         "22-let-him-cook",
         "23-lady-luck",
-        "24-make-the-cut"
+        "24-make-the-cut",
+        "25-wack-attack"
       ],
       "generation": 1,
       "contract": {
@@ -324,7 +326,8 @@
         "20-punch-buggy",
         "21-i-see-the-light",
         "22-let-him-cook",
-        "24-make-the-cut"
+        "24-make-the-cut",
+        "25-wack-attack"
       ],
       "generation": 1,
       "contract": {
@@ -827,7 +830,8 @@
         "21-i-see-the-light",
         "22-let-him-cook",
         "23-lady-luck",
-        "24-make-the-cut"
+        "24-make-the-cut",
+        "25-wack-attack"
       ],
       "generation": 1,
       "contract": {
@@ -1329,7 +1333,8 @@
         "21-i-see-the-light",
         "22-let-him-cook",
         "23-lady-luck",
-        "24-make-the-cut"
+        "24-make-the-cut",
+        "25-wack-attack"
       ],
       "generation": 1,
       "contract": {
@@ -2123,6 +2128,85 @@
         "No moving camera",
         "No telling eliminating strings apart before they are cut",
         "No sound, no score kept between games"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "25-wack-attack",
+      "phase": "P6",
+      "title": "Minigame 10, Wack-Attack: a field of sixteen holes, moles and a golden mole popping out, everybody walking about with a hammer",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "25.1",
+          "title": "The field: sixteen holes, and a seeded schedule of moles and golden moles popping out of them",
+          "status": "done"
+        },
+        {
+          "id": "25.2",
+          "title": "The hammer: a swing lands in front of you, whacks the mole there, first whack counts, points by mole",
+          "status": "done"
+        },
+        {
+          "id": "25.3",
+          "title": "The controls: WASD to walk, left click to swing",
+          "status": "done"
+        },
+        {
+          "id": "25.4",
+          "title": "A still camera over the field, moles rising and sinking, hammers swinging, whacks landing",
+          "status": "done"
+        },
+        {
+          "id": "25.5",
+          "title": "One field shared across the lobby, whacks settled by the host, stand-ins only when alone",
+          "status": "done"
+        },
+        {
+          "id": "25.6",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "25.7",
+          "title": "The assets: models, sprites and sound in place of capsules and primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-17T02:28:05.236Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: players are the island capsule, moles and hammers are primitives",
+        "No moving camera",
+        "No knocking other players about with the hammer",
+        "No sound, no score kept between rounds"
       ],
       "budgets": {
         "drawCallsMax": 0,

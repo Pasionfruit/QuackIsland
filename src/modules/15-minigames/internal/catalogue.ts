@@ -254,15 +254,17 @@ const ENTRIES = [
     title: 'Wack-Attack',
     kind: 'free-for-all',
     description: [
-      'Sixteen holes, moles coming out of them, and everybody walking about with a hammer.',
-      'An ordinary mole is worth what it is worth. The golden one is worth more and gives you far less time to get to it.',
+      'Walk about a field with a hammer while moles pop out of sixteen holes. Get over one and swing before it goes back down.',
+      'A regular mole is a point. The golden mole is five, and gives you far less time to get to it. Most points when time runs out wins.',
     ],
     controls: [
       { input: 'WASD', does: 'Move' },
-      { input: 'Left click', does: 'Swing the hammer' },
+      { input: 'Left click', does: 'Swing hammer' },
     ],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `25-wack-attack`. The assets stage is still to do - the
+    // players are the island's capsule and the moles are primitives.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'lady-luck',
