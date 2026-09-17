@@ -250,6 +250,36 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'racers',
   },
+  'synchronize-steps': {
+    title: 'Synchronize Steps',
+    screen: 'SynchronizeStepsScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
+}
+
+/**
+ * An expression that, in a page showing Synchronize Steps, picks `pick` the way
+ * a player does: pressing its number key, or with `mouse` a real pointerdown on
+ * its button. Evaluates to the round and phase it picked in, and the pick the
+ * page shows as its own straight after.
+ */
+export function stepsPick({ pick, mouse = false }) {
+  return `(async () => {
+    if (${mouse}) {
+      const b = document.querySelector('[data-option="${pick}"]')
+      if (!b) return null
+      const r = b.getBoundingClientRect()
+      b.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, bubbles: true }))
+    } else {
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit${pick}', key: '${pick}', bubbles: true }))
+    }
+    await new Promise((res) => setTimeout(res, 60))
+    const g = ${gameState('synchronize-steps')}
+    if (!g) return null
+    const me = g.players.find((p) => p.mine)
+    return { round: g.round, phase: g.phase, clock: +g.clock.toFixed(2), shown: me ? me.pick : null }
+  })()`
 }
 
 /**

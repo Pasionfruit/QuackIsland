@@ -412,9 +412,14 @@ const ENTRIES = [
       'If exactly two of you pick the same number, you both move that far. If three or more do, all of you drop eight. Match nobody and you stay exactly where you are.',
       'Where you end up, top to bottom, is where you place.',
     ],
-    controls: [],
+    controls: [
+      { input: '1 / 4 / 6', does: 'Choose number of steps' },
+      { input: 'Mouse', does: 'Select an option' },
+    ],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `30-synchronize-steps`. The assets stage is still to do - the
+    // players are the island's capsule and the tower is primitives.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'sharing-is-caring',

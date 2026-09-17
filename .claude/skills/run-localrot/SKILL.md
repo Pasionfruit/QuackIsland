@@ -95,7 +95,12 @@ and the end. For I See The Light (`--game i-see-the-light`)
 it presses space once a tick on green and moves the pointer onto the middle of
 the circle (read from the page's `data-circle`) on red, screenshotting a red and
 the results; `--slip` also presses space a second into the second red and fails
-unless that puts it out. Prints the
+unless that puts it out. For Synchronize Steps (`--game synchronize-steps`) it
+picks every round with a number key or the buttons - once changing its mind - sits
+round 3 out, and presses a key in each reveal. It fails if a pick is not the one
+counted, if the sat-out round is not picked for it, or if a key pressed in the
+reveal carries into the next round. It screenshots a pick, the others' ticks, a
+reveal and the results. Prints the
 race's layout and seed, each spin, the finishing place, and console errors.
 About 30 seconds.
 
@@ -106,7 +111,7 @@ node .claude/skills/run-localrot/scripts/lobby.mjs --players 8 --out <dir>
 ```
 
 Starts N **separate** headless Chromes, puts them in one lobby, then for each
-game (default `zombie-tag,messy-maze,probable-stop,duck-hunt,feeding-time,sprint-triathlon,punch-buggy,time-it,wack-attack,lady-luck,find-yourself,make-the-cut,let-him-cook,i-see-the-light`): the host opens and starts it, and it
+game (default `zombie-tag,messy-maze,probable-stop,duck-hunt,feeding-time,sprint-triathlon,punch-buggy,time-it,wack-attack,lady-luck,find-yourself,make-the-cut,let-him-cook,i-see-the-light,synchronize-steps`): the host opens and starts it, and it
 checks every browser has the same round (same seed, maze and headcount - Zombie
 Tag has no seed or maze, so there it is headcount alone) with exactly one body
 marked as its own, then that a guest holding a key moves on
@@ -129,7 +134,11 @@ clover is its claim on the host, that two guests clicking the same one at once
 leaves it claimed once, and that all agree on the claims; in Let Him Cook, every browser plays its own turns
 with what it saw the chef take until a guest's pick is claimed on the host, then
 that all agree on the plates and the line; in I See The Light, that a guest
-running through a green and a red shows its steps on the host and is still in.
+running through a green and a red shows its steps on the host and is still in;
+in Synchronize Steps, every browser picks for three rounds, in twos so there are
+pairs and crowds, with keys or buttons and some changing their minds. At each
+reveal every browser must agree on the picks and steps, and each pick must be the
+one its browser meant.
 The other browsers are left idle there, so they go out on the first red for a
 pointer that was never in the circle - that is the rules, not a failure. Screenshots the host and a guest per game. Exits non-zero on
 any disagreement. Needs the relay. About a minute for eight.

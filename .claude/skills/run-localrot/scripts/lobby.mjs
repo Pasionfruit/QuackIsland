@@ -5,7 +5,7 @@
  *   node .claude/skills/run-localrot/scripts/lobby.mjs --players 8 --out <dir>
  *
  * --players   how many (default 8, the most the games are built for)
- * --games     comma list, in order (default zombie-tag,messy-maze,probable-stop,duck-hunt,punch-buggy,i-see-the-light)
+ * --games     comma list, in order (default: every built game, synchronize-steps last)
  * --app       dev server URL (default http://localhost:5199/)
  * --out       where screenshots go (default <temp>/localrot-run/lobby)
  * --software  render with SwiftShader instead of the GPU
@@ -21,9 +21,9 @@
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, say, sleep, timeItStop, triathlonMove, whackMove } from './cdp.mjs'
+import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, say, sleep, stepsPick, timeItStop, triathlonMove, whackMove } from './cdp.mjs'
 
-const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt,feeding-time,sprint-triathlon,punch-buggy,time-it,wack-attack,lady-luck,find-yourself,make-the-cut,let-him-cook,i-see-the-light', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
+const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt,feeding-time,sprint-triathlon,punch-buggy,time-it,wack-attack,lady-luck,find-yourself,make-the-cut,let-him-cook,i-see-the-light,synchronize-steps', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
 const count = Number(opt.players)
 const games = String(opt.games).split(',')
 const pages = []
@@ -336,6 +336,49 @@ try {
       await host.shot(`${game}-host.png`)
       await pages[ids.indexOf(landed.id)].shot(`${game}-guest.png`)
       if (!agree) throw new Error(`${game}: browsers disagree - ${views.join(' | ')}`)
+      await host.eval('window.__mg.backOut()')
+      for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
+      continue
+    }
+
+    if (game === 'synchronize-steps') {
+      // Three rounds: every browser picks - a key or a button, some changing
+      // their minds - and at each reveal every browser should agree on every
+      // pick and step, each the pick its own browser meant.
+      const waitAll = (phase, round) => Promise.all(pages.map((p) => p.waitFor(`(() => { const g = ${gameState(game)}; return g && (g.phase === 'over' || (g.phase === ${JSON.stringify(phase)} && g.round === ${round})) })()`, 20000)))
+      for (let round = 0; round < 3; round++) {
+        await waitAll('choose', round)
+        if (await host.eval(`${gameState(game)}.phase === 'over'`)) break
+        const options = [1, 4, 6]
+        // Browsers in twos on a number, so there are pairs - and, with enough browsers, crowds.
+        const meant = pages.map((_, i) => options[(Math.floor(i / 2) + round) % 3])
+        const standing = JSON.parse(await host.eval(`JSON.stringify(${gameState(game)}.players.map((p) => !p.out))`))
+        await Promise.all(
+          pages.map(async (p, i) => {
+            if (!standing[i]) return
+            if (i % 3 === 2) {
+              await p.eval(stepsPick({ pick: options[(i + round + 1) % 3], mouse: true }))
+              await sleep(250)
+            }
+            await p.eval(stepsPick({ pick: meant[i], mouse: i % 2 === 1 }))
+          }),
+        )
+        await waitAll('reveal', round)
+        await sleep(300)
+        const views = await Promise.all(pages.map((p) => p.eval(`(() => { const g = ${gameState(game)}; return JSON.stringify(g.players.map((x) => [x.id, x.step, x.out, x.last])) })()`)))
+        const agree = new Set(views).size === 1
+        const moves = JSON.parse(views[0])
+        say(`${game}: round ${round + 1} picks ${JSON.stringify(moves.map((m) => m[3] && m[3].pick))} steps ${JSON.stringify(moves.map((m) => m[1]))}; every browser agrees ${agree}`)
+        if (round === 0) {
+          await host.shot(`${game}-host.png`)
+          await mover.shot(`${game}-guest.png`)
+        }
+        if (!agree) throw new Error(`${game}: browsers disagree - ${views.join(' | ')}`)
+        moves.forEach((m, i) => {
+          if (!standing[i]) return
+          if (!m[3] || m[3].pick !== meant[i] || m[3].auto) throw new Error(`${game}: ${ids[i]} meant ${meant[i]} but the host counted ${JSON.stringify(m[3])}`)
+        })
+      }
       await host.eval('window.__mg.backOut()')
       for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
       continue

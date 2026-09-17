@@ -118,7 +118,8 @@
         "26-sprint-triathlon",
         "27-find-yourself",
         "28-feeding-time",
-        "29-time-it"
+        "29-time-it",
+        "30-synchronize-steps"
       ]
     }
   ],
@@ -157,7 +158,8 @@
         "26-sprint-triathlon",
         "27-find-yourself",
         "28-feeding-time",
-        "29-time-it"
+        "29-time-it",
+        "30-synchronize-steps"
       ],
       "generation": 1,
       "contract": {
@@ -339,7 +341,8 @@
         "26-sprint-triathlon",
         "27-find-yourself",
         "28-feeding-time",
-        "29-time-it"
+        "29-time-it",
+        "30-synchronize-steps"
       ],
       "generation": 1,
       "contract": {
@@ -847,7 +850,8 @@
         "26-sprint-triathlon",
         "27-find-yourself",
         "28-feeding-time",
-        "29-time-it"
+        "29-time-it",
+        "30-synchronize-steps"
       ],
       "generation": 1,
       "contract": {
@@ -1354,7 +1358,8 @@
         "26-sprint-triathlon",
         "27-find-yourself",
         "28-feeding-time",
-        "29-time-it"
+        "29-time-it",
+        "30-synchronize-steps"
       ],
       "generation": 1,
       "contract": {
@@ -2543,6 +2548,85 @@
         "No moving camera",
         "No authority over a player's own stop time: their screen times it",
         "No sound, no score kept between rounds"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "30-synchronize-steps",
+      "phase": "P6",
+      "title": "Minigame 19, Synchronize Steps: a tower of twenty steps, picks of 1, 4 or 6 every two seconds, pairs move, crowds drop eight, the lonely stay",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "30.1",
+          "title": "The tower: twenty steps a player, a pick of 1, 4 or 6 every two seconds, pairs move that far, three or more drop eight, alone stays",
+          "status": "done"
+        },
+        {
+          "id": "30.2",
+          "title": "The end: the bottom is out, last on the tower or the round limit ends it, placed top to bottom",
+          "status": "done"
+        },
+        {
+          "id": "30.3",
+          "title": "The controls: 1, 4 and 6 on the keyboard, or click an option",
+          "status": "done"
+        },
+        {
+          "id": "30.4",
+          "title": "A still camera on a staircase a lane per player, hops and drops, a reveal of who picked what",
+          "status": "done"
+        },
+        {
+          "id": "30.5",
+          "title": "One tower shared across the lobby, picks hidden until the reveal, stand-ins only when alone",
+          "status": "done"
+        },
+        {
+          "id": "30.6",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "30.7",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-17T04:45:21.916Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: players are the island capsule, steps are boxes",
+        "No moving camera",
+        "No showing picks before the reveal",
+        "No sound, no score kept between games"
       ],
       "budgets": {
         "drawCallsMax": 0,

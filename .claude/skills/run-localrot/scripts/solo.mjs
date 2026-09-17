@@ -5,7 +5,7 @@
  *
  * --game      messy-maze (default), zombie-tag, probable-stop, duck-hunt, punch-buggy
  *             time-it, feeding-time, find-yourself, sprint-triathlon, wack-attack, lady-luck, make-the-cut, let-him-cook
- *             or i-see-the-light
+ *             i-see-the-light or synchronize-steps
  * --app       dev server URL (default http://localhost:5199/)
  * --out       where screenshots go (default <temp>/localrot-run/solo)
  * --steer     Messy Maze: drive your racer to the middle with the stand-ins'
@@ -52,13 +52,19 @@
  *             countdown, a red, then the
  *             results. With --slip, press space in the second red and check it
  *             is out for it.
+ *             Synchronize Steps: every round, press a number key - or click
+ *             its button, or pick one and change its mind - except round 3,
+ *             which it sits out; presses a key in each reveal too. Fails if a
+ *             pick is not the one counted, if the sat-out round is not picked
+ *             for it, or if a key in the reveal carries into the next round.
+ *             Screenshots a pick, a reveal and the results.
  * --software  render with SwiftShader instead of the GPU (slow; see cdp.mjs)
  *
  * Needs the dev server running; not the relay - alone you are your own host.
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, say, sleep, timeItStop, triathlonMove, whackMove } from './cdp.mjs'
+import { GAMES, args, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, say, sleep, stepsPick, timeItStop, triathlonMove, whackMove } from './cdp.mjs'
 
 const opt = args({ game: 'messy-maze', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'solo'), port: '9400' })
 const game = GAMES[opt.game]
@@ -403,6 +409,62 @@ try {
     say('my turns', JSON.stringify(log))
     await page.waitFor(`!!document.querySelector('[data-again]')`, 300000)
     say('results', await page.shot('7-results.png'))
+  } else if (opt.steer && opt.game === 'synchronize-steps') {
+    const state = () => page.eval(`(() => { const g = ${gameState('synchronize-steps')}; const me = g.players.find((p) => p.mine); return { round: g.round, phase: g.phase, clock: +g.clock.toFixed(2), step: me.step, pick: me.pick, last: me.last, out: me.out, all: g.players.map((p) => p.step) } })()`)
+    const waitPhase = (phase, round) => page.waitFor(`(() => { const g = ${gameState('synchronize-steps')}; return g.phase === 'over' || (g.phase === ${JSON.stringify(phase)} && g.round === ${round}) })()`, 15000)
+    const log = []
+    let shotPick = false
+    let shotReveal = false
+    for (let round = 0; round < 30; round++) {
+      await waitPhase('choose', round)
+      let s = await state()
+      if (s.phase === 'over' || s.out) break
+      if (s.pick !== null) throw new Error(`round ${round}: a pick carried over from the reveal: ${s.pick}`)
+      const options = [1, 4, 6]
+      let meant = null
+      if (round === 2) {
+        // Sitting this one out: late in it, everybody else has picked and it should say so, but not what.
+        await page.waitFor(`(() => { const g = ${gameState('synchronize-steps')}; return g.phase !== 'choose' || g.clock > 1.55 })()`, 5000)
+        say('others picked', await page.shot('3-others-picked.png'))
+      } else {
+        await sleep(300)
+        if (round % 3 === 1) {
+          // Change of mind: one button, then another.
+          await page.eval(stepsPick({ pick: options[round % 3], mouse: true }))
+          await sleep(200)
+          meant = options[(round + 1) % 3]
+          const did = await page.eval(stepsPick({ pick: meant, mouse: true }))
+          if (did?.shown !== meant) throw new Error(`round ${round}: clicked ${meant} but the page shows ${did?.shown}`)
+        } else {
+          meant = options[round % 3]
+          const did = await page.eval(stepsPick({ pick: meant }))
+          if (did?.shown !== meant) throw new Error(`round ${round}: pressed ${meant} but the page shows ${did?.shown}`)
+        }
+        if (!shotPick) {
+          shotPick = true
+          say('picked', meant, await page.shot('3-pick.png'))
+        }
+      }
+      await waitPhase('reveal', round)
+      await sleep(round === 0 ? 700 : 150)
+      s = await state()
+      if (s.phase === 'over') break
+      if (!shotReveal && round === 0) {
+        shotReveal = true
+        say('reveal', JSON.stringify(s), await page.shot('4-reveal.png'))
+      }
+      if (!s.last) throw new Error(`round ${round}: no move recorded`)
+      if (meant !== null && (s.last.pick !== meant || s.last.auto)) throw new Error(`round ${round}: meant ${meant}, counted ${JSON.stringify(s.last)}`)
+      if (meant === null && !s.last.auto) throw new Error(`round ${round}: sat out but not picked for: ${JSON.stringify(s.last)}`)
+      log.push([round, meant, s.last.with, s.last.moved, s.step])
+      // A key in the reveal must not count for the next round.
+      await page.eval(stepsPick({ pick: 6 }))
+      if (s.out) break
+    }
+    say('rounds [round, meant, with, moved, step]', JSON.stringify(log))
+    await page.waitFor(`!!document.querySelector('[data-again]')`, 150000)
+    await sleep(500)
+    say('results', JSON.stringify(await state()), await page.shot('5-results.png'))
   } else if (opt.steer && opt.game === 'i-see-the-light') {
     const state = () => page.eval(`(() => { const r = ${gameState('i-see-the-light')}; const me = r.racers.find((x) => x.mine); return { over: r.over, elapsed: +r.elapsed.toFixed(2), steps: me.steps, out: me.out, place: me.place, others: r.racers.filter((x) => !x.mine).map((x) => x.id + ':' + x.steps + (x.out ? ':' + x.out.why : '') + (x.place ? ':#' + x.place : '')) } })()`)
     let reds = 0
