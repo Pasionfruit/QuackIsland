@@ -111,7 +111,8 @@
         "19-duck-hunt",
         "20-punch-buggy",
         "21-i-see-the-light",
-        "22-let-him-cook"
+        "22-let-him-cook",
+        "23-lady-luck"
       ]
     }
   ],
@@ -143,7 +144,8 @@
         "19-duck-hunt",
         "20-punch-buggy",
         "21-i-see-the-light",
-        "22-let-him-cook"
+        "22-let-him-cook",
+        "23-lady-luck"
       ],
       "generation": 1,
       "contract": {
@@ -820,7 +822,8 @@
         "19-duck-hunt",
         "20-punch-buggy",
         "21-i-see-the-light",
-        "22-let-him-cook"
+        "22-let-him-cook",
+        "23-lady-luck"
       ],
       "generation": 1,
       "contract": {
@@ -1320,7 +1323,8 @@
         "19-duck-hunt",
         "20-punch-buggy",
         "21-i-see-the-light",
-        "22-let-him-cook"
+        "22-let-him-cook",
+        "23-lady-luck"
       ],
       "generation": 1,
       "contract": {
@@ -1957,6 +1961,84 @@
         "No moving camera",
         "No recipe secrecy from the host browser: it runs the kitchen",
         "No sound, no score kept between games"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "23-lady-luck",
+      "phase": "P6",
+      "title": "Minigame 11, Lady Luck: a field of three-leaf clovers hiding three four-leaf ones at a time, click to claim, most claims wins",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "23.1",
+          "title": "The field: a seeded meadow of clovers, three four-leaf ones hidden at a time, a new one growing wherever one is claimed",
+          "status": "done"
+        },
+        {
+          "id": "23.2",
+          "title": "The claim: a click on a free four-leaf clover rings it in your colour; anything else costs a second",
+          "status": "done"
+        },
+        {
+          "id": "23.3",
+          "title": "The controls: aim with the mouse, left click to select a clover",
+          "status": "done"
+        },
+        {
+          "id": "23.4",
+          "title": "A still camera over the field, every clover drawn in one instanced mesh, claims ringed",
+          "status": "done"
+        },
+        {
+          "id": "23.5",
+          "title": "One field shared across the lobby, claims settled by the host, stand-ins only when alone",
+          "status": "done"
+        },
+        {
+          "id": "23.6",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "23.7",
+          "title": "The assets: models, sprites and sound in place of flat leaves",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-17T01:55:08.945Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: clovers are flat instanced leaves",
+        "No moving camera",
+        "No hiding the four-leaf clovers from a browser that draws them",
+        "No sound, no score kept between rounds"
       ],
       "budgets": {
         "drawCallsMax": 0,

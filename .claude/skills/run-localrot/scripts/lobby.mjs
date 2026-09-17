@@ -21,9 +21,9 @@
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, cookPick, duckHuntShot, gameState, launch, lightMove, say, sleep } from './cdp.mjs'
+import { GAMES, args, cloverClick, cookPick, duckHuntShot, gameState, launch, lightMove, say, sleep } from './cdp.mjs'
 
-const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt,punch-buggy,let-him-cook,i-see-the-light', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
+const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt,punch-buggy,lady-luck,let-him-cook,i-see-the-light', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
 const count = Number(opt.players)
 const games = String(opt.games).split(',')
 const pages = []
@@ -107,6 +107,39 @@ try {
       if (Math.hypot(after.x - before.x, after.y - before.y) < 0.5 || after.clicks !== before.clicks + 1) {
         throw new Error(`${game}: the host did not see the guest walk and punch`)
       }
+      await host.eval('window.__mg.backOut()')
+      for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
+      continue
+    }
+
+    if (game === 'lady-luck') {
+      // A guest claims a four-leaf clover; then two guests click the same one at
+      // once. Every browser should agree on the claims, and a clover is only ever
+      // claimed once.
+      const claimsOn = (p) => p.eval(`(() => { const g = ${gameState(game)}; return JSON.stringify(g.claims.map((c) => [c.clover, c.player])) })()`)
+      const other = guests.length > 1 ? guests[0] : null
+      await sleep(600)
+      const did = await mover.eval(cloverClick('lucky'))
+      await sleep(900)
+      const after = JSON.parse(await claimsOn(host))
+      const moverIndex = ids.indexOf(moverId)
+      say(`${game}: guest ${moverId} clicked clover ${did?.clover}; host has claims ${JSON.stringify(after)}`)
+      if (!did || !after.some(([c, p]) => c === did.clover && p === moverIndex)) throw new Error(`${game}: the guest's claim did not land on the host`)
+      if (other) {
+        const [a, b] = await Promise.all([mover.eval(cloverClick('lucky', { force: true })), other.eval(cloverClick('lucky', { force: true }))])
+        await sleep(1200)
+        const both = JSON.parse(await claimsOn(host))
+        const onIt = both.filter(([c]) => c === a?.clover)
+        say(`${game}: two guests clicked clover ${a?.clover} / ${b?.clover} at once; claimed by ${JSON.stringify(onIt)}`)
+        if (a && b && a.clover === b.clover && onIt.length !== 1) throw new Error(`${game}: a clover was claimed ${onIt.length} times`)
+      }
+      await sleep(400)
+      const views = await Promise.all(pages.map(claimsOn))
+      const agree = new Set(views).size === 1
+      say(`${game}: every browser agrees on the claims ${agree}`)
+      await host.shot(`${game}-host.png`)
+      await mover.shot(`${game}-guest.png`)
+      if (!agree) throw new Error(`${game}: browsers disagree - ${views.join(' | ')}`)
       await host.eval('window.__mg.backOut()')
       for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
       continue

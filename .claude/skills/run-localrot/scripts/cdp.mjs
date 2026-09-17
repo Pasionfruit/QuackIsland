@@ -196,6 +196,12 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'fighters',
   },
+  'lady-luck': {
+    title: 'Lady Luck',
+    screen: 'LadyLuckScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
   'let-him-cook': {
     title: 'Let Him Cook',
     screen: 'LetHimCookScreen',
@@ -208,6 +214,53 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'racers',
   },
+}
+
+/**
+ * An expression that, in a page showing Lady Luck, clicks a clover the way a
+ * player does - a pointer move over the board and a pointerdown on the canvas
+ * at the clover's spot on screen, projected with the game's own camera fit -
+ * and evaluates to what it clicked, or null when there was nothing to click or
+ * the cooldown was running.
+ *
+ * `which` is 'lucky' (the nth hidden four-leaf clover, `n` from 0) or 'plain' (a
+ * three-leaf clover). `force` clicks even during the cooldown.
+ */
+export function cloverClick(which = 'lucky', { n = 0, force = false } = {}) {
+  return `(async () => {
+    const rules = await import('/src/modules/23-lady-luck/internal/rules.ts')
+    const cam = await import('/src/modules/23-lady-luck/internal/camera.ts')
+    const g = ${gameState('lady-luck')}
+    if (!g || g.over) return null
+    const me = g.players.find((p) => p.mine)
+    if (!me || (me.cooldown > 0 && !${force})) return null
+    const field = rules.fieldFor(g.seed)
+    let clover = null
+    if (${JSON.stringify(which)} === 'lucky') clover = g.lucky[${n}]?.clover ?? null
+    else clover = field.findIndex((_, i) => !rules.fourLeaf(g, i))
+    if (clover === null || clover < 0) return null
+    const canvas = document.querySelector('[data-board] canvas')
+    const rect = canvas.getBoundingClientRect()
+    const aspect = rect.width / rect.height
+    const shot = cam.frameScene(aspect)
+    const at = { x: field[clover].x, y: 0.02, z: field[clover].z }
+    const sub = (p, q) => ({ x: p.x - q.x, y: p.y - q.y, z: p.z - q.z })
+    const dot = (p, q) => p.x * q.x + p.y * q.y + p.z * q.z
+    const norm = (p) => { const l = Math.hypot(p.x, p.y, p.z); return { x: p.x / l, y: p.y / l, z: p.z / l } }
+    const cross = (p, q) => ({ x: p.y * q.z - p.z * q.y, y: p.z * q.x - p.x * q.z, z: p.x * q.y - p.y * q.x })
+    const eye = { x: shot.x, y: shot.y, z: shot.z }
+    const forward = norm(sub(shot.target, eye))
+    const right = norm(cross(forward, { x: 0, y: 1, z: 0 }))
+    const up = cross(right, forward)
+    const rel = sub(at, eye)
+    const depth = dot(rel, forward)
+    const half = Math.tan((cam.FOV * Math.PI) / 360)
+    const clientX = rect.left + ((dot(rel, right) / (depth * half * aspect) + 1) / 2) * rect.width
+    const clientY = rect.top + ((1 - dot(rel, up) / (depth * half)) / 2) * rect.height
+    document.querySelector('[data-board]').dispatchEvent(new PointerEvent('pointermove', { clientX, clientY, bubbles: true }))
+    canvas.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX, clientY, bubbles: true }))
+    return { clover, which: ${JSON.stringify(which)}, score: me.score, x: Math.round(clientX), y: Math.round(clientY) }
+  })()`
 }
 
 /**

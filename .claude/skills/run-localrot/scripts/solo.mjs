@@ -4,7 +4,7 @@
  *   node .claude/skills/run-localrot/scripts/solo.mjs --game messy-maze --out <dir> [--steer] [--software]
  *
  * --game      messy-maze (default), zombie-tag, probable-stop, duck-hunt, punch-buggy
- *             let-him-cook or i-see-the-light
+ *             lady-luck, let-him-cook or i-see-the-light
  * --app       dev server URL (default http://localhost:5199/)
  * --out       where screenshots go (default <temp>/localrot-run/solo)
  * --steer     Messy Maze: drive your racer to the middle with the stand-ins'
@@ -16,6 +16,10 @@
  *             allows, for the whole minute, then the results.
  *             Punch Buggy: walk at the nearest fighter, punch when facing them
  *             within reach, pull back, repeat - screenshotting a punch in flight
+ *             and the results.
+ *             Lady Luck: click a three-leaf clover once and check it starts
+ *             the cooldown and blocks a click during it, then claim a four-leaf
+ *             clover every three seconds, screenshotting the field mid-round
  *             and the results.
  *             Let Him Cook: watch the chef, then on each of your turns pick an
  *             item this browser saw go in and nobody has claimed, screenshotting
@@ -33,7 +37,7 @@
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, cookPick, duckHuntShot, gameState, launch, lightMove, say, sleep } from './cdp.mjs'
+import { GAMES, args, cloverClick, cookPick, duckHuntShot, gameState, launch, lightMove, say, sleep } from './cdp.mjs'
 
 const opt = args({ game: 'messy-maze', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'solo'), port: '9400' })
 const game = GAMES[opt.game]
@@ -84,6 +88,52 @@ try {
     })()`)
     say('steered', JSON.stringify(log), await page.shot('3-in.png'))
     await page.waitFor(`!!document.querySelector('[data-again]')`, 120000)
+    say('results', await page.shot('4-results.png'))
+  } else if (opt.steer && opt.game === 'lady-luck') {
+    const state = () => page.eval(`(() => { const g = ${gameState('lady-luck')}; const me = g.players.find((p) => p.mine); return { over: g.over, elapsed: +g.elapsed.toFixed(2), score: me.score, misses: me.misses, cooldown: +me.cooldown.toFixed(2), claims: g.claims.length, lucky: g.lucky.map((l) => l.clover), scores: g.players.map((p) => p.score) } })()`)
+    let claimed = 0
+    let tried = 0
+    let missed = false
+    let shotMid = false
+    let nextAt = 2
+    for (let i = 0; i < 3000; i++) {
+      const s = await state()
+      if (s.over) break
+      if (!missed && s.elapsed > 1) {
+        // One deliberate miss: a three-leaf clover, and the cooldown should start.
+        missed = true
+        await page.eval(cloverClick('plain'))
+        await sleep(120)
+        const after = await state()
+        say('clicked a three-leaf clover', JSON.stringify({ misses: after.misses, cooldown: after.cooldown }))
+        if (after.misses !== s.misses + 1 || after.cooldown <= 0) throw new Error('a three-leaf clover was not a miss')
+        const blocked = await page.eval(cloverClick('lucky', { force: true }))
+        await sleep(120)
+        const still = await state()
+        say('clicked a four-leaf clover during the cooldown', JSON.stringify({ blocked, score: still.score }))
+        if (still.score !== s.score) throw new Error('a click during the cooldown counted')
+      }
+      // Find one every few seconds, like a player who is looking.
+      if (s.elapsed >= nextAt && s.cooldown <= 0) {
+        const did = await page.eval(cloverClick('lucky'))
+        if (did) {
+          tried += 1
+          await sleep(150)
+          const after = await state()
+          if (after.score === s.score + 1) claimed += 1
+          else say('claim not counted', JSON.stringify({ did, before: s, after }))
+          nextAt = after.elapsed + 3
+        }
+      }
+      if (!shotMid && s.elapsed > 25) {
+        shotMid = true
+        say('mid-round', JSON.stringify(s), await page.shot('3-field.png'))
+      }
+      await sleep(80)
+    }
+    say('claimed', claimed, 'of', tried, 'clicks on four-leaf clovers')
+    if (claimed === 0) throw new Error('never claimed a four-leaf clover')
+    await page.waitFor(`!!document.querySelector('[data-again]')`, 90000)
     say('results', await page.shot('4-results.png'))
   } else if (opt.steer && opt.game === 'let-him-cook') {
     const state = () => page.eval(`(() => { const g = ${gameState('let-him-cook')}; const me = g.players.findIndex((p) => p.mine); return { phase: g.phase, clock: +g.clock.toFixed(2), recipe: g.recipe, turn: g.turn, up: g.queue[0], me, out: g.players[me].out, claims: g.players[me].claims, last: g.last, left: g.players.filter((p) => !p.out).length, picks: g.picks.length } })()`)

@@ -270,15 +270,17 @@ const ENTRIES = [
     title: 'Lady Luck',
     kind: 'free-for-all',
     description: [
-      'A field of three-leaf clovers with exactly three four-leaf clovers hidden in it. Search, and click what you find.',
-      'Claiming one rings it in your colour and shuts everybody else out of it.',
+      'A field of three-leaf clovers with three four-leaf clovers hidden in it at a time. Search, and click what you find - a new one grows for every one claimed.',
+      'Claiming one rings it in your colour and shuts everybody else out of it. Click anything else and you wait a second. Most claimed before the round ends wins.',
     ],
     controls: [
       { input: 'Mouse', does: 'Aim' },
-      { input: 'Left click', does: 'Pick a clover' },
+      { input: 'Left click', does: 'Select a clover' },
     ],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `23-lady-luck`. The assets stage is still to do - the clovers
+    // are flat instanced leaves.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'find-yourself',
