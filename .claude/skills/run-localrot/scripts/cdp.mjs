@@ -196,6 +196,12 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'fighters',
   },
+  'make-the-cut': {
+    title: 'Make The Cut',
+    screen: 'MakeTheCutScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
   'lady-luck': {
     title: 'Lady Luck',
     screen: 'LadyLuckScreen',
@@ -214,6 +220,67 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'racers',
   },
+}
+
+/**
+ * An expression that, in a page showing Make The Cut, plays one moment of this
+ * player's turn the way a player does: holds the WASD keys towards the nearest
+ * whole string until it is well in reach, then lets go, moves the pointer onto
+ * the string - projected with the game's own camera fit - and clicks. Evaluates
+ * to what it did, or null when it is not this player's turn. Off its turn it
+ * lets go of every key.
+ */
+export function cutterMove() {
+  return `(async () => {
+    const rules = await import('/src/modules/24-make-the-cut/internal/rules.ts')
+    const cam = await import('/src/modules/24-make-the-cut/internal/camera.ts')
+    const g = ${gameState('make-the-cut')}
+    const held = (window.__mcKeys ??= new Set())
+    const press = (code, down) => {
+      if (down === held.has(code)) return
+      down ? held.add(code) : held.delete(code)
+      window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, key: code.slice(3).toLowerCase() }))
+    }
+    const letGo = () => ['KeyW', 'KeyA', 'KeyS', 'KeyD'].forEach((c) => press(c, false))
+    if (!g) return null
+    const me = g.players.findIndex((p) => p.mine)
+    if (me < 0 || rules.whoseTurn(g) !== me || g.clock < 0.3) { letGo(); return null }
+    const string = rules.nearestString(g, me)
+    const web = rules.webFor(g.seed, g.count)
+    const rim = web[string].rim
+    const body = g.players[me]
+    const dx = rim.x - body.x
+    const dy = rim.z - body.y
+    const far = Math.hypot(dx, dy)
+    if (far > rules.TOWER.reach * 0.7) {
+      press('KeyD', dx > far * 0.3); press('KeyA', dx < -far * 0.3)
+      press('KeyS', dy > far * 0.3); press('KeyW', dy < -far * 0.3)
+      return { walking: string, far: +far.toFixed(2) }
+    }
+    letGo()
+    const canvas = document.querySelector('[data-board] canvas')
+    const rect = canvas.getBoundingClientRect()
+    const aspect = rect.width / rect.height
+    const shot = cam.frameScene(aspect)
+    const s = web[string]
+    const at = { x: s.rim.x + (s.end.x - s.rim.x) * 0.2, y: s.rim.y + (s.end.y - s.rim.y) * 0.2 + 0.25, z: s.rim.z + (s.end.z - s.rim.z) * 0.2 }
+    const sub = (p, q) => ({ x: p.x - q.x, y: p.y - q.y, z: p.z - q.z })
+    const dot = (p, q) => p.x * q.x + p.y * q.y + p.z * q.z
+    const norm = (p) => { const l = Math.hypot(p.x, p.y, p.z); return { x: p.x / l, y: p.y / l, z: p.z / l } }
+    const cross = (p, q) => ({ x: p.y * q.z - p.z * q.y, y: p.z * q.x - p.x * q.z, z: p.x * q.y - p.y * q.x })
+    const eye = { x: shot.x, y: shot.y, z: shot.z }
+    const forward = norm(sub(shot.target, eye))
+    const right = norm(cross(forward, { x: 0, y: 1, z: 0 }))
+    const up = cross(right, forward)
+    const rel = sub(at, eye)
+    const depth = dot(rel, forward)
+    const half = Math.tan((cam.FOV * Math.PI) / 360)
+    const clientX = rect.left + ((dot(rel, right) / (depth * half * aspect) + 1) / 2) * rect.width
+    const clientY = rect.top + ((1 - dot(rel, up) / (depth * half)) / 2) * rect.height
+    canvas.dispatchEvent(new PointerEvent('pointermove', { clientX, clientY, bubbles: true }))
+    canvas.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX, clientY, bubbles: true }))
+    return { cut: string, turn: g.turns, x: Math.round(clientX), y: Math.round(clientY) }
+  })()`
 }
 
 /**

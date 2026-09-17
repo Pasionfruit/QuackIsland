@@ -112,7 +112,8 @@
         "20-punch-buggy",
         "21-i-see-the-light",
         "22-let-him-cook",
-        "23-lady-luck"
+        "23-lady-luck",
+        "24-make-the-cut"
       ]
     }
   ],
@@ -145,7 +146,8 @@
         "20-punch-buggy",
         "21-i-see-the-light",
         "22-let-him-cook",
-        "23-lady-luck"
+        "23-lady-luck",
+        "24-make-the-cut"
       ],
       "generation": 1,
       "contract": {
@@ -321,7 +323,8 @@
         "19-duck-hunt",
         "20-punch-buggy",
         "21-i-see-the-light",
-        "22-let-him-cook"
+        "22-let-him-cook",
+        "24-make-the-cut"
       ],
       "generation": 1,
       "contract": {
@@ -823,7 +826,8 @@
         "20-punch-buggy",
         "21-i-see-the-light",
         "22-let-him-cook",
-        "23-lady-luck"
+        "23-lady-luck",
+        "24-make-the-cut"
       ],
       "generation": 1,
       "contract": {
@@ -1324,7 +1328,8 @@
         "20-punch-buggy",
         "21-i-see-the-light",
         "22-let-him-cook",
-        "23-lady-luck"
+        "23-lady-luck",
+        "24-make-the-cut"
       ],
       "generation": 1,
       "contract": {
@@ -2026,7 +2031,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-17T01:55:08.945Z"
+          "at": "2026-09-17T02:12:51.486Z"
         },
         "human": {
           "status": "pending"
@@ -2039,6 +2044,85 @@
         "No moving camera",
         "No hiding the four-leaf clovers from a browser that draws them",
         "No sound, no score kept between rounds"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "24-make-the-cut",
+      "phase": "P6",
+      "title": "Minigame 13, Make The Cut: a tower in a web of strings, turns cutting them, eliminating strings launch you off, last one standing",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "24.1",
+          "title": "The tower: a platform in a web of strings, three per player and one eliminating string fewer than players",
+          "status": "done"
+        },
+        {
+          "id": "24.2",
+          "title": "The turns: a random first cutter, turns passing round, an eliminating string launching you off, last one standing",
+          "status": "done"
+        },
+        {
+          "id": "24.3",
+          "title": "The controls: WASD to walk the tower top, the mouse to aim at a string, left click to cut one in reach",
+          "status": "done"
+        },
+        {
+          "id": "24.4",
+          "title": "A still camera over the tower and its web, strings snapping, cutters launched",
+          "status": "done"
+        },
+        {
+          "id": "24.5",
+          "title": "One tower shared across the lobby, the eliminating strings kept on the host, stand-ins only when alone",
+          "status": "done"
+        },
+        {
+          "id": "24.6",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "24.7",
+          "title": "The assets: models, sprites and sound in place of capsules and cylinders",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-17T02:12:31.551Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: cutters are the island capsule, strings are cylinders",
+        "No moving camera",
+        "No telling eliminating strings apart before they are cut",
+        "No sound, no score kept between games"
       ],
       "budgets": {
         "drawCallsMax": 0,

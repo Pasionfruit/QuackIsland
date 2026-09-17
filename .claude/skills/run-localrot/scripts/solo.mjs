@@ -4,7 +4,7 @@
  *   node .claude/skills/run-localrot/scripts/solo.mjs --game messy-maze --out <dir> [--steer] [--software]
  *
  * --game      messy-maze (default), zombie-tag, probable-stop, duck-hunt, punch-buggy
- *             lady-luck, let-him-cook or i-see-the-light
+ *             lady-luck, make-the-cut, let-him-cook or i-see-the-light
  * --app       dev server URL (default http://localhost:5199/)
  * --out       where screenshots go (default <temp>/localrot-run/solo)
  * --steer     Messy Maze: drive your racer to the middle with the stand-ins'
@@ -17,6 +17,9 @@
  *             Punch Buggy: walk at the nearest fighter, punch when facing them
  *             within reach, pull back, repeat - screenshotting a punch in flight
  *             and the results.
+ *             Make The Cut: on each of your turns, walk with WASD to the nearest
+ *             string and click it, failing if a cut in reach does not count,
+ *             screenshotting the draw, walking, a cut, a launch and the results.
  *             Lady Luck: click a three-leaf clover once and check it starts
  *             the cooldown and blocks a click during it, then claim a four-leaf
  *             clover every three seconds, screenshotting the field mid-round
@@ -37,7 +40,7 @@
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, cloverClick, cookPick, duckHuntShot, gameState, launch, lightMove, say, sleep } from './cdp.mjs'
+import { GAMES, args, cloverClick, cookPick, cutterMove, duckHuntShot, gameState, launch, lightMove, say, sleep } from './cdp.mjs'
 
 const opt = args({ game: 'messy-maze', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'solo'), port: '9400' })
 const game = GAMES[opt.game]
@@ -89,6 +92,41 @@ try {
     say('steered', JSON.stringify(log), await page.shot('3-in.png'))
     await page.waitFor(`!!document.querySelector('[data-again]')`, 120000)
     say('results', await page.shot('4-results.png'))
+  } else if (opt.steer && opt.game === 'make-the-cut') {
+    const state = () => page.eval(`(() => { const g = ${gameState('make-the-cut')}; const me = g.players.findIndex((p) => p.mine); return { phase: g.phase, clock: +g.clock.toFixed(2), turn: g.turn, turns: g.turns, me, out: g.players[me].out, cuts: g.players[me].cuts, last: g.last, standing: g.players.filter((p) => !p.out).length, cut: g.cut.map((c) => (c ? c.player + (c.deadly ? '!' : '') : '.')).join(' ') } })()`)
+    const shots = new Set()
+    const log = []
+    for (let i = 0; i < 8000; i++) {
+      const s = await state()
+      if (s.phase === 'over') break
+      if (s.phase === 'draw' && s.clock > 1.9 && !shots.has('draw')) {
+        shots.add('draw')
+        say('draw', JSON.stringify({ first: s.turn, me: s.me }), await page.shot('3-draw.png'))
+      }
+      const did = await page.eval(cutterMove())
+      if (did?.walking !== undefined && !shots.has('walking')) {
+        shots.add('walking')
+        say('walking to a string', JSON.stringify(did), await page.shot('4-walking.png'))
+      }
+      if (did?.cut !== undefined) {
+        await sleep(150)
+        const after = await state()
+        log.push({ string: did.cut, landed: after.last?.player === s.me && after.last?.string === did.cut, deadly: after.last?.deadly })
+        say('cut', JSON.stringify(log[log.length - 1]), shots.has('cut') ? '' : await page.shot('5-cut.png'))
+        shots.add('cut')
+        if (!log[log.length - 1].landed) throw new Error('a cut in reach did not count')
+      }
+      if (s.phase === 'result' && s.last?.deadly && !shots.has('launch')) {
+        shots.add('launch')
+        await sleep(500)
+        say('launched', JSON.stringify(s.last), await page.shot('6-launch.png'))
+      }
+      await sleep(60)
+    }
+    say('my cuts', JSON.stringify(log))
+    if (log.length === 0) throw new Error('never got to cut')
+    await page.waitFor(`!!document.querySelector('[data-again]')`, 240000)
+    say('results', await page.shot('7-results.png'))
   } else if (opt.steer && opt.game === 'lady-luck') {
     const state = () => page.eval(`(() => { const g = ${gameState('lady-luck')}; const me = g.players.find((p) => p.mine); return { over: g.over, elapsed: +g.elapsed.toFixed(2), score: me.score, misses: me.misses, cooldown: +me.cooldown.toFixed(2), claims: g.claims.length, lucky: g.lucky.map((l) => l.clover), scores: g.players.map((p) => p.score) } })()`)
     let claimed = 0

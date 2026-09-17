@@ -58,7 +58,11 @@ spot on screen, projected with the game's own camera fit, so it goes through
 the real aiming - and screenshots mid-game and the results. For Punch Buggy
 (`--game punch-buggy`) it walks at the nearest fighter with WASD, clicks to
 punch when facing them within reach and again to pull back, and screenshots a
-punch in flight and the results. For Lady Luck
+punch in flight and the results. For Make The Cut
+(`--game make-the-cut`) it plays each of your turns - holding WASD towards the
+nearest string until it is in reach, then aiming at the string and clicking -
+failing if a cut in reach does not count, and screenshots the draw, walking, a
+cut, a launch and the results. For Lady Luck
 (`--game lady-luck`) it clicks a three-leaf clover once and fails unless that
 starts the cooldown and a click during it is ignored, then claims a four-leaf
 clover every three seconds for the minute - a real pointer event at the
@@ -83,14 +87,16 @@ node .claude/skills/run-localrot/scripts/lobby.mjs --players 8 --out <dir>
 ```
 
 Starts N **separate** headless Chromes, puts them in one lobby, then for each
-game (default `zombie-tag,messy-maze,probable-stop,duck-hunt,punch-buggy,lady-luck,let-him-cook,i-see-the-light`): the host opens and starts it, and it
+game (default `zombie-tag,messy-maze,probable-stop,duck-hunt,punch-buggy,lady-luck,make-the-cut,let-him-cook,i-see-the-light`): the host opens and starts it, and it
 checks every browser has the same round (same seed, maze and headcount - Zombie
 Tag has no seed or maze, so there it is headcount alone) with exactly one body
 marked as its own, then that a guest holding a key moves on
 the host's screen - or, in Probable Stop, that a guest stepping to another path
 and confirming shows up on the host's; in Duck Hunt, that a guest's shot at one
 of its own balloons counts on the host; in Punch Buggy, that a guest walking and
-clicking moves and throws a punch on the host; in Lady Luck, that a guest's click on a four-leaf
+clicking moves and throws a punch on the host; in Make The Cut, every browser plays its own turns with
+the keys and the mouse until a guest's cut lands on the host, then that all agree
+on the cuts and who is out; in Lady Luck, that a guest's click on a four-leaf
 clover is its claim on the host, that two guests clicking the same one at once
 leaves it claimed once, and that all agree on the claims; in Let Him Cook, every browser plays its own turns
 with what it saw the chef take until a guest's pick is claimed on the host, then

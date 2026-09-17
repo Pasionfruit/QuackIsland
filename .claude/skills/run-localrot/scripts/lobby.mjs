@@ -21,9 +21,9 @@
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, cloverClick, cookPick, duckHuntShot, gameState, launch, lightMove, say, sleep } from './cdp.mjs'
+import { GAMES, args, cloverClick, cookPick, cutterMove, duckHuntShot, gameState, launch, lightMove, say, sleep } from './cdp.mjs'
 
-const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt,punch-buggy,lady-luck,let-him-cook,i-see-the-light', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
+const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt,punch-buggy,lady-luck,make-the-cut,let-him-cook,i-see-the-light', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
 const count = Number(opt.players)
 const games = String(opt.games).split(',')
 const pages = []
@@ -107,6 +107,43 @@ try {
       if (Math.hypot(after.x - before.x, after.y - before.y) < 0.5 || after.clicks !== before.clicks + 1) {
         throw new Error(`${game}: the host did not see the guest walk and punch`)
       }
+      await host.eval('window.__mg.backOut()')
+      for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
+      continue
+    }
+
+    if (game === 'make-the-cut') {
+      // Everybody plays their own turns - walking with the keys to the nearest
+      // string and clicking it - until a guest's cut has landed on the host;
+      // then every browser should agree on the cuts and who is out.
+      const onHost = () => host.eval(`(() => { const g = ${gameState(game)}; return { phase: g.phase, turns: g.turns, last: g.last, players: g.players.map((p) => ({ id: p.id, x: +p.x.toFixed(2), y: +p.y.toFixed(2) })) } })()`)
+      let landed = null
+      let walked = 0
+      for (let i = 0; i < 4000 && !landed; i++) {
+        const before = await onHost()
+        if (before.phase === 'over') break
+        const results = await Promise.all(pages.map((p) => p.eval(cutterMove())))
+        const cutter = results.findIndex((r) => r && r.cut !== undefined)
+        const walker = results.findIndex((r) => r && r.walking !== undefined)
+        if (walker > 0) walked = Math.max(walked, 1)
+        if (cutter >= 0) {
+          await sleep(700)
+          const after = await onHost()
+          say(`${game}: ${ids[cutter]} cut string ${results[cutter].cut}; host's last cut ${JSON.stringify(after.last)}`)
+          if (!after.last || after.last.string !== results[cutter].cut || after.last.player !== cutter) throw new Error(`${game}: ${ids[cutter]}'s cut did not land on the host`)
+          if (cutter > 0) landed = { id: ids[cutter], string: results[cutter].cut }
+        }
+        await sleep(80)
+      }
+      for (const p of pages) await p.eval(`['KeyW', 'KeyA', 'KeyS', 'KeyD'].forEach((code) => window.dispatchEvent(new KeyboardEvent('keyup', { code })))`)
+      if (!landed) throw new Error(`${game}: no guest's cut landed on the host`)
+      await sleep(500)
+      const views = await Promise.all(pages.map((p) => p.eval(`(() => { const g = ${gameState(game)}; return JSON.stringify([g.cut.map((c) => (c ? [c.player, c.deadly] : null)), g.players.map((p) => p.out ? p.out.order : 0), g.turns]) })()`)))
+      const agree = new Set(views).size === 1
+      say(`${game}: a guest walked to its string (${walked > 0}); every browser agrees on the cuts and who is out ${agree}`)
+      await host.shot(`${game}-host.png`)
+      await pages[ids.indexOf(landed.id)].shot(`${game}-guest.png`)
+      if (!agree) throw new Error(`${game}: browsers disagree - ${views.join(' | ')}`)
       await host.eval('window.__mg.backOut()')
       for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
       continue

@@ -304,12 +304,18 @@ const ENTRIES = [
     title: 'Make The Cut',
     kind: 'free-for-all',
     description: [
-      'Everybody gets three strings, and there is one eliminating string for every player but one. A random player goes first.',
-      'Cut a string. Cut an eliminating one and you go off the side of the tower.',
+      'Stand on a tower in a web of strings: three for every player, and one eliminating string fewer than there are players. A random player cuts first, and the turn passes round.',
+      'Cut a normal string and nothing happens. Cut an eliminating one and you are launched off the tower. Last one standing wins.',
     ],
-    controls: [],
+    controls: [
+      { input: 'WASD', does: 'Move' },
+      { input: 'Mouse', does: 'Aim' },
+      { input: 'Left click', does: 'Cut string' },
+    ],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `24-make-the-cut`. The assets stage is still to do - the
+    // cutters are the island's capsule and the strings are cylinders.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'hes-one-shot',

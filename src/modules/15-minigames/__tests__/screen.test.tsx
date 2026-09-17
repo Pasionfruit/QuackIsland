@@ -169,7 +169,7 @@ describe('a game briefing', () => {
 
   it('says so when a game has no controls written down', () => {
     const where = mount()
-    act(() => openMinigame('make-the-cut'))
+    act(() => openMinigame('hes-one-shot'))
     click(where.querySelector('[data-leaf="controls"]'))
     expect(where.textContent).toContain('Not written down yet')
   })
