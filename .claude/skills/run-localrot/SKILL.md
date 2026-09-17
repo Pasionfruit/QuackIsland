@@ -123,10 +123,13 @@ turn together - a few minutes. Prints the
 race's layout and seed, each spin, the finishing place, and console errors.
 About 30 seconds.
 
-**Musical Mayhem** (`--game musical-mayhem`) and **Where's Midnight?**
-(`--game wheres-midnight`) are opened and screenshotted but have no `--steer`
-yet: the briefing and the round, and nothing played. Both read their state the
-usual way, so `gameState` gives you the floor or the search to drive by hand.
+**Musical Mayhem** (`--game musical-mayhem`), **Where's Midnight?**
+(`--game wheres-midnight`) and **Pet Race** (`--game pet-race`) are opened and
+screenshotted but have no `--steer` yet: the briefing and the round, and nothing
+played. All three read their state the usual way, so `gameState` gives you the
+floor, the search or the race to drive by hand. Pet Race opens on its ten-second
+table - the cards carry `data-pick="<pet>"`, and clicking one is a pick; choose
+nothing and you are a fish.
 
 ### A full lobby
 

@@ -126,7 +126,8 @@
         "34-sharing-is-caring",
         "35-chef-caricature",
         "36-musical-mayhem",
-        "37-wheres-midnight"
+        "37-wheres-midnight",
+        "38-pet-race"
       ]
     }
   ],
@@ -173,7 +174,8 @@
         "34-sharing-is-caring",
         "35-chef-caricature",
         "36-musical-mayhem",
-        "37-wheres-midnight"
+        "37-wheres-midnight",
+        "38-pet-race"
       ],
       "generation": 1,
       "contract": {
@@ -878,7 +880,8 @@
         "34-sharing-is-caring",
         "35-chef-caricature",
         "36-musical-mayhem",
-        "37-wheres-midnight"
+        "37-wheres-midnight",
+        "38-pet-race"
       ],
       "generation": 1,
       "contract": {
@@ -1393,7 +1396,8 @@
         "34-sharing-is-caring",
         "35-chef-caricature",
         "36-musical-mayhem",
-        "37-wheres-midnight"
+        "37-wheres-midnight",
+        "38-pet-race"
       ],
       "generation": 1,
       "contract": {
@@ -3257,6 +3261,99 @@
         "No models: the junk is boxes, cylinders, tyres and blobs, and the cat is spheres",
         "No walking: the camera turns and zooms and never leaves the spot",
         "No hints, no highlighting, no warmer-and-colder - looking is the whole game",
+        "No sound, no score kept between games"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "38-pet-race",
+      "phase": "P6",
+      "title": "Minigame 5, Pet Race: ten seconds to read five pets’ stats and pick one - or be given the fish - then three, two, one and thirty seconds to race them down a course of hedges, puddles and treats, boosting on a stamina bar that only some of them can afford",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "38.1",
+          "title": "The five pets: speed, boost, stamina, how fast it regrows and how sharply the animal turns, none of them simply the best",
+          "status": "done"
+        },
+        {
+          "id": "38.2",
+          "title": "The course: a fenced run from the seed, hedges to steer round, puddles that drag and treats that give stamina back",
+          "status": "done"
+        },
+        {
+          "id": "38.3",
+          "title": "The choosing: ten seconds with every pet’s stats on the table, and the fish for anybody who does not choose",
+          "status": "done"
+        },
+        {
+          "id": "38.4",
+          "title": "The race: three, two, one, then thirty seconds - momentum, boost that burns stamina, and the fish flopping on the line",
+          "status": "done"
+        },
+        {
+          "id": "38.5",
+          "title": "The end: finishers by their time, everybody else by how far they got",
+          "status": "done"
+        },
+        {
+          "id": "38.6",
+          "title": "The controls: WASD to move, hold left click to boost",
+          "status": "done"
+        },
+        {
+          "id": "38.7",
+          "title": "A camera behind your own pet, the course drawn, and five animals built out of primitives",
+          "status": "done"
+        },
+        {
+          "id": "38.8",
+          "title": "One course across the lobby, the host moving everybody from what they press, stand-ins only when alone",
+          "status": "done"
+        },
+        {
+          "id": "38.9",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "38.10",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-17T21:43:32.179Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: the five pets are built out of boxes, spheres and cones",
+        "No racer-on-racer collision: pets run through each other, so nobody can be blocked out of a win",
+        "No lap counting, no checkpoints: one run, one line",
         "No sound, no score kept between games"
       ],
       "budgets": {

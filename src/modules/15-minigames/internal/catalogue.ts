@@ -179,12 +179,18 @@ const ENTRIES = [
     title: 'Pet Race',
     kind: 'free-for-all',
     description: [
-      'Pick a dog, a cat, a rabbit, a hamster or a fish. Each has its own speed and its own stamina, and none of them is simply the best one.',
-      'Twenty seconds of countdown, and then race for the line.',
+      'Ten seconds to read five pets’ numbers and take one - dog, cat, rabbit, hamster or fish. Each has its own speed, its own boost and its own tank, and none of them is simply the best one. Choose nothing and you get the fish, and the fish flops on the line for the whole race.',
+      'Then three, two, one, and thirty seconds to race two hundred metres of hedges, puddles and treats. Hold the button to boost and the tank empties a second a second; let go and it fills again.',
     ],
-    controls: [{ input: 'WASD', does: 'Move' }],
+    controls: [
+      { input: 'Left click', does: 'Choose a pet, then hold to boost - it burns stamina' },
+      { input: '1-5', does: 'Choose a pet from the table' },
+      { input: 'WASD', does: 'Move' },
+    ],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `38-pet-race`. The assets stage is still to do - the five
+    // animals are boxes, balls and cones, and the hedges are bushes.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'feeding-time',
