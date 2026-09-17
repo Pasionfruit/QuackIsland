@@ -196,6 +196,12 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'fighters',
   },
+  'sprint-triathlon': {
+    title: 'Sprint Triathlon',
+    screen: 'TriathlonScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'racers',
+  },
   'wack-attack': {
     title: 'Wack-Attack',
     screen: 'WackAttackScreen',
@@ -226,6 +232,42 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'racers',
   },
+}
+
+/**
+ * An expression that, in a page showing Sprint Triathlon, does one thing the leg
+ * on screen asks for, the way a player does: a left click on the field to swim,
+ * a press of Space to bike, the next character of the sentence to run - or, with
+ * `wrong`, a key that is not it. Reads the leg and sentence from the page's
+ * `data-task`, `data-sentence` and `data-typed`. Evaluates to what it did, or
+ * null when there is nothing to do.
+ */
+export function triathlonMove({ wrong = false } = {}) {
+  return `(() => {
+    const task = document.querySelector('[data-task]')
+    if (!task) return null
+    const leg = task.dataset.task
+    if (leg === 'swim') {
+      const board = document.querySelector('[data-board]')
+      const rect = board.getBoundingClientRect()
+      board.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 3, bubbles: true }))
+      return { leg }
+    }
+    if (leg === 'bike') {
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ', bubbles: true }))
+      window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space', key: ' ', bubbles: true }))
+      return { leg }
+    }
+    if (leg === 'run') {
+      const box = task.querySelector('[data-sentence]')
+      const sentence = box.dataset.sentence
+      const typed = Number(box.dataset.typed)
+      const key = ${wrong} ? '#' : sentence[typed]
+      window.dispatchEvent(new KeyboardEvent('keydown', { key, code: key === ' ' ? 'Space' : '', bubbles: true }))
+      return { leg, key, typed }
+    }
+    return { leg }
+  })()`
 }
 
 /**

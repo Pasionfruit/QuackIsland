@@ -4,7 +4,8 @@
  *   node .claude/skills/run-localrot/scripts/solo.mjs --game messy-maze --out <dir> [--steer] [--software]
  *
  * --game      messy-maze (default), zombie-tag, probable-stop, duck-hunt, punch-buggy
- *             wack-attack, lady-luck, make-the-cut, let-him-cook or i-see-the-light
+ *             sprint-triathlon, wack-attack, lady-luck, make-the-cut, let-him-cook
+ *             or i-see-the-light
  * --app       dev server URL (default http://localhost:5199/)
  * --out       where screenshots go (default <temp>/localrot-run/solo)
  * --steer     Messy Maze: drive your racer to the middle with the stand-ins'
@@ -17,6 +18,10 @@
  *             Punch Buggy: walk at the nearest fighter, punch when facing them
  *             within reach, pull back, repeat - screenshotting a punch in flight
  *             and the results.
+ *             Sprint Triathlon: click to swim, press Space to bike and type the
+ *             sentence to run, about fourteen times a second, to the finish,
+ *             screenshotting the countdown and each leg. With --slip, type a
+ *             wrong key on the run and check the next right key is ignored.
  *             Wack-Attack: walk with WASD to the nearest mole up and click to
  *             swing once over it, for the whole minute, failing if nothing was
  *             whacked; screenshots a swing, the field and the results.
@@ -43,7 +48,7 @@
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, cloverClick, cookPick, cutterMove, duckHuntShot, gameState, launch, lightMove, say, sleep, whackMove } from './cdp.mjs'
+import { GAMES, args, cloverClick, cookPick, cutterMove, duckHuntShot, gameState, launch, lightMove, say, sleep, triathlonMove, whackMove } from './cdp.mjs'
 
 const opt = args({ game: 'messy-maze', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'solo'), port: '9400' })
 const game = GAMES[opt.game]
@@ -95,6 +100,47 @@ try {
     say('steered', JSON.stringify(log), await page.shot('3-in.png'))
     await page.waitFor(`!!document.querySelector('[data-again]')`, 120000)
     say('results', await page.shot('4-results.png'))
+  } else if (opt.steer && opt.game === 'sprint-triathlon') {
+    const state = () => page.eval(`(() => { const r = ${gameState('sprint-triathlon')}; const me = r.racers.find((x) => x.mine); return { over: r.over, elapsed: +r.elapsed.toFixed(2), strokes: me.strokes, pedals: me.pedals, typed: me.typed, mistakes: me.mistakes, swimAt: me.swimAt, bikeAt: me.bikeAt, finishAt: me.finishAt, place: me.place, others: r.racers.filter((x) => !x.mine).map((x) => x.id + ':' + [x.strokes, x.pedals, x.typed].join('/')) } })()`)
+    await page.waitFor(`!!document.querySelector('[data-countdown]')`, 10000)
+    say('countdown', await page.shot('3-countdown.png'))
+    const shots = new Set()
+    let slipped = false
+    for (let i = 0; i < 4000; i++) {
+      const did = await page.eval(triathlonMove())
+      const leg = did?.leg
+      if (leg && !shots.has(leg) && leg !== 'done') {
+        shots.add(leg)
+        await sleep(leg === 'run' ? 1500 : 800)
+        say(leg, JSON.stringify(await state()), await page.shot(`4-${leg}.png`))
+      }
+      if (opt.slip && leg === 'run' && !slipped && did.typed > 10) {
+        // A wrong key: a mistake, and the next right key straight after does nothing.
+        slipped = true
+        const before = await state()
+        await page.eval(triathlonMove({ wrong: true }))
+        await page.eval(triathlonMove())
+        await sleep(100)
+        const after = await page.eval(`document.querySelector('[data-sentence]')?.dataset.typed`)
+        say('typed a wrong key', JSON.stringify({ typedBefore: before.typed, typedAfter: Number(after), mistakes: (await state()).mistakes }))
+        if (Number(after) !== did.typed + 1) throw new Error('a right key straight after a mistake still counted')
+        await sleep(450)
+      }
+      if (leg === 'done') {
+        await sleep(300)
+        say('finished', JSON.stringify(await state()), await page.shot('5-finished.png'))
+        break
+      }
+      if (!did) {
+        const s = await state()
+        if (s.over) break
+      }
+      await sleep(70)
+    }
+    const end = await state()
+    if (end.finishAt === null) throw new Error('never finished: ' + JSON.stringify(end))
+    await page.waitFor(`!!document.querySelector('[data-again]')`, 120000)
+    say('results', await page.shot('6-results.png'))
   } else if (opt.steer && opt.game === 'wack-attack') {
     const state = () => page.eval(`(() => { const g = ${gameState('wack-attack')}; const me = g.players.find((p) => p.mine); return { over: g.over, elapsed: +g.elapsed.toFixed(2), score: me.score, whacks: me.whacks, golden: me.golden, swings: me.swings, scores: g.players.map((p) => p.score) } })()`)
     let swings = 0

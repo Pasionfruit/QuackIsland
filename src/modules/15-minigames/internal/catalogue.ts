@@ -205,17 +205,19 @@ const ENTRIES = [
     title: 'Sprint Triathlon',
     kind: 'free-for-all',
     description: [
-      'Three legs, back to back. Swim by clicking as fast as you can. Bike by hammering space. Then run, by typing the sentence out without getting it wrong:',
+      'Three legs, back to back. Swim by clicking as fast as you can. Bike by hammering space. Then run, by typing the sentence on the screen without getting it wrong - a wrong key trips you up. The first sentence is this one:',
       'Duck walked up to a lemonade stand, and he said to the man running the stand, hey! Got any grapes?',
-      'How you did across all three is your time.',
+      'How you did across all three is your race time. Fastest wins.',
     ],
     controls: [
       { input: 'Left click', does: 'Swim' },
       { input: 'Space', does: 'Bike' },
-      { input: 'Keyboard', does: 'Type the sentence' },
+      { input: 'Keyboard', does: 'Type the displayed sentence during the run' },
     ],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `26-sprint-triathlon`. The assets stage is still to do - the
+    // racers are the island's capsule and the bikes are primitives.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'punch-buggy',

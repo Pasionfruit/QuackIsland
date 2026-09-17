@@ -21,9 +21,9 @@
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, cloverClick, cookPick, cutterMove, duckHuntShot, gameState, launch, lightMove, say, sleep, whackMove } from './cdp.mjs'
+import { GAMES, args, cloverClick, cookPick, cutterMove, duckHuntShot, gameState, launch, lightMove, say, sleep, triathlonMove, whackMove } from './cdp.mjs'
 
-const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt,punch-buggy,wack-attack,lady-luck,make-the-cut,let-him-cook,i-see-the-light', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
+const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt,sprint-triathlon,punch-buggy,wack-attack,lady-luck,make-the-cut,let-him-cook,i-see-the-light', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
 const count = Number(opt.players)
 const games = String(opt.games).split(',')
 const pages = []
@@ -107,6 +107,33 @@ try {
       if (Math.hypot(after.x - before.x, after.y - before.y) < 0.5 || after.clicks !== before.clicks + 1) {
         throw new Error(`${game}: the host did not see the guest walk and punch`)
       }
+      await host.eval('window.__mg.backOut()')
+      for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
+      continue
+    }
+
+    if (game === 'sprint-triathlon') {
+      // Everybody races for a while; the host should see guests' progress, and
+      // once hands stop every browser should agree on where everybody got to.
+      // Splits are compared as a snapshot carries them: to the hundredth.
+      const where = (p) => p.eval(`(() => { const r = ${gameState(game)}; const t = (v) => (v === null ? null : Math.round(v * 100) / 100); return JSON.stringify(r.racers.map((x) => [x.id, x.strokes, x.pedals, x.typed, t(x.swimAt), t(x.bikeAt)])) })()`)
+      await host.waitFor(`!document.querySelector('[data-countdown]')`, 10000)
+      const until = Date.now() + 12000
+      while (Date.now() < until) {
+        await Promise.all(pages.map((p) => p.eval(triathlonMove())))
+        await sleep(90)
+      }
+      await sleep(1200)
+      const onHost = JSON.parse(await where(host))
+      const guestWork = onHost.slice(1).reduce((n, [, s, b, t]) => n + s + b + t, 0)
+      say(`${game}: host has ${JSON.stringify(onHost)}`)
+      if (guestWork === 0) throw new Error(`${game}: no guest's race reached the host`)
+      const views = await Promise.all(pages.map(where))
+      const agree = new Set(views).size === 1
+      say(`${game}: every browser agrees on where everybody got to ${agree}`)
+      await host.shot(`${game}-host.png`)
+      await mover.shot(`${game}-guest.png`)
+      if (!agree) throw new Error(`${game}: browsers disagree - ${views.join(' | ')}`)
       await host.eval('window.__mg.backOut()')
       for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
       continue

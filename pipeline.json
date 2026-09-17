@@ -114,7 +114,8 @@
         "22-let-him-cook",
         "23-lady-luck",
         "24-make-the-cut",
-        "25-wack-attack"
+        "25-wack-attack",
+        "26-sprint-triathlon"
       ]
     }
   ],
@@ -149,7 +150,8 @@
         "22-let-him-cook",
         "23-lady-luck",
         "24-make-the-cut",
-        "25-wack-attack"
+        "25-wack-attack",
+        "26-sprint-triathlon"
       ],
       "generation": 1,
       "contract": {
@@ -327,7 +329,8 @@
         "21-i-see-the-light",
         "22-let-him-cook",
         "24-make-the-cut",
-        "25-wack-attack"
+        "25-wack-attack",
+        "26-sprint-triathlon"
       ],
       "generation": 1,
       "contract": {
@@ -831,7 +834,8 @@
         "22-let-him-cook",
         "23-lady-luck",
         "24-make-the-cut",
-        "25-wack-attack"
+        "25-wack-attack",
+        "26-sprint-triathlon"
       ],
       "generation": 1,
       "contract": {
@@ -1334,7 +1338,8 @@
         "22-let-him-cook",
         "23-lady-luck",
         "24-make-the-cut",
-        "25-wack-attack"
+        "25-wack-attack",
+        "26-sprint-triathlon"
       ],
       "generation": 1,
       "contract": {
@@ -2207,6 +2212,85 @@
         "No moving camera",
         "No knocking other players about with the hammer",
         "No sound, no score kept between rounds"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "26-sprint-triathlon",
+      "phase": "P6",
+      "title": "Minigame 7, Sprint Triathlon: swim by clicking, bike by pressing space, run by typing a sentence, fastest race time wins",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "26.1",
+          "title": "The course: a swim, a bike and a run, lane by lane, and a sentence to type for the run",
+          "status": "done"
+        },
+        {
+          "id": "26.2",
+          "title": "The race: a click a stroke, a press a pedal, a correct key a stride, splits and a finish time for each",
+          "status": "done"
+        },
+        {
+          "id": "26.3",
+          "title": "The controls: left click to swim, space to bike, typing the sentence to run",
+          "status": "done"
+        },
+        {
+          "id": "26.4",
+          "title": "A still camera along the course, swimmers, bikes and runners in their lanes",
+          "status": "done"
+        },
+        {
+          "id": "26.5",
+          "title": "One race shared across the lobby, each screen counting its own race, stand-ins only when alone",
+          "status": "done"
+        },
+        {
+          "id": "26.6",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "26.7",
+          "title": "The assets: models, sprites and sound in place of capsules and primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-17T02:51:11.453Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: racers are the island capsule, bikes are primitives",
+        "No moving camera",
+        "No authority over a player's own clicks, presses and typing: their screen counts them",
+        "No sound, no score kept between races"
       ],
       "budgets": {
         "drawCallsMax": 0,
