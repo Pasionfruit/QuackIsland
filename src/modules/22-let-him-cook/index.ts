@@ -1,9 +1,9 @@
 /**
  * 22-let-him-cook - the public contract.
  *
- * Minigame 16. Watch the chef cook from fifteen items of six ingredients and
- * remember what went in. Then, in a random turn order, pick an item you think
- * was in the recipe: wrong, or one whose every copy is already claimed, and you
+ * Minigame 16. Watch the chef cook from six baskets of ingredients - three of
+ * each - and remember what went in. The baskets rotate round the counter. Then, in a random turn order,
+ * take an item from a basket and toss it in the pot: wrong, or one whose every copy is already claimed, and you
  * are out; right, and you go to the back of the line. Last cook standing wins.
  *
  * It plugs into `15-minigames` and nothing else in the build knows it exists.
@@ -39,6 +39,7 @@ export {
   pickTime,
   placings,
   recipeSize,
+  rotation,
   stepGame,
   stillIn,
   turnTime,
@@ -71,6 +72,6 @@ export {
   type WireCook,
 } from './internal/wire'
 
-export { FILL, FOV, LAYOUT, POINTS, POT, TILT, frameScene, pickSlot, slotAt, type Point, type Shot } from './internal/camera'
+export { FILL, FOV, LAYOUT, LOOP, POINTS, POT, TILT, basketAt, chipAt, frameScene, itemAt, pickBasket, type Point, type Shot } from './internal/camera'
 
 export { LetHimCookScreen } from './internal/LetHimCookScreen'

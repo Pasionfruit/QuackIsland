@@ -2,16 +2,19 @@
  * The kitchen's layout, where the camera stands to see it, and what a click
  * lands on.
  *
- * A counter with the fifteen items on it in three rows of five, the chef behind
- * it, and the stove with the pot off to the chef's left - your right. The camera
- * stands in front of the counter, raised, looking down at the items: they are
- * what you have to watch and what you click.
+ * A counter with six baskets on it, one per ingredient, in two rows of three -
+ * each holding however many copies of its ingredient there are. The chef stands
+ * behind it, and the stove with the pot is off to the chef's left - your right.
+ * Whoever's turn it is stands in front of the counter, reaches into a basket and
+ * tosses what they took into the pot. The camera stands in front of all of it,
+ * raised, looking down into the baskets: they are what you have to watch and
+ * what you click.
  *
  * Fitted the same way as the other minigames' cameras: slid along its line of
  * sight until the kitchen touches the edge of the frame, and aimed so the space
  * above and below comes out even.
  */
-import { KITCHEN } from './rules'
+import { KINDS, KITCHEN } from './rules'
 
 export interface Point {
   x: number
@@ -20,62 +23,117 @@ export interface Point {
 }
 
 export const LAYOUT = {
-  columns: 5,
-  /** Across and front to back between items. */
-  spacing: { x: 1.7, z: 1.3 },
+  /** Baskets across; the six make two rows. */
+  columns: 3,
+  /** Across and front to back between baskets. */
+  spacing: { x: 3, z: 2.2 },
+  /** A basket's radius, and the height of its side. */
+  basket: 0.95,
+  wall: 0.45,
   /** The counter top's height. */
   top: 1,
   /** The counter's size. */
   counter: { width: 9.6, depth: 4.4 },
-  /** An item's radius, for drawing and for clicking. */
+  /** An item's radius, for drawing. */
   item: 0.52,
+  /** How big an item is in its basket, next to its size on its own. */
+  inBasket: 0.8,
   /** Where the chef stands: behind the counter, at this depth. */
   chefZ: -3.1,
+  /** Where whoever's turn it is stands: in front of the counter, at this depth. */
+  cookZ: 2.95,
+  /** Where they walk in from, across. */
+  cookEnters: -5.6,
   /** The stove, and the pot on it. */
   stove: { x: 6.3, z: -2.2, height: 1, width: 1.8 },
   potTop: 2.1,
 } as const
 
-/** Where an item sits on the counter. Row 0 is at the back. */
-export function slotAt(slot: number): Point {
-  const column = slot % LAYOUT.columns
-  const row = Math.floor(slot / LAYOUT.columns)
-  const rows = Math.ceil(KITCHEN.items / LAYOUT.columns)
+/** The middle of a place on the counter a basket can stand, on the counter top. Row 0 is at the back. */
+function placeAt(place: number): Point {
+  const column = place % LAYOUT.columns
+  const row = Math.floor(place / LAYOUT.columns)
+  const rows = Math.ceil(KITCHEN.places / LAYOUT.columns)
   return {
     x: (column - (LAYOUT.columns - 1) / 2) * LAYOUT.spacing.x,
-    y: LAYOUT.top + LAYOUT.item,
+    y: LAYOUT.top,
     z: (row - (rows - 1) / 2) * LAYOUT.spacing.z,
   }
 }
 
-/** The top of the pot, where the chef's items land. */
+/** The places round the counter, in the order a basket goes round them: along the back, then back along the front. */
+export const LOOP: readonly number[] = [0, 1, 2, 5, 4, 3]
+
+const smooth = (t: number) => t * t * (3 - 2 * t)
+
+/**
+ * The middle of an ingredient's basket, on the counter top, once the baskets
+ * have turned `turned` places round the counter from where they start - each
+ * ingredient's own place. A fraction is a basket on its way from one place to
+ * the next.
+ */
+export function basketAt(kind: number, turned = 0): Point {
+  const start = LOOP.indexOf(kind % KITCHEN.places)
+  const whole = Math.floor(turned)
+  const from = placeAt(LOOP[(((start + whole) % LOOP.length) + LOOP.length) % LOOP.length])
+  const part = smooth(turned - whole)
+  if (part === 0) return from
+  const to = placeAt(LOOP[(((start + whole + 1) % LOOP.length) + LOOP.length) % LOOP.length])
+  return { x: from.x + (to.x - from.x) * part, y: from.y, z: from.z + (to.z - from.z) * part }
+}
+
+/** Where items sit in a basket, by how many it holds: across and front to back from its middle. */
+const NESTS: readonly (readonly [number, number][])[] = [
+  [],
+  [[0, 0]],
+  [[-0.3, 0], [0.3, 0]],
+  [[-0.32, -0.26], [0.32, -0.26], [0, 0.3]],
+  [[-0.32, -0.3], [0.32, -0.3], [-0.32, 0.3], [0.32, 0.3]],
+]
+
+/** Where the nth of `count` copies of an ingredient sits in its basket, standing on its floor. */
+export function itemAt(kind: number, index: number, count: number, turned = 0): Point {
+  const basket = basketAt(kind, turned)
+  const nest = NESTS[Math.min(Math.max(count, 1), NESTS.length - 1)]
+  const [dx, dz] = nest[Math.min(index, nest.length - 1)] ?? [0, 0]
+  return { x: basket.x + dx, y: LAYOUT.top + 0.08, z: basket.z + dz }
+}
+
+/** Where the nth claim on an ingredient is marked: a chip in the claimer's colour, beside its basket. */
+export function chipAt(kind: number, n: number, turned = 0): Point {
+  const basket = basketAt(kind, turned)
+  return { x: basket.x + LAYOUT.basket + 0.3, y: LAYOUT.top + 0.03, z: basket.z - 0.45 + n * 0.3 }
+}
+
+/** The top of the pot, where the items land. */
 export const POT: Point = { x: LAYOUT.stove.x, y: LAYOUT.potTop, z: LAYOUT.stove.z }
 
 /**
- * The item a ray from the camera meets first, or null. Items `skip` says are not
- * there to click - claimed ones - are passed through.
+ * The basket a ray from the camera meets first, or null, with the baskets turned
+ * `turned` places round the counter. Baskets `skip` says are not there to click
+ * - emptied ones - are passed through.
  */
-export function pickSlot(origin: Point, direction: Point, skip: (slot: number) => boolean = () => false): number | null {
+export function pickBasket(origin: Point, direction: Point, skip: (kind: number) => boolean = () => false, turned = 0): number | null {
   const length = Math.hypot(direction.x, direction.y, direction.z)
   if (length === 0) return null
   const d = { x: direction.x / length, y: direction.y / length, z: direction.z / length }
-  // A little more than the drawn item, so a click on its edge is not a miss.
-  const radius = LAYOUT.item * 1.15
-  let best: { slot: number; along: number } | null = null
-  for (let slot = 0; slot < KITCHEN.items; slot++) {
-    if (skip(slot)) continue
-    const at = slotAt(slot)
-    const to = { x: at.x - origin.x, y: at.y - origin.y, z: at.z - origin.z }
+  // A little more than the basket, so a click on its rim is not a miss.
+  const radius = LAYOUT.basket * 1.05
+  let best: { kind: number; along: number } | null = null
+  for (let kind = 0; kind < KINDS; kind++) {
+    if (skip(kind)) continue
+    const at = basketAt(kind, turned)
+    const to = { x: at.x - origin.x, y: at.y + LAYOUT.wall * 0.7 - origin.y, z: at.z - origin.z }
     const along = to.x * d.x + to.y * d.y + to.z * d.z
     if (along <= 0) continue
     const closest = Math.hypot(to.x - d.x * along, to.y - d.y * along, to.z - d.z * along)
     if (closest > radius) continue
-    if (!best || along < best.along) best = { slot, along }
+    if (!best || along < best.along) best = { kind, along }
   }
-  return best ? best.slot : null
+  return best ? best.kind : null
 }
 
-/** The points that have to be in frame: the counter, the chef's hat, the stove and pot. */
+/** The points that have to be in frame: the counter, the chef's hat, the stove and pot, and the cook in front. */
 export const POINTS: readonly [number, number, number][] = [
   ...[-LAYOUT.counter.width / 2, LAYOUT.counter.width / 2].flatMap((x) =>
     [-LAYOUT.counter.depth / 2, LAYOUT.counter.depth / 2].flatMap((z) => [0, LAYOUT.top + 1.1].map((y): [number, number, number] => [x, y, z])),
@@ -84,6 +142,8 @@ export const POINTS: readonly [number, number, number][] = [
   [LAYOUT.counter.width / 2, 3.4, LAYOUT.chefZ],
   [LAYOUT.stove.x + LAYOUT.stove.width / 2 + 0.2, LAYOUT.potTop + 0.3, LAYOUT.stove.z - 0.9],
   [LAYOUT.stove.x + LAYOUT.stove.width / 2 + 0.2, 0, LAYOUT.stove.z + 0.9],
+  [LAYOUT.cookEnters, 0, LAYOUT.cookZ + 0.35],
+  [LAYOUT.spacing.x + 0.4, 0, LAYOUT.cookZ + 0.35],
 ]
 
 /** Degrees up from the counter. Steep enough to see every item in the back row past the front. */

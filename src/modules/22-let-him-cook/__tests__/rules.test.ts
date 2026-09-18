@@ -17,6 +17,7 @@ import {
   pickTime,
   placings,
   recipeSize,
+  rotation,
   stepGame,
   stillIn,
   turnTime,
@@ -60,18 +61,38 @@ function seedWithUnused(): number {
 }
 
 describe('a recipe', () => {
-  it('is fifteen items of six ingredients, every ingredient there, none more than four times', () => {
+  it('is the same number of every one of six ingredients', () => {
+    expect(KITCHEN.items).toBe(KINDS * KITCHEN.copies)
     for (let seed = 1; seed <= 50; seed++) {
       const { counter, served } = dealRecipe(seed, 0, 4)
       expect(counter).toHaveLength(KITCHEN.items)
-      for (let kind = 0; kind < KINDS; kind++) {
-        const n = counter.filter((k) => k === kind).length
-        expect(n).toBeGreaterThanOrEqual(1)
-        expect(n).toBeLessThanOrEqual(KITCHEN.maxCopies)
-      }
-      // Laid out again: the same fifteen, somewhere else.
+      for (let kind = 0; kind < KINDS; kind++) expect(counter.filter((k) => k === kind)).toHaveLength(KITCHEN.copies)
+      // Laid out again: the same items.
       expect([...served].sort()).toEqual([...counter].sort())
     }
+  })
+
+  it('rotates the baskets at least one place and never all the way round, once the chef is done', () => {
+    const spins = new Set<number>()
+    for (let seed = 1; seed <= 200; seed++) {
+      const { spin } = dealRecipe(seed, 0, 4)
+      expect(spin).toBeGreaterThanOrEqual(1)
+      expect(spin).toBeLessThan(KITCHEN.places)
+      spins.add(spin)
+    }
+    expect(spins.size).toBe(KITCHEN.places - 1)
+
+    const game = createGame(9, [{ id: 'a' }, { id: 'b' }])
+    const end = cookTime(game.picks.length, 0)
+    const lastLands = pickTime(game.picks.length - 1, 0) + KITCHEN.flight
+    game.clock = lastLands
+    expect(rotation(game)).toBe(0)
+    game.clock = end - 0.3 - KITCHEN.rotate / 2
+    expect(rotation(game)).toBeCloseTo(game.spin / 2)
+    game.clock = end - 0.2
+    expect(rotation(game)).toBe(game.spin)
+    game.phase = 'turns'
+    expect(rotation(game)).toBe(game.spin)
   })
 
   it('takes different items each time, and counts what went in', () => {

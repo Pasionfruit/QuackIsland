@@ -2,13 +2,14 @@
  * Let Him Cook, on the screen.
  *
  * The kitchen is drawn in its own canvas by `LetHimCookScene`; this is the
- * shell: `useKitchenNet` running or following the kitchen, a click on an item
+ * shell: `useKitchenNet` running or following the kitchen, a click on a basket
  * passed to it on your turn, and the words - what the chef is doing, whose turn
  * it is and how long they have, the line, the turn order, what the last pick
  * was, and the results.
  *
- * **Aim with the mouse, left click to pick.** Only on your turn; the item under
- * the pointer lifts and gets a ring when a click would take it.
+ * **Aim with the mouse, left click to pick.** Only on your turn; the basket under
+ * the pointer gets a ring, and your cook walks to it, when a click would take
+ * from it.
  */
 import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
@@ -121,7 +122,7 @@ export function LetHimCookScreen({ run }: { run: MinigameRun }) {
         {game.phase === 'cooking' && game.recipe === 0 && game.clock < KITCHEN.intro ? (
           <Banner colour={LOOK.ink} text="Watch what the chef puts in the pot" />
         ) : null}
-        {isMine && game.phase === 'turns' ? <Banner colour={COLOURS[mineIndex % COLOURS.length]} text="Your turn - click an ingredient that was in the recipe" data="your-turn" /> : null}
+        {isMine && game.phase === 'turns' ? <Banner colour={COLOURS[mineIndex % COLOURS.length]} text="Your turn - take something from a basket that was in the recipe" data="your-turn" /> : null}
         {game.phase === 'result' && game.last ? <Result last={game.last} game={game} nameOf={nameOf} /> : null}
         {game.phase === 'order' ? <Order game={game} nameOf={nameOf} /> : null}
       </div>

@@ -2014,6 +2014,11 @@
           "status": "done"
         },
         {
+          "id": "22.8",
+          "title": "The baskets: six baskets of three in place of the counter, rotated round it after the cooking; the cook at the counter tossing each pick into the pot, the chef shaking his head at a wrong one; two recipes",
+          "status": "done"
+        },
+        {
           "id": "22.7",
           "title": "The assets: models, sprites and sound in place of primitives",
           "status": "planned"
@@ -2022,7 +2027,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-17T00:55:45.292Z"
+          "at": "2026-09-18T22:36:50.366Z"
         },
         "human": {
           "status": "pending"

@@ -3,8 +3,8 @@
  */
 import { Frustum, Matrix4, PerspectiveCamera, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
-import { FILL, FOV, LAYOUT, POINTS, frameScene, pickSlot, slotAt } from '../internal/camera'
-import { KITCHEN, claimedOf, cookTime, createGame, pick, pickTime, stepGame, stillIn, type Game } from '../internal/rules'
+import { FILL, FOV, LAYOUT, POINTS, basketAt, frameScene, itemAt, pickBasket } from '../internal/camera'
+import { KINDS, KITCHEN, claimedOf, cookTime, createGame, pick, pickTime, stepGame, stillIn, type Game } from '../internal/rules'
 import { waitingGame } from '../internal/setup'
 import { LOOKAHEAD, applySnapshot, decodeIntent, decodeSnapshot, encodeIntent, encodeSnapshot, shownPicks } from '../internal/wire'
 
@@ -37,12 +37,14 @@ describe('a snapshot', () => {
     }
     expect(JSON.stringify(at(0))).not.toContain(String(SEED))
     for (const message of [at(0), at(5), at(cookTime(game.picks.length) - 0.1)]) {
-      expect(Object.keys(message).sort()).toEqual(['c', 'e', 'g', 'k', 'l', 'm', 'n', 'p', 'pl', 'q', 'r', 's', 't', 'x'])
+      expect(Object.keys(message).sort()).toEqual(['c', 'e', 'g', 'k', 'l', 'm', 'n', 'o', 'p', 'pl', 'q', 'r', 's', 't', 'x'])
     }
     while (game.phase !== 'turns') stepGame(game, 0.25)
     const copy = applySnapshot(waitingGame(), decodeSnapshot(relay(encodeSnapshot(game)))!, 'p1')
     expect(copy.used).toEqual([])
     expect(copy.picks).toEqual([])
+    // Where the baskets stand is not a secret: everybody watches them rotate.
+    expect([copy.turned, copy.spin]).toEqual([game.turned, game.spin])
   })
 
   it("shows the chef's picks only as the chef reaches for them", () => {
@@ -82,7 +84,9 @@ describe('a snapshot', () => {
     expect(decodeSnapshot({ ...good, s: '999999999999999' })).toBeNull()
     expect(decodeSnapshot({ ...good, m: [7, ...(good.m as number[]).slice(1)] })).toBeNull()
     expect(decodeSnapshot({ ...good, q: [0, 9] })).toBeNull()
-    expect(decodeSnapshot({ ...good, x: [15] })).toBeNull()
+    expect(decodeSnapshot({ ...good, x: [KITCHEN.items] })).toBeNull()
+    expect(decodeSnapshot({ ...good, o: [0, KITCHEN.places] })).toBeNull()
+    expect(decodeSnapshot({ ...good, o: [0] })).toBeNull()
     expect(decodeSnapshot({ ...good, pl: [] })).toBeNull()
     expect(decodeSnapshot({ ...good, l: [0, 3, 2, 1] })).toBeNull()
     expect(decodeSnapshot({ ...good, p: 9 })).toBeNull()
@@ -96,7 +100,7 @@ describe('a snapshot', () => {
 describe('an intent', () => {
   it('comes back as what was sent, and is refused when it is not one', () => {
     expect(decodeIntent(relay(encodeIntent(41, 6, 14)))).toEqual({ game: 41, turn: 6, slot: 14 })
-    expect(decodeIntent({ t: 'lhc-in', g: 41, n: 6, s: 15 })).toBeNull()
+    expect(decodeIntent({ t: 'lhc-in', g: 41, n: 6, s: KITCHEN.items })).toBeNull()
     expect(decodeIntent({ t: 'lhc-in', g: 41, n: -1, s: 2 })).toBeNull()
     expect(decodeIntent({ t: 'lhc-in', n: 1, s: 2 })).toBeNull()
   })
@@ -171,36 +175,56 @@ describe('the fixed camera, and a click', () => {
       for (const p of points) expect(frustum.containsPoint(p), `${aspect}`).toBe(true)
       const projected = points.map((p) => p.clone().project(camera))
       expect(Math.max(...projected.map((p) => Math.max(Math.abs(p.x), Math.abs(p.y)))), `${aspect}`).toBeGreaterThan(FILL - 0.01)
-      for (let slot = 0; slot < KITCHEN.items; slot++) {
-        const at = slotAt(slot)
-        expect(frustum.containsPoint(new Vector3(at.x, at.y, at.z))).toBe(true)
-      }
-    }
-  })
-
-  it('lands a click on an item on that item, at every window shape', () => {
-    for (const aspect of aspects) {
-      const camera = cameraFor(aspect)
-      for (let slot = 0; slot < KITCHEN.items; slot++) {
-        const at = slotAt(slot)
-        for (const [dx, dy] of [[0, 0], [0.3, 0], [0, 0.3], [-0.3, -0.2]]) {
-          const screen = new Vector3(at.x + dx * LAYOUT.item, at.y + dy * LAYOUT.item, at.z).project(camera)
-          const direction = new Vector3(screen.x, screen.y, 0.5).unproject(camera).sub(camera.position)
-          expect(pickSlot(camera.position, direction), `${aspect} ${slot}`).toBe(slot)
+      for (let kind = 0; kind < KINDS; kind++) {
+        for (let n = 0; n < KITCHEN.copies; n++) {
+          const at = itemAt(kind, n, KITCHEN.copies)
+          expect(frustum.containsPoint(new Vector3(at.x, at.y + LAYOUT.item, at.z))).toBe(true)
         }
       }
     }
   })
 
-  it('misses between items and passes through claimed ones', () => {
+  it('lands a click on a basket on that basket, anywhere on it, at every window shape and wherever it has turned to', () => {
+    for (const aspect of aspects) {
+      const camera = cameraFor(aspect)
+      for (let turned = 0; turned < KITCHEN.places + 2; turned++) {
+        for (let kind = 0; kind < KINDS; kind++) {
+          const at = basketAt(kind, turned)
+          for (const [dx, dy, dz] of [[0, 0, 0], [0.7, 0, 0], [-0.7, 0, 0], [0, LAYOUT.wall, 0.6], [0, 0.2, -0.6]]) {
+            const screen = new Vector3(at.x + dx * LAYOUT.basket, at.y + dy, at.z + dz * LAYOUT.basket).project(camera)
+            const direction = new Vector3(screen.x, screen.y, 0.5).unproject(camera).sub(camera.position)
+            expect(pickBasket(camera.position, direction, undefined, turned), `${aspect} ${turned} ${kind}`).toBe(kind)
+          }
+        }
+      }
+    }
+  })
+
+  it('turns the baskets round the counter, every basket in its own place, all the way round in six', () => {
+    for (let turned = 0; turned <= KITCHEN.places; turned++) {
+      const places = Array.from({ length: KINDS }, (_, kind) => basketAt(kind, turned)).map((p) => `${p.x},${p.z}`)
+      expect(new Set(places).size).toBe(KINDS)
+    }
+    for (let kind = 0; kind < KINDS; kind++) {
+      expect(basketAt(kind, KITCHEN.places)).toEqual(basketAt(kind, 0))
+      expect(basketAt(kind, 1)).not.toEqual(basketAt(kind, 0))
+      // On the way: between one place and the next, never off the counter.
+      const half = basketAt(kind, 0.5)
+      expect(Math.abs(half.x)).toBeLessThanOrEqual(LAYOUT.spacing.x)
+      expect(Math.abs(half.z)).toBeLessThanOrEqual(LAYOUT.spacing.z / 2)
+    }
+  })
+
+  it('misses between baskets and passes through emptied ones', () => {
     const camera = cameraFor(1.6)
-    const between = slotAt(0)
-    const gap = new Vector3(between.x + LAYOUT.spacing.x / 2, LAYOUT.top, between.z - 0.2).project(camera)
+    const left = basketAt(0)
+    const gap = new Vector3(left.x + LAYOUT.spacing.x / 2, LAYOUT.top, left.z).project(camera)
     const direction = new Vector3(gap.x, gap.y, 0.5).unproject(camera).sub(camera.position)
-    expect(pickSlot(camera.position, direction)).toBeNull()
-    const at = slotAt(7)
+    expect(pickBasket(camera.position, direction)).toBeNull()
+    const at = basketAt(4)
     const on = new Vector3(at.x, at.y, at.z).project(camera)
-    const toItem = new Vector3(on.x, on.y, 0.5).unproject(camera).sub(camera.position)
-    expect(pickSlot(camera.position, toItem, (slot) => slot === 7)).not.toBe(7)
+    const toBasket = new Vector3(on.x, on.y, 0.5).unproject(camera).sub(camera.position)
+    expect(pickBasket(camera.position, toBasket)).toBe(4)
+    expect(pickBasket(camera.position, toBasket, (kind) => kind === 4)).not.toBe(4)
   })
 })

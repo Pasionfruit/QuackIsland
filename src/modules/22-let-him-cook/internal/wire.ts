@@ -3,7 +3,8 @@
  *
  * The host sends what everybody can see: the counter, the items the chef has
  * **taken so far** while cooking, the counter laid out again, who claimed what,
- * the line, and what happened on the last turn. **It never sends the recipe** -
+ * the line, what happened on the last turn, and where the baskets stand and how
+ * far they rotate - everybody sees them move. **It never sends the recipe** -
  * not the seed, not how many of each ingredient went in, not the chef's picks
  * once the cooking is over. A guest that wants the answer has to watch for it,
  * like everybody else.
@@ -26,6 +27,8 @@ export interface Snapshot {
   phase: (typeof PHASES)[number]
   clock: number
   elapsed: number
+  turned: number
+  spin: number
   counter: number[]
   shown: number[]
   served: number[]
@@ -64,6 +67,7 @@ export function encodeSnapshot(game: Game): Record<string, unknown> {
     p: PHASES.indexOf(game.phase),
     c: r2(game.clock),
     e: r2(game.elapsed),
+    o: [game.turned, game.spin],
     k: game.counter.join(''),
     x: shownPicks(game),
     s: game.served.join(''),
@@ -83,6 +87,9 @@ export function decodeSnapshot(message: Record<string, unknown>): Snapshot | nul
   const counter = kinds(message.k)
   const served = kinds(message.s)
   if (!counter || !served) return null
+  const isPlace = (v: unknown): v is number => isCount(v) && (v as number) < KITCHEN.places
+  if (!Array.isArray(message.o) || message.o.length !== 2 || !message.o.every(isPlace)) return null
+  const [turned, spin] = message.o as number[]
 
   if (!Array.isArray(message.pl) || message.pl.length === 0 || message.pl.length > 8) return null
   const players = message.pl.length
@@ -117,6 +124,8 @@ export function decodeSnapshot(message: Record<string, unknown>): Snapshot | nul
     phase: PHASES[message.p as number],
     clock: message.c,
     elapsed: message.e,
+    turned,
+    spin,
     counter,
     shown: message.x as number[],
     served,
@@ -147,6 +156,8 @@ export function applySnapshot(game: Game, snap: Snapshot, me: string): Game {
   game.recipe = snap.recipe
   game.phase = snap.phase
   game.elapsed = snap.elapsed
+  game.turned = snap.turned
+  game.spin = snap.spin
   game.counter = snap.counter
   game.served = snap.served
   game.claimed = snap.claimed

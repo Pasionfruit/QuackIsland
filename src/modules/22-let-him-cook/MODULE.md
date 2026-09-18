@@ -2,17 +2,18 @@
 
 ## What this is
 
-**Minigame 16.** A kitchen. Fifteen items sit on the counter, each one of six
-ingredients. The chef takes some of them into the pot, one at a time, while
-everybody watches. Then the counter is laid out again, all fifteen in new places,
-and players take turns in a random order picking an item they think was in the
-recipe:
+**Minigame 16.** A kitchen. Six baskets sit on the counter, one per ingredient,
+three of it in each. The chef takes some of them into the pot, one at a time,
+while everybody watches. Then the baskets are filled again and **rotate round
+the counter**, and players take turns in a random order walking up, taking an
+item from a basket and tossing it in the pot:
 
 - **An ingredient the chef did not use:** out.
 - **An ingredient the chef used, but every copy of it is already claimed:** out.
-  If two tomatoes went in and two have been picked, the third tomato on the
-  counter is a trap.
-- **Otherwise:** the item goes on a plate in your colour, and you go to the back of the line.
+  If two tomatoes went in and two have been picked, the third tomato in the
+  basket is a trap.
+- **Otherwise:** the item stays in the pot, a chip in your colour goes by its
+  basket, and you go to the back of the line.
 
 Last cook standing wins.
 
@@ -34,26 +35,35 @@ primitives.
 | Not used, or all copies already claimed, eliminates you | `pick` - `Why` = `wrong` / `gone` |
 | Correct: back of the line, another chance next turn | `pick` moves you to the end of `queue` |
 | The last player remaining wins | `stepGame` ends at one left; `placings` |
-| Mouse - aim; left click - select an ingredient | `pickSlot`, the scene's pointer handling |
+| Mouse - aim; left click - select an ingredient | `pickBasket`, `slotFor`, the scene's pointer handling |
 
 ## A recipe
 
-- **The counter.** Every ingredient has at least one copy and at most four; the
-  fifteen are shuffled onto three rows of five.
+- **The baskets.** Three of every ingredient (`KITCHEN.copies`), eighteen
+  items, each ingredient in its own basket. Two rows of three: six places round
+  the counter (`LOOP`, along the back and back along the front).
 - **The recipe.** The chef takes four more items than there are cooks still in,
   between six and ten, each a different item.
 - **The answer.** `used` is how many of each ingredient went in.
-- **The turns.** The counter is shuffled again for them, so remembering *where*
-  things were is no help. Remembering *what* went in, and how many of each, is
-  the game.
+- **The rotation.** Each recipe deals how many places the baskets move, one to
+  five (`spin`). Once the chef's last item is in, the baskets slide round the
+  counter that many places, a place at a time, over the last two seconds of the
+  cooking (`rotation`, `KITCHEN.rotate`). Where a basket *was* is no help unless
+  you watched it go round. The next recipe starts from where they stopped
+  (`turned`).
+- **The turns.** The baskets are filled again for them. Remembering *what* went
+  in, and how many of each, is the game. (The rules still deal the items into
+  slots and reshuffle them, `counter` and `served`; the scene sorts each slot
+  into its basket, so the shuffle is not seen.)
 
 ## Turns
 
 - Ten seconds to pick. Run out, and you are out (`time`).
-- A pick only counts on your turn, and only on an item nobody has claimed;
-  claimed items sit on their plates and a click passes through them.
-- Two seconds after every pick to see what it was and what it meant, then the
-  next turn.
+- A pick only counts on your turn, and only on an item nobody has claimed. A
+  click on a basket takes its last unclaimed item (`slotFor`); every copy in a
+  basket is the same to the rules. An emptied basket cannot be clicked.
+- Two and a half seconds after every pick to see it taken, tossed in, and what
+  the chef made of it, then the next turn.
 
 ## When everything is claimed
 
@@ -63,7 +73,7 @@ it was. Each recipe is **quicker**:
 - The chef's pace drops from 1.4 s an item by a fifth each recipe, to 0.6 s.
 - The turn loses a second each recipe, down to 5 s.
 
-**Six recipes at most** (`KITCHEN.recipes`). When the sixth runs dry, the chef
+**Two recipes at most** (`KITCHEN.recipes`). When the second runs dry, the chef
 does not cook again: every item left is either not in the recipe or already
 claimed, so every pick is out. That guarantees a game ends, however good
 everybody's memory is. The brief's own rule ends it; without the cap, two
@@ -119,12 +129,22 @@ twentieth worse each recipe as the chef speeds up.
 
 ## Seeing what happened
 
-- **The chef.** The chef goes to each item as it is taken; the item lifts, arcs
-  into the pot, and the soup rises.
-- **Picking.** On your turn, the item under the pointer grows and gets a white
-  ring. A click takes it, and it stays lifted until the host answers.
-- **Claimed items.** They sit on a plate edged in the claimer's colour.
-- **A wrong pick.** The item shakes on a red ring.
+- **The chef.** The chef goes to each basket as an item is taken from it; the
+  item lifts, arcs into the pot, and the soup rises. For the turns, the chef
+  waits by the pot.
+- **The cook at the counter.** Whoever's turn it is walks in from the left in
+  their colour and waits in front of the counter. Nobody else is shown.
+- **Picking.** On your turn, the basket under the pointer gets a white ring and
+  your cook walks to it. A click takes an item from it, and the item stays lifted
+  until the host answers.
+- **The toss** (`TOSS`, seconds into the result). The cook goes to the basket,
+  the item comes up into their hands (0.35 s), and they toss it in, leaning into
+  the throw (lands at 1 s).
+- **The chef's answer.** It belongs in the pot: the chef hops. It does not - not
+  in the recipe, or every copy already claimed: **the chef shakes his head** (1-2
+  s), the basket gets a red ring, and the item is thrown back into its basket.
+- **Claimed items.** A chip in the claimer's colour by the basket, one per item
+  claimed from it this recipe, which appears once the item lands.
 - **Banners.** The first cooking ("watch what the chef puts in the pot"), a new
   recipe, your turn, and every result in words: "cook 3 picked the fish - it was
   not in the recipe. Out!" / "Every egg in the recipe was already claimed…".
@@ -135,10 +155,11 @@ twentieth worse each recipe as the chef speeds up.
 
 ## The camera does not move
 
-In front of the counter, raised 44 degrees so the back row shows past the front
-one, with the counter, the chef's hat and the pot in view the whole game. Fitted
-to those points and tested at eight window shapes. So is a click: every item,
-centre and edges, projected through a real camera and picked back.
+In front of the counter, raised 44 degrees to look down into the baskets, with
+the counter, the chef's hat, the pot and the cook in front in view the whole
+game. Fitted to those points and tested at eight window shapes. So is a click:
+every basket, middle, sides and rim, projected through a real camera and picked
+back.
 
 ## Public contract
 
@@ -147,19 +168,22 @@ Exported because it is worth testing, not because anything else needs it.
 | Export | What it is |
 | --- | --- |
 | `KITCHEN`, `INGREDIENTS`, `KINDS`, `COLOURS`, `PHASES`, `WHYS` | The rules and the look, as numbers. |
-| `dealRecipe`, `recipeSize`, `pace`, `turnTime`, `pickTime`, `cookTime` | Recipes and their timing. Pure. |
+| `dealRecipe`, `recipeSize`, `pace`, `turnTime`, `pickTime`, `cookTime`, `rotation` | Recipes, their timing, and where the baskets have turned to. Pure. |
 | `createGame`, `pick`, `leave`, `stepGame`, `whoseTurn`, `claimedOf`, `unclaimed`, `stillIn`, `fastForwarding`, `placings` | The game. Pure. |
 | `Game`, `Cook`, `Pick`, `Phase`, `Why`, `Recipe`, `Entrant` | Its shapes. |
 | `botMove`, `remembered`, `BOT_MEMORY`, `BOT_FORGETS`, `BOT_THINK` | The stand-ins. |
 | `newGame`, `gameRoster`, `secret`, `waitingGame`, `myId`, `ME`, `SOLO_COOKS`, `MAX_COOKS` | Dealing a game. |
 | `encodeSnapshot`, `decodeSnapshot`, `applySnapshot`, `shownPicks`, `encodeIntent`, `decodeIntent`, `LOOKAHEAD`, `SNAPSHOT_TAG`, `INTENT_TAG` | A shared kitchen on the wire. Pure. |
-| `frameScene`, `pickSlot`, `slotAt`, `LAYOUT`, `POT`, `POINTS`, `TILT`, `FOV`, `FILL` | The kitchen's layout, the camera and clicks. Pure. |
+| `frameScene`, `pickBasket`, `basketAt`, `itemAt`, `chipAt`, `LOOP`, `LAYOUT`, `POT`, `POINTS`, `TILT`, `FOV`, `FILL` | The kitchen's layout, the camera and clicks. Pure. |
 | `LetHimCookScreen` | The panel the registry draws. |
 
 ## Invariants you may rely on
 
-- **Fifteen items, six ingredients, one to four of each; the recipe's counts are
-  what the chef took; the turns' counter is the same fifteen reshuffled.** Tested.
+- **Six ingredients, three of each; the recipe's counts are what the chef took;
+  the turns' baskets hold the same items.** Tested.
+- **The baskets rotate one to five places, only after the last item is in, and
+  every basket is always in a place of its own; a click lands on a basket
+  wherever it has turned to.** Tested.
 - **The turn order is a random permutation of everybody.** Tested.
 - **Cooking, then the order (first recipe only), then turns.** Tested.
 - **A pick in the recipe with a copy left is claimed and goes to the back; not in
@@ -189,7 +213,7 @@ Exported because it is worth testing, not because anything else needs it.
 
 - **The host's browser holds the answer.** A host with the dev tools open can
   read it.
-- **A guest's pick waits on the host** before it is on a plate - the item stays
+- **A guest's pick waits on the host** before it is tossed - the item stays
   lifted until then. Fine for a turn-based game; noted in case it feels slow on
   a bad connection.
 - **The shared plumbing is copied an eighth time** - camera fit, host/guest hook,
@@ -200,15 +224,19 @@ Exported because it is worth testing, not because anything else needs it.
 Open a lobby, leave the game on Volcano Island, press **minigames**, open
 **16 · Let Him Cook**, and press **play**.
 
-- **Watch the chef.** A counter of fifteen ingredients, the chef in a hat going
-  to each item in turn, each one arcing into the pot, the soup rising. Count what
+- **Watch the chef.** Six baskets of ingredients, the chef in a hat going to a
+  basket at a time, each item arcing into the pot, the soup rising. Count what
   goes in.
 - **The turn order.** A card with everybody's place in the line.
-- **Look at the counter again.** The same items, in new places.
-- **On your turn, move the pointer over the items.** The one under it grows and
-  gets a white ring. Click one you saw go in: green banner, it goes on a plate in
-  your colour, and you go to the back of the line.
-- **Click one you did not see go in.** Red banner, it shakes, you are out.
+- **The baskets rotate.** Once everything is in, the baskets slide round the
+  counter one to five places.
+- **The baskets fill again**, and the first cook walks in, in their colour.
+- **On your turn, move the pointer over the baskets.** The one under it gets a
+  white ring and your cook walks to it. Click one you saw go in: your cook tosses
+  an item into the pot, the chef hops, green banner, a chip in your colour by the
+  basket, and you go to the back of the line.
+- **Click one you did not see go in.** Tossed in, the chef shakes his head and
+  throws it back; red banner, you are out.
 - **Watch the stand-ins.** They think a moment and pick; now and then they get
   one wrong, or pick a copy that is already gone, and the banner says which.
 - **Wait out a turn.** At ten seconds you are out for time.
@@ -218,9 +246,10 @@ Open a lobby, leave the game on Volcano Island, press **minigames**, open
 
 ### With two browsers
 
-- **Both watch the same cooking**, and see the same order and counter.
-- **Guest: pick on your turn.** The host sees the plate in the guest's colour, and
-  both see the same line after it.
+- **Both watch the same cooking**, see the baskets rotate the same way, and see
+  the same order and baskets.
+- **Guest: pick on your turn.** The host sees the guest's cook toss it in and a
+  chip in the guest's colour, and both see the same line after it.
 - **Guest: pick wrong.** Both see the guest out, and why.
 
 ## Gate record
@@ -230,8 +259,9 @@ Not yet gated.
 ## Measured
 
 Not measured against the world's budget, because it does not draw into the
-world's canvas. Fifteen ingredients of one to four meshes each, a plate and a
-ring per slot, the room, the chef - well under a hundred draw calls. One
+world's canvas. Eighteen ingredients of one to four meshes each, six baskets of
+six meshes and a ring, eighteen chips, the room, the chef, the cook at the
+counter - around a hundred and twenty draw calls at most. One
 shadow-casting light.
 
 Like the other minigames, a **second WebGL context** while a game is up.

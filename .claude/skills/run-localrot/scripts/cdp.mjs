@@ -871,8 +871,9 @@ export function cloverClick(which = 'lucky', { n = 0, force = false } = {}) {
 /**
  * An expression that, in a page showing Let Him Cook on this player's turn,
  * picks an item the way a player does - a pointer move and a pointerdown on the
- * canvas at the item's spot on screen, projected with the game's own camera fit
- * - and evaluates to what it picked, or null when it is not this player's turn.
+ * canvas at its basket's spot on screen, projected with the game's own camera
+ * fit - and evaluates to what it picked, or null when it is not this player's
+ * turn. A click on a basket takes its last unclaimed item, so that is the slot.
  *
  * `choose` is what kind of item, judged only from what this browser was shown
  * of the chef's cooking: 'safe' (a copy it saw go in and nobody has claimed),
@@ -895,12 +896,15 @@ export function cookPick(choose = 'safe', { hoverOnly = false } = {}) {
     }
     const list = lists[${JSON.stringify(choose)}]
     if (list.length === 0) return { none: ${JSON.stringify(choose)}, seen: g.picks.length }
-    const slot = list[0]
+    const kind = g.served[list[0]]
+    const slot = g.served.map((_, s) => s).filter((s) => g.served[s] === kind && g.claimed[s] === null).pop()
     const canvas = document.querySelector('[data-board] canvas')
     const rect = canvas.getBoundingClientRect()
     const aspect = rect.width / rect.height
     const shot = cam.frameScene(aspect)
-    const at = cam.slotAt(slot)
+    const rules = await import('/src/modules/22-let-him-cook/internal/rules.ts')
+    const basket = cam.basketAt(kind, rules.rotation(g))
+    const at = { ...basket, y: basket.y + cam.LAYOUT.wall * 0.7 }
     const sub = (p, q) => ({ x: p.x - q.x, y: p.y - q.y, z: p.z - q.z })
     const dot = (p, q) => p.x * q.x + p.y * q.y + p.z * q.z
     const norm = (p) => { const l = Math.hypot(p.x, p.y, p.z); return { x: p.x / l, y: p.y / l, z: p.z / l } }

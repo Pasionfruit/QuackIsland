@@ -1,21 +1,21 @@
 /**
  * The rules of Let Him Cook, as arithmetic.
  *
- * Fifteen items on a counter, each one of six ingredients. The chef takes some
- * of them, one at a time, into the pot, and everybody watches. Then the counter
- * is laid out again - all fifteen, in new places - and players take turns, in a
- * random order, picking an item they think was in the recipe.
+ * Six baskets, a basket per ingredient, three of it in every one. The chef takes
+ * some of them, one at a time, into the pot, and everybody watches. Then the
+ * baskets are filled again and rotated round the counter, and players take
+ * turns, in a random order, picking an item they think was in the recipe.
  *
  * - An ingredient the chef **did not use**: out.
  * - An ingredient the chef used, but **every copy of it has already been
  *   claimed**: out. Two tomatoes went in and two have been picked; the third
- *   tomato on the counter is a trap.
- * - Otherwise the item is yours - it goes on a plate in your colour - and you go
- *   to the back of the line.
+ *   tomato in the basket is a trap.
+ * - Otherwise the item is yours - it goes in the pot, and a chip in your colour
+ *   goes by its basket - and you go to the back of the line.
  *
  * Last cook standing wins. If every copy in the recipe has been claimed and more
  * than one is still in, the chef cooks again - faster, with less time to pick -
- * and the line carries on. **Six recipes at most**: after the sixth, once every
+ * and the line carries on. **Two recipes at most**: after the second, once every
  * copy is claimed, every pick is out, so a game always ends, however good
  * everybody's memory is.
  *
@@ -36,10 +36,10 @@ export const INGREDIENTS = [
 export const KINDS = INGREDIENTS.length
 
 export const KITCHEN = {
-  /** Items on the counter. */
-  items: 15,
-  /** Most copies of one ingredient on the counter. Every ingredient has at least one. */
-  maxCopies: 4,
+  /** Copies of every ingredient: the same in every basket. */
+  copies: 3,
+  /** Items on the counter, every copy of every ingredient. */
+  items: 18,
   /** How many items the chef cooks with, least and most: four more than there are cooks, within these. */
   recipe: [6, 10] as readonly [number, number],
 
@@ -55,8 +55,12 @@ export const KITCHEN = {
   reach: 0.6,
   /** How long an item is in the air on its way to the pot. */
   flight: 0.7,
-  /** Seconds after the last item lands before the turns start. */
-  outro: 2,
+  /** Seconds after the last item lands before the turns start. The baskets rotate in them. */
+  outro: 3,
+  /** How long the baskets take to rotate, ending a moment before the cooking does. */
+  rotate: 2,
+  /** Places round the counter a basket can be. The baskets rotate by at least one and fewer than this. */
+  places: 6,
 
   /** How long the turn order is shown, before the first recipe's turns. */
   order: 3.5,
@@ -65,9 +69,12 @@ export const KITCHEN = {
   /** A second less each recipe after the first, down to this. */
   turnFloor: 5,
   /** The most recipes the chef cooks. After the last, nothing is left to claim. */
-  recipes: 6,
-  /** How long a pick's result is shown before the next turn. */
-  result: 2,
+  recipes: 2,
+  /**
+   * How long a pick's result is shown before the next turn: long enough to see
+   * the item taken from its basket, tossed into the pot, and the chef's answer.
+   */
+  result: 2.5,
   /** How much faster the kitchen runs once only stand-ins are left in. */
   fastForward: 4,
 } as const
@@ -109,6 +116,10 @@ export interface Game {
   /** Seconds into the phase. */
   clock: number
   elapsed: number
+  /** How many places round the counter the baskets stand from where they started, while the chef cooks. */
+  turned: number
+  /** How many places they rotate once the chef is done, for the turns. */
+  spin: number
   /** What is on the counter while the chef cooks: an ingredient per slot. */
   counter: number[]
   /** The slots the chef takes, in the order they are taken. */
@@ -148,24 +159,21 @@ export function recipeSize(cooks: number): number {
 }
 
 export interface Recipe {
+  spin: number
   counter: number[]
   picks: number[]
   used: number[]
   served: number[]
 }
 
-/** Deals recipe number `recipe`: the counter, what the chef takes, and the counter laid out again. */
+/**
+ * Deals recipe number `recipe`: the counter, what the chef takes, the counter
+ * laid out again, and how far the baskets rotate once the chef is done.
+ */
 export function dealRecipe(seed: number, recipe: number, cooks: number): Recipe {
   const random = createRng(hashSeed(seed, `let-him-cook:recipe:${recipe}`))
-  const copies = new Array<number>(KINDS).fill(1)
-  for (let total = KINDS; total < KITCHEN.items; ) {
-    const kind = Math.floor(random() * KINDS)
-    if (copies[kind] >= KITCHEN.maxCopies) continue
-    copies[kind] += 1
-    total += 1
-  }
   const counter = shuffle(
-    copies.flatMap((n, kind) => new Array<number>(n).fill(kind)),
+    Array.from({ length: KINDS }, (_, kind) => new Array<number>(KITCHEN.copies).fill(kind)).flat(),
     random,
   )
   const slots = shuffle(
@@ -176,7 +184,8 @@ export function dealRecipe(seed: number, recipe: number, cooks: number): Recipe 
   const used = new Array<number>(KINDS).fill(0)
   for (const slot of picks) used[counter[slot]] += 1
   const served = shuffle([...counter], random)
-  return { counter, picks, used, served }
+  const spin = 1 + Math.floor(random() * (KITCHEN.places - 1))
+  return { spin, counter, picks, used, served }
 }
 
 /** Seconds from one item to the next in recipe number `recipe`: quicker every recipe. */
@@ -214,6 +223,7 @@ export function createGame(seed: number, entrants: readonly Entrant[], id = 1): 
     phase: entrants.length > 0 ? 'cooking' : 'over',
     clock: 0,
     elapsed: 0,
+    turned: 0,
     ...recipe,
     claimed: new Array<number | null>(KITCHEN.items).fill(null),
     queue,
@@ -248,6 +258,18 @@ export function claimedOf(game: Game, kind: number): number {
 export function unclaimed(game: Game): number {
   const total = game.used.reduce((sum, n) => sum + n, 0)
   return total - game.claimed.filter((c) => c !== null).length
+}
+
+/**
+ * How many places round the counter the baskets have turned from where they
+ * started, at this moment: `turned` while the chef cooks, moving through the
+ * `spin` in the last of the cooking once every item is in, `turned + spin` for
+ * the turns. Fractional while they move; not wrapped.
+ */
+export function rotation(game: Game): number {
+  if (game.phase !== 'cooking') return game.turned + game.spin
+  const start = cookTime(game.picks.length, game.recipe) - 0.3 - KITCHEN.rotate
+  return game.turned + game.spin * Math.min(1, Math.max(0, (game.clock - start) / KITCHEN.rotate))
 }
 
 /** Whose turn it is, or null. */
@@ -344,6 +366,8 @@ export function stepGame(game: Game, dt: number): Game {
         // Every copy is claimed: the chef cooks again for whoever is left.
         // After the last recipe the turns just go on, and every pick is out.
         game.recipe += 1
+        // The baskets stay where the last turns left them while the chef cooks.
+        game.turned = (game.turned + game.spin) % KITCHEN.places
         Object.assign(game, dealRecipe(game.seed, game.recipe, stillIn(game).length))
         game.claimed = new Array<number | null>(KITCHEN.items).fill(null)
         game.last = null
