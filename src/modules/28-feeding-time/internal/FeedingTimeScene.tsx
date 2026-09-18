@@ -5,7 +5,9 @@
  * everybody on the near bank as the island's own pill in their colour, facing
  * the water. Crackers arc out from whoever threw them and land with a ripple;
  * a duck that gets one dips its head to eat, and a ring in the thrower's colour
- * spreads round it.
+ * spreads round it. Your aim is drawn on the ground: a line from your spot out
+ * towards the pointer, a ring at the pointer, and - while the button is held -
+ * a marker in your colour where the throw would land at the power held.
  *
  * **Drawn from a ref, redrawn every frame from inside the canvas.** The canvas
  * itself is rendered once by the screen; see Duck Hunt's notes.
@@ -16,7 +18,7 @@ import { Color, Group, type DirectionalLight, type MeshBasicMaterial } from 'thr
 import { createRng, hashSeed } from '../../00-core'
 import { createAvatar } from '../../02-player'
 import { frameScene } from './camera'
-import { COLOURS, POND, duckAt, ducksFor, spotOf, type Cracker, type Game } from './rules'
+import { COLOURS, POND, aimThrow, duckAt, ducksFor, landing, spotOf, type Cracker, type Game, type Point } from './rules'
 
 export const PALETTE = {
   background: '#bfe4f2',
@@ -38,6 +40,8 @@ export const PALETTE = {
 export interface SceneHands {
   /** This browser's own cracker the host has not taken yet. */
   pending: () => Cracker | null
+  /** Your aim: your spot, the point under the pointer, and the power held - null when not held. */
+  aim: () => { from: Point; target: Point; power: number | null } | null
 }
 
 function FixedCamera() {
@@ -208,6 +212,67 @@ function CrackerView({ cracker, live }: { cracker: Cracker; live: RefObject<Game
   )
 }
 
+/** How many dots make the aim line. */
+const AIM_DOTS = 24
+
+/** Your aim on the ground: dots out towards the pointer, a ring at it, and where the power held would land. */
+function AimView({ live, hands }: { live: RefObject<Game>; hands: SceneHands }) {
+  const dots = useRef<Group>(null)
+  const reticle = useRef<Group>(null)
+  const lands = useRef<Group>(null)
+  const landsMaterial = useRef<MeshBasicMaterial>(null)
+  useFrame(({ clock }) => {
+    const aim = hands.aim()
+    const g = live.current
+    const me = g.players.findIndex((p) => p.mine)
+    const line = dots.current
+    if (!line || !reticle.current || !lands.current) return
+    const shown = !!aim && me >= 0
+    line.visible = shown
+    reticle.current.visible = shown
+    lands.current.visible = shown && aim.power !== null
+    if (!shown) return
+    const thrown = aimThrow(aim.from, aim.target, aim.power ?? 0)
+    // The line reaches the pointer, or the throw's landing if that is further.
+    const reach = Math.min(POND.distance[1], Math.max(Math.hypot(aim.target.x - aim.from.x, aim.target.z - aim.from.z), aim.power === null ? 0 : thrown.distance))
+    const drift = (clock.elapsedTime * 1.5) % 1
+    line.children.forEach((dot, i) => {
+      const at = landing(aim.from, { angle: thrown.angle, distance: ((i + drift) / AIM_DOTS) * reach })
+      dot.position.set(at.x, 0.05, at.z)
+    })
+    reticle.current.position.set(aim.target.x, 0.05, aim.target.z)
+    if (aim.power !== null) {
+      const at = landing(aim.from, thrown)
+      lands.current.position.set(at.x, 0.06, at.z)
+      if (landsMaterial.current) landsMaterial.current.color.set(COLOURS[me % COLOURS.length])
+    }
+  })
+  return (
+    <>
+      <group ref={dots} visible={false}>
+        {Array.from({ length: AIM_DOTS }, (_, i) => (
+          <mesh key={i} rotation={[-Math.PI / 2, 0, 0]}>
+            <circleGeometry args={[0.09, 10]} />
+            <meshBasicMaterial color="#ffffff" transparent opacity={0.7} depthWrite={false} />
+          </mesh>
+        ))}
+      </group>
+      <group ref={reticle} visible={false}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[POND.feed * 0.8, POND.feed * 0.8 + 0.12, 36]} />
+          <meshBasicMaterial color="#ffffff" transparent opacity={0.85} depthWrite={false} />
+        </mesh>
+      </group>
+      <group ref={lands} visible={false}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.3, 0.55, 28]} />
+          <meshBasicMaterial ref={landsMaterial} transparent opacity={0.95} depthWrite={false} />
+        </mesh>
+      </group>
+    </>
+  )
+}
+
 /** Everybody on the bank, facing the water, a ring under your own spot. */
 function Feeders({ live }: { live: RefObject<Game> }) {
   const g = live.current
@@ -255,6 +320,7 @@ export function FeedingTimeScene({ live, hands }: { live: RefObject<Game>; hands
       <Pond />
       {game.players.length > 0 ? game.eating.map((_, i) => <DuckBody key={`${game.id}:${i}`} index={i} live={live} />) : null}
       <Feeders live={live} />
+      <AimView live={live} hands={hands} />
       {crackers.map((cracker) => (
         <CrackerView key={`${game.id}:${cracker.id}`} cracker={cracker} live={live} />
       ))}

@@ -2,8 +2,8 @@
  * 28-feeding-time - the public contract.
  *
  * Minigame 6. Ducks on a pond, everybody on the bank with crackers. Hold the
- * button and flick the mouse up the screen to throw one - the lean is the aim,
- * the speed is how far. A cracker that lands by a duck feeds it. Most ducks fed
+ * button to charge and let go to throw one - the pointer is the aim, how long
+ * it was held is how far. A cracker that lands by a duck feeds it. Most ducks fed
  * at a minute wins.
  *
  * It plugs into `15-minigames` and nothing else in the build knows it exists.
@@ -23,19 +23,23 @@ registerMinigame('feeding-time', {
 
 export {
   COLOURS,
-  FLICK,
+  CHARGE,
   POND,
   canThrow,
   createGame,
   duckAt,
   duckCount,
   ducksFor,
-  flickToThrow,
+  aimAngle,
+  aimThrow,
+  chargePower,
+  distancePower,
   flightTime,
   landing,
   layDucks,
   onPond,
   placings,
+  powerDistance,
   spotOf,
   stepGame,
   throwCracker,
@@ -66,6 +70,6 @@ export {
   type WireFeeder,
 } from './internal/wire'
 
-export { FILL, FOV, POINTS, TILT, frameScene, type Shot } from './internal/camera'
+export { FILL, FOV, POINTS, TILT, frameScene, groundAt, type Shot } from './internal/camera'
 
 export { FeedingTimeScreen } from './internal/FeedingTimeScreen'

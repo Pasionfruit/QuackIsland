@@ -2440,7 +2440,7 @@
     {
       "id": "28-feeding-time",
       "phase": "P6",
-      "title": "Minigame 6, Feeding Time: ducks on a pond, crackers thrown by flicking the mouse upward, most ducks fed wins",
+      "title": "Minigame 6, Feeding Time: ducks on a pond, crackers aimed with the pointer and thrown by holding and letting go, most ducks fed wins",
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
@@ -2463,12 +2463,12 @@
         },
         {
           "id": "28.2",
-          "title": "The throw: a flick from the bottom third to the top third, its lean the aim and its speed the distance; a cracker near a duck feeds it",
+          "title": "The throw: the pointer is the aim, how long the button is held the distance; a cracker near a duck feeds it",
           "status": "done"
         },
         {
           "id": "28.3",
-          "title": "The controls: hold the left button and drag upward quickly",
+          "title": "The controls: point at the water, hold the left button to charge, let go to throw, with a power meter",
           "status": "done"
         },
         {
@@ -2495,7 +2495,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-17T04:04:49.589Z"
+          "at": "2026-09-18T18:40:32.426Z"
         },
         "human": {
           "status": "pending"
@@ -2506,7 +2506,7 @@
       "nonGoals": [
         "No models: players are the island capsule, ducks and crackers are primitives",
         "No moving camera",
-        "No landing marker: aiming is the game",
+        "No arc drawn in the air: the aim is shown on the water only",
         "No sound, no score kept between rounds"
       ],
       "budgets": {

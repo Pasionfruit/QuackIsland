@@ -2,23 +2,23 @@
  * Feeding Time, on the screen.
  *
  * The pond is drawn in its own canvas by `FeedingTimeScene`; this is the shell:
- * the flick read off the pointer and turned into a throw, `useFeedNet` deciding
- * what it does, and the words - the clock, everybody's ducks fed, a flash for
+ * the pointer read and turned into a throw, `useFeedNet` deciding what it does,
+ * and the words - the clock, everybody's ducks fed, the power meter, a flash for
  * each of yours, and the results.
  *
- * **Hold the left button in the bottom third and drag up into the top third,
- * fast.** The throw goes the moment the pointer reaches the top third: its lean
- * is its aim, and its speed is how far. A trail follows the drag, and the bottom
- * third is marked where a flick has to start.
+ * **Point at the water, hold the left button, let go.** The pointer is the aim -
+ * the scene draws a line out to it - and how long the button was held is the
+ * power: the meter fills, and falls back if held too long. The meter marks the
+ * power that reaches the pointer, and the scene marks where the throw would land.
  */
 import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
 import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
-import { FOV } from './camera'
+import { FOV, groundAt } from './camera'
 import { FeedingTimeScene, type SceneHands } from './FeedingTimeScene'
-import { COLOURS, FLICK, flickToThrow, placings, timeLeft, type Game, type Throw } from './rules'
+import { COLOURS, aimThrow, chargePower, distancePower, placings, spotOf, timeLeft, type Game, type Point, type Throw } from './rules'
 import { myId, newGame, waitingGame } from './setup'
 import { useFeedNet } from './useFeedNet'
 
@@ -34,10 +34,22 @@ const LOOK = {
 const FONT =
   "ui-rounded, 'Hiragino Maru Gothic ProN', 'Segoe UI', system-ui, -apple-system, sans-serif"
 
-interface Drag {
-  from: { x: number; y: number }
-  startedAt: number
-  trail: { x: number; y: number }[]
+/** Where the pointer is over the board, and since when the button has been held. */
+interface Pointer {
+  across: number
+  down: number
+  aspect: number
+  heldSince: number | null
+}
+
+/** Your aim, from the pointer: your spot, the point on the ground, and the power held so far. */
+function aimOf(pointer: Pointer | null, game: Game, now: number): { from: Point; target: Point; power: number | null } | null {
+  const me = game.players.findIndex((p) => p.mine)
+  if (!pointer || me < 0 || game.over) return null
+  const from = spotOf(me, game.players.length)
+  // Above the horizon: straight out, as far as it goes.
+  const target = groundAt(pointer.across, pointer.down, pointer.aspect) ?? { x: from.x, z: from.z - 100 }
+  return { from, target, power: pointer.heldSince === null ? null : chargePower((now - pointer.heldSince) / 1000) }
 }
 
 export function FeedingTimeScreen({ run }: { run: MinigameRun }) {
@@ -57,16 +69,18 @@ export function FeedingTimeScreen({ run }: { run: MinigameRun }) {
   const live = useRef(game)
   live.current = game
 
-  /** A throw flicked, waiting for the next frame. */
+  /** A throw let go, waiting for the next frame. */
   const flicked = useRef<Throw | null>(null)
-  const drag = useRef<Drag | null>(null)
-  const [trail, setTrail] = useState<{ x: number; y: number }[]>([])
+  const pointer = useRef<Pointer | null>(null)
+  const meter = useRef<HTMLDivElement>(null)
+  const meterFill = useRef<HTMLDivElement>(null)
+  const meterReach = useRef<HTMLDivElement>(null)
   const [flash, setFlash] = useState<number | null>(null)
   const lastScore = useRef(0)
   const board = useRef<HTMLDivElement>(null)
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
-  const hands = useMemo<SceneHands>(() => ({ pending: () => wire.pending() }), [])
+  const hands = useMemo<SceneHands>(() => ({ pending: () => wire.pending(), aim: () => aimOf(pointer.current, live.current, performance.now()) }), [])
 
   useEffect(() => {
     let frame = 0
@@ -81,6 +95,15 @@ export function FeedingTimeScreen({ run }: { run: MinigameRun }) {
       const mine = current.players.find((p) => p.mine)
       if (mine && mine.score > lastScore.current) setFlash(current.elapsed)
       lastScore.current = mine?.score ?? 0
+      // The meter, straight onto the page: it moves every frame the button is held.
+      const aim = aimOf(pointer.current, current, now)
+      if (meter.current && meterFill.current && meterReach.current) {
+        const reach = aim ? distancePower(Math.hypot(aim.target.x - aim.from.x, aim.target.z - aim.from.z)) : null
+        meterFill.current.style.width = `${(aim?.power ?? 0) * 100}%`
+        meterReach.current.style.left = `${(reach ?? 0) * 100}%`
+        meterReach.current.style.display = reach === null ? 'none' : 'block'
+        meter.current.style.opacity = aim && aim.power !== null ? '1' : '0.6'
+      }
       frame = requestAnimationFrame(tick)
     }
     frame = requestAnimationFrame(tick)
@@ -93,42 +116,47 @@ export function FeedingTimeScreen({ run }: { run: MinigameRun }) {
     return { x: (e.clientX - rect.left) / rect.width, y: (e.clientY - rect.top) / rect.height, aspect: rect.width / Math.max(1, rect.height) }
   }
 
+  const onPointerMove = (e: React.PointerEvent) => {
+    const at = onBoard(e)
+    pointer.current = { across: at.x, down: at.y, aspect: at.aspect, heldSince: pointer.current?.heldSince ?? null }
+  }
+
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0 || paused.current || live.current.over) return
     const at = onBoard(e)
-    if (at.y < FLICK.startBelow) return
     try {
-      // Keep the drag ours even if the pointer leaves the board on the way up.
+      // Keep the hold ours even if the pointer leaves the board before letting go.
       ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
     } catch {
-      // A pointer the browser does not know to capture: the drag still works inside the board.
+      // A pointer the browser does not know to capture: the hold still works inside the board.
     }
-    drag.current = { from: { x: at.x, y: at.y }, startedAt: performance.now(), trail: [{ x: at.x, y: at.y }] }
-    setTrail([{ x: at.x, y: at.y }])
+    pointer.current = { across: at.x, down: at.y, aspect: at.aspect, heldSince: performance.now() }
   }
 
-  const onPointerMove = (e: React.PointerEvent) => {
-    const held = drag.current
-    if (!held) return
+  const onPointerUp = (e: React.PointerEvent) => {
+    const held = pointer.current
+    if (!held || held.heldSince === null) return
     const at = onBoard(e)
-    held.trail = [...held.trail.slice(-14), { x: at.x, y: at.y }]
-    setTrail(held.trail)
-    if (at.y > FLICK.throwAbove) return
-    // Reached the top third: that is the throw, if it was quick enough.
-    const thrown = flickToThrow(held.from, { x: at.x, y: at.y }, (performance.now() - held.startedAt) / 1000, at.aspect)
-    drag.current = null
-    if (thrown) flicked.current = thrown
-    window.setTimeout(() => setTrail([]), 120)
+    const letGo = { across: at.x, down: at.y, aspect: at.aspect, heldSince: held.heldSince }
+    pointer.current = { ...letGo, heldSince: null }
+    if (paused.current) return
+    const aim = aimOf(letGo, live.current, performance.now())
+    if (aim && aim.power !== null) flicked.current = aimThrow(aim.from, aim.target, aim.power)
   }
 
-  const onPointerUp = () => {
-    drag.current = null
-    setTrail([])
+  const onPointerCancel = () => {
+    pointer.current = null
+  }
+
+  const onPointerLeave = () => {
+    // A held button is captured and keeps its aim; only a pointer passing out of the board drops it.
+    if (pointer.current?.heldSince === null) pointer.current = null
   }
 
   const ready = game.players.length > 0
   const left = timeLeft(game)
   const showFlash = ready && !game.over && flash !== null && game.elapsed - flash < 0.8
+  const myColour = COLOURS[Math.max(0, game.players.findIndex((p) => p.mine)) % COLOURS.length]
 
   return (
     <div style={page}>
@@ -168,32 +196,20 @@ export function FeedingTimeScreen({ run }: { run: MinigameRun }) {
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
+        onPointerCancel={onPointerCancel}
+        onPointerLeave={onPointerLeave}
         onContextMenu={(e) => e.preventDefault()}
         data-board
       >
         <Stage live={live} hands={hands} />
         {ready && !game.over ? (
-          <>
-            <div style={throwLine} />
-            <div style={startBand}>
-              <span style={startHint}>hold here and flick up ↑</span>
+          <div style={meterWrap}>
+            <div ref={meter} style={meterBar} data-meter>
+              <div ref={meterFill} style={{ ...meterFillStyle, background: myColour }} />
+              <div ref={meterReach} style={meterReachStyle} />
             </div>
-          </>
-        ) : null}
-        {trail.length > 1 ? (
-          <svg style={trailSvg} viewBox="0 0 1 1" preserveAspectRatio="none">
-            <polyline
-              points={trail.map((p) => `${p.x},${p.y}`).join(' ')}
-              fill="none"
-              stroke="#ffffff"
-              strokeOpacity={0.85}
-              strokeWidth={6}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              vectorEffect="non-scaling-stroke"
-            />
-          </svg>
+            <span style={meterHint}>point at the water · hold to charge · let go to throw</span>
+          </div>
         ) : null}
         {showFlash ? (
           <div style={flashWrap}>
@@ -308,40 +324,50 @@ const pill: React.CSSProperties = {
   whiteSpace: 'nowrap',
 }
 
-const board_: React.CSSProperties = { flex: 1, minHeight: 0, width: '100%', position: 'relative', overflow: 'hidden', touchAction: 'none', cursor: 'grab' }
+const board_: React.CSSProperties = { flex: 1, minHeight: 0, width: '100%', position: 'relative', overflow: 'hidden', touchAction: 'none', cursor: 'crosshair' }
 
-const startBand: React.CSSProperties = {
+const meterWrap: React.CSSProperties = {
   position: 'absolute',
   left: 0,
   right: 0,
-  bottom: 0,
-  height: `${(1 - FLICK.startBelow) * 100}%`,
-  background: 'linear-gradient(0deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04))',
-  borderTop: '2px dashed rgba(255,255,255,0.45)',
-  pointerEvents: 'none',
+  bottom: 14,
   display: 'flex',
-  alignItems: 'flex-end',
-  justifyContent: 'center',
-  paddingBottom: 12,
-  boxSizing: 'border-box',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: 6,
+  pointerEvents: 'none',
 }
 
-const startHint: React.CSSProperties = {
+const meterBar: React.CSSProperties = {
+  position: 'relative',
+  width: 'min(360px, 70%)',
+  height: 16,
+  borderRadius: 999,
+  background: 'rgba(20, 40, 35, 0.35)',
+  boxShadow: 'inset 0 0 0 2px rgba(255,255,255,0.7)',
+  overflow: 'hidden',
+  opacity: 0.6,
+}
+
+const meterFillStyle: React.CSSProperties = { position: 'absolute', left: 0, top: 0, bottom: 0, width: 0, borderRadius: 999 }
+
+/** The power that reaches the pointer. */
+const meterReachStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: 0,
+  bottom: 0,
+  width: 4,
+  marginLeft: -2,
+  background: '#fff',
+  boxShadow: '0 0 0 1px rgba(0,0,0,0.35)',
+  display: 'none',
+}
+
+const meterHint: React.CSSProperties = {
   color: '#fff',
-  font: `700 14px/1 ${FONT}`,
+  font: `700 13px/1 ${FONT}`,
   textShadow: '0 1px 3px rgba(0,0,0,0.45)',
 }
-
-const throwLine: React.CSSProperties = {
-  position: 'absolute',
-  left: 0,
-  right: 0,
-  top: `${FLICK.throwAbove * 100}%`,
-  borderTop: '2px dashed rgba(255,255,255,0.3)',
-  pointerEvents: 'none',
-}
-
-const trailSvg: React.CSSProperties = { position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }
 
 const flashWrap: React.CSSProperties = {
   position: 'absolute',

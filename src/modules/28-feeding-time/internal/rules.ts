@@ -2,9 +2,9 @@
  * The rules of Feeding Time, as arithmetic.
  *
  * Ducks swim about a pond; everybody stands on the near bank with a pocket of
- * crackers. Hold the button in the bottom third of the screen and flick up into
- * the top third to throw one: the flick's lean is where it goes, and the flick's
- * speed is how far. A cracker that lands near a duck feeds it - a point - and
+ * crackers. Point at the water to aim, hold the button to charge the throw and
+ * let go to throw one: the pointer is which way it goes, and how long it was
+ * held is how far. A cracker that lands near a duck feeds it - a point - and
  * the duck is busy eating for a moment. Most ducks fed at a minute wins.
  *
  * Everything here is pure. Where every duck is at every moment is a function of
@@ -56,16 +56,12 @@ export const POND = {
   lean: 1,
 } as const
 
-export const FLICK = {
-  /** A flick starts in the bottom third of the view and throws on reaching the top third. */
-  startBelow: 2 / 3,
-  throwAbove: 1 / 3,
-  /** Slower than this from press to the top third, and it is not a throw. */
-  slowest: 0.7,
-  /** A flick of this speed - view heights a second - throws the least distance... */
-  slowSpeed: 0.5,
-  /** ...and this speed or faster, the most. */
-  fastSpeed: 3.2,
+export const CHARGE = {
+  /**
+   * Seconds held from no power to full. Hold on past full and it falls back
+   * again, and rises again - so a throw is timed, not just held.
+   */
+  fill: 1.1,
 } as const
 
 export interface Point {
@@ -79,20 +75,36 @@ export interface Throw {
   distance: number
 }
 
+/** How much power a button held this many seconds gives, 0 to 1, rising and falling. */
+export function chargePower(held: number): number {
+  if (!(held > 0)) return 0
+  const t = (held / CHARGE.fill) % 2
+  return t <= 1 ? t : 2 - t
+}
+
+/** How far a throw of this power goes: the least at none, the most at full. */
+export function powerDistance(power: number): number {
+  const t = Math.min(1, Math.max(0, power))
+  return POND.distance[0] + t * (POND.distance[1] - POND.distance[0])
+}
+
+/** The power that throws this far, 0 to 1 - past the limits, the nearest limit. */
+export function distancePower(distance: number): number {
+  return Math.min(1, Math.max(0, (distance - POND.distance[0]) / (POND.distance[1] - POND.distance[0])))
+}
+
+/** Which way from a spot a point lies, as a throw's angle, up to the lean either way. */
+export function aimAngle(from: Point, target: Point): number {
+  return Math.max(-POND.lean, Math.min(POND.lean, Math.atan2(target.x - from.x, from.z - target.z)))
+}
+
 /**
- * A flick turned into a throw, or null if it was not one. `from` and `to` are
- * on the view, 0 to 1 across and down; `seconds` from press to reaching the top
- * third; `aspect` the view's width over its height, so a sideways lean is
- * measured the same way as the upward drag.
+ * A throw from a spot towards a point, with this much power. The point is only
+ * the way it goes: how far is the power's, so a throw lands on the point only
+ * when the power is right for it.
  */
-export function flickToThrow(from: { x: number; y: number }, to: { x: number; y: number }, seconds: number, aspect: number): Throw | null {
-  if (from.y < FLICK.startBelow || to.y > FLICK.throwAbove || seconds <= 0 || seconds > FLICK.slowest) return null
-  const up = from.y - to.y
-  const across = (to.x - from.x) * aspect
-  const angle = Math.max(-POND.lean, Math.min(POND.lean, Math.atan2(across, up)))
-  const speed = Math.hypot(up, across) / seconds
-  const t = Math.min(1, Math.max(0, (speed - FLICK.slowSpeed) / (FLICK.fastSpeed - FLICK.slowSpeed)))
-  return { angle, distance: POND.distance[0] + t * (POND.distance[1] - POND.distance[0]) }
+export function aimThrow(from: Point, target: Point, power: number): Throw {
+  return { angle: aimAngle(from, target), distance: powerDistance(power) }
 }
 
 /** Where player `index` of `count` stands on the bank. */

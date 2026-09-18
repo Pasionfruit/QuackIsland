@@ -1,22 +1,27 @@
 /**
- * The flick, the throw, the ducks, and the stand-ins.
+ * The aim and the charge, the throw, the ducks, and the stand-ins.
  */
+import { PerspectiveCamera, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 import { BOT_EVERY, botThrows } from '../internal/ai'
+import { FOV, frameScene, groundAt } from '../internal/camera'
 import {
-  FLICK,
+  CHARGE,
   POND,
+  aimThrow,
   canThrow,
+  chargePower,
   createGame,
   duckAt,
   duckCount,
   ducksFor,
-  flickToThrow,
+  distancePower,
   flightTime,
   landing,
   layDucks,
   onPond,
   placings,
+  powerDistance,
   spotOf,
   stepGame,
   throwCracker,
@@ -44,29 +49,78 @@ function aimAt(game: Game, player: number, duck: number): Throw {
   return { angle: Math.atan2(at.x - from.x, from.z - at.z), distance: Math.hypot(at.x - from.x, at.z - from.z) }
 }
 
-describe('a flick', () => {
-  it('throws only from the bottom third to the top third, quickly enough', () => {
-    const low = { x: 0.5, y: 0.85 }
-    const high = { x: 0.5, y: 0.2 }
-    expect(flickToThrow(low, high, 0.3, 1.6)).not.toBeNull()
-    expect(flickToThrow({ x: 0.5, y: 0.5 }, high, 0.3, 1.6)).toBeNull()
-    expect(flickToThrow(low, { x: 0.5, y: 0.4 }, 0.3, 1.6)).toBeNull()
-    expect(flickToThrow(low, high, FLICK.slowest + 0.01, 1.6)).toBeNull()
+describe('the charge', () => {
+  it('rises from nothing to full, then falls back and rises again', () => {
+    expect(chargePower(0)).toBe(0)
+    expect(chargePower(CHARGE.fill / 2)).toBeCloseTo(0.5)
+    expect(chargePower(CHARGE.fill)).toBeCloseTo(1)
+    expect(chargePower(CHARGE.fill * 1.5)).toBeCloseTo(0.5)
+    expect(chargePower(CHARGE.fill * 2)).toBeCloseTo(0)
+    expect(chargePower(CHARGE.fill * 2.25)).toBeCloseTo(0.25)
+    for (let t = 0; t < 10; t += 0.07) {
+      expect(chargePower(t)).toBeGreaterThanOrEqual(0)
+      expect(chargePower(t)).toBeLessThanOrEqual(1)
+    }
   })
 
-  it('goes straight for a straight flick, and leans the way it leans', () => {
-    expect(flickToThrow({ x: 0.5, y: 0.9 }, { x: 0.5, y: 0.2 }, 0.3, 1.6)!.angle).toBeCloseTo(0)
-    expect(flickToThrow({ x: 0.5, y: 0.9 }, { x: 0.6, y: 0.2 }, 0.3, 1.6)!.angle).toBeGreaterThan(0.1)
-    expect(flickToThrow({ x: 0.5, y: 0.9 }, { x: 0.4, y: 0.2 }, 0.3, 1.6)!.angle).toBeLessThan(-0.1)
-    expect(Math.abs(flickToThrow({ x: 0.1, y: 0.7 }, { x: 0.99, y: 0.3 }, 0.1, 3)!.angle)).toBeLessThanOrEqual(POND.lean)
+  it('throws further for more power, within limits, and the reach reads back', () => {
+    expect(powerDistance(0)).toBe(POND.distance[0])
+    expect(powerDistance(1)).toBe(POND.distance[1])
+    expect(powerDistance(0.6)).toBeGreaterThan(powerDistance(0.3))
+    expect(powerDistance(5)).toBe(POND.distance[1])
+    for (const d of [3, 7.5, 12, 20]) expect(powerDistance(distancePower(d))).toBeCloseTo(d)
+    expect(distancePower(1)).toBe(0)
+    expect(distancePower(40)).toBe(1)
+  })
+})
+
+describe('the aim', () => {
+  it('goes the way the pointer is, and lands on it with the power that reaches it', () => {
+    const from = spotOf(1, 4)
+    for (const target of [{ x: 0, z: -9 }, { x: -7, z: -5 }, { x: 5, z: -14 }]) {
+      const power = distancePower(Math.hypot(target.x - from.x, target.z - from.z))
+      const at = landing(from, aimThrow(from, target, power))
+      expect(at.x).toBeCloseTo(target.x)
+      expect(at.z).toBeCloseTo(target.z)
+    }
   })
 
-  it('goes further the faster it is, within limits', () => {
-    const slow = flickToThrow({ x: 0.5, y: 0.9 }, { x: 0.5, y: 0.25 }, 0.65, 1.6)!
-    const fast = flickToThrow({ x: 0.5, y: 0.9 }, { x: 0.5, y: 0.25 }, 0.2, 1.6)!
-    expect(fast.distance).toBeGreaterThan(slow.distance)
-    expect(slow.distance).toBeGreaterThanOrEqual(POND.distance[0])
-    expect(flickToThrow({ x: 0.5, y: 0.99 }, { x: 0.5, y: 0.01 }, 0.02, 1.6)!.distance).toBe(POND.distance[1])
+  it('goes straight ahead for a point straight ahead, and leans no further than the limit', () => {
+    const from = spotOf(0, 1)
+    expect(aimThrow(from, { x: from.x, z: -8 }, 0.5).angle).toBeCloseTo(0)
+    expect(aimThrow(from, { x: from.x + 3, z: -8 }, 0.5).angle).toBeGreaterThan(0.1)
+    expect(aimThrow(from, { x: from.x - 3, z: -8 }, 0.5).angle).toBeLessThan(-0.1)
+    expect(Math.abs(aimThrow(from, { x: from.x + 30, z: from.z }, 0.5).angle)).toBeLessThanOrEqual(POND.lean)
+  })
+
+  it('finds the same spot under the pointer as the canvas camera does', () => {
+    for (const aspect of [0.75, 1.6, 2.2]) {
+      const shot = frameScene(aspect)
+      const camera = new PerspectiveCamera(FOV, aspect, 0.5, 300)
+      camera.position.set(shot.x, shot.y, shot.z)
+      camera.lookAt(shot.target.x, shot.target.y, shot.target.z)
+      camera.updateMatrixWorld()
+      for (const [across, down] of [[0.5, 0.5], [0.1, 0.2], [0.9, 0.8], [0.3, 0.95]]) {
+        const ray = new Vector3(across * 2 - 1, 1 - down * 2, 0.5).unproject(camera).sub(camera.position).normalize()
+        const s = -camera.position.y / ray.y
+        const at = groundAt(across, down, aspect)!
+        expect(at.x).toBeCloseTo(camera.position.x + ray.x * s, 4)
+        expect(at.z).toBeCloseTo(camera.position.z + ray.z * s, 4)
+      }
+    }
+  })
+
+  it('finds the pond under the pointer at any window shape', () => {
+    for (const aspect of [0.5, 0.75, 1, 1.33, 1.6, 1.78, 2.2, 3]) {
+      // The middle of the view is on the water, left of it is left, higher is further.
+      const middle = groundAt(0.5, 0.5, aspect)!
+      expect(onPond(middle), `${aspect}`).toBe(true)
+      expect(middle.x).toBeCloseTo(0)
+      expect(groundAt(0.3, 0.5, aspect)!.x).toBeLessThan(-0.5)
+      expect(groundAt(0.5, 0.3, aspect)!.z).toBeLessThan(middle.z - 0.5)
+      // The top of the view is still ground, beyond the pond.
+      expect(groundAt(0.5, 0, aspect)).not.toBeNull()
+    }
   })
 })
 

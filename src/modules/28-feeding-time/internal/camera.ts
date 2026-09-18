@@ -97,3 +97,29 @@ export function frameScene(aspect: number): Shot {
   last = { aspect: safeAspect, shot }
   return shot
 }
+
+/**
+ * The spot on the ground under a point of the view - 0 to 1 across and down -
+ * seen through the camera `frameScene` gives for that shape of view. Null for a
+ * point above the horizon, which never hits the ground.
+ */
+export function groundAt(across: number, down: number, aspect: number): { x: number; z: number } | null {
+  const shot = frameScene(aspect)
+  const safeAspect = Math.max(0.2, Number.isFinite(aspect) ? aspect : 1)
+  const tanV = Math.tan(radians(FOV) / 2)
+  // The camera looks straight down the middle (x = 0), so its right is +x.
+  const f = { x: shot.target.x - shot.x, y: shot.target.y - shot.y, z: shot.target.z - shot.z }
+  const length = Math.hypot(f.x, f.y, f.z)
+  f.x /= length
+  f.y /= length
+  f.z /= length
+  const right = { x: 1, y: 0, z: 0 }
+  // Up on the screen: right × forward.
+  const up = { x: 0, y: -f.z, z: f.y }
+  const sx = (across * 2 - 1) * tanV * safeAspect
+  const sy = (1 - down * 2) * tanV
+  const dir = { x: f.x + right.x * sx + up.x * sy, y: f.y + up.y * sy, z: f.z + up.z * sy }
+  if (dir.y >= -1e-6) return null
+  const s = -shot.y / dir.y
+  return { x: shot.x + dir.x * s, z: shot.z + dir.z * s }
+}

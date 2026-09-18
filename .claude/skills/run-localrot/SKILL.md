@@ -63,10 +63,10 @@ punch in flight and the results. For Time It
 timer, then clicks on the target by the page's own clock and fails unless the
 stop is within 0.15 s of it; screenshots the countdown, the stopwatch running,
 covered, and the results. For Feeding Time
-(`--game feeding-time`) it first drags up slowly and fails if that throws, then
-flicks at the nearest hungry duck for the minute - a real pointerdown in the
-bottom third and pointermoves up into the top third, timed for the distance -
-spoiling every fourth, and fails unless ducks are fed. For Find Yourself
+(`--game feeding-time`) it first moves the pointer about without pressing and
+fails if that throws, then throws at the nearest hungry duck for the minute - a
+real pointermove onto the spot, pointerdown, and pointerup held for the power that
+reaches it - spoiling every fourth, and fails unless ducks are fed. For Find Yourself
 (`--game find-yourself`) it picks the cup its face is really under in stages 1
 and 3 and the one next to it in stage 2 - clicking the cup on the canvas - and
 fails unless that scores 4; screenshots the faces, a shuffle, a hovered cup, a
@@ -147,7 +147,7 @@ and confirming shows up on the host's; in Duck Hunt, that a guest's shot at one
 of its own balloons counts on the host; in Punch Buggy, that a guest walking and
 clicking moves and throws a punch on the host; in Time It, every browser stops a little after the
 target by its own clock, then that all agree on the stops once the round is
-over and each is within 0.03 s of the reading its browser clicked at; in Feeding Time, every browser flicks at ducks for
+over and each is within 0.03 s of the reading its browser clicked at; in Feeding Time, every browser throws at ducks for
 twelve seconds, then that guests' throws reached the host and all agree on the
 scores; in Find Yourself, every browser picks its own cup in
 the first stage, then that all agree on the picks and everybody scored; in Sprint Triathlon, every browser races for twelve

@@ -27,7 +27,7 @@ const GIVE_UP_MS = 2000
 const SNAP_SECONDS = 0.5
 
 export interface FeedNet {
-  /** Moves the round on a frame. `thrown` is a flick this frame, if any. */
+  /** Moves the round on a frame. `thrown` is a throw let go this frame, if any. */
   advance(game: Game, dt: number, thrown: Throw | null, paused: boolean): boolean
   /** This browser's own throw that the host has not taken yet, drawn as a cracker. */
   pending(): Cracker | null

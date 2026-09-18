@@ -198,10 +198,10 @@ const ENTRIES = [
     title: 'Feeding Time',
     kind: 'free-for-all',
     description: [
-      'Ducks on a pond and a pocket of crackers. Hold the left button in the bottom third of the screen and flick the mouse up into the top third to throw one - the faster the flick, the further it goes, and the way it leans is where.',
+      'Ducks on a pond and a pocket of crackers. Point at the water to aim, hold the left button to charge the power meter and let go to throw - the longer you hold, the further it goes, up to full.',
       'A cracker that lands near a duck feeds it. The faster you throw the more you can feed, but only good aim feeds anything. Whoever feeds the most ducks wins.',
     ],
-    controls: [{ input: 'Left click + mouse drag', does: 'Hold and rapidly drag upward to throw crackers' }],
+    controls: [{ input: 'Mouse', does: 'Aim at the water' }, { input: 'Hold left click, release', does: 'Charge the power meter, then throw' }],
     reserved: false,
     // Built: see `28-feeding-time`. The assets stage is still to do - the ducks
     // and crackers are primitives.

@@ -4,7 +4,7 @@
  * A stand-in picks a duck that is not eating, works out where it will be when a
  * cracker gets there, and throws - a little off, as hands are: the lean up to
  * seven degrees out, the distance up to a sixth. Some throws feed, some splash.
- * It throws every 1.1 to 2 seconds, slower than somebody flicking hard.
+ * It throws every 1.1 to 2 seconds, slower than somebody throwing hard.
  *
  * Seeded by the game, the stand-in and how many throws it has made, so the same
  * round plays out the same way. Only ever runs on the host.

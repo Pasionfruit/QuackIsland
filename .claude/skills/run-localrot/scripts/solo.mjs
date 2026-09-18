@@ -23,9 +23,10 @@
  *             the target by the page's own clock, failing unless the stop is
  *             within 0.15 s of it; screenshots countdown, running, covered and
  *             results.
- *             Feeding Time: a slow drag first (must not throw), then flicks at
- *             the nearest hungry duck for the minute - every fourth one spoiled
- *             - failing unless crackers are thrown and ducks fed.
+ *             Feeding Time: pointing without pressing first (must not throw),
+ *             then throws at the nearest hungry duck for the minute - point,
+ *             hold for the power, let go - every fourth one spoiled - failing
+ *             unless crackers are thrown and ducks fed.
  *             Find Yourself: pick the right cup in stages 1 and 3 and the wrong
  *             one in stage 2, failing unless that scores 4; screenshots the
  *             faces, a shuffle, a hovered cup, a result and the results.
@@ -175,13 +176,23 @@ try {
     let flicks = 0
     let shotThrow = false
     let shotMid = false
-    // A slow drag first: not a throw.
+    // Pointing without pressing first: not a throw.
     const before = await state()
-    await page.eval(`(async () => { const b = document.querySelector('[data-board]'); const r = b.getBoundingClientRect(); const at = (y) => ({ clientX: r.left + r.width / 2, clientY: r.top + y * r.height, bubbles: true, pointerId: 1, button: 0 }); b.dispatchEvent(new PointerEvent('pointerdown', at(0.9))); await new Promise((res) => setTimeout(res, 1000)); b.dispatchEvent(new PointerEvent('pointermove', at(0.2))); b.dispatchEvent(new PointerEvent('pointerup', at(0.2))) })()`)
+    await page.eval(`(async () => { const b = document.querySelector('[data-board]'); const r = b.getBoundingClientRect(); for (const y of [0.8, 0.5, 0.2]) { b.dispatchEvent(new PointerEvent('pointermove', { clientX: r.left + r.width / 2, clientY: r.top + y * r.height, bubbles: true, pointerId: 1 })); await new Promise((res) => setTimeout(res, 200)) } })()`)
     await sleep(200)
     const afterSlow = await state()
-    say('a slow drag', JSON.stringify({ throwsBefore: before.throws, throwsAfter: afterSlow.throws }))
-    if (afterSlow.throws !== before.throws) throw new Error('a slow drag threw a cracker')
+    say('pointing only', JSON.stringify({ throwsBefore: before.throws, throwsAfter: afterSlow.throws }), await page.shot('2b-aim.png'))
+    if (afterSlow.throws !== before.throws) throw new Error('pointing without pressing threw a cracker')
+    // Held part way: the meter fills and the landing is marked, and nothing is thrown until letting go.
+    await page.waitFor(`(() => { const g = ${gameState('feeding-time')}; return g.elapsed > 0.5 })()`, 10000)
+    await page.eval(`(() => { const b = document.querySelector('[data-board]'); const r = b.getBoundingClientRect(); b.dispatchEvent(new PointerEvent('pointerdown', { clientX: r.left + r.width * 0.55, clientY: r.top + r.height * 0.35, bubbles: true, pointerId: 1, button: 0 })) })()`)
+    await sleep(600)
+    const held = await state()
+    say('charging', JSON.stringify({ throws: held.throws, meter: await page.eval(`document.querySelector('[data-meter] div').style.width`) }), await page.shot('2c-charging.png'))
+    if (held.throws !== before.throws) throw new Error('holding the button threw a cracker before letting go')
+    await page.eval(`(() => { const b = document.querySelector('[data-board]'); const r = b.getBoundingClientRect(); b.dispatchEvent(new PointerEvent('pointerup', { clientX: r.left + r.width * 0.55, clientY: r.top + r.height * 0.35, bubbles: true, pointerId: 1, button: 0 })) })()`)
+    await sleep(100)
+    if ((await state()).throws !== before.throws + 1) throw new Error('letting go did not throw')
     for (let i = 0; i < 3000; i++) {
       const s = await state()
       if (s.over) break
