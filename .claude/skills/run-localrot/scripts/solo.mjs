@@ -151,15 +151,15 @@ try {
     say('results', await page.shot('4-results.png'))
   } else if (opt.steer && opt.game === 'time-it') {
     const state = () => page.eval(`(() => { const g = ${gameState('time-it')}; const me = g.players.find((p) => p.mine); return { over: g.over, elapsed: +g.elapsed.toFixed(2), stopped: me.stopped, all: g.players.map((p) => p.stopped) } })()`)
-    // A click during the countdown does nothing.
+    // A click during the screen's three-two-one does nothing: the game is held.
     await page.eval(`(() => { const b = document.querySelector('[data-board]'); const r = b.getBoundingClientRect(); b.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX: r.left + 10, clientY: r.top + 10, bubbles: true })) })()`)
     await sleep(150)
     const early = await state()
     say('clicked in the countdown', JSON.stringify({ elapsed: early.elapsed, stopped: early.stopped }), await page.shot('3-countdown.png'))
     if (early.stopped !== null) throw new Error('a click in the countdown stopped the timer')
-    await page.waitFor(`(() => { const g = ${gameState('time-it')}; return g.elapsed > 4 })()`, 10000)
+    await page.waitFor(`(() => { const g = ${gameState('time-it')}; return g.elapsed > 1 })()`, 10000)
     say('running', await page.shot('4-running.png'))
-    await page.waitFor(`(() => { const g = ${gameState('time-it')}; return g.elapsed > 6.2 })()`, 10000)
+    await page.waitFor(`(() => { const g = ${gameState('time-it')}; return g.elapsed > 3.2 })()`, 10000)
     say('covered', await page.shot('5-covered.png'))
     const did = await page.eval(timeItStop())
     await sleep(200)
@@ -168,7 +168,8 @@ try {
     if (!did || after.stopped === null || Math.abs(after.stopped - did.target) > 0.15) throw new Error('the stop did not land on the target: ' + JSON.stringify({ did, after }))
     await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 40000)
     await sleep(600)
-    say('results', JSON.stringify(await state()), await page.shot('6-results.png'))
+    // The podium takes the game down with it, so there is no round left to read.
+    say('results', await page.shot('6-results.png'))
   } else if (opt.steer && opt.game === 'feeding-time') {
     const state = () => page.eval(`(() => { const g = ${gameState('feeding-time')}; const me = g.players.find((p) => p.mine); return { over: g.over, elapsed: +g.elapsed.toFixed(2), score: me.score, throws: me.throws, scores: g.players.map((p) => p.score), crackers: g.crackers.length } })()`)
     let flicks = 0
@@ -445,14 +446,14 @@ try {
   } else if (opt.steer && opt.game === 'hes-one-shot') {
     const S = await page.eval(`(async () => (await import('/src/modules/32-hes-one-shot/internal/HesOneShotScreen.tsx')).SENSITIVITY)()`)
     const state = () =>
-      page.eval(`(() => { const g = ${gameState('hes-one-shot')}; const me = g.players.find((p) => p.mine); return { clock: +(g.elapsed - 3).toFixed(2), over: g.over, x: me.x, z: me.z, yaw: me.yaw, pitch: me.pitch, out: me.out, kills: me.kills, shotAt: me.shotAt, shots: g.shots.length, cooldown: +(document.querySelector('[data-cooldown]')?.dataset.cooldown ?? -1) } })()`)
+      page.eval(`(() => { const g = ${gameState('hes-one-shot')}; const me = g.players.find((p) => p.mine); return { clock: +g.elapsed.toFixed(2), over: g.over, x: me.x, z: me.z, yaw: me.yaw, pitch: me.pitch, out: me.out, kills: me.kills, shotAt: me.shotAt, shots: g.shots.length, cooldown: +(document.querySelector('[data-cooldown]')?.dataset.cooldown ?? -1) } })()`)
     const click = () => page.eval(`(() => { const b = document.querySelector('[data-board]'); b.dispatchEvent(new PointerEvent('pointerdown', { button: 0, bubbles: true })); b.dispatchEvent(new PointerEvent('pointerup', { button: 0, bubbles: true })) })()`)
     const walkKey = (down) => page.eval(`window.dispatchEvent(new KeyboardEvent('${down ? 'keydown' : 'keyup'}', { code: 'KeyW', key: 'w' }))`)
     await page.eval(oneShotPlay({ mode: 'lock' }))
     await sleep(500)
     await click()
     say('countdown', await page.shot('3-countdown.png'))
-    await page.waitFor(`(() => { const g = ${gameState('hes-one-shot')}; return g.elapsed > 3.3 })()`, 10000)
+    await page.waitFor(`(() => { const g = ${gameState('hes-one-shot')}; return g.elapsed > 0.3 })()`, 10000)
     const s0 = await state()
     if (s0.shotAt >= 0) throw new Error('a click in the countdown fired a shot')
 
@@ -516,7 +517,8 @@ try {
     say('hunted', JSON.stringify({ fired, firedAsHunter, kills, outAt, end: last && last.clock }))
     await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 100000)
     await sleep(400)
-    const places = await page.eval(`(() => { const g = ${gameState('hes-one-shot')}; return JSON.stringify(g.players.map((p) => [p.id, p.out, p.by, p.kills])) })()`)
+    // Null once the podium is up: it takes the game down with it.
+    const places = await page.eval(`(() => { const g = ${gameState('hes-one-shot')}; return g ? JSON.stringify(g.players.map((p) => [p.id, p.out, p.by, p.kills])) : null })()`)
     say('results [id, out, by, kills]', places, await page.shot('7-results.png'))
     if (fired === 0) throw new Error('never got a shot off while hunting')
   } else if (opt.steer && opt.game === 'chef-caricature') {
@@ -572,7 +574,8 @@ try {
     say('scores after my turn', JSON.stringify(mine))
     await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 200000)
     await sleep(400)
-    say('results', JSON.stringify((await state()).scores), await page.shot('7-results.png'))
+    // The podium takes the game down with it, so the scores are the last ones read.
+    say('results', JSON.stringify(mine), await page.shot('7-results.png'))
   } else if (opt.steer && opt.game === 'keyboard-warrior') {
     const state = () =>
       page.eval(`(() => { const g = ${gameState('keyboard-warrior')}; const me = g.players.findIndex((p) => p.mine); const l = g.letter; const own = l.attempts.find((a) => a.player === me); return { over: g.over, index: l.index, char: l.char, closed: l.closedAt !== null, winner: l.winner, mine: own ? { key: own.key, reaction: +own.reaction.toFixed(3) } : null, scores: g.players.map((p) => p.score) } })()`)
@@ -734,7 +737,8 @@ try {
     say('rounds [round, meant, with, moved, step]', JSON.stringify(log))
     await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 150000)
     await sleep(500)
-    say('results', JSON.stringify(await state()), await page.shot('5-results.png'))
+    // The podium takes the game down with it, so there is no round left to read.
+    say('results', await page.shot('5-results.png'))
   } else if (opt.steer && opt.game === 'i-see-the-light') {
     const state = () => page.eval(`(() => { const r = ${gameState('i-see-the-light')}; const me = r.racers.find((x) => x.mine); return { over: r.over, elapsed: +r.elapsed.toFixed(2), steps: me.steps, out: me.out, place: me.place, others: r.racers.filter((x) => !x.mine).map((x) => x.id + ':' + x.steps + (x.out ? ':' + x.out.why : '') + (x.place ? ':#' + x.place : '')) } })()`)
     let reds = 0

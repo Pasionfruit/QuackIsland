@@ -4,7 +4,7 @@
  */
 import { afterEach, describe, expect, it } from 'vitest'
 import { NAME_MAX, decodePause, encodePause, mayControl, nameOfPauser, type Pauser } from '../internal/pause'
-import { FADE, beginRun, countShown, forgetBuilds, freshRun, pauseRun, registerMinigame, restartRun, resumeRun, tickRun } from '../internal/registry'
+import { FADE, beginRun, countShown, curtain, forgetBuilds, freshRun, pauseRun, registerMinigame, restartRun, resumeRun, tickRun } from '../internal/registry'
 
 /** A run at the first frame of the three-two-one: play pressed, black lifted. */
 const counting = (id: Parameters<typeof freshRun>[0] = 'zombie-tag') => tickRun(beginRun(freshRun(id)), FADE.in)
@@ -124,10 +124,12 @@ describe('restart', () => {
     expect(countShown(run)).toBe(2)
     run = pauseRun(run, BEA)
 
-    // Back to the top: black first, and then three again.
+    // Back to the top: straight to black and three again - no fade down over
+    // the briefing, which is not what anybody was looking at.
     const again = restartRun(run)
-    expect(again.phase).toBe('fading')
-    expect(countShown(tickRun(again, FADE.in))).toBe(3)
+    expect(again.phase).toBe('counting')
+    expect(countShown(again)).toBe(3)
+    expect(curtain(again)).toBeCloseTo(1, 9)
     expect(again).toMatchObject({ paused: false, pausedBy: null })
     // And a new identity, so the screen takes the old game's panel down.
     expect(again.started).toBeGreaterThan(run.started)
@@ -150,6 +152,6 @@ describe('restart', () => {
   it('works from a round that was playing, not only from a countdown', () => {
     const playing = pauseRun(tickRun(counting(), 9), BEA)
     expect(playing.phase).toBe('playing')
-    expect(restartRun(playing).phase).toBe('fading')
+    expect(restartRun(playing).phase).toBe('counting')
   })
 })

@@ -17,10 +17,10 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { useFinish, type MinigameRun } from '../../15-minigames'
+import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { KeyboardWarriorScene } from './KeyboardWarriorScene'
-import { COLOURS, ROUND, asLetter, attemptOf, clock, phase, placings, type Game } from './rules'
+import { COLOURS, ROUND, asLetter, attemptOf, phase, placings, type Game } from './rules'
 import { myId, newGame, waitingGame } from './setup'
 import { useLetterNet, type Typed } from './useLetterNet'
 
@@ -60,12 +60,6 @@ export function KeyboardWarriorScreen({ run }: { run: MinigameRun }) {
   const shown = useRef<{ game: number; index: number; appearsAt: number; at: number } | null>(null)
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
-
-  const again = () => {
-    const fresh = newGame()
-    live.current = fresh
-    setGame(fresh)
-  }
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -115,8 +109,7 @@ export function KeyboardWarriorScreen({ run }: { run: MinigameRun }) {
 
   let banner: { text: string; sub?: string; tone: 'count' | 'hint' | 'right' | 'wrong' | 'point' | 'none' } | null = null
   if (ready && mineIndex >= 0) {
-    if (now === 'countdown') banner = { text: String(Math.ceil(-clock(game))), sub: 'Type each letter the moment you see it - one try each', tone: 'count' }
-    else if (now === 'waiting') banner = { text: 'Get ready…', tone: 'hint' }
+    if (now === 'waiting') banner = { text: 'Get ready…', tone: 'hint' }
     else if (now === 'up') {
       if (!mine) banner = { text: 'Type it!', tone: 'hint' }
       else if (mine.key === letter.char) banner = { text: `✓ ${mine.key} in ${seconds(mine.reaction)}`, sub: 'the quickest gets the point', tone: 'right' }
@@ -170,7 +163,7 @@ export function KeyboardWarriorScreen({ run }: { run: MinigameRun }) {
         ) : null}
       </div>
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }

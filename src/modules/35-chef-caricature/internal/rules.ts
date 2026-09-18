@@ -123,7 +123,10 @@ export function createGame(seed: number, entrants: readonly Entrant[], id = 1): 
     players: entrants.map((e) => ({ id: e.id, mine: e.mine ?? false, bot: e.bot ?? false, score: 0, left: false })),
     order: turnOrder(seed, entrants.length),
     turn: 0,
-    startsAt: TURN.intro,
+    // The first cook starts on the minigame screen's "Start!" - it has just
+    // counted three, two, one, and a "your turn in 3" after it would be a second
+    // count. Every later turn keeps its intro: that is a hand-over, not a start.
+    startsAt: 0,
     outline: 0,
     stroke: null,
     strokes: 0,

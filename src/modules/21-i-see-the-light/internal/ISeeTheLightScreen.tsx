@@ -13,7 +13,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { useFinish, type MinigameRun } from '../../15-minigames'
+import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { ISeeTheLightScene } from './ISeeTheLightScene'
 import {
@@ -77,12 +77,6 @@ export function ISeeTheLightScreen({ run }: { run: MinigameRun }) {
   const board = useRef<HTMLDivElement>(null)
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
-
-  const again = () => {
-    const fresh = newRace()
-    live.current = fresh
-    setRace(fresh)
-  }
 
   /** The pointer on the board, in the board's own pixels, and the board's size. */
   const onBoard = (): { at: Pointer | null; width: number; height: number } => {
@@ -223,7 +217,7 @@ export function ISeeTheLightScreen({ run }: { run: MinigameRun }) {
         {mine && mine.finishedAt !== null && !race.over ? <Banner text={`Over the line - ${placeName(mine.place ?? 1)}!`} colour={LOOK.green} /> : null}
       </div>
 
-      {results && ready ? <Over race={race} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
+      {results && ready ? <Over race={race} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }

@@ -16,7 +16,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useReducer, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { useFinish, type MinigameRun } from '../../15-minigames'
+import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV, boardPoint } from './camera'
 import { ChefCaricatureScene } from './ChefCaricatureScene'
 import { outlineFor } from './outlines'
@@ -47,7 +47,7 @@ export function ChefCaricatureScreen({ run }: { run: MinigameRun }) {
   // old copy - and the dish it fed the duck lost, so the same outline could be
   // fed twice. So the game is only replaced by a new game, and every frame just
   // asks React to draw it again.
-  const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
+  const [game] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
   // Held back through the two seconds of Finish; see `useFinish`.
   const results = useFinish(game.over, () =>
     placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: COLOURS[e.index % COLOURS.length], mine: e.player.id === me })),
@@ -65,12 +65,6 @@ export function ChefCaricatureScreen({ run }: { run: MinigameRun }) {
   const holding = useRef(false)
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
-
-  const again = () => {
-    const fresh = newGame()
-    live.current = fresh
-    setGame(fresh)
-  }
 
   useEffect(() => {
     let frame = 0
@@ -232,7 +226,7 @@ export function ChefCaricatureScreen({ run }: { run: MinigameRun }) {
         ) : null}
       </div>
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }

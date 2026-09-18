@@ -20,7 +20,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { useFinish, type MinigameRun } from '../../15-minigames'
+import { CountOver, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { TRACK } from './course'
 import { PETS, petById, petBars, type PetId } from './pets'
@@ -75,13 +75,6 @@ export function PetRaceScreen({ run }: { run: MinigameRun }) {
   picked.current = pick
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
-
-  const again = () => {
-    const fresh = newGame()
-    live.current = fresh
-    setPick(null)
-    setGame(fresh)
-  }
 
   const choosing = game.phase === 'choosing' && !game.over
 
@@ -218,11 +211,13 @@ export function PetRaceScreen({ run }: { run: MinigameRun }) {
         {ready ? <Stage live={live} /> : null}
         {ready && !game.over ? <Standings game={game} me={me} nameOf={nameOf} /> : null}
         {ready && game.phase === 'racing' ? <Hints /> : null}
-        {ready && game.phase === 'countdown' && !game.over ? <GetSet left={left} /> : null}
+        {/* The screen's own three-two-one and Start!, voiced - only here, as the
+            race is counted in, rather than before the choosing. */}
+        <CountOver left={ready && game.phase === 'countdown' && !game.over ? left : null} />
         {ready && choosing ? <Table game={game} pick={pick} onPick={setPick} left={left} /> : null}
       </div>
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }
@@ -323,16 +318,6 @@ function Bars({ pet }: { pet: PetId }) {
           </span>
         </div>
       ))}
-    </div>
-  )
-}
-
-/** Three, two, one. */
-function GetSet({ left }: { left: number }) {
-  const n = Math.max(1, Math.ceil(left))
-  return (
-    <div style={getSet} data-countdown={n}>
-      {n}
     </div>
   )
 }
@@ -545,18 +530,6 @@ const card: React.CSSProperties = {
   flexDirection: 'column',
   gap: 2,
   textAlign: 'left',
-}
-
-const getSet: React.CSSProperties = {
-  position: 'absolute',
-  inset: 0,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  font: `900 120px/1 ${FONT}`,
-  color: '#ffffff',
-  textShadow: '0 6px 0 rgba(0,0,0,0.25)',
-  pointerEvents: 'none',
 }
 
 const overBackdrop: React.CSSProperties = {

@@ -70,6 +70,8 @@ export {
   COUNT_FROM,
   FADE,
   beginRun,
+  countLength,
+  screenCounts,
   curtain,
   finishRun,
   buildFor,
@@ -115,3 +117,4 @@ export {
 } from './internal/state'
 
 export { MinigameScreen } from './internal/MinigameScreen'
+export { CountOver } from './internal/Transitions'

@@ -13,7 +13,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { useFinish, type MinigameRun } from '../../15-minigames'
+import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { TimeItScene } from './TimeItScene'
 import { COLOURS, offBy, placings, showing, stopwatch, targetFor, type Game } from './rules'
@@ -55,12 +55,6 @@ export function TimeItScreen({ run }: { run: MinigameRun }) {
   const frameAt = useRef(performance.now())
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
-
-  const again = () => {
-    const fresh = newGame()
-    live.current = fresh
-    setGame(fresh)
-  }
 
   useEffect(() => {
     let frame = 0
@@ -147,7 +141,7 @@ export function TimeItScreen({ run }: { run: MinigameRun }) {
         ) : null}
       </div>
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }

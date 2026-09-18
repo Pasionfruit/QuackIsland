@@ -101,7 +101,8 @@ describe('the pen', () => {
   it('draws only for whoever is drawing, and only in their turn', () => {
     const g = game()
     const d = drawer(g)
-    expect(penDown(g, d, 0, 0)).toBe(false)
+    // The first turn has no intro - the screen has counted - so it is drawing at once.
+    expect(phase(g)).toBe('drawing')
     toDrawing(g)
     expect(penDown(g, (d + 1) % 3, 0, 0)).toBe(false)
     expect(penDown(g, d, 0, 0)).toBe(true)
@@ -202,7 +203,8 @@ describe('the turns', () => {
       stepGame(g, 0.1)
     }
     expect(seen).toEqual(g.order)
-    expect(g.elapsed).toBeCloseTo(3 * (TURN.intro + TURN.length + TURN.result), 0)
+    // Every turn but the first has its intro: that one starts on the screen's "Start!".
+    expect(g.elapsed).toBeCloseTo(3 * (TURN.length + TURN.result) + 2 * TURN.intro, 0)
   })
 
   it('start each with the first outline and nothing drawn', () => {

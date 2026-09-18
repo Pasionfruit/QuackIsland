@@ -20,7 +20,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { useFinish, type MinigameRun } from '../../15-minigames'
+import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { MusicalMayhemScene } from './MusicalMayhemScene'
 import { COLOURS, ROUND, isIn, isSafe, phase, phaseTime, placings, type Game, type Player } from './rules'
@@ -72,12 +72,6 @@ export function MusicalMayhemScreen({ run }: { run: MinigameRun }) {
   const playing = useRef(false)
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
-
-  const again = () => {
-    const fresh = newGame()
-    live.current = fresh
-    setGame(fresh)
-  }
 
   useEffect(() => {
     const set = (e: KeyboardEvent, down: boolean) => {
@@ -227,7 +221,7 @@ export function MusicalMayhemScreen({ run }: { run: MinigameRun }) {
         {ready && !game.over ? <Keys /> : null}
       </div>
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }

@@ -5,14 +5,13 @@
  * there is something running, taking you back without asking would throw away a
  * round you are in the middle of - so it stops instead, and asks.
  *
- * **It stops for everybody, and it says who stopped it.** Anybody in the lobby
- * can pause; the card names them on every screen. See `pause.ts`.
+ * **It stops for everybody, and only the host can stop it.** Guests in a party
+ * work no buttons on this screen at all - see `iMayControl`.
  *
- * **The buttons belong to whoever paused it.** Everybody else gets the same
- * card with the same three words on it and nothing to press, and a line telling
- * them who they are waiting for - which is better than three dead buttons and
- * no explanation. If the person who paused has left, the buttons come back for
- * whoever is still here.
+ * **The buttons are the host's.** Everybody else gets the same card with the
+ * same three words on it and nothing to press, and a line telling them who
+ * they are waiting for - which is better than three dead buttons and no
+ * explanation. If the host leaves, whoever hosts next gets the buttons.
  *
  * **What the last button does depends on who you are.** The host is the reason
  * anybody is in this game, so leaving takes everybody out and puts them back
@@ -41,7 +40,7 @@ export function Paused({ isHost, pausedBy, me, mayControl }: { isHost: boolean; 
               : 'You stopped the round for everybody. Leaving lets them carry on without you.'
             : gone
               ? `${who} stopped the round and has since left, so it is yours to start again.`
-              : `${who} stopped the round. Only ${who} can start it again.`}
+              : `${who} stopped the round. Only the host can start it again.`}
         </div>
 
         {mayControl ? (
@@ -63,7 +62,7 @@ export function Paused({ isHost, pausedBy, me, mayControl }: { isHost: boolean; 
           </>
         ) : (
           <div style={waiting} data-waiting>
-            waiting for {who}
+            waiting for the host
           </div>
         )}
       </div>

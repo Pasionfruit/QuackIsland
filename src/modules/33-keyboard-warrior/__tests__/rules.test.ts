@@ -58,10 +58,10 @@ describe('the letters', () => {
     expect(new Set(Array.from({ length: 400 }, (_, i) => letterFor(9, i).char)).size).toBe(26)
   })
 
-  it('come after the countdown and a pause, one after another, and the game ends after the last', () => {
+  it('come after a pause, one after another, and the game ends after the last', () => {
+    // No count of its own: the minigame screen has already counted three, two, one.
     const g = game()
-    expect(phase(g)).toBe('countdown')
-    wait(g, ROUND.countdown)
+    expect(ROUND.countdown).toBe(0)
     expect(phase(g)).toBe('waiting')
     untilUp(g)
     expect(g.elapsed).toBeCloseTo(ROUND.countdown + letterFor(SEED, 0).gap, 1)

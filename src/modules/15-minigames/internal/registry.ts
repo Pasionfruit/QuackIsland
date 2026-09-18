@@ -120,6 +120,15 @@ export interface MinigameBuild {
    * behind it.
    */
   Panel: (props: { run: MinigameRun }) => ReactNode
+  /**
+   * The game counts its own three-two-one, later than the screen would.
+   *
+   * Pet Race opens on ten seconds of choosing a pet, and the race is what gets
+   * counted in, not the choosing. For a game like that the screen only lifts
+   * the black off it - no numbers, no sound - and the game shows `CountOver`
+   * when its own moment comes, so the count looks and sounds the same.
+   */
+  ownCountdown?: boolean
 }
 
 const BUILDS = new Map<MinigameId, MinigameBuild>()
@@ -217,13 +226,29 @@ export function finishRun(run: MinigameRun, standings: readonly Standing[] | nul
  *
  * Not `beginRun` on the run you have - that only moves a briefing on, and a run
  * that is counting or playing is neither. A restart is a fresh run of the same
- * game taken straight to the countdown, which is exactly what `freshRun` and
- * `beginRun` are between them, and is why this is two calls and no new rules.
+ * game taken **straight to black and the count**: it cuts to the curtain rather
+ * than fading down over the briefing, because the briefing is not what anybody
+ * was looking at, and flashing it up just to cover it again is the description
+ * screen coming back for half a second.
  */
 export function restartRun(run: MinigameRun): MinigameRun {
+  const begun = beginRun(freshRun(run.id))
   // Carries the count on rather than starting it over, so the panel that is up
   // is never handed the key it already has.
-  return { ...beginRun(freshRun(run.id)), started: run.started + 1 }
+  return { ...begun, phase: 'counting', countdown: countLength(begun), started: run.started + 1 }
+}
+
+/**
+ * How long this game's `counting` lasts: the three-two-one, or - for a game
+ * that counts for itself - only as long as the black takes to lift.
+ */
+export function countLength(run: MinigameRun): number {
+  return buildFor(run.id)?.ownCountdown ? FADE.in : COUNT_FROM
+}
+
+/** Whether the screen counts this game in, or leaves it to the game. */
+export function screenCounts(run: MinigameRun): boolean {
+  return !buildFor(run.id)?.ownCountdown
 }
 
 /** What each timed phase gives way to, and with how long on the clock. */
@@ -250,7 +275,9 @@ export function tickRun(run: MinigameRun, dt: number): MinigameRun {
   // What is left over runs on into the phase after. A frame the browser did not
   // give us must not make the three-two-one take four seconds, and a step long
   // enough to cross two phases has to cross both.
-  return tickRun({ ...run, ...next }, -left)
+  const moved = { ...run, ...next }
+  if (moved.phase === 'counting') moved.countdown = countLength(moved)
+  return tickRun(moved, -left)
 }
 
 /** Whether the screen has a clock to run down just now. */
@@ -267,7 +294,7 @@ export function isTimed(run: MinigameRun): boolean {
  */
 export function curtain(run: MinigameRun): number {
   if (run.phase === 'fading') return 1 - run.countdown / FADE.in
-  if (run.phase === 'counting') return Math.max(0, (run.countdown - (COUNT_FROM - FADE.in)) / FADE.in)
+  if (run.phase === 'counting') return Math.max(0, (run.countdown - (countLength(run) - FADE.in)) / FADE.in)
   if (run.phase === 'finishing') return 1 - run.countdown / FADE.dim
   return 0
 }
@@ -318,6 +345,6 @@ export function resumeRun(run: MinigameRun): MinigameRun {
  * each, which is what anybody counting along expects.
  */
 export function countShown(run: MinigameRun): number | null {
-  if (run.phase !== 'counting' || run.countdown <= 0) return null
+  if (run.phase !== 'counting' || run.countdown <= 0 || !screenCounts(run)) return null
   return Math.ceil(run.countdown)
 }

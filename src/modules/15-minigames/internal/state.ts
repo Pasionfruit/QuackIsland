@@ -15,12 +15,11 @@
  */
 import { useEffect, useRef } from 'react'
 import { createStore, useStore } from '../../00-core'
-import { getMyName, getNet, getPeers, sendToRoom, subscribeRoom, useNet, usePeers } from '../../09-net'
+import { getMyName, getNet, getPeers, isHost, sendToRoom, subscribeRoom, useNet, usePeers } from '../../09-net'
 import { hostChoice } from '../../13-modes'
 import {
   decodePause,
   encodePause,
-  mayControl,
   type PauseAct,
   type Pauser,
 } from './pause'
@@ -78,9 +77,10 @@ export function useMinigameScreen(): MinigameScreenState {
  */
 export function useMayControl(): boolean {
   const open = useStore(screen)
-  const peers = usePeers()
+  const net = useNet()
+  usePeers()
   if (open.at !== 'game') return false
-  return mayControl(open.run.pausedBy, getNet().id ?? 'you', [getNet().id ?? 'you', ...peers.map((peer) => peer.id)])
+  return open.run.paused && net.host
 }
 
 /**
@@ -97,9 +97,12 @@ export function useMayControl(): boolean {
  */
 export function usePauseSync(): void {
   useEffect(() => {
-    return subscribeRoom((_from, raw) => {
+    return subscribeRoom((from, raw) => {
       const said = decodePause(raw)
       if (!said) return
+      // Only the host works the round. A guest's pause - from an older build,
+      // or anybody trying - is not one.
+      if (!isHost(from, here().filter((id) => id !== from))) return
       apply(said.act, said.by)
     })
   }, [])
@@ -239,11 +242,18 @@ function here(): string[] {
   return [me().id, ...getPeers().map((peer) => peer.id)]
 }
 
-/** Whether this browser may work the buttons on the card that is up. */
+/**
+ * Whether this browser may work the buttons on the card that is up.
+ *
+ * **The host, and nobody else.** Guests in a party work no button on the
+ * minigame screen: not pause, not the card, not back. Hosting passes to whoever
+ * is left if the host goes, so a card is never stranded without anybody to
+ * take it down.
+ */
 export function iMayControl(): boolean {
   const now = screen.get()
   if (now.at !== 'game') return false
-  return mayControl(now.run.pausedBy, me().id, here())
+  return now.run.paused && getNet().host
 }
 
 /**
@@ -267,13 +277,12 @@ function announce(act: PauseAct, by: Pauser): void {
 /**
  * Stops the round where it stands, for everybody, and says who did it.
  *
- * Anybody may. This is the one thing a guest can press that moves every screen
- * in the lobby, and it is deliberate: a round somebody has had to walk away
- * from is not a round worth finishing without them.
+ * The host's alone. Guests in a party work no button on the minigame screen,
+ * pause included - see `iMayControl`.
  */
 export function pauseMinigame(): void {
   const now = screen.get()
-  if (now.at !== 'game' || !isPausable(now.run) || now.run.paused) return
+  if (now.at !== 'game' || !isPausable(now.run) || now.run.paused || !getNet().host) return
   announce('pause', me())
 }
 

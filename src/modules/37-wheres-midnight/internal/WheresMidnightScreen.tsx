@@ -21,7 +21,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { useFinish, type MinigameRun } from '../../15-minigames'
+import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { COLOURS, SEARCH, placings, timeLeft, type Game } from './rules'
 import { myId, newGame, waitingGame } from './setup'
 import { useSearchNet } from './useSearchNet'
@@ -80,14 +80,6 @@ export function WheresMidnightScreen({ run }: { run: MinigameRun }) {
   const [zoom, setZoom] = useState(1)
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
-
-  const again = () => {
-    const fresh = newGame()
-    live.current = fresh
-    view.current = startView()
-    setSplat(null)
-    setGame(fresh)
-  }
 
   /** Where a pointer is on the board, as -1..1 across and up, with the board's shape. */
   const on = (e: { clientX: number; clientY: number }) => {
@@ -257,7 +249,7 @@ export function WheresMidnightScreen({ run }: { run: MinigameRun }) {
         {ready && !game.over ? <Hints /> : null}
       </div>
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }

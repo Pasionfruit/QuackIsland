@@ -16,7 +16,7 @@ import { Canvas } from '@react-three/fiber'
 import { useEffect, useRef, useState } from 'react'
 import { ACESFilmicToneMapping, PCFSoftShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { useFinish, type MinigameRun } from '../../15-minigames'
+import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { ARROWS, heldLetters } from './bindings'
 import { FOV } from './camera'
 import { MessyMazeScene, PALETTE } from './MessyMazeScene'
@@ -57,12 +57,6 @@ export function MessyMazeScreen({ run }: { run: MinigameRun }) {
   live.current = race
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
-
-  const again = () => {
-    const fresh = newRace()
-    live.current = fresh
-    setRace(fresh)
-  }
 
   // Every letter that is down. A set rather than four flags, because which
   // four letters matter changes mid-race.
@@ -173,7 +167,7 @@ export function MessyMazeScreen({ run }: { run: MinigameRun }) {
       </div>
 
       {results ? (
-        <Over race={race} me={me} nameOf={nameOf} onAgain={net.host ? again : null} />
+        <Over race={race} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} />
       ) : null}
     </div>
   )

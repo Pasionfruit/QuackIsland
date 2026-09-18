@@ -12,7 +12,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { useFinish, type MinigameRun } from '../../15-minigames'
+import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { SharingIsCaringScene } from './SharingIsCaringScene'
 import { COLOURS, placings, points, timeLeft, type Intent, type Round } from './rules'
@@ -51,12 +51,6 @@ export function SharingIsCaringScreen({ run }: { run: MinigameRun }) {
   const keys = useRef({ up: false, down: false, left: false, right: false })
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
-
-  const again = () => {
-    const fresh = newRound()
-    live.current = fresh
-    setRound(fresh)
-  }
 
   useEffect(() => {
     const set = (e: KeyboardEvent, down: boolean) => {
@@ -165,7 +159,7 @@ export function SharingIsCaringScreen({ run }: { run: MinigameRun }) {
         {ready ? <Standings round={round} me={me} nameOf={nameOf} /> : null}
       </div>
 
-      {results && ready ? <Over round={round} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
+      {results && ready ? <Over round={round} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }

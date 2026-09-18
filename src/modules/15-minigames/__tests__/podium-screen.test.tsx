@@ -16,6 +16,7 @@ const lobby = vi.hoisted(() => ({
 }))
 
 vi.mock('../../09-net', () => ({
+  isHost: (me: string, others: readonly string[]) => others.every((id) => me < id),
   getNet: () => lobby.net,
   getPeers: () => lobby.peers,
   getMyName: () => 'ali',
@@ -168,7 +169,7 @@ describe('the podium screen', () => {
     const where = mount()
     toThePodium(where, [{ id: 'a', place: 1 }])
     click(where.querySelector('[data-replay]'))
-    expect(getMinigameScreen()).toMatchObject({ at: 'game', run: { id: 'zombie-tag', phase: 'fading', standings: null } })
+    expect(getMinigameScreen()).toMatchObject({ at: 'game', run: { id: 'zombie-tag', phase: 'counting', standings: null } })
     expect(where.querySelector('[data-podium]')).toBeNull()
     expect(lobby.sent.filter((m) => m.t === PAUSE_TAG)).toHaveLength(1)
   })
@@ -180,13 +181,14 @@ describe('the podium screen', () => {
     expect(getMinigameScreen().at).toBe('dashboard')
   })
 
-  it('gives a guest a line to wait on where the host has replay', () => {
+  it('gives a guest a line to wait on, and no buttons at all', () => {
     lobby.net = { ...lobby.net, id: 'p2', host: false }
     const where = mount()
     toThePodium(where, [{ id: 'a', place: 1 }])
     expect(where.querySelector('[data-replay]')).toBeNull()
     expect(where.querySelector('[data-waiting]')?.textContent).toMatch(/waiting for the host/)
-    expect(where.querySelector('[data-dashboard]')).not.toBeNull()
+    expect(where.querySelector('[data-dashboard]')).toBeNull()
+    expect(where.querySelectorAll('button')).toHaveLength(0)
     expect(where.querySelector('[data-podium]')).not.toBeNull()
   })
 

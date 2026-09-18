@@ -15,7 +15,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { useFinish, type MinigameRun } from '../../15-minigames'
+import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { ARENA, COLOURS, EMBLEMS, type Emblem } from './arena'
 import { FOV } from './camera'
 import { DuckHuntScene } from './DuckHuntScene'
@@ -54,12 +54,6 @@ export function DuckHuntScreen({ run }: { run: MinigameRun }) {
   const crosshair = useRef<HTMLDivElement>(null)
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
-
-  const again = () => {
-    const fresh = newGame()
-    live.current = fresh
-    setGame(fresh)
-  }
 
   const onShoot = useCallback((shot: Trigger) => {
     if (!paused.current) trigger.current = shot
@@ -147,7 +141,7 @@ export function DuckHuntScreen({ run }: { run: MinigameRun }) {
       </div>
 
       {results && ready ? (
-        <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? again : null} />
+        <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} />
       ) : null}
     </div>
   )

@@ -91,10 +91,11 @@ describe('the maze', () => {
 })
 
 describe('the torch', () => {
-  it('starts down in the start cell, and cannot be picked up in the countdown', () => {
+  it('starts down in the start cell, and can be picked up at once', () => {
+    // No count of its own: the minigame screen has already counted three, two, one.
     const g = game()
+    expect(ROUND.countdown).toBe(0)
     expect(g.players.every((p) => !p.held && p.x === startPoint(SEED).x && p.z === startPoint(SEED).z)).toBe(true)
-    expect(steer(g, 0, startPoint(SEED), 0.1)).toBeNull()
     started(g)
     const s = startPoint(SEED)
     expect(steer(g, 0, { x: s.x + TORCH.grab + 0.05, z: s.z }, 0.1)).toBeNull()

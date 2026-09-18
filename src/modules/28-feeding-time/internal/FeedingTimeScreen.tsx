@@ -15,7 +15,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { useFinish, type MinigameRun } from '../../15-minigames'
+import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { FeedingTimeScene, type SceneHands } from './FeedingTimeScene'
 import { COLOURS, FLICK, flickToThrow, placings, timeLeft, type Game, type Throw } from './rules'
@@ -67,13 +67,6 @@ export function FeedingTimeScreen({ run }: { run: MinigameRun }) {
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
   const hands = useMemo<SceneHands>(() => ({ pending: () => wire.pending() }), [])
-
-  const again = () => {
-    const fresh = newGame()
-    live.current = fresh
-    lastScore.current = 0
-    setGame(fresh)
-  }
 
   useEffect(() => {
     let frame = 0
@@ -211,7 +204,7 @@ export function FeedingTimeScreen({ run }: { run: MinigameRun }) {
         ) : null}
       </div>
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }

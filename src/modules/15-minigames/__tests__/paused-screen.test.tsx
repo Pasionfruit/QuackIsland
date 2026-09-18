@@ -21,6 +21,8 @@ const lobby = vi.hoisted(() => ({
 }))
 
 vi.mock('../../09-net', () => ({
+  // The real rule: the lowest id in the room hosts.
+  isHost: (me: string, others: readonly string[]) => others.every((id) => me < id),
   getNet: () => lobby.net,
   getPeers: () => lobby.peers,
   getMyName: () => 'ali',
@@ -93,10 +95,15 @@ function intoARound() {
 const pauses = () => lobby.sent.filter((m) => m.t === PAUSE_TAG)
 
 /** What another browser saying something looks like from in here. */
-const hear = (message: Record<string, unknown>) =>
+const hear = (message: Record<string, unknown>, from = 'p2') =>
   act(() => {
-    for (const fn of lobby.heard) fn('p2', message)
+    for (const fn of lobby.heard) fn(from, message)
   })
+
+/** This browser as a guest: bea, `p2`, is the lowest id and hosts. */
+function asGuest(): void {
+  lobby.net = { status: 'joined', room: 'ABCDE', id: 'p3', peers: 1, host: false, why: null }
+}
 
 beforeEach(() => {
   lobby.net = { status: 'joined', room: 'ABCDE', id: 'p1', peers: 1, host: true, why: null }
@@ -124,7 +131,8 @@ describe('stopping the round', () => {
     expect(pauses()).toEqual([encodePause({ act: 'pause', by: { id: 'p1', name: 'ali' } })])
   })
 
-  it('stops it here when somebody else does it, and says who', () => {
+  it('stops it here when the host does it, and says who', () => {
+    asGuest()
     mountListener()
     intoARound()
     hear(encodePause({ act: 'pause', by: BEA }))
@@ -136,7 +144,26 @@ describe('stopping the round', () => {
     expect(pauses()).toEqual([])
   })
 
-  it('is not something a second person can take off you', () => {
+  it('is not something a guest can do', () => {
+    asGuest()
+    intoARound()
+    act(() => pauseMinigame())
+    const open = getMinigameScreen()
+    expect(open.at === 'game' && open.run.paused).toBe(false)
+    expect(pauses()).toEqual([])
+  })
+
+  it('ignores a pause from a guest, whatever it says', () => {
+    lobby.peers = [{ id: 'p2', name: 'bea', ping: null }, { id: 'p9', name: 'cy', ping: null }]
+    mountListener()
+    intoARound()
+    hear(encodePause({ act: 'pause', by: { id: 'p9', name: 'cy' } }), 'p9')
+    const open = getMinigameScreen()
+    expect(open.at === 'game' && open.run.paused).toBe(false)
+  })
+
+  it('gives a guest no buttons on a pause the host put up', () => {
+    asGuest()
     mountListener()
     intoARound()
     hear(encodePause({ act: 'pause', by: BEA }))
@@ -149,13 +176,16 @@ describe('stopping the round', () => {
     expect(pauses()).toEqual([])
   })
 
-  it('hands the buttons over once whoever paused has left', () => {
+  it('hands the buttons to whoever hosts next once the host has left', () => {
+    asGuest()
     mountListener()
     intoARound()
     hear(encodePause({ act: 'pause', by: BEA }))
     expect(iMayControl()).toBe(false)
 
+    // Bea goes; the room makes this browser the host.
     lobby.peers = []
+    lobby.net = { ...lobby.net, host: true }
     expect(iMayControl()).toBe(true)
     act(() => resumeMinigame())
     const open = getMinigameScreen()
@@ -184,22 +214,23 @@ describe('starting it again', () => {
     lobby.sent = []
     act(() => restartMinigame())
 
-    // Back through the black and into the count, the same way play goes.
+    // Straight to black and the count, on a new game.
     const open = getMinigameScreen()
-    expect(open.at === 'game' && open.run.phase).toBe('fading')
+    expect(open.at === 'game' && open.run.phase).toBe('counting')
     expect(open.at === 'game' && open.run.paused).toBe(false)
     expect(open.at === 'game' && open.run.game).not.toBe(was.at === 'game' ? was.run.game : null)
     expect(pauses()).toEqual([encodePause({ act: 'restart', by: { id: 'p1', name: 'ali' } })])
   })
 
-  it('happens here too when the person who stopped it presses it over there', () => {
+  it('happens here too when the host presses it over there', () => {
+    asGuest()
     mountListener()
     intoARound()
     hear(encodePause({ act: 'pause', by: BEA }))
     hear(encodePause({ act: 'restart', by: BEA }))
 
     const open = getMinigameScreen()
-    expect(open.at === 'game' && open.run.phase).toBe('fading')
+    expect(open.at === 'game' && open.run.phase).toBe('counting')
     expect(open.at === 'game' && open.run.paused).toBe(false)
   })
 })
@@ -219,8 +250,8 @@ describe('the card', () => {
     expect(where.querySelector('[data-resume]')).toBeNull()
     expect(where.querySelector('[data-restart]')).toBeNull()
     expect(where.querySelector('[data-leave]')).toBeNull()
-    expect(where.querySelector('[data-waiting]')?.textContent).toContain('waiting for bea')
-    expect(where.textContent).toContain('Only bea can start it again')
+    expect(where.querySelector('[data-waiting]')?.textContent).toContain('waiting for the host')
+    expect(where.textContent).toContain('Only the host can start it again')
   })
 
   it('says so when the buttons have come back because somebody left', () => {

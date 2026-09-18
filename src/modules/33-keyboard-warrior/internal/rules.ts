@@ -22,7 +22,11 @@ import { createRng, hashSeed } from '../../00-core'
 export const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 export const ROUND = {
-  countdown: 3,
+  /**
+   * Seconds of count before the round. None: the minigame screen's shared three-two-one runs before the game is
+   * let go, so a count of its own would be a second one.
+   */
+  countdown: 0,
   /** How many letters in a game. */
   letters: 15,
   /** The pause before each letter, shortest and longest, seconds. */

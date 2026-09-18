@@ -35,7 +35,7 @@ import {
 } from './round'
 import { emptyRound, myId, newRound } from './setup'
 import { useRoundNet } from './useRoundNet'
-import { useFinish, type MinigameRun } from '../../15-minigames'
+import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 
 /** Text and chrome. The board's own colours live with the board, in the scene. */
 const LOOK = {
@@ -81,14 +81,6 @@ export function ZombieTagScreen({ run }: { run: MinigameRun }) {
   /** Somebody's name for the scoreboard: you, a lobby name, or a runner's. */
   const nameOf = (id: string) =>
     id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id)
-
-  // Dealt into the ref as well as the state, so the frame that follows the
-  // click steps the new round rather than handing React the old one back.
-  const again = () => {
-    const fresh = newRound()
-    live.current = fresh
-    setRound(fresh)
-  }
 
   const keys = useRef({ up: false, down: false, left: false, right: false })
   const pushEdge = useRef(false)
@@ -193,7 +185,7 @@ export function ZombieTagScreen({ run }: { run: MinigameRun }) {
       {/* Only the host can deal a fresh round; a guest waits to be dealt one,
           the same as they waited to be brought here. */}
       {results ? (
-        <Over round={round} me={me} nameOf={nameOf} onAgain={net.host ? again : null} />
+        <Over round={round} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} />
       ) : null}
     </div>
   )

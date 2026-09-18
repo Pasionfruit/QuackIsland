@@ -13,7 +13,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { useFinish, type MinigameRun } from '../../15-minigames'
+import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV, aimAt } from './camera'
 import { HelpingDadScene } from './HelpingDadScene'
 import type { Point } from './maze'
@@ -61,12 +61,6 @@ export function HelpingDadScreen({ run }: { run: MinigameRun }) {
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
 
-  const again = () => {
-    const fresh = newGame()
-    live.current = fresh
-    setGame(fresh)
-  }
-
   useEffect(() => {
     let frame = 0
     let last = performance.now()
@@ -97,8 +91,7 @@ export function HelpingDadScreen({ run }: { run: MinigameRun }) {
 
   let banner: { text: string; sub?: string; tone: 'count' | 'yell' | 'hint' | 'done' } | null = null
   if (ready && !game.over && mine) {
-    if (t < 0) banner = { text: String(Math.ceil(-t)), sub: 'Your torch is in the bottom-left corner', tone: 'count' }
-    else if (mine.finished !== null) banner = { text: `You made it - ${ordinal(myPlace ?? 1)}`, sub: 'waiting for the others', tone: 'done' }
+    if (mine.finished !== null) banner = { text: `You made it - ${ordinal(myPlace ?? 1)}`, sub: 'waiting for the others', tone: 'done' }
     else if (mine.stunned > 0) banner = { text: `DAD: ${YELLS[(mine.hits - 1 + YELLS.length) % YELLS.length]}`, sub: `stunned ${(Math.ceil(mine.stunned * 10) / 10).toFixed(1)}s`, tone: 'yell' }
     else if (!mine.held) banner = { text: 'Put the mouse on your torch to pick it up', tone: 'hint' }
   }
@@ -152,7 +145,7 @@ export function HelpingDadScreen({ run }: { run: MinigameRun }) {
         ) : null}
       </div>
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }

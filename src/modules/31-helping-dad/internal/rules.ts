@@ -33,7 +33,11 @@ export const TORCH = {
 } as const
 
 export const ROUND = {
-  countdown: 3,
+  /**
+   * Seconds of count before the round. None: the minigame screen's shared three-two-one runs before the game is
+   * let go, so a count of its own would be a second one.
+   */
+  countdown: 0,
   /** Seconds from the start to the end, finished or not. */
   limit: 120,
 } as const

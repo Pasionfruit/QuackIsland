@@ -15,8 +15,11 @@
 import { createRng, hashSeed } from '../../00-core'
 
 export const WATCH = {
-  /** Seconds of "3, 2, 1" before the stopwatch starts. */
-  countdown: 3,
+  /**
+   * Seconds before the stopwatch starts. None: the minigame screen's shared three-two-one runs before the game is
+   * let go, and the stopwatch starts on its "Start!".
+   */
+  countdown: 0,
   /** How long the stopwatch can be seen once it starts. */
   visible: 2.5,
   /** The round is over this long after the stopwatch starts, stopped or not. */

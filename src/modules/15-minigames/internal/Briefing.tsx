@@ -61,9 +61,12 @@ export function Briefing({ run }: { run: MinigameRun }) {
   return (
     <div style={screen}>
       <div style={bar}>
-        <button type="button" onClick={backOut} style={button}>
-          back
-        </button>
+        {/* The host's, like every button on this screen. */}
+        {isHost ? (
+          <button type="button" onClick={backOut} style={button}>
+            back
+          </button>
+        ) : null}
         <span style={{ ...tileNumber, marginLeft: 4 }}>{game.number}</span>
         <span style={wordmark}>{game.reserved ? RESERVED_LOOK.label : game.title}</span>
         <span style={{ ...kindTag, background: KIND_COLOUR[game.kind] }}>
@@ -149,7 +152,7 @@ export function Briefing({ run }: { run: MinigameRun }) {
           <div style={note}>
             {isHost
               ? 'Play runs the three-two-one and starts the round for everybody in the lobby.'
-              : 'The host brought you here and the host starts it. Escape to step out.'}
+              : 'The host brought you here, and the host starts it.'}
           </div>
         </div>
       </div>

@@ -13,7 +13,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { useFinish, type MinigameRun } from '../../15-minigames'
+import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { PALETTE, SynchronizeStepsScene, outcomeColour } from './SynchronizeStepsScene'
 import { COLOURS, TOWER, placings, type Game } from './rules'
@@ -53,12 +53,6 @@ export function SynchronizeStepsScreen({ run }: { run: MinigameRun }) {
   const picked = useRef<number | null>(null)
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
-
-  const again = () => {
-    const fresh = newGame()
-    live.current = fresh
-    setGame(fresh)
-  }
 
   useEffect(() => {
     let frame = 0
@@ -178,7 +172,7 @@ export function SynchronizeStepsScreen({ run }: { run: MinigameRun }) {
         </div>
       ) : null}
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }

@@ -18,7 +18,7 @@
  * see `sound.ts` for why they are not on the island's audio bus.
  */
 import { useEffect, useRef, useState } from 'react'
-import { countShown, curtain, FADE, type MinigameRun } from './registry'
+import { countShown, curtain, FADE, screenCounts, type MinigameRun } from './registry'
 import { FONT, ISLAND } from './look'
 import { COUNTDOWN_SOUND, FINISH_SOUND, holdScreenSounds, playOnce, stopScreenSounds } from './sound'
 
@@ -38,53 +38,99 @@ export function Curtain({ run }: { run: MinigameRun }) {
  * The sound is voiced, so it starts on the **edge** into `counting` rather than
  * on the clock reading exactly three: the fade hands its leftover time on, so
  * the count rarely begins at a clean three, and a check for one would miss it.
- * `started` is in the edge so a restart counts again even when the phase it
- * comes back to is the same one. A pause holds the voice where it is.
+ * `started` is in the edge so a restart counts again even from a count.
  *
- * The number is keyed on itself so React rebuilds the element each second,
- * which is what restarts the pop. Without the key it would pop once and then
- * sit there changing digit.
+ * A pause holds the voice where it is, and only a **resume** carries it on.
+ * Leaving the round, or restarting it, stops it dead: a held "two" must never
+ * come back on its own the next time a screen mounts.
  */
 export function Countdown({ run }: { run: MinigameRun }) {
   const n = countShown(run)
-  const counting = run.phase === 'counting'
-  const [start, setStart] = useState(false)
-  const was = useRef(run.phase)
+  const counts = screenCounts(run)
+  const counting = run.phase === 'counting' && counts
+  const start = useStartFlash(counting) && run.phase === 'playing'
+  const wasPaused = useRef(run.paused)
+  const wasStarted = useRef(run.started)
+
+  // Order matters: hold or carry on first, then a restart stops everything, and
+  // only then does a new count start its voice from the top.
+  useEffect(() => {
+    if (run.paused === wasPaused.current) return
+    wasPaused.current = run.paused
+    holdScreenSounds(run.paused)
+  }, [run.paused])
+
+  useEffect(() => {
+    if (run.started === wasStarted.current) return
+    wasStarted.current = run.started
+    stopScreenSounds()
+  }, [run.started])
 
   useEffect(() => {
     if (counting) playOnce(COUNTDOWN_SOUND)
   }, [counting, run.started])
 
-  useEffect(() => {
-    holdScreenSounds(run.paused)
-  }, [run.paused])
+  if (n !== null) return <Shown n={n} />
+  if (start) return <Shown n="start" />
+  return null
+}
 
-  // A restart goes back through the black. Whatever was being said when it was
-  // pressed - a paused "two", carried on by the resume - stops there.
-  useEffect(() => {
-    if (run.phase === 'fading') stopScreenSounds()
-  }, [run.phase, run.started])
+/**
+ * The same three-two-one, for a game that counts for itself.
+ *
+ * `left` is the seconds until go, or `null` when the game is not counting. The
+ * numbers, the pop, the voice and the **Start!** after are the screen's own, so
+ * a count that happens later in a game - Pet Race's, after its pet choosing -
+ * looks and sounds like every other. A pause holds the voice with the rest of
+ * the screen's sounds.
+ */
+export function CountOver({ left }: { left: number | null }) {
+  const counting = left !== null && left > 0
+  const start = useStartFlash(counting)
 
-  // "Start!" for a moment on the way from counting into the round. The game is
-  // already running under it - it is a word, not another wait.
+  useEffect(() => {
+    if (counting) playOnce(COUNTDOWN_SOUND)
+  }, [counting])
+
+  if (counting) return <Shown n={Math.ceil(left)} />
+  if (start) return <Shown n="start" />
+  return null
+}
+
+/**
+ * **Start!** for a moment once a count runs out. The round is already running
+ * under it - it is a word, not another wait.
+ */
+function useStartFlash(counting: boolean): boolean {
+  const [start, setStart] = useState(false)
+  const was = useRef(counting)
   useEffect(() => {
     const from = was.current
-    was.current = run.phase
-    if (from !== 'counting' || run.phase !== 'playing') {
-      if (run.phase !== 'playing') setStart(false)
+    was.current = counting
+    if (counting || !from) {
+      setStart(false)
       return
     }
     setStart(true)
     const timer = window.setTimeout(() => setStart(false), START_SHOWN_MS)
     return () => window.clearTimeout(timer)
-  }, [run.phase])
+  }, [counting])
+  return start
+}
 
-  if (n === null && !start) return null
+/**
+ * A number, or Start!, popping in over the middle of the screen.
+ *
+ * Keyed on itself so React rebuilds the element each second, which is what
+ * restarts the pop. Without the key it would pop once and then sit there
+ * changing digit.
+ */
+function Shown({ n }: { n: number | 'start' }) {
   return (
     <div style={middle}>
       <style>{POP}</style>
-      <div key={n ?? 'start'} style={n === null ? startWord : number} data-countdown={n ?? 'start'}>
-        {n ?? 'Start!'}
+      <div key={n} style={n === 'start' ? startWord : number} data-countdown={n}>
+        {n === 'start' ? 'Start!' : n}
       </div>
     </div>
   )

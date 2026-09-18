@@ -18,8 +18,11 @@ export const COURSE = {
   strokes: 60,
   /** Pedal presses to ride the second. */
   pedals: 80,
-  /** Seconds of "3, 2, 1" before anybody can go. */
-  start: 3,
+  /**
+   * Seconds of wait before anybody can go. None: the minigame screen's shared three-two-one runs before the game is
+   * let go, so a count of its own would be a second one.
+   */
+  start: 0,
   /** However the race is going, it is over after this long from the gun. */
   timeLimit: 150,
   /** How long a wrong key trips you up: keys pressed meanwhile do nothing. */

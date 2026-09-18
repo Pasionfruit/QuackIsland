@@ -61,20 +61,21 @@ export function MinigameScreen() {
   const paused = run?.paused === true
 
   useEffect(() => {
-    if (!showing) return
+    // The screen is the host's to work, escape included. A guest's escape is
+    // the same nothing every button is for them - see `iMayControl`.
+    if (!showing || !net.host) return
     const onKey = (e: KeyboardEvent) => {
       if (e.code !== 'Escape') return
       // Nothing running: escape is still the way back. Something running:
       // stop it and ask, rather than throwing away a round in progress.
-      // Already stopped: only whoever stopped it can take the card down, so
-      // for anybody else escape is the same nothing the buttons are.
+      // Already stopped: escape takes the card down again.
       if (!pausable) backOut()
       else if (!paused) pauseMinigame()
       else if (mayControl) resumeMinigame()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [showing, pausable, paused, mayControl])
+  }, [showing, pausable, paused, mayControl, net.host])
 
   useEffect(() => {
     if (!ticking) return
@@ -83,10 +84,12 @@ export function MinigameScreen() {
   }, [ticking])
 
   // Walking out mid-countdown must not leave the three-two-one playing to
-  // nobody over the dashboard.
+  // nobody over the dashboard - paused or not. A held count is dropped here,
+  // never carried on into the next game.
+  const inGame = open.at === 'game'
   useEffect(() => {
-    if (!showing) stopScreenSounds()
-  }, [showing])
+    if (!inGame) stopScreenSounds()
+  }, [inGame])
 
   if (open.at === 'closed') return null
   if (open.at === 'dashboard') return <Dashboard />
@@ -168,9 +171,11 @@ function NotBuilt({ run }: { run: MinigameRun }) {
   return (
     <div style={screen}>
       <div style={bar}>
-        <button type="button" onClick={backOut} style={button}>
-          back
-        </button>
+        {getNet().host ? (
+          <button type="button" onClick={backOut} style={button}>
+            back
+          </button>
+        ) : null}
         <span style={wordmark}>{game.title}</span>
         <span style={{ flex: 1 }} />
         <span style={{ color: ISLAND.fadedInk }}>playing</span>

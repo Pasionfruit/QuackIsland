@@ -97,9 +97,11 @@ export function Podium({ run }: { run: MinigameRun }) {
       </div>
 
       <div style={footer}>
-        <button type="button" onClick={backOut} style={{ ...button, ...corner }} data-dashboard>
-          minigame dashboard
-        </button>
+        {net.host ? (
+          <button type="button" onClick={backOut} style={{ ...button, ...corner }} data-dashboard>
+            minigame dashboard
+          </button>
+        ) : null}
         {net.host ? (
           <button type="button" onClick={replayMinigame} style={{ ...corner, ...replay }} data-replay>
             replay

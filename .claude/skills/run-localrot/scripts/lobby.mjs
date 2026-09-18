@@ -348,7 +348,7 @@ try {
       // for ten seconds; then the last guest flings its mouse into a wall. The
       // host should have every guest's torch where that guest's own screen has
       // it, and the wall.
-      await host.waitFor(`(() => { const g = ${gameState(game)}; return g && g.elapsed > 3.2 })()`, 30000)
+      await host.waitFor(`(() => { const g = ${gameState(game)}; return g && g.elapsed > 0.2 })()`, 30000)
       const start = await host.eval(`(async () => { const r = await import('/src/modules/31-helping-dad/internal/rules.ts'); return r.startPoint(${gameState(game)}.seed) })()`)
       const until = Date.now() + 10000
       const far = pages.map(() => false)
@@ -466,7 +466,7 @@ try {
       // Then everybody hunts for twenty seconds, with the real controls, and
       // every browser should agree on who is out, by whom, and on the kills -
       // with guests' own shots among the hits the host counted.
-      await host.waitFor(`(() => { const g = ${gameState(game)}; return g && g.elapsed > 3.2 })()`, 30000)
+      await host.waitFor(`(() => { const g = ${gameState(game)}; return g && g.elapsed > 0.2 })()`, 30000)
       await Promise.all(pages.map((p) => p.eval(oneShotPlay({ mode: 'lock' }))))
       const where = () => host.eval(`(() => { const g = ${gameState(game)}; const p = g.players.find((x) => x.id === ${JSON.stringify(moverId)}); return { x: p.x, z: p.z } })()`)
       const before = await where()

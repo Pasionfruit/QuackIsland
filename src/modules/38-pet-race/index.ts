@@ -21,6 +21,9 @@ import { newGame } from './internal/setup'
 registerMinigame('pet-race', {
   newGame: () => newGame(),
   Panel: PetRaceScreen,
+  // Ten seconds of choosing come first, and it is the race that gets counted
+  // in - so the screen lifts the black and leaves the three-two-one to us.
+  ownCountdown: true,
 })
 
 export { DEFAULT_PET, PETS, canRun, isPetId, petAt, petBars, petById, petIndex, type Pet, type PetId } from './internal/pets'

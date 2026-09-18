@@ -1,11 +1,11 @@
 /**
  * Stopping a round, for everybody, and who is allowed to start it again.
  *
- * **A pause is shared.** Anybody in the lobby can stop the round - it is the
- * one thing a guest can do that moves everybody's screen - and when they do,
- * every browser stops and says who did it. The alternative, which this replaces,
- * was a pause that stopped only your own hands while the round carried on
- * without you, and the card lied about what was happening.
+ * **A pause is shared, and it is the host's.** Only the host can stop the
+ * round - guests in a party work no button on the minigame screen - and when
+ * they do, every browser stops and says so. `state.ts` holds that rule; the
+ * pure `mayControl` below is kept for whoever paused, and is no longer what the
+ * screen asks.
  *
  * **Whoever stopped it is the one who starts it again.** Resume, restart and
  * leaving are theirs; everybody else is told to wait and told who for. Two

@@ -14,7 +14,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { useFinish, type MinigameRun } from '../../15-minigames'
+import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { TriathlonScene } from './TriathlonScene'
 import {
@@ -79,12 +79,6 @@ export function TriathlonScreen({ run }: { run: MinigameRun }) {
   const [, bump] = useState(0)
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
-
-  const again = () => {
-    const fresh = newRace()
-    live.current = fresh
-    setRace(fresh)
-  }
 
   /** Whether this screen's hands count right now, and the race they count against. */
   const hands = (): Race | null => {
@@ -157,7 +151,6 @@ export function TriathlonScreen({ run }: { run: MinigameRun }) {
         }
       : FRESH
   const leg = legOf(own, sentence)
-  const countdown = ready && race.elapsed < COURSE.start ? Math.ceil(COURSE.start - race.elapsed) : null
 
   return (
     <div style={page}>
@@ -189,23 +182,16 @@ export function TriathlonScreen({ run }: { run: MinigameRun }) {
       </div>
 
       <div
-        style={{ ...board, cursor: leg === 'swim' && !countdown ? 'pointer' : 'default' }}
+        style={{ ...board, cursor: leg === 'swim' ? 'pointer' : 'default' }}
         onPointerDown={onPointerDown}
         onContextMenu={(e) => e.preventDefault()}
         data-board
       >
         <Stage live={live} />
-        {countdown !== null ? (
-          <div style={countdownWrap}>
-            <span key={countdown} style={countdownNumber} data-countdown={countdown}>
-              {countdown}
-            </span>
-          </div>
-        ) : null}
-        {ready && mine && !race.over && countdown === null ? <Task leg={leg} own={own} racer={mine} race={race} sentence={sentence} /> : null}
+        {ready && mine && !race.over ? <Task leg={leg} own={own} racer={mine} race={race} sentence={sentence} /> : null}
       </div>
 
-      {results && ready ? <Over race={race} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
+      {results && ready ? <Over race={race} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }
@@ -385,29 +371,6 @@ const pill: React.CSSProperties = {
 }
 
 const board: React.CSSProperties = { flex: 1, minHeight: 0, width: '100%', position: 'relative', overflow: 'hidden' }
-
-const countdownWrap: React.CSSProperties = {
-  position: 'absolute',
-  inset: 0,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  pointerEvents: 'none',
-}
-
-const countdownNumber: React.CSSProperties = {
-  width: 120,
-  height: 120,
-  borderRadius: '50%',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  background: 'rgba(51, 64, 63, 0.9)',
-  border: '5px solid #fff',
-  color: '#fff',
-  font: `800 68px/1 ${FONT}`,
-  boxShadow: '0 6px 0 rgba(0,0,0,0.18)',
-}
 
 const panelWrap: React.CSSProperties = {
   position: 'absolute',

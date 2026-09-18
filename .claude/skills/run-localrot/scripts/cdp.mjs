@@ -439,8 +439,8 @@ export function oneShotPlay({ mode = 'play', fire = true } = {}) {
     const g = ${gameState('hes-one-shot')}
     if (!g || g.players.length === 0) return null
     const me = g.players.find((p) => p.mine)
-    const state = { clock: +(g.elapsed - 3).toFixed(2), over: g.over, x: +me.x.toFixed(3), z: +me.z.toFixed(3), yaw: +me.yaw.toFixed(4), pitch: +me.pitch.toFixed(4), out: me.out, kills: me.kills, shotAt: me.shotAt, fired: false, target: null }
-    if (${JSON.stringify(mode)} === 'lock' || g.over || g.elapsed < 3) {
+    const state = { clock: +g.elapsed.toFixed(2), over: g.over, x: +me.x.toFixed(3), z: +me.z.toFixed(3), yaw: +me.yaw.toFixed(4), pitch: +me.pitch.toFixed(4), out: me.out, kills: me.kills, shotAt: me.shotAt, fired: false, target: null }
+    if (${JSON.stringify(mode)} === 'lock' || g.over || g.elapsed <= 0) {
       for (const code of [...w.held]) press(code, false)
       return state
     }
@@ -493,7 +493,7 @@ export function torchMove({ ahead = 0.25, at = null } = {}) {
     const g = ${gameState('helping-dad')}
     if (!g || g.players.length === 0) return null
     const me = g.players.find((p) => p.mine)
-    const state = { x: +me.x.toFixed(3), z: +me.z.toFixed(3), held: me.held, stunned: +me.stunned.toFixed(2), hits: me.hits, finished: me.finished, over: g.over, clock: +(g.elapsed - 3).toFixed(2) }
+    const state = { x: +me.x.toFixed(3), z: +me.z.toFixed(3), held: me.held, stunned: +me.stunned.toFixed(2), hits: me.hits, finished: me.finished, over: g.over, clock: +g.elapsed.toFixed(2) }
     if (g.over || me.finished !== null) return state
     let target = ${JSON.stringify(at)}
     if (!target) {

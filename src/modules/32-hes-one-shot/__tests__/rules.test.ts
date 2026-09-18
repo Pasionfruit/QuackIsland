@@ -133,12 +133,10 @@ describe('the arena', () => {
 })
 
 describe('walking', () => {
-  it('goes at a jog, no faster on a diagonal, and only once the countdown is done', () => {
+  it('goes at a jog and no faster on a diagonal - from the first frame, the screen having counted', () => {
     const g = game(2)
     put(g, 0, -6, OPEN)
     g.players[0].yaw = -Math.PI / 2 // east
-    walk(g, 0, { forward: 1, right: 0 }, 0.1)
-    expect(g.players[0].x).toBe(-6)
     started(g)
     for (let i = 0; i < 60; i++) walk(g, 0, { forward: 1, right: 0 }, 1 / 60)
     expect(g.players[0].x).toBeCloseTo(-6 + BODY.speed, 6)
@@ -199,7 +197,6 @@ describe('the gun', () => {
     put(g, 1, 6, OPEN)
     put(g, 2, 0, -OPEN)
     aim(g, 0, g.players[1])
-    expect(fire(g, 0)).toBeNull()
     started(g)
     const shot = fire(g, 0)!
     expect(shot.hit).toBe(1)

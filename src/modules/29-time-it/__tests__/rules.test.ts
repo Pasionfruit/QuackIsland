@@ -32,11 +32,10 @@ describe('the target', () => {
 })
 
 describe('the stopwatch', () => {
-  it('starts after the countdown and shows for two and a half seconds', () => {
+  it('starts at once - the screen has already counted - and shows for two and a half seconds', () => {
     const game = createGame(SEED, timers(2))
-    expect(stopwatch(game)).toBe(-WATCH.countdown)
-    expect(showing(game)).toBe(false)
-    at(game, 0)
+    expect(WATCH.countdown).toBe(0)
+    expect(stopwatch(game)).toBe(0)
     expect(showing(game)).toBe(true)
     at(game, WATCH.visible - 0.05)
     expect(showing(game)).toBe(true)
@@ -48,8 +47,6 @@ describe('the stopwatch', () => {
 describe('a stop', () => {
   it('counts once, after the start, and no later than the stopwatch has got to', () => {
     const game = createGame(SEED, timers(2))
-    at(game, -1)
-    expect(stop(game, 0, 0)).toBe(false)
     at(game, 5)
     expect(stop(game, 0, 5.5)).toBe(false)
     expect(stop(game, 0, 5.5, WATCH.grace)).toBe(true)

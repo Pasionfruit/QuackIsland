@@ -148,9 +148,20 @@ mounted under the black, so its expensive first frame happens unwatched.
 
 **Three, two, one - over the game.** The black lifts off the game, drawn and
 held still (it is handed `paused: true`), with the numbers over it and then a
-moment of **Start!**. The briefing has no count of its own any more.
-`audio/Countdown.mp3` starts on the edge into `counting` and is paused with the
-round. Each number is rounded up, so the three is up for a whole second.
+moment of **Start!**. The briefing has no count of its own any more, and
+**neither does any game**: Sprint Triathlon, Time It, He's One Shot, Helping
+Dad and Keyboard Warrior had their own 3-2-1 and now start on the screen's
+**Start!**; Chef Caricature's first cook does too (later turns keep their
+"next up" hand-over). `audio/Countdown.mp3` starts on the edge into `counting`
+and is paused with the round - and only a resume carries it on. Leaving or
+restarting stops it for good, so a held "two" never comes back on its own with
+the next game. Each number is rounded up, so the three is up for a whole second.
+
+**A game that counts for itself** registers with `ownCountdown: true`. Pet Race
+opens on ten seconds of choosing a pet, and it is the race that gets counted
+in - so for it the screen only lifts the black (`counting` lasts `FADE.in`, with
+no numbers and no voice), and the game shows `CountOver` when its race is about
+to start: the same numbers, pop, voice and **Start!**.
 
 **Finish.** A game says its round is over with `useFinish(over)`, and draws its
 results only when that returns true. In between: two seconds (`FADE.dim`) of a
@@ -245,42 +256,36 @@ the way the button does. Once a round is counting or playing, stepping back
 would throw away a round you are in the middle of — so it stops the round and
 puts a card over it, offering **resume**, **restart the round** and a way out.
 
-### A pause is shared, and it belongs to whoever pressed it
+### A pause is shared, and it is the host's
 
-**Anybody can stop the round, and it stops for everybody.** This is the one
-thing a guest can press that moves every screen in the lobby. It is deliberate:
-a round somebody has had to walk away from is not a round worth finishing
-without them, and a pause that stopped only your own hands while the round ran
-on without you was a card that lied about what was happening.
+**Only the host works the minigame screen.** Guests in a party press no button
+on it at all: no back on the briefing or the empty round, no pause, nothing on
+the pause card, no dashboard or replay on the podium, and escape does nothing
+for them. They still read the briefing's two tabs, which change nothing but
+their own view. `iMayControl` is `paused && host`; `pauseMinigame` refuses a
+guest; and a pause message is applied only if it came from the host (the lowest
+id in the room, `isHost`), so an older build's guest cannot stop the round.
 
-**The card names who stopped it**, on every screen, and **the buttons are
-theirs.** Everybody else gets the same card with nothing to press and a line
-saying who they are waiting for — which is better than three dead buttons and no
-explanation. Two people reaching for the same round at once is how you get a
-round that resumes half a second after somebody paused it to answer the door.
+**It stops for everybody**, and the card says so on every screen. Everybody but
+the host gets the same card with nothing to press and *waiting for the host*.
 
-**Unless they are gone.** If whoever paused has left the lobby, the buttons come
-back for whoever is still here — otherwise closing a browser strands everybody
-in front of a card nobody can dismiss. That is the whole of the exception, and
-it is the only reason `mayControl` needs to know who is in the room.
+**If the host leaves**, hosting passes to the next lowest id on its own, and the
+buttons go with it - so a card is never stranded with nobody to take it down.
 
-**Walking out of a round you stopped lets everybody else carry on.** `backOut`
-sends a resume on the way past, because the one person who could dismiss the
-card leaving the lobby looking at it is the same deadlock by the front door.
-
-It does **not** ride on `hostChoice` like the call does: that is host-owned by
-construction, and the whole point of this one is that a guest can press it. It
-is a plain broadcast, applied by everybody who hears it — the sender included,
-which is harmless because `pauseRun` and `resumeRun` return the same run when
-there is nothing to do. Nothing is repeated and nothing is asked for: a pause is
-a moment, not a setting, so somebody who joins mid-pause is not dragged into it
-— and, for the same reason, is not told about one already up.
+It is a plain broadcast rather than `hostChoice`, applied by everybody who hears
+it - the sender included, which is harmless because `pauseRun` and `resumeRun`
+return the same run when there is nothing to do. Nothing is repeated and
+nothing is asked for: a pause is a moment, not a setting, so somebody who joins
+mid-pause is not dragged into it.
 
 ### Restart
 
 **Restart** starts the whole round again, from the three-two-one and a new game
-state, for everybody. It is `beginRun(freshRun(id))` and no new rules: a fresh
-run of the same game, taken straight to the countdown.
+state, for everybody - from the pause card, the podium's replay, or a game's own
+"again" (which is `replayMinigame` too, so no round is ever restarted without
+its count). It cuts **straight to black** and lifts off the new game into
+three, two, one: a fresh run of the same game, never back through the briefing,
+which is not what anybody was looking at.
 
 ### What stops
 
@@ -311,7 +316,8 @@ behind it.
 | `rankStandings`, `poseFor`, `Standing`, `Placed`, `Pose`, `PodiumResult` | Who stands where on the podium and how they take it. All pure. |
 | `replayMinigame` | The podium's replay: the same game again, for everybody. The host's. |
 | `openDashboard`, `openMinigame`, `playMinigame`, `tickMinigame`, `backOut`, `closeMinigames` | Moving the screen about. |
-| `pauseMinigame`, `resumeMinigame`, `restartMinigame`, `isPausable`, `pauseRun`, `resumeRun`, `restartRun` | Stopping a round, starting it again, and starting it over. |
+| `pauseMinigame`, `resumeMinigame`, `restartMinigame`, `isPausable`, `pauseRun`, `resumeRun`, `restartRun` | Stopping a round, starting it again, and starting it over. The host's alone. |
+| `CountOver`, `countLength`, `screenCounts`, `MinigameBuild.ownCountdown` | A game that counts itself in later - Pet Race - with the screen's own look and voice. |
 | `mayControl`, `iMayControl`, `useMayControl`, `nameOfPauser`, `Pauser` | Who the card belongs to, and what to call them. |
 | `encodePause`, `decodePause`, `PAUSE_TAG`, `PauseAct`, `PauseMessage` | A pause on the wire. |
 | `useMinigameSync`, `getMinigameCall` | Taking a guest where the host went. Mount the hook once. |
@@ -443,8 +449,8 @@ party panel, bottom left.
 - **Host: open a game.** The guest should land on the same briefing, able to
   read both tabs, with *waiting for the host to start* where the play button is.
 - **Host: press play.** Both should count down and start together.
-- **Guest: press escape and leave the round.** They go back to the world and
-  stay there — they must not be dragged back in.
+- **Guest: press escape, on the briefing and in a round.** Nothing should
+  happen. A guest has no back, pause or podium button anywhere on the screen.
 - **Host: open a different game.** The guest who walked out should be picked
   back up by it.
 - **Host: leave the round.** The guest should be taken out of it too.

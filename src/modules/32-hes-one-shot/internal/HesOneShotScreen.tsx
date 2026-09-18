@@ -15,7 +15,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { useFinish, type MinigameRun } from '../../15-minigames'
+import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { HesOneShotScene, type LookRef } from './HesOneShotScene'
 import { COLOURS, GUN, PITCH_LIMIT, ROUND, clock, cooldownLeft, isStanding, placings, type Game } from './rules'
 import { myId, newGame, waitingGame } from './setup'
@@ -81,12 +81,6 @@ export function HesOneShotScreen({ run }: { run: MinigameRun }) {
   const [hitAt, setHitAt] = useState(-Infinity)
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
-
-  const again = () => {
-    const fresh = newGame()
-    live.current = fresh
-    setGame(fresh)
-  }
 
   useEffect(() => {
     let frame = 0
@@ -198,8 +192,7 @@ export function HesOneShotScreen({ run }: { run: MinigameRun }) {
   let banner: { text: string; sub?: string; tone: 'count' | 'out' | 'hint' | 'got' } | null = null
   if (ready && !game.over && mine) {
     const got = game.players.filter((p) => p.by === mineIndex && p.out !== null && t - p.out < 2).pop()
-    if (t < 0) banner = { text: String(Math.ceil(-t)), sub: 'WASD to move · click to take aim', tone: 'count' }
-    else if (mine.out !== null && t - mine.out < 3) {
+    if (mine.out !== null && t - mine.out < 3) {
       const by = mine.by !== null ? game.players[mine.by] : null
       banner = { text: "You're a hunter now", sub: by ? `${nameOf(by.id)} got you - keep shooting` : 'keep shooting', tone: 'out' }
     } else if (got) banner = { text: `You got ${nameOf(got.id)}`, tone: 'got' }
@@ -309,7 +302,7 @@ export function HesOneShotScreen({ run }: { run: MinigameRun }) {
         ) : null}
       </div>
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }

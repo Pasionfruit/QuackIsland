@@ -14,7 +14,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { useFinish, type MinigameRun } from '../../15-minigames'
+import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { LetHimCookScene, myTurn, type SceneHands } from './LetHimCookScene'
 import { COLOURS, INGREDIENTS, KITCHEN, cookTime, fastForwarding, placings, stillIn, turnTime, whoseTurn, type Cook, type Game, type Pick } from './rules'
@@ -64,12 +64,6 @@ export function LetHimCookScreen({ run }: { run: MinigameRun }) {
     }),
     [],
   )
-
-  const again = () => {
-    const fresh = newGame()
-    live.current = fresh
-    setGame(fresh)
-  }
 
   useEffect(() => {
     let frame = 0
@@ -132,7 +126,7 @@ export function LetHimCookScreen({ run }: { run: MinigameRun }) {
         {game.phase === 'order' ? <Order game={game} nameOf={nameOf} /> : null}
       </div>
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }
