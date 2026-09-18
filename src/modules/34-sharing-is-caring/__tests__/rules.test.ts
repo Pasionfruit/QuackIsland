@@ -3,13 +3,16 @@
  */
 import { describe, expect, it } from 'vitest'
 import { PLAYER } from '../../02-player'
-import { ARENA, canTake, createRound, holderOf, placings, points, spawns, stepRound, timeLeft, type Intent, type Round } from '../internal/rules'
+import { ARENA, canBoost, canTake, createRound, holderOf, placings, points, rocksFor, spawns, stepRound, timeLeft, type Intent, type Round } from '../internal/rules'
 
 const FRAME = 1 / 60
 const still = new Map<string, Intent>()
 
+/** A round on open sand: most of these put bodies where they like, and a rock would be in the way. The rocks have tests of their own. */
 function round(n = 3): Round {
-  return createRound(1, Array.from({ length: n }, (_, i) => ({ id: `p${i + 1}` })), 1)
+  const r = createRound(1, Array.from({ length: n }, (_, i) => ({ id: `p${i + 1}` })), 1)
+  r.rocks = []
+  return r
 }
 
 function run(r: Round, seconds: number, intents: ReadonlyMap<string, Intent> = still) {
@@ -76,7 +79,7 @@ describe('wearing it', () => {
     expect(at(r, 'p2').score).toBe(0)
   })
 
-  it('slows you down, so a chaser can catch up', () => {
+  it('speeds you up, so one chaser on foot cannot catch up', () => {
     const r = round(2)
     Object.assign(at(r, 'p1'), { x: 0, y: 0 })
     Object.assign(at(r, 'p2'), { x: 0, y: -8 })
@@ -84,7 +87,18 @@ describe('wearing it', () => {
     const before = at(r, 'p1').x
     const chaserBefore = at(r, 'p2').x
     run(r, 0.5, new Map([['p1', { x: 1, y: 0 }], ['p2', { x: 1, y: 0 }]]))
-    expect(at(r, 'p1').x - before).toBeLessThan(at(r, 'p2').x - chaserBefore)
+    expect(at(r, 'p1').x - before).toBeGreaterThan(at(r, 'p2').x - chaserBefore)
+  })
+
+  it('cannot be boosted: the wearer holding boost goes no faster', () => {
+    const r = round(2)
+    Object.assign(at(r, 'p1'), { x: 0, y: 0 })
+    stepRound(r, still, FRAME)
+    expect(canBoost(r, at(r, 'p1'))).toBe(false)
+    const before = at(r, 'p1').x
+    run(r, 0.5, new Map([['p1', { x: 1, y: 0, boost: true }]]))
+    expect(at(r, 'p1').x - before).toBeCloseTo(ARENA.speed * ARENA.crownPace * 0.5, 1)
+    expect(at(r, 'p1').boost).toBe(0)
   })
 
   it('does not hand out points for a frame that took a long time', () => {
@@ -184,6 +198,85 @@ describe('a bump', () => {
       if (a !== b) expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThan(ARENA.body * 2 - 0.2)
     }
     expect(holderOf(r)).not.toBeNull()
+  })
+})
+
+describe('the boost', () => {
+  it('starts charged, and a press is a burst of speed', () => {
+    const r = round(2)
+    const p = at(r, 'p2')
+    expect(p.charge).toBe(1)
+    Object.assign(p, { x: -6, y: 5 })
+    const from = p.x
+    stepRound(r, new Map([['p2', { x: 1, y: 0, boost: true }]]), FRAME)
+    expect(p.boost).toBeGreaterThan(0)
+    expect(p.charge).toBe(0)
+    run(r, ARENA.boostTime - 2 * FRAME, new Map([['p2', { x: 1, y: 0 }]]))
+    expect(p.x - from).toBeCloseTo(ARENA.speed * ARENA.boostPace * (ARENA.boostTime - FRAME), 1)
+  })
+
+  it('is faster than the wearer while it lasts', () => {
+    expect(ARENA.boostPace).toBeGreaterThan(ARENA.crownPace * 1.3)
+    expect(ARENA.boostPace * ARENA.botPace).toBeGreaterThan(ARENA.crownPace * 1.3)
+  })
+
+  it('runs out, then takes the recharge to be ready again, and holding the key does not spend it early', () => {
+    const r = round(2)
+    const p = at(r, 'p2')
+    const hold = new Map([['p2', { x: 0, y: 0, boost: true }]])
+    stepRound(r, hold, FRAME)
+    run(r, ARENA.boostTime + 0.1, hold)
+    expect(p.boost).toBe(0)
+    run(r, ARENA.recharge - 0.3, hold)
+    expect(p.charge).toBeLessThan(1)
+    expect(p.boost).toBe(0)
+    run(r, 0.4, hold)
+    expect(p.boost).toBeGreaterThan(0)
+  })
+
+  it('ends when you take the crown mid-boost', () => {
+    const r = round(2)
+    Object.assign(at(r, 'p1'), { x: 1.5, y: 0 })
+    run(r, 0.3, new Map([['p1', { x: -1, y: 0, boost: true }]]))
+    expect(r.holder).toBe('p1')
+    expect(at(r, 'p1').boost).toBe(0)
+  })
+
+  it('cannot be used dazed', () => {
+    const r = round(2)
+    at(r, 'p2').dazed = 1
+    expect(canBoost(r, at(r, 'p2'))).toBe(false)
+  })
+})
+
+describe('the rocks', () => {
+  it('stand between the spawns, clear of every straight run to the crown and of the crown itself', () => {
+    for (let n = 2; n <= 8; n++) {
+      const rocks = rocksFor(n)
+      expect(rocks.length).toBe(2 * (n < 4 ? n * 2 : n))
+      for (const rock of rocks) {
+        expect(Math.hypot(rock.x, rock.y) - rock.r).toBeGreaterThan(ARENA.crown + ARENA.body * 3)
+        expect(Math.hypot(rock.x, rock.y) + rock.r).toBeLessThan(ARENA.radius - ARENA.body * 2)
+        for (const s of spawns(n)) {
+          // Distance from the rock to the run from the spawn to the middle: rocks past the middle are not on it.
+          if (s.x * rock.x + s.y * rock.y <= 0) continue
+          const d = Math.abs(s.x * rock.y - s.y * rock.x) / Math.hypot(s.x, s.y)
+          expect(d).toBeGreaterThan(rock.r + ARENA.body)
+        }
+      }
+    }
+  })
+
+  it('are solid: walking into one slides round it, never through', () => {
+    const r = createRound(1, [{ id: 'p1' }, { id: 'p2' }, { id: 'p3' }, { id: 'p4' }], 1)
+    const rock = r.rocks[0]
+    const p = r.players[0]
+    Object.assign(p, { x: rock.x - 3, y: rock.y + 0.1 })
+    for (let i = 0; i < 120; i++) {
+      stepRound(r, new Map([['p1', { x: 1, y: 0 }]]), FRAME)
+      for (const each of r.rocks) expect(Math.hypot(p.x - each.x, p.y - each.y)).toBeGreaterThanOrEqual(each.r + ARENA.body - 1e-9)
+    }
+    expect(p.x).toBeGreaterThan(rock.x)
   })
 })
 

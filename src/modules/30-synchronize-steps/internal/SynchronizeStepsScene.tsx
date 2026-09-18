@@ -8,7 +8,7 @@
  * While picking, a bubble over your own head shows your pick, and a bubble over
  * anybody else's says only that they have picked. At the reveal every bubble
  * shows its number - green if it was alone and they stay, yellow for a pair,
- * red for a crowd - and a moment later everybody walks down to where it takes
+ * red for a drop of eight (a crowd, or a pair on 1) - and a moment later everybody walks down to where it takes
  * them, hopping down one step at a time. Reach the bottom and you land on the
  * ground past the last step, and the game is over.
  *
@@ -20,7 +20,7 @@ import { memo, useLayoutEffect, useMemo, useReducer, useRef, type RefObject } fr
 import { CanvasTexture, Color, Group, InstancedMesh, Matrix4, SRGBColorSpace, type DirectionalLight, type Sprite } from 'three'
 import { createAvatar } from '../../02-player'
 import { STAIRS, frameScene, hopAt, laneZ, stepX, stepY, walkAt } from './camera'
-import { COLOURS, TOWER, type Game, type Stepper } from './rules'
+import { COLOURS, TOWER, moveFor, type Game, type Stepper } from './rules'
 
 export const PALETTE = {
   background: '#9fd3ee',
@@ -73,9 +73,10 @@ function labelTexture(text: string, fill: string, ink: string, round = true): Ca
   return texture
 }
 
-/** The colour a revealed pick is shown in: alone, a pair, or a crowd. */
-export function outcomeColour(count: number): string {
-  return count >= 3 ? PALETTE.crowd : count === 2 ? PALETTE.pair : PALETTE.alone
+/** The colour a revealed pick is shown in: alone, a pair, or a drop of eight (a crowd, or a pair on 1). */
+export function outcomeColour(pick: number, count: number): string {
+  const moved = moveFor(pick, count)
+  return moved >= TOWER.crowdDrop ? PALETTE.crowd : moved > 0 ? PALETTE.pair : PALETTE.alone
 }
 
 function FixedCamera({ lanes }: { lanes: number }) {
@@ -194,7 +195,7 @@ function Player({ index, count, live }: { index: number; count: number; live: Re
     if (g.phase === 'choose' && !stepper.out && stepper.pick !== null) {
       label = stepper.mine && stepper.pick > 0 ? labelTexture(String(stepper.pick), PALETTE.bubble, PALETTE.ink) : labelTexture('✓', PALETTE.bubble, PALETTE.ink)
     } else if (g.phase === 'reveal' && stepper.last && (!stepper.out || stepper.out.round === g.round) && stepper.pick !== null) {
-      label = labelTexture(String(stepper.last.pick), outcomeColour(stepper.last.with), PALETTE.bubble)
+      label = labelTexture(String(stepper.last.pick), outcomeColour(stepper.last.pick, stepper.last.with), PALETTE.bubble)
     }
     bubble.current.visible = label !== null
     if (label && bubble.current.material.map !== label) {

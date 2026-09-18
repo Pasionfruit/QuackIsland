@@ -42,6 +42,32 @@ describe('a stand-in', () => {
     expect(Math.abs(want.y)).toBeGreaterThan(0.5)
   })
 
+  it('boosts at the wearer once near enough, and not from across the arena', () => {
+    const r = solo()
+    r.holder = 'you'
+    Object.assign(r.players[0], { x: 0, y: 0 })
+    const bot = r.players[1]
+    Object.assign(bot, { x: 2, y: 0 })
+    expect(botIntent(r, bot).boost).toBe(true)
+    Object.assign(bot, { x: 9, y: 0 })
+    expect(botIntent(r, bot).boost).toBeFalsy()
+  })
+
+  it('steers round a rock in its way rather than into it', () => {
+    const r = solo()
+    const rock = r.rocks[0]
+    const bot = r.players[1]
+    r.holder = 'you'
+    // The wearer straight beyond the rock from the stand-in.
+    const ux = rock.x / Math.hypot(rock.x, rock.y)
+    const uy = rock.y / Math.hypot(rock.x, rock.y)
+    Object.assign(bot, { x: rock.x - ux * 1.8, y: rock.y - uy * 1.8 })
+    Object.assign(r.players[0], { x: rock.x + ux * 3, y: rock.y + uy * 3 })
+    const want = botIntent(r, bot)
+    const across = Math.abs(want.x * -uy + want.y * ux)
+    expect(across).toBeGreaterThan(0.3)
+  })
+
   it('does nothing once the round is over', () => {
     const r = solo()
     r.over = true
@@ -58,7 +84,7 @@ describe('a round alone', () => {
       const holder = r.players.find((p) => p.id === r.holder)
       const target = holder && holder !== me ? holder : null
       let mine: Intent = { x: -me.x, y: -me.y }
-      if (target) mine = { x: target.x - me.x, y: target.y - me.y }
+      if (target) mine = { x: target.x - me.x, y: target.y - me.y, boost: Math.hypot(target.x - me.x, target.y - me.y) < 3 }
       else if (holder === me) {
         // Run from the nearest stand-in, round the arena.
         const near = r.players.filter((p) => p !== me).sort((a, b) => Math.hypot(a.x - me.x, a.y - me.y) - Math.hypot(b.x - me.x, b.y - me.y))[0]

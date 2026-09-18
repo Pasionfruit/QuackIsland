@@ -5,6 +5,11 @@
  * yours; while you wear it you score a point a second. Anybody who bumps into
  * you takes it. After a minute, the most points wins.
  *
+ * The wearer is a little faster than everybody else, so one chaser in a straight
+ * line never catches them. Catching takes the arena and the boost: rocks to pin
+ * a runner against, and a burst of speed that everybody without the crown can
+ * spend once it has charged.
+ *
  * No three.js, no React, no clock of its own. `stepRound` takes a round, which
  * way everybody is walking and how long since last time, and gives back the
  * round a moment later.
@@ -26,12 +31,23 @@ export const ARENA = {
   /** Walking speed, units a second. */
   speed: 7,
   /**
-   * How much of that the wearer keeps. At full pace, one person running round
-   * a circle can never be caught by one chaser; a crown has to cost something.
+   * How much faster the wearer walks. A chaser on foot falls behind; catching
+   * the wearer takes a boost at the right moment, or a rock or the wall to pin
+   * them against, or somebody coming the other way.
    */
-  crownPace: 0.85,
-  /** How much a stand-in gets. Enough to catch a person wearing the crown, never enough to outrun one chasing. */
+  crownPace: 1.1,
+  /** How much a stand-in gets, so a person is never simply outrun by one. */
   botPace: 0.9,
+  /** How much faster a boost walks you. */
+  boostPace: 1.8,
+  /** How long a boost lasts, in seconds. */
+  boostTime: 0.7,
+  /** Seconds a boost takes to charge from empty. Everybody starts charged. */
+  recharge: 5,
+  /** How far from the middle the inner ring of rocks stands, and how big each rock is. */
+  innerRocks: { ring: 5, radius: 0.9 },
+  /** The outer ring, among the spawns. */
+  outerRocks: { ring: 8.6, radius: 0.7 },
   /** How close to the crown's middle a body has to get to pick it up. */
   crown: 0.6,
   /** Points a second while wearing it. */
@@ -72,6 +88,10 @@ export interface Wearer {
   takes: number
   /** Seconds left standing dazed after losing the crown. Zero when free to walk. */
   dazed: number
+  /** Seconds of boost left. Zero when not boosting. */
+  boost: number
+  /** How charged the boost is, nought to one. One is ready. */
+  charge: number
   mine: boolean
   bot: boolean
 }
@@ -82,6 +102,8 @@ export interface Round {
   /** Tells one round from the next on the wire. */
   id: number
   players: Wearer[]
+  /** The rocks, from how many are playing - see `rocksFor`. */
+  rocks: Rock[]
   /** Who wears the crown, or `null` while it is still in the middle. */
   holder: string | null
   /** When it last changed hands, in round seconds. */
@@ -94,6 +116,15 @@ export interface Round {
 export interface Intent {
   x: number
   y: number
+  /** Wants to boost. Spent the first step it is charged and they are not wearing the crown. */
+  boost?: boolean
+}
+
+/** A round rock nobody can walk through. */
+export interface Rock {
+  x: number
+  y: number
+  r: number
 }
 
 export interface Entrant {
@@ -118,11 +149,30 @@ export function spawns(count: number): (Point & { facing: number })[] {
   })
 }
 
+/**
+ * The rocks: two rings, each rock halfway between two spawns, so nobody's
+ * straight run to the crown is blocked and nobody's is easier. Fewer than four
+ * players get twice as many a ring, so a small arena is not bare.
+ */
+export function rocksFor(count: number): Rock[] {
+  if (count < 2) return []
+  const each = count < 4 ? count * 2 : count
+  const out: Rock[] = []
+  for (const { ring, radius } of [ARENA.innerRocks, ARENA.outerRocks]) {
+    for (let k = 0; k < each; k++) {
+      const angle = (Math.PI * 2 * (k + 0.5)) / each - Math.PI / 2
+      out.push({ x: Math.cos(angle) * ring, y: Math.sin(angle) * ring, r: radius })
+    }
+  }
+  return out
+}
+
 export function createRound(seed: number, entrants: readonly Entrant[], id = 1): Round {
   const starts = spawns(entrants.length)
   return {
     seed,
     id,
+    rocks: rocksFor(entrants.length),
     elapsed: 0,
     over: false,
     holder: null,
@@ -135,6 +185,8 @@ export function createRound(seed: number, entrants: readonly Entrant[], id = 1):
       score: 0,
       takes: 0,
       dazed: 0,
+      boost: 0,
+      charge: 1,
       mine: e.mine ?? false,
       bot: e.bot ?? false,
     })),
@@ -154,6 +206,13 @@ function give(round: Round, to: Wearer): void {
   round.holder = to.id
   round.heldSince = round.elapsed
   to.takes += 1
+  // A boost does not carry the crown away: whoever takes it mid-boost stops boosting.
+  to.boost = 0
+}
+
+/** Whether somebody could boost right now. */
+export function canBoost(round: Round, p: Wearer): boolean {
+  return p.charge >= 1 && p.boost === 0 && p.dazed === 0 && p.id !== round.holder && !round.over
 }
 
 /**
@@ -162,9 +221,10 @@ function give(round: Round, to: Wearer): void {
  * Mutates and returns the same round. `dt` is clamped, so a tab that comes back
  * from the background does not hand somebody thirty seconds of crown.
  *
- * In order: the wearer scores for the time just gone; everybody not dazed walks; the
- * crown is picked up or stolen; bodies push each other apart; the wall keeps
- * everybody in; and the round ends at a minute.
+ * In order: the wearer scores for the time just gone; boosts charge, start and
+ * run out; everybody not dazed walks; the crown is picked up or stolen; bodies
+ * push each other apart; the rocks and the wall keep everybody out and in; and
+ * the round ends at a minute.
  */
 export function stepRound(round: Round, intents: ReadonlyMap<string, Intent>, dt: number): Round {
   if (round.over) return round
@@ -175,14 +235,22 @@ export function stepRound(round: Round, intents: ReadonlyMap<string, Intent>, dt
   if (wearer) wearer.score += ARENA.rate * step
 
   for (const p of round.players) {
+    const intent = intents.get(p.id)
+    if (p.boost > 0) p.boost = Math.max(0, p.boost - step)
+    else if (p.charge < 1) p.charge = Math.min(1, p.charge + step / ARENA.recharge)
+    if (intent?.boost && canBoost(round, p)) {
+      p.boost = ARENA.boostTime
+      p.charge = 0
+    }
     if (p.dazed > 0) {
       p.dazed = Math.max(0, p.dazed - step)
       continue
     }
-    const intent = intents.get(p.id)
     const length = intent ? Math.hypot(intent.x, intent.y) : 0
     if (!intent || length === 0) continue
-    const pace = ARENA.speed * (p.id === round.holder ? ARENA.crownPace : 1) * (p.bot ? ARENA.botPace : 1) * step
+    const crowned = p.id === round.holder
+    const pace =
+      ARENA.speed * (crowned ? ARENA.crownPace : 1) * (p.boost > 0 && !crowned ? ARENA.boostPace : 1) * (p.bot ? ARENA.botPace : 1) * step
     const scale = Math.min(1, length) / length
     p.x += intent.x * scale * pace
     p.y += intent.y * scale * pace
@@ -201,7 +269,10 @@ export function stepRound(round: Round, intents: ReadonlyMap<string, Intent>, dt
   }
 
   separate(round)
-  for (const p of round.players) wall(p)
+  for (const p of round.players) {
+    rocks(p, round.rocks)
+    wall(p)
+  }
 
   if (round.elapsed >= ARENA.duration) {
     round.elapsed = ARENA.duration
@@ -267,6 +338,20 @@ function separate(round: Round): void {
       b.x += (dx / apart) * shift
       b.y += (dy / apart) * shift
     }
+  }
+}
+
+/** Rocks are solid: a body walking into one slides round it. */
+function rocks(p: Wearer, all: readonly Rock[]): void {
+  for (const rock of all) {
+    const dx = p.x - rock.x
+    const dy = p.y - rock.y
+    const d = Math.hypot(dx, dy)
+    const minimum = rock.r + ARENA.body
+    if (d >= minimum) continue
+    const away = d === 0 ? Math.atan2(rock.y, rock.x) : Math.atan2(dy, dx)
+    p.x = rock.x + Math.cos(away) * minimum
+    p.y = rock.y + Math.sin(away) * minimum
   }
 }
 

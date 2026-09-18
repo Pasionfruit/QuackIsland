@@ -2602,7 +2602,7 @@
     {
       "id": "30-synchronize-steps",
       "phase": "P6",
-      "title": "Minigame 19, Synchronize Steps: a tower of twenty steps, picks of 1, 4 or 6 every two seconds, pairs move, crowds drop eight, the lonely stay",
+      "title": "Minigame 19, Synchronize Steps: a tower of twenty steps, picks of 1, 4 or 6 every two seconds, pairs move, a pair on 1 or a crowd drops eight, the lonely stay",
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
@@ -2644,6 +2644,11 @@
           "status": "done"
         },
         {
+          "id": "30.8",
+          "title": "No spamming 1: a pair on 1 drops eight, like a crowd",
+          "status": "done"
+        },
+        {
           "id": "30.6",
           "title": "Contract, tests, MODULE.md",
           "status": "done"
@@ -2657,7 +2662,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-18T22:44:50.113Z"
+          "at": "2026-09-18T22:56:44.634Z"
         },
         "human": {
           "status": "pending"
@@ -2927,7 +2932,7 @@
     {
       "id": "34-sharing-is-caring",
       "phase": "P6",
-      "title": "Minigame 20, Sharing Is Caring: a crown in the middle of a walled arena, a point a second while you wear it, bump the wearer to take it, most points after a minute wins",
+      "title": "Minigame 20, Sharing Is Caring: a crown in the middle of a walled arena ringed with rocks, a point a second while you wear it, the wearer a little faster, a rechargeable boost to catch them, bump the wearer to take it, most points after a minute wins",
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
@@ -2984,6 +2989,11 @@
           "status": "done"
         },
         {
+          "id": "34.11",
+          "title": "Trapping the wearer: the wearer a little faster, a rechargeable boost for everybody else, two rings of rocks between the spawns",
+          "status": "done"
+        },
+        {
           "id": "34.8",
           "title": "Contract, tests, MODULE.md",
           "status": "done"
@@ -2997,7 +3007,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-17T16:41:30.805Z"
+          "at": "2026-09-18T22:56:15.967Z"
         },
         "human": {
           "status": "pending"
@@ -3009,7 +3019,7 @@
         "No models: players are the island capsule, the crown is primitives",
         "No moving camera",
         "No falling off: the edge is a wall",
-        "No pushing, dashing or items - bumping is walking into somebody",
+        "No pushing or items - bumping is walking into somebody; the boost is the one extra",
         "No sound, no score kept between games"
       ],
       "budgets": {

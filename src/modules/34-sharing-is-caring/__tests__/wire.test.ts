@@ -67,6 +67,8 @@ describe('a snapshot', () => {
     expect(decodeSnapshot(withField(5, 1.5))).toBeNull()
     expect(decodeSnapshot(withField(6, -0.5))).toBeNull()
     expect(decodeSnapshot({ ...good, p: [p[0].slice(0, 6)] })).toBeNull()
+    expect(decodeSnapshot(withField(7, -0.1))).toBeNull()
+    expect(decodeSnapshot(withField(8, 1.5))).toBeNull()
   })
 
   it('fits in a relay message with eight in the arena', () => {
@@ -77,6 +79,22 @@ describe('a snapshot', () => {
 describe('an intent', () => {
   it('comes back as what was sent, for its round', () => {
     expect(decodeIntent(relay(encodeIntent({ x: 0.5, y: -0.5 }, 12)))).toEqual({ round: 12, intent: { x: 0.5, y: -0.5 } })
+  })
+
+  it('carries a boost press, and only a one says boost', () => {
+    expect(decodeIntent(relay(encodeIntent({ x: 1, y: 0, boost: true }, 3)))!.intent.boost).toBe(true)
+    expect(decodeIntent(relay(encodeIntent({ x: 1, y: 0 }, 3)))!.intent.boost).toBeUndefined()
+    expect(decodeIntent({ t: 'sc-in', r: 1, x: 0, y: 0, b: 'yes' })!.intent.boost).toBeUndefined()
+  })
+
+  it('brings the boost and the rocks across to a guest', () => {
+    const round = host(5)
+    round.players[2].boost = 0.4
+    round.players[2].charge = 0
+    const copy = applySnapshot(waitingRound(), decodeSnapshot(relay(encodeSnapshot(round)))!, 'p1')
+    expect(copy.players[2].boost).toBeCloseTo(0.4, 2)
+    expect(copy.players[2].charge).toBe(0)
+    expect(copy.rocks).toEqual(round.rocks)
   })
 
   it('cannot ask for more than full speed, and is refused when it is not one', () => {

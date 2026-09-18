@@ -5,7 +5,8 @@
  * as the island's own pill in their colour; and a gold crown that spins over a
  * glowing disc in the middle until somebody takes it, then rides on their head.
  * When it changes hands it hops across rather than blinking, so a steal is
- * something you see.
+ * something you see. Two rings of rocks stand in the sand, and somebody
+ * boosting leaves a streak of cyan behind them.
  *
  * **Drawn from a ref, redrawn every frame from inside the canvas.** The canvas
  * itself is rendered once by the screen; see Duck Hunt's notes for why a
@@ -16,7 +17,7 @@ import { memo, useLayoutEffect, useMemo, useReducer, useRef, type RefObject } fr
 import { Color, DoubleSide, Group, type DirectionalLight, type Mesh, type MeshBasicMaterial } from 'three'
 import { PLAYER, createAvatar } from '../../02-player'
 import { frameScene } from './camera'
-import { ARENA, COLOURS, canTake, holderOf, type Round, type Wearer } from './rules'
+import { ARENA, COLOURS, canTake, holderOf, type Rock, type Round, type Wearer } from './rules'
 
 export const PALETTE = {
   sand: '#d0bd90',
@@ -27,6 +28,8 @@ export const PALETTE = {
   gold: '#ffc83a',
   goldGlow: '#ffb000',
   jewel: '#d8344a',
+  boulder: '#948170',
+  boost: '#5fe3e3',
   sunColour: '#fff3e0',
   ambientColour: '#cfe3ff',
   skyColour: '#bcd6ff',
@@ -39,6 +42,8 @@ const HEAD_Y = PLAYER.height + 0.02
 /** How quickly the crown hops to where it belongs, per second. */
 const HOP_RATE = 12
 const WALL_HEIGHT = 0.55
+/** Lower than a player, so the tilted camera sees a head over a rock in front of it. */
+const ROCK_HEIGHT = 0.8
 
 function FixedCamera() {
   useFrame(({ camera, size }) => {
@@ -98,14 +103,35 @@ const Arena = memo(function Arena() {
   )
 })
 
+/** The rocks: squat stones, each a little turned so the rings do not look stamped out. */
+const Rocks = memo(function Rocks({ rocks }: { rocks: readonly Rock[] }) {
+  return (
+    <group>
+      {rocks.map((rock, i) => (
+        <group key={i} position={[rock.x, 0, rock.y]} rotation={[0, i * 1.7, 0]}>
+          <mesh position={[0, ROCK_HEIGHT / 2, 0]} castShadow receiveShadow>
+            <cylinderGeometry args={[rock.r * 0.82, rock.r, ROCK_HEIGHT, 9]} />
+            <meshStandardMaterial color={PALETTE.boulder} roughness={0.95} flatShading />
+          </mesh>
+          <mesh position={[0, ROCK_HEIGHT, 0]} scale={[1, 0.45, 1]} castShadow>
+            <dodecahedronGeometry args={[rock.r * 0.82, 0]} />
+            <meshStandardMaterial color={PALETTE.boulder} roughness={0.95} flatShading />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  )
+})
+
 /** A heading in the rules' flat x/y, as a turn about the world's up axis. */
 function headingToYaw(heading: number): number {
   return Math.atan2(Math.cos(heading), Math.sin(heading))
 }
 
-/** One player: the pill in their colour, reeling on the spot while dazed. */
+/** One player: the pill in their colour, reeling on the spot while dazed, leaning into a boost. */
 function PlayerBody({ player, index }: { player: Wearer; index: number }) {
   const holder = useRef<Group>(null)
+  const streak = useRef<Group>(null)
   const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
   useFrame(({ clock }) => {
@@ -115,11 +141,30 @@ function PlayerBody({ player, index }: { player: Wearer; index: number }) {
     const reel = player.dazed > 0 ? Math.min(1, player.dazed * 3) : 0
     group.position.set(player.x, 0, player.y)
     group.rotation.set(Math.sin(t * 17) * 0.22 * reel, headingToYaw(player.facing) + reel * t * 9, Math.cos(t * 13) * 0.22 * reel)
+    const trail = streak.current
+    if (trail) {
+      trail.visible = player.boost > 0
+      trail.position.set(player.x, 0.06, player.y)
+      trail.rotation.set(0, headingToYaw(player.facing), 0)
+    }
   })
   return (
-    <group ref={holder}>
-      <primitive object={avatar} />
-    </group>
+    <>
+      <group ref={holder}>
+        <primitive object={avatar} />
+      </group>
+      <group ref={streak} visible={false}>
+        {/* A streak on the sand behind, pointing back the way they came. */}
+        <mesh position={[0, 0, -0.9]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[ARENA.body * 1.6, 1.6]} />
+          <meshBasicMaterial color={PALETTE.boost} transparent opacity={0.55} depthWrite={false} />
+        </mesh>
+        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[ARENA.body * 1.1, ARENA.body * 1.5, 24]} />
+          <meshBasicMaterial color={PALETTE.boost} transparent opacity={0.8} depthWrite={false} />
+        </mesh>
+      </group>
+    </>
   )
 }
 
@@ -274,6 +319,7 @@ export function SharingIsCaringScene({ live }: { live: RefObject<Round> }) {
       <FixedCamera />
       <Daylight />
       <Arena />
+      <Rocks rocks={round.rocks} />
       <Pedestal live={live} />
       <WearerRing live={live} />
       {mineIndex >= 0 ? <YouMarker player={round.players[mineIndex]} index={mineIndex} /> : null}

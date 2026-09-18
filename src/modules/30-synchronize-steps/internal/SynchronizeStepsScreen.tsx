@@ -16,7 +16,7 @@ import { getNet, useNet, usePeers } from '../../09-net'
 import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { PALETTE, SynchronizeStepsScene, outcomeColour } from './SynchronizeStepsScene'
-import { COLOURS, TOWER, placings, type Game } from './rules'
+import { COLOURS, TOWER, moveFor, placings, type Game } from './rules'
 import { myId, newGame, waitingGame } from './setup'
 import { useTowerNet } from './useTowerNet'
 
@@ -194,10 +194,10 @@ function Reveal({ game, nameOf }: { game: Game; nameOf: (id: string) => string }
     <div style={revealWrap}>
       {groups.map(({ option, who }) => {
         const count = who.length
-        const what = count === 0 ? 'nobody' : count === 1 ? 'alone - stays' : count === 2 ? `pair - down ${option}` : `crowd - down ${TOWER.crowdDrop}`
+        const what = count === 0 ? 'nobody' : count === 1 ? 'alone - stays' : count === 2 ? `pair - down ${moveFor(option, count)}` : `crowd - down ${TOWER.crowdDrop}`
         return (
-          <div key={option} style={{ ...revealCard, borderColor: count ? outcomeColour(count) : 'rgba(255,255,255,0.3)' }} data-reveal={option} data-count={count}>
-            <div style={{ ...revealNumber, background: count ? outcomeColour(count) : 'rgba(255,255,255,0.25)' }}>{option}</div>
+          <div key={option} style={{ ...revealCard, borderColor: count ? outcomeColour(option, count) : 'rgba(255,255,255,0.3)' }} data-reveal={option} data-count={count}>
+            <div style={{ ...revealNumber, background: count ? outcomeColour(option, count) : 'rgba(255,255,255,0.25)' }}>{option}</div>
             <div style={{ minWidth: 0 }}>
               <div style={{ font: `700 13px/1.3 ${FONT}` }}>{what}</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 3 }}>

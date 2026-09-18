@@ -5,8 +5,10 @@
  * shell: the keys in, `useRoundNet` deciding what they do, a HUD with the clock,
  * who has the crown and your points, a running scoreboard, and the results.
  *
- * **WASD to move.** That is every control there is: you pick the crown up by
- * walking into it, and take it off somebody by walking into them.
+ * **WASD to move, Space or Shift to boost.** You pick the crown up by walking
+ * into it, and take it off somebody by walking into them. The boost is a short
+ * burst of speed that recharges; the wearer cannot use it, and is a little
+ * faster than everybody else, so a boost is how a wearer gets caught.
  */
 import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
@@ -15,7 +17,7 @@ import { getNet, useNet, usePeers } from '../../09-net'
 import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { SharingIsCaringScene } from './SharingIsCaringScene'
-import { COLOURS, placings, points, timeLeft, type Intent, type Round } from './rules'
+import { COLOURS, canBoost, placings, points, timeLeft, type Intent, type Round } from './rules'
 import { myId, newRound, waitingRound } from './setup'
 import { useRoundNet } from './useRoundNet'
 
@@ -26,6 +28,8 @@ const LOOK = {
   sun: '#ffc94d',
   gold: '#e0a21a',
   danger: '#c8443c',
+  boost: '#35bdbd',
+  boostDim: '#9fcfcf',
 } as const
 
 const FONT =
@@ -49,6 +53,11 @@ export function SharingIsCaringScreen({ run }: { run: MinigameRun }) {
   live.current = round
 
   const keys = useRef({ up: false, down: false, left: false, right: false })
+  /**
+   * A boost press is held on for a moment, not only while the key is down: a
+   * tap between two of the host's frames, or two intents, would otherwise be lost.
+   */
+  const boostUntil = useRef(0)
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
 
@@ -67,6 +76,11 @@ export function SharingIsCaringScreen({ run }: { run: MinigameRun }) {
           break
         case 'KeyD':
           k.right = down
+          break
+        case 'Space':
+        case 'ShiftLeft':
+        case 'ShiftRight':
+          if (down && !e.repeat) boostUntil.current = performance.now() + BOOST_HOLD_MS
           break
         default:
           return
@@ -100,6 +114,7 @@ export function SharingIsCaringScreen({ run }: { run: MinigameRun }) {
       const mine: Intent = {
         x: (k.right ? 1 : 0) - (k.left ? 1 : 0),
         y: (k.down ? 1 : 0) - (k.up ? 1 : 0),
+        boost: now < boostUntil.current,
       }
       if (wire.advance(current, dt, mine, paused.current)) setRound({ ...current })
       frame = requestAnimationFrame(tick)
@@ -147,6 +162,7 @@ export function SharingIsCaringScreen({ run }: { run: MinigameRun }) {
           <span style={{ color: LOOK.faded }}>waiting for the host…</span>
         )}
         <span style={{ flex: 1 }} />
+        {mine ? <BoostMeter round={round} /> : null}
         {mine ? (
           <span style={{ ...pill, background: COLOURS[mineIndex % COLOURS.length], color: '#fff' }} data-points={points(mine.score)}>
             {points(mine.score)} {points(mine.score) === 1 ? 'point' : 'points'}
@@ -161,6 +177,25 @@ export function SharingIsCaringScreen({ run }: { run: MinigameRun }) {
 
       {results && ready ? <Over round={round} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
+  )
+}
+
+/** Your boost: filling while it charges, lit when it is ready, and why it is not when you wear the crown. */
+function BoostMeter({ round }: { round: Round }) {
+  const mine = round.players.find((p) => p.mine)
+  if (!mine) return null
+  const wearing = mine.id === round.holder
+  const ready = canBoost(round, mine)
+  const label = mine.boost > 0 ? 'boosting!' : wearing ? 'no boost with the crown' : ready ? 'boost ready - space' : 'charging…'
+  return (
+    <span
+      style={{ ...meter, opacity: wearing ? 0.55 : 1 }}
+      data-boost={mine.boost > 0 ? 'on' : ready ? 'ready' : 'charging'}
+      data-charge={Math.round(mine.charge * 100)}
+    >
+      <span style={{ ...meterFill, width: `${Math.round(mine.charge * 100)}%`, background: ready || mine.boost > 0 ? LOOK.boost : LOOK.boostDim }} />
+      <span style={{ position: 'relative' }}>⚡ {label}</span>
+    </span>
   )
 }
 
@@ -199,6 +234,8 @@ const Stage = memo(function Stage({ live }: { live: RefObject<Round> }) {
     </Canvas>
   )
 })
+
+const BOOST_HOLD_MS = 250
 
 const SHADOWS = { type: PCFShadowMap }
 const DPR: [number, number] = [1, 2]
@@ -297,6 +334,18 @@ const pill: React.CSSProperties = {
   font: `600 12px/1.5 ${FONT}`,
   whiteSpace: 'nowrap',
 }
+
+const meter: React.CSSProperties = {
+  ...pill,
+  position: 'relative',
+  overflow: 'hidden',
+  minWidth: 150,
+  textAlign: 'center',
+  background: 'rgba(74, 53, 36, 0.18)',
+  color: LOOK.ink,
+}
+
+const meterFill: React.CSSProperties = { position: 'absolute', left: 0, top: 0, bottom: 0 }
 
 const board: React.CSSProperties = { flex: 1, minHeight: 0, width: '100%', position: 'relative' }
 

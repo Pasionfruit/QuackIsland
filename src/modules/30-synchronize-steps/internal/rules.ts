@@ -4,7 +4,10 @@
  * Everybody starts on top of a tower twenty steps high. Every two seconds each
  * player picks how far to go down: 1, 4 or 6. Then the picks are revealed:
  *
- * - **Exactly two** picked the same number: both move down that many steps.
+ * - **Exactly two** picked the same number: both move down that many steps -
+ *   except a pair on **1**, which drops eight. Otherwise 1 is the safe pick:
+ *   the worst a pair on it costs is one step, and everybody would pick 1 every
+ *   round.
  * - **Three or more** picked the same number: all of them drop eight.
  * - **Alone** on a number: you stay where you are.
  *
@@ -25,7 +28,7 @@ export const TOWER = {
   steps: 20,
   /** The picks. */
   options: [1, 4, 6] as readonly number[],
-  /** How far three or more on the same pick drop. */
+  /** How far three or more on the same pick drop - and a pair on the smallest pick. */
   crowdDrop: 8,
   /** Seconds to pick. */
   choose: 2,
@@ -114,7 +117,7 @@ export function choose(game: Game, player: number, pick: number, round = game.ro
 /** How far a pick moves everybody on it, for how many made it. */
 export function moveFor(pick: number, count: number): number {
   if (count >= 3) return TOWER.crowdDrop
-  if (count === 2) return pick
+  if (count === 2) return pick === TOWER.options[0] ? TOWER.crowdDrop : pick
   return 0
 }
 

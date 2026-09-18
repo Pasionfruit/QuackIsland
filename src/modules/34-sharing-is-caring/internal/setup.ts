@@ -55,5 +55,5 @@ export function newRound({ seed = nextSeed(), roster = roundRoster(), me = myId(
 
 /** An arena with nobody in it yet, for a guest to hold until the host's first snapshot. */
 export function waitingRound(): Round {
-  return { seed: 0, id: 0, players: [], holder: null, heldSince: 0, elapsed: 0, over: false }
+  return { seed: 0, id: 0, players: [], rocks: [], holder: null, heldSince: 0, elapsed: 0, over: false }
 }

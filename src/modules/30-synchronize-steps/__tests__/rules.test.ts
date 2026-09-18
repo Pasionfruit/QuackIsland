@@ -20,9 +20,10 @@ function round(g: Game, picks: number[]) {
 }
 
 describe('a move', () => {
-  it('is nothing alone, the number for a pair, and eight for a crowd', () => {
+  it('is nothing alone, the number for a pair, and eight for a crowd or a pair on 1', () => {
     expect(moveFor(6, 1)).toBe(0)
-    expect(moveFor(1, 2)).toBe(1)
+    expect(moveFor(1, 1)).toBe(0)
+    expect(moveFor(1, 2)).toBe(TOWER.crowdDrop)
     expect(moveFor(4, 2)).toBe(4)
     expect(moveFor(6, 2)).toBe(6)
     expect(moveFor(1, 3)).toBe(TOWER.crowdDrop)
@@ -36,6 +37,13 @@ describe('a round', () => {
     expect(g.phase).toBe('choose')
     expect(g.players.every((p) => p.step === TOWER.steps && p.pick === null && !p.out)).toBe(true)
     expect(createGame(SEED, [{ id: 'solo' }]).phase).toBe('over')
+  })
+
+  it('drops a pair on 1 eight, like a crowd', () => {
+    const g = game(3)
+    round(g, [1, 1, 6])
+    expect(g.players.map((p) => p.step)).toEqual([12, 12, 20])
+    expect(g.players[0].last).toEqual({ pick: 1, with: 2, moved: TOWER.crowdDrop, auto: false })
   })
 
   it('moves a pair, drops a crowd and leaves somebody alone where they are', () => {
@@ -150,20 +158,20 @@ describe('the end', () => {
     expect(g.phase).toBe('over')
     const h = game(3)
     round(h, [6, 6, 6]) // crowd: 12 12 12
-    round(h, [6, 6, 6]) // 4 4 4
-    round(h, [1, 4, 1]) // 3 4 3
-    round(h, [6, 6, 6]) // all out, from 3 4 3
+    round(h, [4, 6, 4]) // 8 12 8
+    round(h, [6, 6, 1]) // 2 6 8
+    round(h, [6, 6, 6]) // all out, from 2 6 8
     expect(h.phase).toBe('over')
     expect(placings(h).map((e) => [e.stepper.id, e.place])).toEqual([
-      ['p2', 1],
-      ['p1', 2],
-      ['p3', 2],
+      ['p3', 1],
+      ['p2', 2],
+      ['p1', 3],
     ])
   })
 
   it('ends after the last round when nobody ever matches, highest first', () => {
     const g = game(3)
-    round(g, [1, 1, 4]) // 19 19 20
+    round(g, [1, 1, 4]) // a pair on 1: 12 12 20
     for (let i = 1; i < TOWER.rounds; i++) round(g, [1, 4, 6])
     expect(g.phase).toBe('over')
     expect(g.round).toBe(TOWER.rounds - 1)

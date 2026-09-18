@@ -4,8 +4,8 @@
 
 **Minigame 19.** Everybody starts on top of a tower twenty steps high. Every two
 seconds everybody picks how far to go down: 1, 4 or 6. Then the picks are
-revealed. If exactly two picked the same number, both go down that far. If three
-or more did, they all drop eight. Anybody alone on a number stays put. The game
+revealed. If exactly two picked the same number, both go down that far - except
+two on 1, who drop eight. If three or more did, they all drop eight. Anybody alone on a number stays put. The game
 ends as soon as anybody reaches the bottom. Highest at the end wins.
 
 It plugs into `15-minigames` and nothing else in the build knows it exists.
@@ -21,6 +21,7 @@ not: the players are the island's capsule and the staircase is boxes.
 | Players start on a tower 20 steps high | `TOWER.steps`, `createGame` |
 | Every 2 seconds, choose 1, 4 or 6 steps down | `TOWER.choose`, `TOWER.options`, `choose` |
 | Two players choose the same number: both move down that many | `moveFor`, `resolve` |
+| Two players choose 1: both drop 8, so nobody can spam 1 | `moveFor` |
 | 3 or more choose the same number: all jump 8 down | `TOWER.crowdDrop`, `moveFor` |
 | The only player on an option stays still | `moveFor` |
 | Eliminated on reaching the bottom, and the game ends | `resolve` sets `out`, `reachedBottom` ends it |
@@ -44,6 +45,10 @@ not: the players are the island's capsule and the staircase is boxes.
 
 ### Decisions to check
 
+- **A pair on 1 drops eight.** Before, 1 was the pick to spam: a pair on it cost
+  one step, so it was nearly as safe as being alone. Now a pair on 1 costs as
+  much as a crowd, and 4 is the cheapest pair. The reveal card says "pair - down
+  8" and shows it red, like a crowd.
 - **A player who has not picked by the end of a round gets a pick at random**,
   shown as "(late)". Without this, not picking would be the best move in the game,
   since you would never move.
@@ -89,7 +94,7 @@ towards the numbers fewest players picked last round, but only as a lean.
 - **Picking:** a bubble over your head shows your number, a tick over anybody
   else's head says they have picked, and the bar under the stage runs down.
 - **The reveal:** every bubble shows its number, green if the player was alone,
-  yellow for a pair, red for a crowd. Cards across the top say what each number
+  yellow for a pair, red for a drop of eight (a crowd, or a pair on 1). Cards across the top say what each number
   did ("pair - down 4", "crowd - down 8", "alone - stays", "nobody") and who
   picked it. A moment later everybody walks down, hopping one step at a time.
 - **Out:** you land on the ground past the bottom step, and your HUD pill says
@@ -124,7 +129,8 @@ Exported because it is worth testing, not because anything else needs it.
 
 ## Invariants you may rely on
 
-- **Alone stays, a pair moves by its number, three or more drop eight.** Tested.
+- **Alone stays, a pair moves by its number except a pair on 1 drops eight,
+  three or more drop eight.** Tested.
 - **Only 1, 4 or 6, only while picking, only for this round; the last pick counts.**
   Tested.
 - **Anybody who has not picked gets a random pick, the same one for the same seed.**

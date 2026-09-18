@@ -87,7 +87,7 @@ export function useRoundNet(): RoundNet {
     }
 
     // Nothing to say until there is a round to say it about.
-    const said = `${round.id}:${wish.x.toFixed(2)}:${wish.y.toFixed(2)}`
+    const said = `${round.id}:${wish.x.toFixed(2)}:${wish.y.toFixed(2)}:${wish.boost ? 1 : 0}`
     if (round.id !== 0 && (said !== lastSaid.current || now - saidAt.current >= REPEAT_MS)) {
       lastSaid.current = said
       saidAt.current = now
