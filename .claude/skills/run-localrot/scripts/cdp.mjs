@@ -166,6 +166,12 @@ export class Page {
 
 /** Each game's screen component, and an element inside it to start the search from. */
 export const GAMES = {
+  'whats-your-rpm': {
+    title: "What's Your RPM?",
+    screen: 'RpmScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
   'ill-just-wait': {
     title: "I'll Just Wait",
     screen: 'IllJustWaitScreen',

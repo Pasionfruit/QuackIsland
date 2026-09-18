@@ -601,14 +601,22 @@ const ENTRIES = [
     done: { environment: false, controls: false, assets: false },
   },
   {
-    id: 'reserved-31',
+    id: 'whats-your-rpm',
     number: 31,
-    title: 'Free slot',
+    title: "What's Your RPM?",
     kind: 'free-for-all',
-    description: [],
-    controls: [],
-    reserved: true,
-    done: { environment: false, controls: false, assets: false },
+    description: [
+      'Scroll through as many reels as you can on your mini phone, and be the first to reach the end of the feed. Scroll the mouse wheel rapidly to move through the reels.',
+      'Watch out for ads: they stop your progress dead, with a Skip Ad button somewhere different on the screen every time - and smaller the further you get. Click it quickly to carry on scrolling. The first player to reach the end wins.',
+    ],
+    controls: [
+      { input: 'Mouse Wheel', does: 'Scroll through reels' },
+      { input: 'Mouse', does: 'Click skip ad buttons' },
+    ],
+    reserved: false,
+    // Built: see `40-whats-your-rpm`. The assets stage is still to do - the
+    // phone and its reels are drawn on the page and the players are the island's capsule.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'reserved-32',

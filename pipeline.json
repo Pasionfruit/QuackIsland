@@ -128,7 +128,8 @@
         "36-musical-mayhem",
         "37-wheres-midnight",
         "38-pet-race",
-        "39-ill-just-wait"
+        "39-ill-just-wait",
+        "40-whats-your-rpm"
       ]
     }
   ],
@@ -177,7 +178,8 @@
         "36-musical-mayhem",
         "37-wheres-midnight",
         "38-pet-race",
-        "39-ill-just-wait"
+        "39-ill-just-wait",
+        "40-whats-your-rpm"
       ],
       "generation": 1,
       "contract": {
@@ -367,7 +369,8 @@
         "34-sharing-is-caring",
         "35-chef-caricature",
         "36-musical-mayhem",
-        "39-ill-just-wait"
+        "39-ill-just-wait",
+        "40-whats-your-rpm"
       ],
       "generation": 1,
       "contract": {
@@ -885,7 +888,8 @@
         "36-musical-mayhem",
         "37-wheres-midnight",
         "38-pet-race",
-        "39-ill-just-wait"
+        "39-ill-just-wait",
+        "40-whats-your-rpm"
       ],
       "generation": 1,
       "contract": {
@@ -1402,7 +1406,8 @@
         "36-musical-mayhem",
         "37-wheres-midnight",
         "38-pet-race",
-        "39-ill-just-wait"
+        "39-ill-just-wait",
+        "40-whats-your-rpm"
       ],
       "generation": 1,
       "contract": {
@@ -3451,6 +3456,84 @@
       "freeze": null,
       "nonGoals": [
         "No models: players are the island capsule, the clocks are primitives on a painted face",
+        "No moving camera",
+        "No sound of its own"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "40-whats-your-rpm",
+      "phase": "P6",
+      "title": "Minigame 31, What's Your RPM?: a race down a feed of sixty reels on a mini phone - mouse wheel to scroll, capped at 360 reels a minute - with ads that stop you dead until you click a Skip Ad button that is somewhere different each time and shrinks as you go; everybody walking their lane on a track, first to the end wins",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "40.1",
+          "title": "The feed: sixty seeded reels, and a seeded plan of ads - where each stops you, where its skip button goes, how small",
+          "status": "done"
+        },
+        {
+          "id": "40.2",
+          "title": "The race: scrolling stops at an ad until it is skipped, first to the end wins and ends it, else a time limit",
+          "status": "done"
+        },
+        {
+          "id": "40.3",
+          "title": "The controls: the mouse wheel queues reels and the frame drains them at no more than the top speed; click Skip Ad",
+          "status": "done"
+        },
+        {
+          "id": "40.4",
+          "title": "Your mini phone with the feed on it, beside a still camera on a running track with everybody walking their lane, phone held up",
+          "status": "done"
+        },
+        {
+          "id": "40.5",
+          "title": "One game shared across the lobby, everybody's progress on the wire, scrolling and skipping on your own screen at once, stand-ins only when alone",
+          "status": "done"
+        },
+        {
+          "id": "40.6",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "40.7",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-18T23:46:10.406Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: players are the island capsule, the phones are primitives and the feed is drawn on the page",
         "No moving camera",
         "No sound of its own"
       ],

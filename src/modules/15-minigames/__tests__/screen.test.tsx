@@ -199,8 +199,8 @@ describe('a game briefing', () => {
 
   it('opens a free slot like any other, and says a number is waiting', () => {
     const where = mount()
-    act(() => openMinigame('reserved-31'))
-    expect(where.textContent).toContain('31')
+    act(() => openMinigame('reserved-32'))
+    expect(where.textContent).toContain('32')
     expect(where.textContent).toContain('waiting for a game')
     expect(where.querySelector('[data-play]')).not.toBeNull()
   })
