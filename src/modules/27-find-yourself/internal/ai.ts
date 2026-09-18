@@ -13,7 +13,7 @@ import { createRng, hashSeed } from '../../00-core'
 import { cupCount, currentStage, facesBySlot, type Game } from './rules'
 
 /** The chance a stand-in tracks its own cup, by stage. */
-export const BOT_TRACKS: readonly number[] = [0.8, 0.55, 0.35]
+export const BOT_TRACKS: readonly number[] = [0.75, 0.45, 0.25]
 /** How long a stand-in takes to pick, least and most. */
 export const BOT_DECIDES: readonly [number, number] = [1.2, 4]
 

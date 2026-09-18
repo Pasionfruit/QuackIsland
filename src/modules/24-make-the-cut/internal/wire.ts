@@ -2,15 +2,15 @@
  * One game, on the wire.
  *
  * The host sends what everybody sees: the web's seed and size, the clock, whose
- * turn it is, every string cut - who cut it and whether it eliminated - and
- * where everybody is. **Never which uncut strings eliminate**, and never the
+ * turn it is, every string cut - who cut it and whether it eliminated - the
+ * cut waiting out its suspense (who and which, not what), and where everybody is. **Never which uncut strings eliminate**, and never the
  * secret that decides it: a string's nature is only sent once it is cut.
  *
  * A guest sends which way it is walking, four times a second and on every
  * change, and - when it cuts - the string, the turn it cut on, and a number that
  * goes up with each cut, said again until the host has taken it.
  */
-import { PHASES, type Cut, type Cutter, type Game, type Intent, type Last } from './rules'
+import { PHASES, type Cut, type Cutter, type Game, type Intent, type Last, type Pending } from './rules'
 
 export const SNAPSHOT_TAG = 'mc'
 export const INTENT_TAG = 'mc-in'
@@ -28,6 +28,7 @@ export interface Snapshot {
   turn: number
   turns: number
   last: Last | null
+  pending: Pending | null
   cut: (Cut | null)[]
   cutters: WireCutter[]
 }
@@ -44,6 +45,7 @@ export function encodeSnapshot(game: Game): Record<string, unknown> {
     if (c) cuts.push([string, c.player, c.deadly ? 1 : 0, r2(c.at)])
   })
   const last = game.last
+  const pending = game.pending
   return {
     t: SNAPSHOT_TAG,
     g: game.id,
@@ -55,6 +57,7 @@ export function encodeSnapshot(game: Game): Record<string, unknown> {
     u: game.turn,
     n: game.turns,
     l: last ? [last.player, last.string, last.deadly ? 1 : 0, last.auto ? 1 : 0] : 0,
+    w: pending ? [pending.player, pending.string, pending.auto ? 1 : 0] : 0,
     x: cuts,
     f: game.players.map(
       (p): WireCutter => [p.id, r2(p.x), r2(p.y), r2(p.facing), p.out ? p.out.order : 0, p.out ? p.out.string : -1, p.out ? r2(p.out.at) : 0, p.cuts, p.seq],
@@ -102,6 +105,14 @@ export function decodeSnapshot(message: Record<string, unknown>): Snapshot | nul
     last = { player, string, deadly: deadly === 1, auto: auto === 1 }
   }
 
+  let pending: Pending | null = null
+  if (message.w !== undefined && message.w !== 0) {
+    if (!Array.isArray(message.w) || message.w.length !== 3) return null
+    const [player, string, auto] = message.w
+    if (!isPlayer(player) || !isString(string) || (auto !== 0 && auto !== 1)) return null
+    pending = { player, string, auto: auto === 1 }
+  }
+
   return {
     id: message.g as number,
     seed: message.s as number,
@@ -112,6 +123,7 @@ export function decodeSnapshot(message: Record<string, unknown>): Snapshot | nul
     turn: message.u as number,
     turns: message.n as number,
     last,
+    pending,
     cut,
     cutters,
   }
@@ -134,6 +146,7 @@ export function applySnapshot(game: Game, snap: Snapshot, me: string): Map<strin
   game.turn = snap.turn
   game.turns = snap.turns
   game.last = snap.last
+  game.pending = snap.pending
   game.outs = snap.cutters.filter((c) => c[4] > 0).length
 
   const at = new Map<string, { x: number; y: number; facing: number }>()

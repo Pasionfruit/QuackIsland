@@ -251,8 +251,13 @@ try {
         const walker = results.findIndex((r) => r && r.walking !== undefined)
         if (walker > 0) walked = Math.max(walked, 1)
         if (cutter >= 0) {
+          // The cut waits out its suspense on the host before it snaps.
           await sleep(700)
-          const after = await onHost()
+          let after = await onHost()
+          for (let w = 0; w < 80 && after.phase === 'suspense'; w++) {
+            await sleep(80)
+            after = await onHost()
+          }
           say(`${game}: ${ids[cutter]} cut string ${results[cutter].cut}; host's last cut ${JSON.stringify(after.last)}`)
           if (!after.last || after.last.string !== results[cutter].cut || after.last.player !== cutter) throw new Error(`${game}: ${ids[cutter]}'s cut did not land on the host`)
           if (cutter > 0) landed = { id: ids[cutter], string: results[cutter].cut }

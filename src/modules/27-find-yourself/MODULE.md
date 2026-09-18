@@ -26,7 +26,7 @@ not: the faces are the island's capsule and the cups are cylinders.
 | The brief said | Where it is |
 | --- | --- |
 | Cups with each player's face underneath | `dealStage` - `faces`, `cupCount` |
-| Cups shuffle around the table at increasing speeds | `TABLE.swaps` (7, 12, 18), `TABLE.swapTime` (0.6, 0.42, 0.28 s), `cupsAt` |
+| Cups shuffle around the table at increasing speeds | `TABLE.swaps` (8, 14, 22), `TABLE.swapTime` (0.34, 0.2, 0.11 s), `cupsAt` |
 | After each stage, select the cup hiding your face | the `pick` phase, `pick` |
 | 3 stages worth 1, 2 and 3 points | `TABLE.points`, `stepGame` scoring on the reveal |
 | Each stage faster and harder to track | more swaps, each quicker |
@@ -42,9 +42,9 @@ not: the faces are the island's capsule and the cups are cylinders.
 - **Shuffle.** Two cups trade places at a time, easing out and back in, one in
   front of the row and one behind so they pass. The same pair is never swapped
   twice running, since that would look like nothing happened.
-  - Stage 1: 7 swaps at 0.6 s each.
-  - Stage 2: 12 swaps at 0.42 s.
-  - Stage 3: 18 swaps at 0.28 s.
+  - Stage 1: 8 swaps at 0.34 s each - quick, but followable.
+  - Stage 2: 14 swaps at 0.2 s - hard.
+  - Stage 3: 22 swaps at 0.11 s - meant to feel close to a guess by eye.
 - **Pick, 7 s.** Click a cup. The first click is your pick for the stage. The
   phase ends early once everybody still here has picked.
 - **Result, 3.2 s.** The cups lift up and back off the faces, a marker in every
@@ -77,8 +77,8 @@ your cup; your eyes are meant to.
   frame - see Duck Hunt's notes.
 
 **The roster is the lobby**, host first, up to eight. Alone, three stand-ins fill
-in. A stand-in takes 1.2 to 4 seconds to pick, and tracks its own cup 80% of the
-time in stage 1, 55% in stage 2 and 35% in stage 3 - otherwise it picks another
+in. A stand-in takes 1.2 to 4 seconds to pick, and tracks its own cup 75% of the
+time in stage 1, 45% in stage 2 and 25% in stage 3 - otherwise it picks another
 cup at random.
 
 ## The camera does not move

@@ -52,6 +52,11 @@ export const TOWER = {
   draw: 2.5,
   /** Seconds a turn lasts. After it, the nearest string is cut for you. */
   turn: 12,
+  /**
+   * Seconds between a cut and finding out what it was: the blade is in, the
+   * string strains and frays, and everybody waits to see if it snaps clean.
+   */
+  suspense: 2.6,
   /** Seconds a cut's result is shown before the next turn. */
   result: 2.2,
 } as const
@@ -112,8 +117,8 @@ export function webFor(seed: number, count: number): Strand[] {
   return web
 }
 
-export type Phase = 'draw' | 'turn' | 'result' | 'over'
-export const PHASES: readonly Phase[] = ['draw', 'turn', 'result', 'over']
+export type Phase = 'draw' | 'turn' | 'suspense' | 'result' | 'over'
+export const PHASES: readonly Phase[] = ['draw', 'turn', 'suspense', 'result', 'over']
 
 export interface Cutter {
   id: string
@@ -134,6 +139,13 @@ export interface Cut {
   player: number
   deadly: boolean
   at: number
+}
+
+/** A cut made and not yet known: who, which string, and whether it was cut for them. */
+export interface Pending {
+  player: number
+  string: number
+  auto: boolean
 }
 
 /** What happened on the last turn. */
@@ -166,6 +178,8 @@ export interface Game {
   /** How many turns have been taken, so a cut can say which turn it is for. */
   turns: number
   last: Last | null
+  /** During the suspense, the cut waiting to be known. What it is stays on the host until then. */
+  pending: Pending | null
   outs: number
 }
 
@@ -222,6 +236,7 @@ export function createGame(seed: number, luck: number, entrants: readonly Entran
     turn: entrants.length > 0 ? Math.floor(random() * entrants.length) : 0,
     turns: 0,
     last: null,
+    pending: null,
     outs: 0,
   }
 }
@@ -273,21 +288,35 @@ function knockOut(game: Game, player: number, string: number): void {
  * A cutter cuts a string. Only on their turn, only a string still whole, and -
  * unless it is being cut for them - only one in reach. `turn`, if given, must be
  * the turn it was asked for. Returns whether it counted.
+ *
+ * The cut is not known at once: the game goes into the suspense, and only when
+ * that runs out does the string snap and say what it was - see `stepGame`.
  */
 export function cut(game: Game, player: number, string: number, { auto = false, turn, grace = 0 }: { auto?: boolean; turn?: number; grace?: number } = {}): boolean {
   if (whoseTurn(game) !== player) return false
   if (turn !== undefined && turn !== game.turns) return false
   if (!Number.isInteger(string) || string < 0 || string >= game.count || game.cut[string] !== null) return false
   if (!auto && !inReach(game, player, string, grace)) return false
+  game.pending = { player, string, auto }
+  game.turns += 1
+  game.phase = 'suspense'
+  game.clock = 0
+  return true
+}
+
+/** The suspense is over: the pending cut snaps, and says what it was. */
+function resolve(game: Game): void {
+  const pending = game.pending
+  game.pending = null
+  game.phase = 'result'
+  game.clock = 0
+  if (!pending) return
+  const { player, string, auto } = pending
   const deadly = game.deadly[string] === true
   game.cut[string] = { player, deadly, at: game.elapsed }
   game.players[player].cuts += 1
   if (deadly) knockOut(game, player, string)
   game.last = { player, string, deadly, auto }
-  game.turns += 1
-  game.phase = 'result'
-  game.clock = 0
-  return true
 }
 
 /** The whole string nearest a cutter, for cutting when their time is up. */
@@ -312,8 +341,9 @@ export function leave(game: Game, player: number): void {
   knockOut(game, player, -1)
   if (standing(game).length <= 1) {
     game.phase = 'over'
+    game.pending = null
     game.clock = 0
-  } else if (game.turn === player && game.phase !== 'result') {
+  } else if (game.turn === player && (game.phase === 'draw' || game.phase === 'turn')) {
     game.turn = nextFrom(game, player)
     game.clock = 0
   }
@@ -369,7 +399,8 @@ export function walk(cutter: Cutter, intent: Intent, step: number): void {
 
 /**
  * One step: everybody walks, and the clock - the draw, a turn running out (the
- * nearest string is cut for you), a result shown, the next turn or the end.
+ * nearest string is cut for you), the suspense after a cut and then its snap,
+ * a result shown, the next turn or the end.
  */
 export function stepGame(game: Game, intents: ReadonlyMap<string, Intent>, dt: number): Game {
   const step = Math.min(Math.max(dt, 0), 0.05)
@@ -391,6 +422,9 @@ export function stepGame(game: Game, intents: ReadonlyMap<string, Intent>, dt: n
       break
     case 'turn':
       if (game.clock >= TOWER.turn) cut(game, game.turn, nearestString(game, game.turn), { auto: true })
+      break
+    case 'suspense':
+      if (game.clock >= TOWER.suspense) resolve(game)
       break
     case 'result':
       if (game.clock < TOWER.result) break

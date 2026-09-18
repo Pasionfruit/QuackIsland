@@ -24,9 +24,9 @@ export const TABLE = {
   /** How many stages, and what each is worth. */
   points: [1, 2, 3] as readonly number[],
   /** Swaps in each stage's shuffle... */
-  swaps: [7, 12, 18] as readonly number[],
+  swaps: [8, 14, 22] as readonly number[],
   /** ...and how long each swap takes, seconds. */
-  swapTime: [0.6, 0.42, 0.28] as readonly number[],
+  swapTime: [0.34, 0.2, 0.11] as readonly number[],
 
   /** Seconds the faces are shown before the cups come down. */
   show: 2.5,

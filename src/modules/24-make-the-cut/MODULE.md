@@ -8,6 +8,8 @@ for every player, plus one eliminating string fewer than there are players**.
 A random player cuts first, and the turn passes round the group.
 
 - **Your turn:** walk to a string, aim at it, and click to cut it.
+- **The suspense:** 2.6 seconds with the string straining before anybody
+  knows what it was.
 - **A normal string:** nothing happens.
 - **An eliminating string:** you are launched off the tower, and out.
 
@@ -26,7 +28,7 @@ not: the cutters are the island's capsule and the strings are cylinders.
 | A tower surrounded by a web of strings | `TOWER`, `layWeb` |
 | 3 strings per player, plus one fewer eliminating strings than players | `stringCount` (4N - 1), `deadlyCount` (N - 1) |
 | A random player cuts first, the turn passes around | `createGame` draws `turn`; the `draw` phase shows it; `stepGame` passes it on |
-| A normal string: nothing happens | `cut` |
+| A normal string: nothing happens | `cut`, then the `suspense` phase, then `resolve` in `stepGame` |
 | An eliminating string: launched off and eliminated | `cut` → `out`; the scene's launch |
 | The last player remaining wins | `stepGame` ends at one standing; `placings` |
 | WASD - move; mouse - aim; left click - cut string | `walk`, `aimAt`, `inReach` |
@@ -41,6 +43,12 @@ not: the cutters are the island's capsule and the strings are cylinders.
   cut for you - it could be an eliminating one. Turns cannot be stalled away,
   and nobody is knocked out just for being slow.
 - **Walking out of the lobby is out**, and your turn passes on.
+- **Suspense after every cut** (`TOWER.suspense`, 2.6 s). A cut goes into
+  `game.pending` and the `suspense` phase; the string shivers harder and
+  harder, thins and pales, a banner says who cut and counts out dots, and only
+  then does it snap and say what it was. Nothing about the cut - whether it
+  eliminated, who is out - is sent or shown until the
+  suspense ends. A snapshot sends the pending cut as who and which, never what.
 
 ## Why it always ends
 
@@ -98,6 +106,8 @@ turn it stands still.
 - **Your turn:** a ring on the boards shows how far you can reach, and a banner
   tells you what to do - or to walk closer.
 - **The draw:** names flick past and land on whoever cuts first.
+- **A string being cut strains first:** it shivers, faster and harder, thinning
+  and paling, through the suspense, under a banner saying who cut it.
 - **A cut string snaps:** one end swings down from the rim and the other from its
   pole - pale for a normal string, red for an eliminating one. Whoever cut an
   eliminating one is launched outward and up, spinning, and down into the grass.
@@ -125,7 +135,7 @@ Exported because it is worth testing, not because anything else needs it.
 | `layWeb`, `webFor`, `stringCount`, `deadlyCount`, `spawns` | The web and the start. Pure. |
 | `createGame`, `stepGame`, `cut`, `leave`, `walk`, `whoseTurn`, `inReach`, `distanceTo`, `nearestString`, `deadlyLeft`, `standing`, `placings` | The game. Pure. |
 | `aimAt`, `rayToSegment` | Aiming. Pure. |
-| `Game`, `Cutter`, `Cut`, `Last`, `Strand`, `Intent`, `Phase`, `Point3`, `Entrant` | Its shapes. |
+| `Game`, `Cutter`, `Cut`, `Last`, `Pending`, `Strand`, `Intent`, `Phase`, `Point3`, `Entrant` | Its shapes. |
 | `botPlan`, `botIntents`, `botCut`, `BOT_THINK` | The stand-ins. |
 | `newGame`, `gameRoster`, `secret`, `waitingGame`, `myId`, `ME`, `SOLO_CUTTERS`, `MAX_CUTTERS` | Dealing a game. |
 | `encodeSnapshot`, `decodeSnapshot`, `applySnapshot`, `encodeIntent`, `decodeIntent`, `SNAPSHOT_TAG`, `INTENT_TAG` | A shared tower on the wire. Pure. |
@@ -139,6 +149,8 @@ Exported because it is worth testing, not because anything else needs it.
 - **Strings rise from the rim and never cross, seen from above.** Tested.
 - **Turns start after the draw and pass round, skipping anybody out.** Tested.
 - **A normal string does nothing; an eliminating one puts its cutter out.** Tested.
+- **A cut waits out the suspense before anything about it is known, and a
+  snapshot during it never says what it was.** Tested.
 - **A cut counts only on your turn, in reach (plus the allowance for a guest), on
   a whole string, for the turn it was made on.** Tested.
 - **Out of time, the nearest string is cut for you.** Tested.
@@ -181,7 +193,7 @@ Open a lobby, leave the game on Volcano Island, press **minigames**, open
 - **On your turn,** a marker spins over your head and a ring shows your reach.
   Walk with WASD. Put the pointer on a string: gold if you can reach it, grey
   if not ("too far").
-- **Click a gold string.** It snaps. Normal: a green banner, and the turn moves on.
+- **Click a gold string.** It strains for a couple of seconds, then snaps. Normal: a green banner, and the turn moves on.
   Eliminating: its ends go red, you are launched off the tower, a red banner.
 - **Wait out a turn.** At twelve seconds a string near you is cut for you.
 - **Watch the stand-ins** walk to strings and cut them; now and then one is

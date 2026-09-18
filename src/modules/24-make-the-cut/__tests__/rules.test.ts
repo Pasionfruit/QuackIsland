@@ -45,6 +45,18 @@ function toTurn(game: Game): Game {
   return game
 }
 
+/** Through the suspense after a cut, to the moment it snaps. */
+function snap(game: Game): Game {
+  while (game.phase === 'suspense') stepGame(game, NONE, 0.05)
+  return game
+}
+
+/** Through a cut's suspense and result, to the next turn or the end. */
+function onward(game: Game): Game {
+  while (game.phase === 'suspense' || game.phase === 'result') stepGame(game, NONE, 0.05)
+  return game
+}
+
 /** Puts the player whose turn it is next to a string, and returns that string. */
 function standBy(game: Game, deadly: boolean): number {
   const player = whoseTurn(game)!
@@ -111,7 +123,7 @@ describe('the turns', () => {
     toTurn(game)
     expect(whoseTurn(game)).toBe(first)
     cut(game, first, standBy(game, false))
-    run(game, TOWER.result + 0.05)
+    onward(game)
     expect(whoseTurn(game)).toBe((first + 1) % 4)
   })
 
@@ -120,6 +132,7 @@ describe('the turns', () => {
     const player = game.turn
     const string = standBy(game, false)
     expect(cut(game, player, string)).toBe(true)
+    snap(game)
     expect(game.cut[string]).toEqual({ player, deadly: false, at: game.elapsed })
     expect(game.players[player]).toMatchObject({ out: null, cuts: 1 })
     expect(game.last).toEqual({ player, string, deadly: false, auto: false })
@@ -131,16 +144,39 @@ describe('the turns', () => {
     const player = game.turn
     const string = standBy(game, true)
     cut(game, player, string)
+    snap(game)
     expect(game.players[player].out).toEqual({ order: 1, at: game.elapsed, string })
     expect(deadlyLeft(game)).toBe(1)
-    run(game, TOWER.result + 0.05)
+    onward(game)
     expect(whoseTurn(game)).toBe((player + 1) % 3)
     for (let n = 0; n < 6; n++) {
       if (game.phase !== 'turn') break
       expect(whoseTurn(game)).not.toBe(player)
       cut(game, game.turn, standBy(game, false))
-      run(game, TOWER.result + 0.05)
+      onward(game)
     }
+  })
+
+  it('keeps a cut in suspense before it snaps, and says nothing of it until then', () => {
+    const game = toTurn(createGame(SEED, LUCK, cutters(3)))
+    const player = game.turn
+    const string = standBy(game, true)
+    expect(cut(game, player, string)).toBe(true)
+    expect(game.phase).toBe('suspense')
+    expect(game.pending).toEqual({ player, string, auto: false })
+    expect(whoseTurn(game)).toBeNull()
+    // No second cut while waiting.
+    expect(cut(game, player, (string + 1) % game.count, { auto: true })).toBe(false)
+    run(game, TOWER.suspense - 0.1)
+    expect(game.phase).toBe('suspense')
+    expect(game.cut[string]).toBeNull()
+    expect(game.last).toBeNull()
+    expect(game.players[player].out).toBeNull()
+    expect(deadlyLeft(game)).toBe(2)
+    run(game, 0.15)
+    expect(game.phase).toBe('result')
+    expect(game.pending).toBeNull()
+    expect(game.players[player].out?.string).toBe(string)
   })
 
   it('refuses a cut off your turn, out of reach, on a cut string, or for another turn', () => {
@@ -159,7 +195,7 @@ describe('the turns', () => {
     Object.assign(game.players[player], { x: rim.x + (near.x - rim.x) * back, y: rim.z + (near.y - rim.z) * back })
     expect(cut(game, player, string)).toBe(false)
     expect(cut(game, player, string, { grace: TOWER.reachGrace, turn: 0 })).toBe(true)
-    run(game, TOWER.result + 0.05)
+    onward(game)
     expect(cut(game, game.turn, string, { grace: 100 })).toBe(false)
   })
 
@@ -168,6 +204,7 @@ describe('the turns', () => {
     const player = game.turn
     const nearest = nearestString(game, player)
     run(game, TOWER.turn + 0.05)
+    snap(game)
     expect(game.last).toMatchObject({ player, string: nearest, auto: true })
     expect(game.cut[nearest]?.player).toBe(player)
   })
@@ -200,10 +237,10 @@ describe('the end', () => {
     const game = toTurn(createGame(SEED, LUCK, cutters(3)))
     const a = game.turn
     cut(game, a, standBy(game, true))
-    run(game, TOWER.result + 0.05)
+    onward(game)
     const b = game.turn
     cut(game, b, standBy(game, true))
-    run(game, TOWER.result + 0.05)
+    onward(game)
     expect(game.phase).toBe('over')
     const c = [0, 1, 2].find((i) => i !== a && i !== b)!
     expect(placings(game).map((e) => [e.index, e.place])).toEqual([

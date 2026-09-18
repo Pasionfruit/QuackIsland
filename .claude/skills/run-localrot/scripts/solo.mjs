@@ -329,7 +329,7 @@ try {
     await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 90000)
     say('results', await page.shot('5-results.png'))
   } else if (opt.steer && opt.game === 'make-the-cut') {
-    const state = () => page.eval(`(() => { const g = ${gameState('make-the-cut')}; const me = g.players.findIndex((p) => p.mine); return { phase: g.phase, clock: +g.clock.toFixed(2), turn: g.turn, turns: g.turns, me, out: g.players[me].out, cuts: g.players[me].cuts, last: g.last, standing: g.players.filter((p) => !p.out).length, cut: g.cut.map((c) => (c ? c.player + (c.deadly ? '!' : '') : '.')).join(' ') } })()`)
+    const state = () => page.eval(`(() => { const g = ${gameState('make-the-cut')}; const me = g.players.findIndex((p) => p.mine); return { phase: g.phase, clock: +g.clock.toFixed(2), turn: g.turn, turns: g.turns, me, out: g.players[me].out, cuts: g.players[me].cuts, last: g.last, pending: g.pending, standing: g.players.filter((p) => !p.out).length, cut: g.cut.map((c) => (c ? c.player + (c.deadly ? '!' : '') : '.')).join(' ') } })()`)
     const shots = new Set()
     const log = []
     for (let i = 0; i < 8000; i++) {
@@ -346,11 +346,23 @@ try {
       }
       if (did?.cut !== undefined) {
         await sleep(150)
-        const after = await state()
-        log.push({ string: did.cut, landed: after.last?.player === s.me && after.last?.string === did.cut, deadly: after.last?.deadly })
+        // A cut waits out the suspense - straining, nothing known - before it snaps.
+        const held = await state()
+        const pendingOk = held.phase === 'suspense' && held.pending?.player === s.me && held.pending?.string === did.cut && held.cut.split(' ')[did.cut] === '.'
+        if (!shots.has('suspense')) {
+          await sleep(1400)
+          say('suspense', JSON.stringify(held.pending), await page.shot('5a-suspense.png'))
+          shots.add('suspense')
+        }
+        let after = await state()
+        for (let w = 0; w < 100 && after.phase === 'suspense'; w++) {
+          await sleep(60)
+          after = await state()
+        }
+        log.push({ string: did.cut, suspense: pendingOk, landed: pendingOk && after.last?.player === s.me && after.last?.string === did.cut, deadly: after.last?.deadly })
         say('cut', JSON.stringify(log[log.length - 1]), shots.has('cut') ? '' : await page.shot('5-cut.png'))
         shots.add('cut')
-        if (!log[log.length - 1].landed) throw new Error('a cut in reach did not count')
+        if (!log[log.length - 1].landed) throw new Error('a cut in reach did not count, or did not wait out the suspense')
       }
       if (s.phase === 'result' && s.last?.deadly && !shots.has('launch')) {
         shots.add('launch')

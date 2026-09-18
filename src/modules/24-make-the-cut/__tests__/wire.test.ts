@@ -52,6 +52,25 @@ describe('a snapshot', () => {
     expect(copy.cut.every((c) => c === null)).toBe(true)
   })
 
+  it('says who cut what during the suspense, but not what it was', () => {
+    const game = toTurn(host(3))
+    const player = game.turn
+    const string = game.deadly.indexOf(true)
+    const rim = webFor(game.seed, game.count)[string].rim
+    Object.assign(game.players[player], { x: rim.x * 0.85, y: rim.z * 0.85 })
+    cut(game, player, string)
+    expect(game.phase).toBe('suspense')
+
+    const copy = waitingGame()
+    applySnapshot(copy, decodeSnapshot(relay(encodeSnapshot(game)))!, 'p1')
+    expect(copy.phase).toBe('suspense')
+    expect(copy.pending).toEqual({ player, string, auto: false })
+    expect(copy.cut[string]).toBeNull()
+    expect(copy.last).toBeNull()
+    expect(copy.players[player].out).toBeNull()
+    expect(decodeSnapshot({ ...relay(encodeSnapshot(game)), w: [player, string] })).toBeNull()
+  })
+
   it('is refused whole rather than half-read', () => {
     const good = relay(encodeSnapshot(host()))
     expect(decodeSnapshot(good)).not.toBeNull()

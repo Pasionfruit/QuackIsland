@@ -7,7 +7,8 @@
  * over their head, and on your own turn a ring on the boards shows how far you
  * can reach.
  *
- * Strings look alike until they are cut. A cut string snaps: one end hangs from
+ * Strings look alike until they are cut. A string being cut strains first -
+ * shivering harder, thinning and paling through the suspense - and then snaps: one end hangs from
  * the rim, the other from its pole - pale for a normal string, red for an
  * eliminating one, and whoever cut an eliminating one is launched off the tower,
  * spinning.
@@ -46,10 +47,14 @@ export const PALETTE = {
   groundColour: '#7b8f5a',
 } as const
 
+const STRAINED = new Color('#ffffff')
+
 /** How thick a string is drawn. Aiming allows for more - see `TOWER.aim`. */
 const ROPE = 0.06
 /** How long a snapped end hangs from the rim. */
 const DANGLE = 1.6
+/** How far a straining string shivers, at its worst. */
+const SHIVER = 0.09
 /** How long a launched cutter stays in view. */
 const FLIGHT = 3
 
@@ -140,6 +145,7 @@ function StringView({ strand, index, live, hands }: { strand: Strand; index: num
   const wholeMaterial = useRef<MeshStandardMaterial>(null)
   const topMaterial = useRef<MeshStandardMaterial>(null)
   const bottomMaterial = useRef<MeshStandardMaterial>(null)
+  const strained = useRef(false)
   const rim = useMemo(() => new Vector3(strand.rim.x, strand.rim.y + 0.25, strand.rim.z), [strand])
   const end = useMemo(() => new Vector3(strand.end.x, strand.end.y + 0.2, strand.end.z), [strand])
 
@@ -153,7 +159,27 @@ function StringView({ strand, index, live, hands }: { strand: Strand; index: num
     if (whole.current) whole.current.visible = !cut
     if (top.current) top.current.visible = !!cut
     if (bottom.current) bottom.current.visible = !!cut
+    if (!cut && g.phase === 'suspense' && g.pending?.string === index) {
+      // Straining: shivering side to side, faster and harder, thinning as it frays.
+      const t = Math.min(1, g.clock / TOWER.suspense)
+      const strain = t * t
+      const beat = clock.elapsedTime * (18 + 40 * strain)
+      const across = new Vector3().subVectors(end, rim).cross(new Vector3(0, 1, 0)).normalize()
+      if (whole.current) {
+        span(whole.current, rim, end)
+        whole.current.position.addScaledVector(across, Math.sin(beat) * SHIVER * (0.25 + strain))
+        whole.current.position.y += Math.cos(beat * 1.3) * SHIVER * 0.5 * strain
+        whole.current.scale.x = whole.current.scale.z = 1.6 - 0.9 * strain
+      }
+      wholeMaterial.current?.color.set(PALETTE.rope).lerp(STRAINED, strain)
+      if (wholeMaterial.current) wholeMaterial.current.emissiveIntensity = 0
+      strained.current = true
+      return
+    }
     if (!cut) {
+      // Back in place if a strain ended without a snap - somebody left mid-suspense.
+      if (strained.current && whole.current) span(whole.current, rim, end)
+      strained.current = false
       const aimedHere = hands.aimed.current === index && hands.canCut()
       const mine = g.players.findIndex((p) => p.mine)
       const reachable = aimedHere && mine >= 0 && inReach(g, mine, index)

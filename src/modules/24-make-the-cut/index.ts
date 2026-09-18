@@ -50,6 +50,7 @@ export {
   type Game,
   type Intent,
   type Last,
+  type Pending,
   type Phase,
   type Point3,
   type Strand,

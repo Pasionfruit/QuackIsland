@@ -169,6 +169,7 @@ export function MakeTheCutScreen({ run }: { run: MinigameRun }) {
       <div style={{ ...board, cursor: myTurn ? 'crosshair' : 'default' }} onContextMenu={(e) => e.preventDefault()} data-board>
         <Stage live={live} hands={hands} />
         {game.phase === 'draw' && ready ? <Draw game={game} nameOf={nameOf} /> : null}
+        {game.phase === 'suspense' && game.pending ? <Suspense game={game} nameOf={nameOf} /> : null}
         {game.phase === 'result' && game.last ? <Result last={game.last} game={game} nameOf={nameOf} /> : null}
         {myTurn && game.phase === 'turn' ? (
           <Banner
@@ -194,7 +195,8 @@ function Status({ game, nameOf }: { game: Game; nameOf: (id: string) => string }
   else if (game.phase === 'turn' && turn !== null) {
     text = game.players[turn].mine ? 'Your turn' : `${nameOf(game.players[turn].id)}'s turn`
     left = Math.max(0, TOWER.turn - game.clock)
-  } else if (game.phase === 'result') text = 'Snap!'
+  } else if (game.phase === 'suspense') text = 'Holding on…'
+  else if (game.phase === 'result') text = 'Snap!'
   else if (game.phase === 'over') text = 'Game over'
   return (
     <>
@@ -223,6 +225,28 @@ function Draw({ game, nameOf }: { game: Game; nameOf: (id: string) => string }) 
       <div style={{ ...drawCard, borderColor: COLOURS[shown % COLOURS.length] }} data-first={settled ? game.players[game.turn].id : ''}>
         <div style={{ color: LOOK.faded, fontSize: 13 }}>{settled ? 'First to cut' : 'Choosing who cuts first'}</div>
         <div style={{ fontSize: 26, fontWeight: 800, color: COLOURS[shown % COLOURS.length] }}>{name}</div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * The wait between a cut and knowing what it was: who cut, then the dots
+ * counting it out, and the last moment held with nothing new said.
+ */
+function Suspense({ game, nameOf }: { game: Game; nameOf: (id: string) => string }) {
+  const pending = game.pending!
+  const cutter = game.players[pending.player]
+  const who = cutter.mine ? 'You' : nameOf(cutter.id)
+  const lead = pending.auto ? `Time's up - a string is cut for ${cutter.mine ? 'you' : who}` : `${who} cut a string`
+  const dots = '.'.repeat(Math.min(3, 1 + Math.floor((game.clock / TOWER.suspense) * 4)))
+  // The banner leans in as the snap comes.
+  const scale = 1 + Math.min(1, game.clock / TOWER.suspense) * 0.12
+  return (
+    <div style={bannerWrap}>
+      <div style={{ ...banner, background: LOOK.ink, transform: `scale(${scale.toFixed(3)})` }} data-banner="suspense">
+        {lead}
+        {dots}
       </div>
     </div>
   )
