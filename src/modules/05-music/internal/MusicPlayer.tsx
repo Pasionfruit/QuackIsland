@@ -11,7 +11,7 @@
  * six-megabyte file rather than decoding all of it up front.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { assetUrl, readFolded, writeFolded } from '../../00-core'
+import { assetUrl, createStore, readFolded, useStore, writeFolded } from '../../00-core'
 import {
   MUSIC,
   clampVolume,
@@ -293,32 +293,103 @@ export function MusicPlayer({ stopped = false }: MusicPlayerProps = {}) {
     }
   }, [tracks.length])
 
-  const progress = Number.isFinite(duration) && duration > 0 ? position / duration : 0
+  // Published every render so the settings page can drive the same element
+  // this corner owns - one audio element, two places to reach it from.
+  const view: MusicView = {
+    track,
+    index,
+    count: tracks.length,
+    playing,
+    blocked,
+    volume,
+    position,
+    duration,
+    toggle,
+    skip,
+    rewind,
+    changeVolume,
+  }
+  useEffect(() => {
+    musicView.set(view)
+  })
+  useEffect(() => () => musicView.set(null), [])
+
+  if (folded) {
+    // Folded, it is a square with a note on it: out of the way, but plainly
+    // the music, and one click from the controls.
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setFolded(false)
+          writeFolded('music', false)
+        }}
+        style={square}
+        title={`Music - ${trackLabel(track)}`}
+        aria-label="Show the music player"
+      >
+        <MusicIcon playing={playing} />
+      </button>
+    )
+  }
 
   return (
     <div style={panel}>
       <button
         type="button"
         onClick={() => {
-          const next = !folded
-          setFolded(next)
-          writeFolded('music', next)
+          setFolded(true)
+          writeFolded('music', true)
         }}
         style={foldHeader}
-        title={folded ? 'Show' : 'Hide'}
+        title="Hide"
       >
         <span>MUSIC</span>
-        <span style={{ opacity: 0.7 }}>{folded ? '+' : '–'}</span>
+        <span style={{ opacity: 0.7 }}>–</span>
       </button>
+      <Controls view={view} />
+    </div>
+  )
+}
 
-      {/* The track stays visible folded: what is playing is the one thing you
-          want to see without opening anything. */}
+/** Everything the music player shows, for anything else that wants to show it. */
+export interface MusicView {
+  track: Track | null
+  index: number
+  count: number
+  playing: boolean
+  blocked: boolean
+  volume: number
+  position: number
+  duration: number
+  toggle: () => void
+  skip: () => void
+  rewind: () => void
+  changeVolume: (next: number) => void
+}
+
+const musicView = createStore<MusicView | null>(null)
+
+/**
+ * The music player's controls, anywhere on the page.
+ *
+ * Reads the one mounted `MusicPlayer` rather than owning a second audio
+ * element - so it only has anything to show while that player is mounted.
+ */
+export function MusicControls() {
+  const view = useStore(musicView)
+  if (!view) return <div style={{ opacity: 0.55 }}>no music player on the page</div>
+  return <Controls view={view} />
+}
+
+function Controls({ view }: { view: MusicView }) {
+  const { track, index, count, playing, blocked, volume, position, duration } = view
+  const progress = Number.isFinite(duration) && duration > 0 ? position / duration : 0
+  return (
+    <>
       <div style={title} title={trackLabel(track)}>
         {trackLabel(track)}
       </div>
-
-      {folded ? null : (
-        <>
 
       <div style={rail}>
         <div style={{ ...fill, width: `${Math.min(100, progress * 100)}%` }} />
@@ -327,20 +398,20 @@ export function MusicPlayer({ stopped = false }: MusicPlayerProps = {}) {
       <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.55, marginTop: 2 }}>
         <span>{formatTime(position)}</span>
         <span>
-          {tracks.length > 0 ? `${index + 1}/${tracks.length}` : '-'}
+          {count > 0 ? `${index + 1}/${count}` : '-'}
           {blocked ? ' · click to start' : ''}
         </span>
         <span>{formatTime(duration)}</span>
       </div>
 
       <div style={{ display: 'flex', gap: 6, marginTop: 6, alignItems: 'center' }}>
-        <button type="button" onClick={rewind} style={button} title="Back (restarts the track first)">
+        <button type="button" onClick={view.rewind} style={button} title="Back (restarts the track first)">
           {'|<'}
         </button>
-        <button type="button" onClick={toggle} style={button} title={playing ? 'Pause' : 'Play'}>
+        <button type="button" onClick={view.toggle} style={button} title={playing ? 'Pause' : 'Play'}>
           {playing ? '||' : '>'}
         </button>
-        <button type="button" onClick={skip} style={button} title="Skip">
+        <button type="button" onClick={view.skip} style={button} title="Skip">
           {'>|'}
         </button>
 
@@ -351,14 +422,30 @@ export function MusicPlayer({ stopped = false }: MusicPlayerProps = {}) {
           max={1}
           step={0.01}
           value={volume}
-          onChange={(e) => changeVolume(Number(e.target.value))}
+          onChange={(e) => view.changeVolume(Number(e.target.value))}
           style={{ flex: 1, minWidth: 54, accentColor: '#6fb6c8' }}
           title={`${Math.round(volume * 100)}%`}
         />
       </div>
-        </>
-      )}
-    </div>
+    </>
+  )
+}
+
+/** A pair of quavers. Lit while something is playing. */
+function MusicIcon({ playing }: { playing: boolean }) {
+  return (
+    <svg width={20} height={20} viewBox="0 0 24 24" aria-hidden>
+      <path
+        d="M9 18V5l12-2v13"
+        fill="none"
+        stroke={playing ? '#ffcf8a' : '#f2ece2'}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx={6} cy={18} r={3} fill={playing ? '#ffcf8a' : '#f2ece2'} />
+      <circle cx={18} cy={16} r={3} fill={playing ? '#ffcf8a' : '#f2ece2'} />
+    </svg>
   )
 }
 
@@ -371,6 +458,19 @@ const panel: React.CSSProperties = {
   width: 214,
   boxSizing: 'border-box',
   userSelect: 'none',
+}
+
+const square: React.CSSProperties = {
+  width: 40,
+  height: 40,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: 8,
+  background: 'rgba(20, 22, 26, 0.78)',
+  border: '1px solid rgba(255,255,255,0.14)',
+  padding: 0,
+  cursor: 'pointer',
 }
 
 const foldHeader: React.CSSProperties = {

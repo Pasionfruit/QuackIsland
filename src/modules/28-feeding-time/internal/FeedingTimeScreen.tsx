@@ -15,7 +15,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { FeedingTimeScene, type SceneHands } from './FeedingTimeScene'
 import { COLOURS, FLICK, flickToThrow, placings, timeLeft, type Game, type Throw } from './rules'
@@ -135,9 +135,9 @@ export function FeedingTimeScreen({ run }: { run: MinigameRun }) {
       <div style={hud}>
         <span style={{ fontWeight: 700, fontSize: 16 }}>Feeding Time</span>
         {ready ? (
-          <span style={{ ...pill, background: left <= 10 ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
+          <TopTimer><span style={{ ...pill, background: left <= 10 ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
             {Math.ceil(left)}s
-          </span>
+          </span></TopTimer>
         ) : (
           <span style={{ color: LOOK.faded }}>waiting for the host…</span>
         )}

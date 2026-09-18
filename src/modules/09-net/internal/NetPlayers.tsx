@@ -21,6 +21,9 @@ import { followWorld, peerAt, peerTracks, publish, sweep } from './client'
 interface Rig {
   root: Group
   tilt: Group
+  /** Holds the body, so a peer who changes colour can be repainted in place. */
+  feet: Group
+  colour: string | null
 }
 
 /**
@@ -132,7 +135,14 @@ export function NetPlayers() {
       there.grounded = !state.swimming
       there.vy = 0
 
+      const colour = seen.get(id)?.colour ?? null
       let rig = rigs.get(id)
+      if (rig && rig.colour !== colour) {
+        // They picked a new colour in settings: swap the body, keep the rig.
+        rig.feet.clear()
+        rig.feet.add(createAvatar(colour ?? undefined))
+        rig.colour = colour
+      }
       if (!rig) {
         const root = new Group()
         const tilt = new Group()
@@ -140,11 +150,11 @@ export function NetPlayers() {
         // and the middle of it is what should pivot.
         const feet = new Group()
         feet.position.y = -PLAYER.height / 2
-        feet.add(createAvatar())
+        feet.add(createAvatar(colour ?? undefined))
         tilt.add(feet)
         root.add(tilt)
         parent.add(root)
-        rig = { root, tilt }
+        rig = { root, tilt, feet, colour }
         rigs.set(id, rig)
       }
 

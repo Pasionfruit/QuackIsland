@@ -19,4 +19,9 @@ export {
   type Track,
 } from './internal/playlist'
 
-export { MusicPlayer, type MusicPlayerProps } from './internal/MusicPlayer'
+export {
+  MusicControls,
+  MusicPlayer,
+  type MusicPlayerProps,
+  type MusicView,
+} from './internal/MusicPlayer'

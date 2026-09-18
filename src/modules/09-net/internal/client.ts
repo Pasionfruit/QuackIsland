@@ -25,6 +25,7 @@ import {
   useStore,
   type WeatherKind,
 } from '../../00-core'
+import { getPlayerColour } from '../../02-player'
 import { createTrack, record, sampleTrack, stale, type Track } from './interpolate'
 import {
   NET,
@@ -98,6 +99,8 @@ export interface NetInfo {
 export interface PeerInfo {
   id: string
   name: string
+  /** The colour they chose, or null for the default. */
+  colour: string | null
   /** Round trip in milliseconds, or null until one has come back. */
   ping: number | null
 }
@@ -143,7 +146,7 @@ export function getPeers(): PeerInfo[] {
 function publishRoster(): void {
   const list: PeerInfo[] = []
   for (const [id, track] of tracks) {
-    list.push({ id, name: track.name, ping: pings.get(id) ?? null })
+    list.push({ id, name: track.name, colour: track.colour, ping: pings.get(id) ?? null })
   }
   list.sort((a, b) => a.id.localeCompare(b.id, 'en', { numeric: true }))
   roster.set(list)
@@ -396,8 +399,9 @@ function open(rawCode: string, rawName: string, make: boolean): void {
       set({ peers: tracks.size })
       electHost()
     }
-    const renamed = track.name !== duck.name
+    const renamed = track.name !== duck.name || track.colour !== duck.colour
     track.name = duck.name
+    track.colour = duck.colour
     record(track, performance.now() / 1000, duck.state)
     if (renamed) publishRoster()
   }
@@ -419,7 +423,7 @@ function open(rawCode: string, rawName: string, make: boolean): void {
 
   sending = setInterval(() => {
     if (ws.readyState !== WebSocket.OPEN || !outgoing) return
-    ws.send(encodeState(myName, outgoing))
+    ws.send(encodeState(myName, outgoing, getPlayerColour()))
   }, 1000 / NET.sendRate)
 
   // The host publishes the world. Once a second is plenty: guests run the same
@@ -512,7 +516,7 @@ export function followWorld(dt: number): void {
 export function renameSelf(rawName: string): string {
   myName = cleanName(rawName)
   const ws = socket
-  if (ws && ws.readyState === WebSocket.OPEN && outgoing) ws.send(encodeState(myName, outgoing))
+  if (ws && ws.readyState === WebSocket.OPEN && outgoing) ws.send(encodeState(myName, outgoing, getPlayerColour()))
   return myName
 }
 

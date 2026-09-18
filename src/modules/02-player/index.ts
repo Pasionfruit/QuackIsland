@@ -21,6 +21,14 @@ export {
 export { AVATAR, armPoints, bodyPose, createAvatar, facePoints } from './internal/avatar'
 
 export {
+  PLAYER_COLOURS,
+  getPlayerColour,
+  isPlayerColour,
+  setPlayerColour,
+  usePlayerColour,
+} from './internal/colour'
+
+export {
   VIEW,
   VIEW_MODES,
   clampPitch,

@@ -13,7 +13,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { PALETTE, SynchronizeStepsScene, outcomeColour } from './SynchronizeStepsScene'
 import { COLOURS, TOWER, placings, type Game } from './rules'
@@ -127,9 +127,14 @@ export function SynchronizeStepsScreen({ run }: { run: MinigameRun }) {
 
       {ready && game.phase !== 'over' ? (
         <div style={panel}>
-          <div style={timerTrack}>
-            <div style={{ ...timerFill, width: `${(left / TOWER.choose) * 100}%` }} />
-          </div>
+          {game.phase === 'choose' ? (
+            <TopTimer>
+              <div style={timerTrack} data-time-left={Math.ceil(left)}>
+                <div style={{ ...timerFill, width: `${(left / TOWER.choose) * 100}%` }} />
+              </div>
+              <span style={timerSeconds}>{Math.ceil(left)}s</span>
+            </TopTimer>
+          ) : null}
           <div style={{ color: LOOK.faded, font: `600 13px/1.3 ${FONT}` }}>
             {!mine
               ? 'watching'
@@ -325,7 +330,8 @@ const panel: React.CSSProperties = {
   borderTop: '2px solid #ddd3e8',
 }
 
-const timerTrack: React.CSSProperties = { width: 'min(360px, 100%)', height: 8, borderRadius: 999, background: '#ddd3e8', overflow: 'hidden' }
+const timerTrack: React.CSSProperties = { width: 200, height: 8, borderRadius: 999, background: '#ddd3e8', overflow: 'hidden' }
+const timerSeconds: React.CSSProperties = { padding: '1px 8px', borderRadius: 999, background: '#fff', color: '#3f8fd0', font: `700 11px/1.5 ${FONT}` }
 const timerFill: React.CSSProperties = { height: '100%', borderRadius: 999, background: '#3f8fd0' }
 
 const optionButton: React.CSSProperties = {

@@ -14,7 +14,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { LetHimCookScene, myTurn, type SceneHands } from './LetHimCookScene'
 import { COLOURS, INGREDIENTS, KITCHEN, cookTime, fastForwarding, placings, stillIn, turnTime, whoseTurn, type Cook, type Game, type Pick } from './rules'
@@ -163,9 +163,9 @@ function Status({ game, nameOf }: { game: Game; nameOf: (id: string) => string }
         {text}
       </span>
       {left !== null ? (
-        <span style={{ ...pill, background: game.phase === 'turns' && left <= 3 ? LOOK.red : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
+        <TopTimer><span style={{ ...pill, background: game.phase === 'turns' && left <= 3 ? LOOK.red : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
           {Math.ceil(left)}s
-        </span>
+        </span></TopTimer>
       ) : null}
     </>
   )

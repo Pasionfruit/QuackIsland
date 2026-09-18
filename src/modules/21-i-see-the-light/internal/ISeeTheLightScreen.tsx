@@ -13,7 +13,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { ISeeTheLightScene } from './ISeeTheLightScene'
 import {
@@ -171,9 +171,9 @@ export function ISeeTheLightScreen({ run }: { run: MinigameRun }) {
             <span style={{ ...pill, background: LOOK.ink, color: '#fff' }}>
               {race.racers.filter(racing).length} racing
             </span>
-            <span style={{ ...pill, background: left <= 10 ? LOOK.red : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
+            <TopTimer><span style={{ ...pill, background: left <= 10 ? LOOK.red : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
               {Math.ceil(left)}s
-            </span>
+            </span></TopTimer>
           </>
         ) : (
           <span style={{ color: LOOK.faded }}>waiting for the host…</span>

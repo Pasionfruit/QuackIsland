@@ -21,7 +21,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { COLOURS, SEARCH, placings, timeLeft, type Game } from './rules'
 import { myId, newGame, waitingGame } from './setup'
 import { useSearchNet } from './useSearchNet'
@@ -199,9 +199,9 @@ export function WheresMidnightScreen({ run }: { run: MinigameRun }) {
         <span style={{ fontWeight: 700, fontSize: 16 }}>Where&rsquo;s Midnight?</span>
         {ready ? (
           <>
-            <span style={{ ...pill, background: left <= 10 ? LOOK.danger : '#2a3240' }} data-time-left={Math.ceil(left)}>
+            <TopTimer><span style={{ ...pill, background: left <= 10 ? LOOK.danger : '#2a3240' }} data-time-left={Math.ceil(left)}>
               {Math.ceil(left)}s
-            </span>
+            </span></TopTimer>
             <span
               style={{
                 ...pill,

@@ -16,7 +16,7 @@ import { Canvas } from '@react-three/fiber'
 import { useEffect, useRef, useState } from 'react'
 import { ACESFilmicToneMapping, PCFSoftShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { ARROWS, heldLetters } from './bindings'
 import { FOV } from './camera'
 import { MessyMazeScene, PALETTE } from './MessyMazeScene'
@@ -142,7 +142,7 @@ export function MessyMazeScreen({ run }: { run: MinigameRun }) {
         </Pill>
         {callLeft !== null ? <Pill colour="#c8443c">last call {Math.ceil(callLeft)}s</Pill> : null}
         <span style={{ flex: 1 }} />
-        <Pill colour={LOOK.ink}>{race.elapsed.toFixed(1)}s</Pill>
+        <TopTimer><Pill colour={LOOK.ink}>{race.elapsed.toFixed(1)}s</Pill></TopTimer>
         {you ? <Keys key={you.spins} binding={you.binding} /> : null}
       </div>
 

@@ -16,7 +16,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useReducer, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV, boardPoint } from './camera'
 import { ChefCaricatureScene } from './ChefCaricatureScene'
 import { outlineFor } from './outlines'
@@ -163,9 +163,9 @@ export function ChefCaricatureScreen({ run }: { run: MinigameRun }) {
               turn {game.turn + 1} of {game.order.length}
             </span>
             {now === 'drawing' ? (
-              <span style={{ ...pill, background: LOOK.sun, color: LOOK.ink }} data-time-left={Math.ceil(timeLeft(game))}>
+              <TopTimer><span style={{ ...pill, background: LOOK.sun, color: LOOK.ink }} data-time-left={Math.ceil(timeLeft(game))}>
                 {Math.ceil(timeLeft(game))}s
-              </span>
+              </span></TopTimer>
             ) : null}
           </>
         ) : (

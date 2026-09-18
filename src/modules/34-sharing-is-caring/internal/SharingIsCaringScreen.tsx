@@ -12,7 +12,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { SharingIsCaringScene } from './SharingIsCaringScene'
 import { COLOURS, placings, points, timeLeft, type Intent, type Round } from './rules'
@@ -129,9 +129,9 @@ export function SharingIsCaringScreen({ run }: { run: MinigameRun }) {
         <span style={{ fontWeight: 700, fontSize: 16 }}>Sharing Is Caring</span>
         {ready ? (
           <>
-            <span style={{ ...pill, background: left <= 10 ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
+            <TopTimer><span style={{ ...pill, background: left <= 10 ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
               {Math.ceil(left)}s
-            </span>
+            </span></TopTimer>
             <span
               style={{
                 ...pill,

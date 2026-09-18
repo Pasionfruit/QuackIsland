@@ -15,7 +15,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { HesOneShotScene, type LookRef } from './HesOneShotScene'
 import { COLOURS, GUN, PITCH_LIMIT, ROUND, clock, cooldownLeft, isStanding, placings, type Game } from './rules'
 import { myId, newGame, waitingGame } from './setup'
@@ -211,9 +211,9 @@ export function HesOneShotScreen({ run }: { run: MinigameRun }) {
         <span style={{ fontWeight: 700, fontSize: 16 }}>He's One Shot</span>
         {ready ? (
           <>
-            <span style={{ ...pill, background: LOOK.sun, color: LOOK.ink }} data-time-left={Math.max(0, Math.ceil(ROUND.limit - Math.max(0, t)))}>
+            <TopTimer><span style={{ ...pill, background: LOOK.sun, color: LOOK.ink }} data-time-left={Math.max(0, Math.ceil(ROUND.limit - Math.max(0, t)))}>
               {minutes(Math.max(0, Math.ceil(ROUND.limit - Math.max(0, t))))}
-            </span>
+            </span></TopTimer>
             <span style={{ ...pill, background: LOOK.ink, color: '#fff' }} data-standing={standing}>
               {standing} standing
             </span>

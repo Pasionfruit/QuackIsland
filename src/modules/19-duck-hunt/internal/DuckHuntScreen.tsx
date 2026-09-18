@@ -15,7 +15,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { ARENA, COLOURS, EMBLEMS, type Emblem } from './arena'
 import { FOV } from './camera'
 import { DuckHuntScene } from './DuckHuntScene'
@@ -94,9 +94,9 @@ export function DuckHuntScreen({ run }: { run: MinigameRun }) {
       <div style={hud}>
         <span style={{ fontWeight: 700, fontSize: 16 }}>Duck Hunt</span>
         {ready ? (
-          <span style={{ ...pill, background: left <= 10 ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
+          <TopTimer><span style={{ ...pill, background: left <= 10 ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
             {Math.ceil(left)}s
-          </span>
+          </span></TopTimer>
         ) : (
           <span style={{ color: LOOK.faded }}>waiting for the host…</span>
         )}

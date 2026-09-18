@@ -25,6 +25,7 @@ import {
 } from './controller'
 import { clampPitch, getViewMode, placeCamera, toggleViewMode } from './camera'
 import { bodyPose, createAvatar } from './avatar'
+import { usePlayerColour } from './colour'
 
 const CAM_EASE = 12
 /**
@@ -179,9 +180,10 @@ export function Player({
   const domElement = useThree((s) => s.gl.domElement)
   const body = useRef<Group>(null)
   const tilt = useRef<Group>(null)
-  // Built once: it is the same two meshes for the life of the component, and
-  // nothing about it depends on React state.
-  const avatar = useMemo(() => createAvatar(), [])
+  // Built once per colour: the same meshes for as long as you keep the colour
+  // chosen in settings, and a fresh body painted the new one when you change it.
+  const colour = usePlayerColour()
+  const avatar = useMemo(() => createAvatar(colour), [colour])
 
   const state = useMemo(() => createPlayer(spawnX, spawnZ, heightAt), [spawnX, spawnZ])
   const keys = useRef<PlayerInput>({ ...IDLE_INPUT })

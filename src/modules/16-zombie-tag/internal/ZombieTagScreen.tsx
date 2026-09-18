@@ -35,7 +35,7 @@ import {
 } from './round'
 import { emptyRound, myId, newRound } from './setup'
 import { useRoundNet } from './useRoundNet'
-import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 
 /** Text and chrome. The board's own colours live with the board, in the scene. */
 const LOOK = {
@@ -160,7 +160,7 @@ export function ZombieTagScreen({ run }: { run: MinigameRun }) {
         <Pill colour={LOOK.runner}>{left.length} running</Pill>
         <Pill colour={LOOK.zombie}>{chase.length} zombies</Pill>
         <span style={{ flex: 1 }} />
-        <Pill colour={LOOK.ink}>{round.elapsed.toFixed(1)}s</Pill>
+        <TopTimer><Pill colour={LOOK.ink}>{round.elapsed.toFixed(1)}s</Pill></TopTimer>
         {you ? <PushMeter body={you} /> : null}
       </div>
 

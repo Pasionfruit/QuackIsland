@@ -14,7 +14,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { TriathlonScene } from './TriathlonScene'
 import {
@@ -157,9 +157,9 @@ export function TriathlonScreen({ run }: { run: MinigameRun }) {
       <div style={hud}>
         <span style={{ fontWeight: 700, fontSize: 16 }}>Sprint Triathlon</span>
         {ready ? (
-          <span style={{ ...pill, background: LOOK.ink, color: '#fff', fontVariantNumeric: 'tabular-nums' }} data-clock={raceClock(race).toFixed(1)}>
+          <TopTimer><span style={{ ...pill, background: LOOK.ink, color: '#fff', fontVariantNumeric: 'tabular-nums' }} data-clock={raceClock(race).toFixed(1)}>
             {(mine ? timeOf(race, mine) : raceClock(race)).toFixed(1)}s
-          </span>
+          </span></TopTimer>
         ) : (
           <span style={{ color: LOOK.faded }}>waiting for the host…</span>
         )}

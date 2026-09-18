@@ -13,7 +13,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { FindYourselfScene, type SceneHands } from './FindYourselfScene'
 import { COLOURS, TABLE, found, phaseLength, placings, type Game } from './rules'
@@ -107,10 +107,10 @@ export function FindYourselfScreen({ run }: { run: MinigameRun }) {
             <span style={{ ...pill, background: LOOK.ink, color: '#fff' }} data-stage={game.stage + 1}>
               stage {game.stage + 1} of {TABLE.points.length} · {worth} {worth === 1 ? 'point' : 'points'}
             </span>
-            <span style={{ ...pill, background: game.phase === 'pick' ? LOOK.sun : 'rgba(45,42,51,0.12)', color: LOOK.ink }} data-phase={game.phase}>
+            <TopTimer><span style={{ ...pill, background: game.phase === 'pick' ? LOOK.sun : 'rgba(45,42,51,0.12)', color: LOOK.ink }} data-phase={game.phase}>
               {status}
               {game.phase === 'pick' ? ` ${Math.ceil(left)}s` : ''}
-            </span>
+            </span></TopTimer>
           </>
         ) : (
           <span style={{ color: LOOK.faded }}>waiting for the host…</span>

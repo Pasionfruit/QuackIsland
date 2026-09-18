@@ -22,13 +22,15 @@ export interface Snapshot {
 
 export interface Track {
   name: string
+  /** The colour they chose, or null for the default. */
+  colour: string | null
   snapshots: Snapshot[]
   /** When anything was last heard from this peer. */
   heard: number
 }
 
 export function createTrack(name: string): Track {
-  return { name, snapshots: [], heard: 0 }
+  return { name, colour: null, snapshots: [], heard: 0 }
 }
 
 /**

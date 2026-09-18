@@ -74,6 +74,89 @@ export function readyLook(ready: boolean, waiting: number): {
   return { label: 'ready up', lit: waiting > 0, danger: false }
 }
 
+/**
+ * What the lobby bar says after your name.
+ *
+ * Pure, like `readyLook`, because it is a rule: the bar is the one place that
+ * is always on screen, so it has to say where you are in a word or two.
+ */
+export function lobbyStatus(
+  status: string,
+  room: string | null,
+  peers: number,
+  host: boolean,
+  phase: string,
+): string {
+  if (status === 'connecting') return 'connecting…'
+  if (status === 'error') return 'connection problem'
+  if (status !== 'joined' || !room) return 'not in a lobby'
+  const others = `${peers} other${peers === 1 ? '' : 's'}`
+  const what = phase === 'playing' ? 'playing' : host ? 'hosting' : 'in lobby'
+  return `${what} ${room} · ${others}`
+}
+
+/** Copies the lobby code, and says so for a moment. */
+function CopyCode({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false)
+  useEffect(() => {
+    if (!copied) return
+    const id = window.setTimeout(() => setCopied(false), 1400)
+    return () => window.clearTimeout(id)
+  }, [copied])
+
+  const copy = () => {
+    const done = () => setCopied(true)
+    try {
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(code).then(done, () => fallbackCopy(code) && done())
+        return
+      }
+    } catch {
+      // Fall through to the old way.
+    }
+    if (fallbackCopy(code)) done()
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      style={{ ...bar, padding: '0 10px', gap: 5, color: copied ? '#6fd08c' : '#f2ece2' }}
+      title={`Copy the lobby code ${code}`}
+      aria-label="Copy lobby code"
+    >
+      {copied ? (
+        '✓ copied'
+      ) : (
+        <>
+          <svg width={14} height={14} viewBox="0 0 24 24" aria-hidden>
+            <rect x={8} y={8} width={12} height={12} rx={2} fill="none" stroke="currentColor" strokeWidth={2} />
+            <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" fill="none" stroke="currentColor" strokeWidth={2} />
+          </svg>
+          <span style={{ letterSpacing: 1.5 }}>{code}</span>
+        </>
+      )}
+    </button>
+  )
+}
+
+/** For a page served somewhere the clipboard API is not allowed - plain http. */
+function fallbackCopy(text: string): boolean {
+  try {
+    const area = document.createElement('textarea')
+    area.value = text
+    area.style.position = 'fixed'
+    area.style.opacity = '0'
+    document.body.appendChild(area)
+    area.select()
+    const ok = document.execCommand('copy')
+    area.remove()
+    return ok
+  } catch {
+    return false
+  }
+}
+
 export function LobbyPopup() {
   const [open, setOpen] = useState(false)
   const net = useNet()
@@ -186,24 +269,36 @@ export function LobbyPopup() {
               ? 'everybody is ready'
               : 'everybody is ready - the host starts it'
 
+  const status = lobbyStatus(net.status, net.room, net.peers, net.host, party.phase)
+  const dot =
+    net.status === 'joined'
+      ? '#6fd08c'
+      : net.status === 'connecting'
+        ? '#ffcf8a'
+        : net.status === 'error'
+          ? '#ff8d84'
+          : '#8d8a84'
+
   return (
     <div ref={shell} style={{ position: 'relative' }}>
-      <button
-        type="button"
-        onClick={() => setOpen((was) => !was)}
-        style={{
-          ...panel,
-          ...button,
-          width: 168,
-          textAlign: 'left',
-          borderColor: open ? 'rgba(255,255,255,0.3)' : 'transparent',
-        }}
-      >
-        <span style={{ opacity: 0.55, letterSpacing: 0.6 }}>LOBBY</span>{' '}
-        <span style={{ color: joined ? '#ffcf8a' : '#8d8a84' }}>
-          {joined ? net.room : 'offline'}
-        </span>
-      </button>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'stretch' }}>
+        <button
+          type="button"
+          onClick={() => setOpen((was) => !was)}
+          style={{
+            ...bar,
+            borderColor: open ? '#ffcf8a' : 'rgba(255,207,138,0.45)',
+          }}
+          title="Open the lobby"
+        >
+          <span style={{ ...statusDot, background: dot, boxShadow: `0 0 6px ${dot}` }} />
+          <span style={{ fontWeight: 700, color: '#fff' }}>{name.trim() || 'player'}</span>
+          <span style={{ opacity: 0.5 }}>-</span>
+          <span style={{ color: joined ? '#ffcf8a' : '#c8c3ba' }}>{status}</span>
+          <span style={{ opacity: 0.6, marginLeft: 2 }}>{open ? '▴' : '▾'}</span>
+        </button>
+        {joined && net.room ? <CopyCode code={net.room} /> : null}
+      </div>
 
       {open ? (
         <div style={popup}>
@@ -452,6 +547,29 @@ function ReadyButton({ ready, waiting }: { ready: boolean; waiting: number }) {
     </button>
   )
 }
+
+/**
+ * The bar in the top left: bigger and brighter than the panels around it,
+ * because it is the first thing anybody looks for.
+ */
+const bar: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 7,
+  minHeight: 40,
+  padding: '0 14px',
+  borderRadius: 8,
+  background: 'rgba(20, 22, 26, 0.88)',
+  border: '1px solid rgba(255,207,138,0.45)',
+  boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
+  color: '#f2ece2',
+  font: '600 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace',
+  whiteSpace: 'nowrap',
+  cursor: 'pointer',
+  userSelect: 'none',
+}
+
+const statusDot: React.CSSProperties = { width: 8, height: 8, borderRadius: '50%', flex: '0 0 auto' }
 
 const panel: React.CSSProperties = {
   padding: '8px 10px',

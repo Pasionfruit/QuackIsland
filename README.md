@@ -1,4 +1,4 @@
-# LocalRot
+# Quack Island
 
 A browser 3D world, built in gated modules.
 

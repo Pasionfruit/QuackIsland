@@ -4,8 +4,8 @@ import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it } from 'vitest'
 import { PerfHUD } from '../../modules/00-core'
 import { MusicPlayer } from '../../modules/05-music'
-import { DebugPanel } from '../DebugPanel'
-import { LobbyPopup, readyLook } from '../LobbyPopup'
+import { SETTINGS_TABS, Settings, SettingsPage } from '../Settings'
+import { LobbyPopup, lobbyStatus, readyLook } from '../LobbyPopup'
 import { PartyPanel } from '../PartyPanel'
 import { Scoreboard } from '../Scoreboard'
 import { MODES, chooseMode } from '../../modules/13-modes'
@@ -77,8 +77,8 @@ describe('the panels mount', () => {
     expect(mount(<PartyPanel />)).toContain('PARTY')
   })
 
-  it('renders the music player', () => {
-    expect(mount(<MusicPlayer />)).toContain('MUSIC')
+  it('renders the music player, folded to a square by default', () => {
+    expect(mount(<MusicPlayer />)).toMatch(/music player/i)
   })
 
   it('renders the music player stopped, the way a running game leaves it', () => {
@@ -86,11 +86,28 @@ describe('the panels mount', () => {
     // never renders into the DOM, and jsdom does not meaningfully simulate -
     // so what a test here can hold onto is that passing it mounts cleanly,
     // both ways, rather than throwing.
-    expect(mount(<MusicPlayer stopped />)).toContain('MUSIC')
+    expect(mount(<MusicPlayer stopped />)).toMatch(/music player/i)
   })
 
-  it('renders the debug panel', () => {
-    expect(mount(<DebugPanel />)).toContain('TIME OF DAY')
+  it('renders the settings gear, with the page closed', () => {
+    const html = mount(<Settings />)
+    expect(html).toContain('aria-label="Settings"')
+    expect(html).not.toContain('TIME OF DAY')
+  })
+
+  it('renders every tab of the settings page', () => {
+    const expected = {
+      island: ['TIME OF DAY', 'WEATHER'],
+      audio: ['SOUND EFFECTS', 'MUSIC'],
+      player: ['COLOUR', 'WALLET'],
+      developer: ['VIEW', 'MODULES', 'PERFORMANCE'],
+    } as const
+    for (const tab of SETTINGS_TABS) {
+      const html = mount(<SettingsPage onClose={() => {}} initialTab={tab} />)
+      for (const title of expected[tab]) expect(html).toContain(title)
+      act(() => root?.unmount())
+      root = null
+    }
   })
 
   it('renders the scoreboard, which starts hidden', () => {
@@ -99,7 +116,7 @@ describe('the panels mount', () => {
 
   it('renders the lobby button, with the popup closed', () => {
     const html = mount(<LobbyPopup />)
-    expect(html).toContain('LOBBY')
+    expect(html).toContain('not in a lobby')
     // Closed: the games are behind the button, not on the screen.
     expect(html).not.toContain(MODES[0].title)
   })
@@ -165,22 +182,30 @@ describe('the panels mount', () => {
     expect(labels).toContain('start the party')
   })
 
+  it('says where you are in the lobby bar', () => {
+    expect(lobbyStatus('offline', null, 0, true, 'off')).toBe('not in a lobby')
+    expect(lobbyStatus('connecting', null, 0, true, 'off')).toBe('connecting…')
+    expect(lobbyStatus('joined', 'ABCDE', 2, true, 'gathering')).toBe('hosting ABCDE · 2 others')
+    expect(lobbyStatus('joined', 'ABCDE', 1, false, 'gathering')).toBe('in lobby ABCDE · 1 other')
+    expect(lobbyStatus('joined', 'ABCDE', 1, false, 'playing')).toBe('playing ABCDE · 1 other')
+  })
+
   it('renders all of them at once, which is what the page does', () => {
     const html = mount(
       <>
         <PerfHUD />
         <PartyPanel />
         <MusicPlayer />
-        <DebugPanel />
+        <Settings />
         <Scoreboard />
         <LobbyPopup />
       </>,
     )
     expect(html).toContain('PERF')
     expect(html).toContain('PARTY')
-    expect(html).toContain('MUSIC')
-    expect(html).toContain('TIME OF DAY')
-    expect(html).toContain('LOBBY')
+    expect(html).toMatch(/music player/i)
+    expect(html).toContain('aria-label="Settings"')
+    expect(html).toContain('not in a lobby')
   })
 })
 

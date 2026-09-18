@@ -234,8 +234,15 @@ export function cleanName(input: string): string {
   return name.length > 0 ? name : 'duck'
 }
 
-export function encodeState(name: string, state: DuckState): string {
-  return JSON.stringify({ t: 'duck', name, s: round(state) })
+/**
+ * `colour` rides along with the name, and for the same reason: it changes
+ * rarely, and a peer who hears a different one simply repaints you. Left out
+ * when there is none, so the packet is the size it always was.
+ */
+export function encodeState(name: string, state: DuckState, colour?: string): string {
+  return JSON.stringify(
+    colour ? { t: 'duck', name, c: colour, s: round(state) } : { t: 'duck', name, s: round(state) },
+  )
 }
 
 /** Six decimals is a thousandth of a millimetre, and halves the packet size. */
@@ -255,6 +262,8 @@ function round(state: DuckState): DuckState {
 export interface DuckMessage {
   type: 'duck'
   name: string
+  /** `#rrggbb`, or null when the sender did not say - drawn the default red. */
+  colour: string | null
   state: DuckState
 }
 
@@ -297,6 +306,9 @@ export function decodeMessage(raw: unknown): DuckMessage | null {
   return {
     type: 'duck',
     name: cleanName(typeof message.name === 'string' ? message.name : ''),
+    // Only ever a plain hex colour. Anything else off the wire is ignored
+    // rather than handed to a material.
+    colour: typeof message.c === 'string' && /^#[0-9a-f]{6}$/i.test(message.c) ? message.c : null,
     state,
   }
 }

@@ -13,7 +13,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV, aimAt } from './camera'
 import { HelpingDadScene } from './HelpingDadScene'
 import type { Point } from './maze'
@@ -101,9 +101,9 @@ export function HelpingDadScreen({ run }: { run: MinigameRun }) {
       <div style={hud}>
         <span style={{ fontWeight: 700, fontSize: 16 }}>Helping Dad</span>
         {ready ? (
-          <span style={{ ...pill, background: LOOK.sun, color: LOOK.ink }} data-time-left={Math.max(0, Math.ceil(ROUND.limit - Math.max(0, t)))}>
+          <TopTimer><span style={{ ...pill, background: LOOK.sun, color: LOOK.ink }} data-time-left={Math.max(0, Math.ceil(ROUND.limit - Math.max(0, t)))}>
             {Math.max(0, Math.ceil(ROUND.limit - Math.max(0, t)))}s
-          </span>
+          </span></TopTimer>
         ) : (
           <span style={{ color: LOOK.faded }}>waiting for the host…</span>
         )}

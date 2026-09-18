@@ -5,11 +5,10 @@
  * interface over it. One of them falling over must not take the other with it,
  * and neither may leave a blank page with nothing to read - see `Boundary`.
  */
-import { GameCanvas, PerfHUD } from './modules/00-core'
+import { GameCanvas } from './modules/00-core'
 import { MusicPlayer } from './modules/05-music'
-import { WalletHUD } from './modules/11-currency'
 import { World } from './app/World'
-import { DebugPanel } from './app/DebugPanel'
+import { Settings } from './app/Settings'
 import { PartyPanel } from './app/PartyPanel'
 import { LobbyPopup } from './app/LobbyPopup'
 import { useParty } from './modules/10-party'
@@ -66,18 +65,22 @@ export default function App() {
       </Boundary>
 
       <Boundary what="the interface">
-        {/* Two fixed columns, so panels stack instead of each pinning itself to
-            the same corner and overlapping. */}
+        {/* Three corners, each with one job: who you are playing with in the
+            top left, settings behind the gear in the top right, and the music
+            folded into a square in the bottom right. The wallet, the perf
+            numbers and every knob that used to sit out here are on the
+            settings page now. */}
         <div style={{ ...column, top: 10, left: 10, alignItems: 'flex-start' }}>
           <LobbyPopup />
-          <PerfHUD />
-          <WalletHUD />
           <PartyPanel />
         </div>
 
         <div style={{ ...column, top: 10, right: 10, alignItems: 'flex-end' }}>
+          <Settings />
+        </div>
+
+        <div style={{ ...column, bottom: 10, right: 10, alignItems: 'flex-end' }}>
           <MusicPlayer stopped={quiet} />
-          <DebugPanel />
         </div>
 
         <Scoreboard />

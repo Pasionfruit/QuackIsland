@@ -118,3 +118,4 @@ export {
 
 export { MinigameScreen } from './internal/MinigameScreen'
 export { CountOver } from './internal/Transitions'
+export { TopTimer } from './internal/TopTimer'

@@ -13,7 +13,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { PunchBuggyScene } from './PunchBuggyScene'
 import { COLOURS, placings, standing, timeLeft, type Intent, type Round } from './rules'
@@ -135,9 +135,9 @@ export function PunchBuggyScreen({ run }: { run: MinigameRun }) {
         <span style={{ fontWeight: 700, fontSize: 16 }}>Punch Buggy</span>
         {ready ? (
           <>
-            <span style={{ ...pill, background: left <= 5 ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
+            <TopTimer><span style={{ ...pill, background: left <= 5 ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
               {Math.ceil(left)}s
-            </span>
+            </span></TopTimer>
             <span style={{ ...pill, background: LOOK.ink, color: '#fff' }}>{standing(round).length} standing</span>
           </>
         ) : (

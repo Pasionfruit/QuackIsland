@@ -20,7 +20,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { CountOver, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { CountOver, TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { TRACK } from './course'
 import { PETS, petById, petBars, type PetId } from './pets'
@@ -170,9 +170,9 @@ export function PetRaceScreen({ run }: { run: MinigameRun }) {
         <span style={{ fontWeight: 700, fontSize: 16 }}>Pet Race</span>
         {ready ? (
           <>
-            <span style={{ ...pill, background: left <= 5 && game.phase === 'racing' ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
+            <TopTimer><span style={{ ...pill, background: left <= 5 && game.phase === 'racing' ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
               {game.over ? 'done' : `${Math.ceil(left)}s`}
-            </span>
+            </span></TopTimer>
             <span style={{ ...pill, background: LOOK.card }} data-phase={game.over ? 'over' : game.phase}>
               {game.over
                 ? 'race over'
