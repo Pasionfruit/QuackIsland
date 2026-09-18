@@ -15,7 +15,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import type { MinigameRun } from '../../15-minigames'
+import { useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { MakeTheCutScene, type SceneHands } from './MakeTheCutScene'
 import { COLOURS, TOWER, deadlyLeft, inReach, placings, whoseTurn, type Cutter, type Game, type Intent, type Last } from './rules'
@@ -37,6 +37,8 @@ const FONT =
 export function MakeTheCutScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the game from here.
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
+  // Held back through the two seconds of Finish; see `useFinish`.
+  const results = useFinish(game.phase === 'over')
   const paused = useRef(run.paused)
   paused.current = run.paused
 
@@ -182,7 +184,7 @@ export function MakeTheCutScreen({ run }: { run: MinigameRun }) {
         {mine?.out && game.phase !== 'over' && game.phase !== 'result' ? <Banner colour={LOOK.faded} text="You are off the tower - watching" /> : null}
       </div>
 
-      {game.phase === 'over' && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
     </div>
   )
 }

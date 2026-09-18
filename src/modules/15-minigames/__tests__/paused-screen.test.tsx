@@ -184,8 +184,9 @@ describe('starting it again', () => {
     lobby.sent = []
     act(() => restartMinigame())
 
+    // Back through the black and into the count, the same way play goes.
     const open = getMinigameScreen()
-    expect(open.at === 'game' && open.run.phase).toBe('counting')
+    expect(open.at === 'game' && open.run.phase).toBe('fading')
     expect(open.at === 'game' && open.run.paused).toBe(false)
     expect(open.at === 'game' && open.run.game).not.toBe(was.at === 'game' ? was.run.game : null)
     expect(pauses()).toEqual([encodePause({ act: 'restart', by: { id: 'p1', name: 'ali' } })])
@@ -198,7 +199,7 @@ describe('starting it again', () => {
     hear(encodePause({ act: 'restart', by: BEA }))
 
     const open = getMinigameScreen()
-    expect(open.at === 'game' && open.run.phase).toBe('counting')
+    expect(open.at === 'game' && open.run.phase).toBe('fading')
     expect(open.at === 'game' && open.run.paused).toBe(false)
   })
 })

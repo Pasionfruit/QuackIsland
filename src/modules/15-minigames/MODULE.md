@@ -136,24 +136,33 @@ Every game gets this screen, built or not, out of its catalogue entry - which
 is what makes forty-one briefings a thing that already exists rather than a
 thing to generate.
 
-## Three, two, one
+## Fade, three, two, one - and Finish
 
-Press play and the run goes `briefing` → `counting` → `playing`. The count is
-the same three seconds for every game, which is exactly why it lives here
-rather than in each of them: a countdown is something the screen does, not
-something forty-one games each have to remember to do.
+Press play and the run goes `briefing` -> `fading` -> `counting` -> `playing`
+-> `finishing` -> `over`. Every game gets all six, which is exactly why they
+live here: a countdown and a finish are things the screen does, not things
+forty-one games each have to remember to do.
 
-The numbers go **over** the briefing rather than instead of it, so what you
-were reading a second ago is still there behind them. Each is rounded up, so
-the three is up for a whole second rather than for a frame.
+**Fade.** The screen goes black over the briefing (`FADE.in`). The game is
+mounted under the black, so its expensive first frame happens unwatched.
 
-**The game's state is built when the count starts, not when it ends** - a game
-that wants to draw its board behind the numbers has a board to draw.
+**Three, two, one - over the game.** The black lifts off the game, drawn and
+held still (it is handed `paused: true`), with the numbers over it and then a
+moment of **Start!**. The briefing has no count of its own any more.
+`audio/Countdown.mp3` starts on the edge into `counting` and is paused with the
+round. Each number is rounded up, so the three is up for a whole second.
 
-`tickRun` is pure and is the only thing that moves a run from `counting` to
-`playing`, so the whole of the countdown is tested by passing it numbers rather
-than by waiting three real seconds. The clock that calls it lives in
-`MinigameScreen` and stops with the screen; there is a test that it does.
+**Finish.** A game says its round is over with `useFinish(over)`, and draws its
+results only when that returns true. In between: two seconds (`FADE.dim`) of a
+big **Finish** over the top, `audio/Finish.mp3`, and the game dimming to black
+behind it. A game's own "again" button gets a Finish for its next round too.
+
+**The game's state is built when the fade starts, not when the count ends** - a
+game that wants to draw its board behind the numbers has a board to draw.
+
+`tickRun` is pure and is the only thing that moves a run between the timed
+phases, so all of it is tested by passing it numbers rather than by waiting.
+The clock that calls it lives in `MinigameScreen` and stops with the screen.
 
 With no build registered, the round that starts is honest about being empty:
 the countdown ran, the phase really is `playing`, and what is missing is the
@@ -262,7 +271,8 @@ behind it.
 | `registerMinigame` | How a built game plugs in. |
 | `buildFor`, `isBuilt`, `builtMinigames`, `forgetBuilds` | Reading the registry. `forgetBuilds` is for tests. |
 | `freshRun`, `MinigameRun`, `MinigameBuild`, `RunPhase` | A run of one game, at its beginning. |
-| `beginRun`, `tickRun`, `countShown`, `COUNT_FROM` | The three-two-one. All pure. |
+| `beginRun`, `tickRun`, `countShown`, `curtain`, `finishRun`, `COUNT_FROM`, `FADE` | Fade, three-two-one and Finish. All pure. |
+| `useFinish` | A game's one line about ending: says it is over, and answers whether its results may be drawn yet. |
 | `openDashboard`, `openMinigame`, `playMinigame`, `tickMinigame`, `backOut`, `closeMinigames` | Moving the screen about. |
 | `pauseMinigame`, `resumeMinigame`, `restartMinigame`, `isPausable`, `pauseRun`, `resumeRun`, `restartRun` | Stopping a round, starting it again, and starting it over. |
 | `mayControl`, `iMayControl`, `useMayControl`, `nameOfPauser`, `Pauser` | Who the card belongs to, and what to call them. |

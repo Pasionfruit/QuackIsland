@@ -16,7 +16,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useReducer, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import type { MinigameRun } from '../../15-minigames'
+import { useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV, boardPoint } from './camera'
 import { ChefCaricatureScene } from './ChefCaricatureScene'
 import { outlineFor } from './outlines'
@@ -48,6 +48,8 @@ export function ChefCaricatureScreen({ run }: { run: MinigameRun }) {
   // fed twice. So the game is only replaced by a new game, and every frame just
   // asks React to draw it again.
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
+  // Held back through the two seconds of Finish; see `useFinish`.
+  const results = useFinish(game.over)
   const [, redraw] = useReducer((n: number) => n + 1, 0)
   const paused = useRef(run.paused)
   paused.current = run.paused
@@ -228,7 +230,7 @@ export function ChefCaricatureScreen({ run }: { run: MinigameRun }) {
         ) : null}
       </div>
 
-      {game.over && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
     </div>
   )
 }

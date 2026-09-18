@@ -13,7 +13,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import type { MinigameRun } from '../../15-minigames'
+import { useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { TimeItScene } from './TimeItScene'
 import { COLOURS, offBy, placings, showing, stopwatch, targetFor, type Game } from './rules'
@@ -36,6 +36,8 @@ const MONO = "ui-monospace, 'Cascadia Mono', 'Consolas', 'Menlo', monospace"
 export function TimeItScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the round from here.
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
+  // Held back through the two seconds of Finish; see `useFinish`.
+  const results = useFinish(game.over)
   const paused = useRef(run.paused)
   paused.current = run.paused
 
@@ -143,7 +145,7 @@ export function TimeItScreen({ run }: { run: MinigameRun }) {
         ) : null}
       </div>
 
-      {game.over && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
     </div>
   )
 }

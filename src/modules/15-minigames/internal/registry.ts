@@ -193,9 +193,13 @@ export function beginRun(run: MinigameRun): MinigameRun {
  * Called by the game, because the game is the only thing that knows. It is the
  * one thing a build has to say out loud, and saying it twice is nothing - which
  * matters, because it is said from a React effect watching a flag.
+ *
+ * Also from `over`: a game's own "again" button starts a new round inside a run
+ * that is already over, and that round ending deserves its Finish as much as the
+ * first one did. `useFinish` only says it on the edge, so this is never a loop.
  */
 export function finishRun(run: MinigameRun): MinigameRun {
-  if (run.phase !== 'playing') return run
+  if (run.phase !== 'playing' && run.phase !== 'over') return run
   return { ...run, phase: 'finishing', countdown: FADE.dim, paused: false, pausedBy: null }
 }
 

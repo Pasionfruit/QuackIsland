@@ -13,7 +13,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import type { MinigameRun } from '../../15-minigames'
+import { useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { ISeeTheLightScene } from './ISeeTheLightScene'
 import {
@@ -54,6 +54,8 @@ const FONT =
 export function ISeeTheLightScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the race from here.
   const [race, setRace] = useState<Race>(() => (getNet().host ? newRace() : waitingRace()))
+  // Held back through the two seconds of Finish; see `useFinish`.
+  const results = useFinish(race.over)
   const paused = useRef(run.paused)
   paused.current = run.paused
 
@@ -219,7 +221,7 @@ export function ISeeTheLightScreen({ run }: { run: MinigameRun }) {
         {mine && mine.finishedAt !== null && !race.over ? <Banner text={`Over the line - ${placeName(mine.place ?? 1)}!`} colour={LOOK.green} /> : null}
       </div>
 
-      {race.over && ready ? <Over race={race} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
+      {results && ready ? <Over race={race} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
     </div>
   )
 }

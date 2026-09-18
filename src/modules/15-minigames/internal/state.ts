@@ -160,17 +160,34 @@ export function finishMinigame(): void {
 }
 
 /**
- * What a game calls to say it has ended.
+ * What a game calls to say it has ended - and asks whether it may show its
+ * results yet.
  *
  * Handed the same flag the game already uses to decide whether to draw its own
- * results - so there is nothing new for a game to work out, and no way for the
- * two to disagree. Fires on the edge, and `finishRun` ignores everything but a
- * round that is actually playing, so saying it twice costs nothing.
+ * results, so there is nothing new for a game to work out. Hands back whether
+ * to draw them **now**: false through the two seconds of Finish while the game
+ * dims, true once those are up. A game gates its results card on the answer and
+ * that is the whole of its part in the ending.
+ *
+ * Fires on the edge. It also fires if the round was already over when the run
+ * reached `playing` - a guest who joined as the host's round ended - so nobody
+ * is left on a finished game with no results.
+ *
+ * Outside the screen (a game's own tests, mounting its panel bare) there is no
+ * run to finish, and the flag is handed straight back.
  */
-export function useFinish(over: boolean): void {
+export function useFinish(over: boolean): boolean {
+  const open = useMinigameScreen()
+  const phase = open.at === 'game' ? open.run.phase : null
+  const was = useRef(over)
   useEffect(() => {
-    if (over) finishMinigame()
-  }, [over])
+    const rose = over && !was.current
+    was.current = over
+    if (!over) return
+    if (phase === 'playing' || (rose && phase === 'over')) finishMinigame()
+  }, [over, phase])
+  if (phase === null) return over
+  return over && phase === 'over'
 }
 
 /**

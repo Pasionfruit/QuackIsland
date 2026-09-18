@@ -28,7 +28,7 @@ import {
   screen,
   wordmark,
 } from './look'
-import { countShown, type MinigameRun } from './registry'
+import type { MinigameRun } from './registry'
 import { backOut, playMinigame } from './state'
 
 const KIND_LABEL = {
@@ -50,8 +50,10 @@ export function Briefing({ run }: { run: MinigameRun }) {
   const net = useNet()
   const [leaf, setLeaf] = useState<Leaf>('how')
   const up = nextStep(game)
-  const count = countShown(run)
-  const counting = run.phase === 'counting'
+  // The briefing is only ever up until the black has come down over it - the
+  // three-two-one is over the game, not here - so this is the only moment it
+  // has to know about.
+  const counting = run.phase === 'fading'
   // Only the host starts a round. A guest is here because the host brought
   // them, and a button that did nothing would be worse than no button.
   const isHost = net.host
@@ -152,15 +154,6 @@ export function Briefing({ run }: { run: MinigameRun }) {
         </div>
       </div>
 
-      {/* Three, two, one. Over the top of the briefing, so the thing you were
-          just reading is still there behind the numbers. */}
-      {count === null ? null : (
-        <div style={countBackdrop}>
-          <div key={count} style={countNumber} data-countdown={count}>
-            {count}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -334,21 +327,4 @@ const kindTag: React.CSSProperties = {
   borderRadius: 999,
   color: '#fff',
   font: `600 11px/1.6 ${FONT}`,
-}
-
-/** The three-two-one, over the briefing rather than instead of it. */
-const countBackdrop: React.CSSProperties = {
-  position: 'fixed',
-  inset: 0,
-  zIndex: 44,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  background: 'rgba(12, 40, 55, 0.45)',
-}
-
-const countNumber: React.CSSProperties = {
-  font: `700 132px/1 ${FONT}`,
-  color: ISLAND.sand,
-  textShadow: '0 6px 0 rgba(0,0,0,0.22)',
 }

@@ -13,7 +13,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import type { MinigameRun } from '../../15-minigames'
+import { useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { PunchBuggyScene } from './PunchBuggyScene'
 import { COLOURS, placings, standing, timeLeft, type Intent, type Round } from './rules'
@@ -34,6 +34,8 @@ const FONT =
 export function PunchBuggyScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the round from here.
   const [round, setRound] = useState<Round>(() => (getNet().host ? newRound() : waitingRound()))
+  // Held back through the two seconds of Finish; see `useFinish`.
+  const results = useFinish(round.over)
   const paused = useRef(run.paused)
   paused.current = run.paused
 
@@ -153,7 +155,7 @@ export function PunchBuggyScreen({ run }: { run: MinigameRun }) {
         <Stage live={live} />
       </div>
 
-      {round.over && ready ? <Over round={round} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
+      {results && ready ? <Over round={round} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
     </div>
   )
 }

@@ -61,8 +61,43 @@ export function playOnce(id: string): void {
   }
 }
 
+const held = new Set<HTMLAudioElement>()
+
+/**
+ * Pauses whichever of them is going, where it stands, or carries it on.
+ *
+ * For the pause card: the three-two-one is voiced, and a round stopped on "two"
+ * that went on saying "one, start" behind the card would be a card that lied.
+ * Only what was actually cut off is carried on - a sound that had already
+ * finished is not played again on resume.
+ */
+export function holdScreenSounds(hold: boolean): void {
+  if (hold) {
+    for (const player of players.values()) {
+      try {
+        if (!player.paused && !player.ended) {
+          player.pause()
+          held.add(player)
+        }
+      } catch {
+        // As below.
+      }
+    }
+    return
+  }
+  for (const player of held) {
+    try {
+      void player.play()?.catch(() => {})
+    } catch {
+      // As below.
+    }
+  }
+  held.clear()
+}
+
 /** Stops whichever of them is going. For leaving a round part way through one. */
 export function stopScreenSounds(): void {
+  held.clear()
   for (const player of players.values()) {
     try {
       player.pause()

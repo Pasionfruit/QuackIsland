@@ -16,7 +16,7 @@ import { Canvas } from '@react-three/fiber'
 import { useEffect, useRef, useState } from 'react'
 import { ACESFilmicToneMapping, PCFSoftShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import type { MinigameRun } from '../../15-minigames'
+import { useFinish, type MinigameRun } from '../../15-minigames'
 import { ARROWS, heldLetters } from './bindings'
 import { FOV } from './camera'
 import { MessyMazeScene, PALETTE } from './MessyMazeScene'
@@ -42,6 +42,8 @@ const FLASH_MS = 1400
 
 export function MessyMazeScreen({ run }: { run: MinigameRun }) {
   const [race, setRace] = useState<Race>(() => (getNet().host ? newRace() : waitingRace()))
+  // Held back through the two seconds of Finish; see `useFinish`.
+  const results = useFinish(race.over)
   const paused = useRef(run.paused)
   paused.current = run.paused
 
@@ -168,7 +170,7 @@ export function MessyMazeScreen({ run }: { run: MinigameRun }) {
         {flash !== null && you ? <SpinCard key={flash} binding={you.binding} /> : null}
       </div>
 
-      {race.over ? (
+      {results ? (
         <Over race={race} me={me} nameOf={nameOf} onAgain={net.host ? again : null} />
       ) : null}
     </div>

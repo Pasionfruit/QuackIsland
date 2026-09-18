@@ -35,7 +35,7 @@ import {
 } from './round'
 import { emptyRound, myId, newRound } from './setup'
 import { useRoundNet } from './useRoundNet'
-import type { MinigameRun } from '../../15-minigames'
+import { useFinish, type MinigameRun } from '../../15-minigames'
 
 /** Text and chrome. The board's own colours live with the board, in the scene. */
 const LOOK = {
@@ -51,6 +51,8 @@ const FONT =
 
 export function ZombieTagScreen({ run }: { run: MinigameRun }) {
   const [round, setRound] = useState<Round>(() => (getNet().host ? newRound() : emptyRound()))
+  // Held back through the two seconds of Finish; see `useFinish`.
+  const results = useFinish(round.over)
   // Read in the frame callback rather than closed over, so pausing takes
   // effect on the very next frame instead of whenever the effect re-runs.
   const paused = useRef(run.paused)
@@ -181,7 +183,7 @@ export function ZombieTagScreen({ run }: { run: MinigameRun }) {
 
       {/* Only the host can deal a fresh round; a guest waits to be dealt one,
           the same as they waited to be brought here. */}
-      {round.over ? (
+      {results ? (
         <Over round={round} me={me} nameOf={nameOf} onAgain={net.host ? again : null} />
       ) : null}
     </div>

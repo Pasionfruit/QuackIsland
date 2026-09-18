@@ -20,7 +20,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import type { MinigameRun } from '../../15-minigames'
+import { useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { TRACK } from './course'
 import { PETS, petById, petBars, type PetId } from './pets'
@@ -54,6 +54,8 @@ const seconds = (s: number) => `${s.toFixed(2)}s`
 export function PetRaceScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the race from here.
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
+  // Held back through the two seconds of Finish; see `useFinish`.
+  const results = useFinish(game.over)
   const paused = useRef(run.paused)
   paused.current = run.paused
 
@@ -218,7 +220,7 @@ export function PetRaceScreen({ run }: { run: MinigameRun }) {
         {ready && choosing ? <Table game={game} pick={pick} onPick={setPick} left={left} /> : null}
       </div>
 
-      {game.over && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
     </div>
   )
 }

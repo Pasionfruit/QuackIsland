@@ -14,7 +14,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import type { MinigameRun } from '../../15-minigames'
+import { useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { TriathlonScene } from './TriathlonScene'
 import {
@@ -59,6 +59,8 @@ const LEG_ICON: Record<Leg, string> = { swim: '🏊', bike: '🚴', run: '🏃',
 export function TriathlonScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the race from here.
   const [race, setRace] = useState<Race>(() => (getNet().host ? newRace() : waitingRace()))
+  // Held back through the two seconds of Finish; see `useFinish`.
+  const results = useFinish(race.over)
   const paused = useRef(run.paused)
   paused.current = run.paused
 
@@ -201,7 +203,7 @@ export function TriathlonScreen({ run }: { run: MinigameRun }) {
         {ready && mine && !race.over && countdown === null ? <Task leg={leg} own={own} racer={mine} race={race} sentence={sentence} /> : null}
       </div>
 
-      {race.over && ready ? <Over race={race} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
+      {results && ready ? <Over race={race} me={me} nameOf={nameOf} onAgain={net.host ? again : null} /> : null}
     </div>
   )
 }

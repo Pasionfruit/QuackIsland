@@ -13,15 +13,17 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { BUILD_STEPS, MINIGAMES, minigameById } from '../internal/catalogue'
 import { MinigameScreen } from '../internal/MinigameScreen'
-import { forgetBuilds, registerMinigame } from '../internal/registry'
+import { FADE, forgetBuilds, registerMinigame, type MinigameRun } from '../internal/registry'
 import {
   backOut,
   closeMinigames,
+  finishMinigame,
   getMinigameScreen,
   openDashboard,
   openMinigame,
   playMinigame,
   tickMinigame,
+  useFinish,
 } from '../internal/state'
 
 let root: Root | null = null
@@ -205,12 +207,19 @@ describe('a game briefing', () => {
 })
 
 describe('pressing play', () => {
-  it('counts three, two, one and then starts the round', () => {
+  it('fades to black, then counts three, two, one over the game and starts it', () => {
     const where = mount()
     act(() => openMinigame('zombie-tag'))
     expect(where.querySelector('[data-countdown]')).toBeNull()
 
+    // The black comes down over the briefing first, with no number on it.
     click(where.querySelector('[data-play]'))
+    expect(getMinigameScreen()).toMatchObject({ at: 'game', run: { phase: 'fading' } })
+    act(() => tickMinigame(FADE.in / 2))
+    expect(where.querySelector('[data-curtain]')).not.toBeNull()
+    expect(where.querySelector('[data-countdown]')).toBeNull()
+
+    act(() => tickMinigame(FADE.in / 2))
     expect(where.querySelector('[data-countdown]')?.textContent).toBe('3')
 
     act(() => tickMinigame(1))
@@ -220,22 +229,25 @@ describe('pressing play', () => {
     expect(where.querySelector('[data-countdown]')?.textContent).toBe('1')
 
     act(() => tickMinigame(1))
-    expect(where.querySelector('[data-countdown]')).toBeNull()
     expect(getMinigameScreen()).toMatchObject({ at: 'game', run: { phase: 'playing' } })
+    expect(where.querySelector('[data-countdown]')?.textContent).toBe('Start!')
   })
 
-  it('leaves the briefing readable behind the numbers', () => {
+  it('has no count of its own on the briefing - only over the game', () => {
     const where = mount()
     act(() => openMinigame('zombie-tag'))
     click(where.querySelector('[data-play]'))
+    act(() => tickMinigame(FADE.in / 2))
+    // Half-way down: the briefing is still there under the black, uncounted.
     expect(where.textContent).toContain(minigameById('zombie-tag').description[0])
+    expect(where.querySelector('[data-countdown]')).toBeNull()
   })
 
   it('cannot be pressed twice to restart the count', () => {
     const where = mount()
     act(() => openMinigame('zombie-tag'))
     click(where.querySelector('[data-play]'))
-    act(() => tickMinigame(1.5))
+    act(() => tickMinigame(FADE.in + 1.5))
 
     click(where.querySelector('[data-play]'))
     // Still where the first press left it, not back at three.
@@ -250,10 +262,10 @@ describe('pressing play', () => {
       const where = mount()
       act(() => openMinigame('zombie-tag'))
       click(where.querySelector('[data-play]'))
-      expect(getMinigameScreen()).toMatchObject({ at: 'game', run: { phase: 'counting' } })
+      expect(getMinigameScreen()).toMatchObject({ at: 'game', run: { phase: 'fading' } })
 
       act(() => {
-        vi.advanceTimersByTime(3200)
+        vi.advanceTimersByTime(FADE.in * 1000 + 3200)
       })
       expect(getMinigameScreen()).toMatchObject({ at: 'game', run: { phase: 'playing' } })
     } finally {
@@ -383,7 +395,7 @@ describe('getting back out', () => {
     const where = mount()
     act(() => openMinigame('duck-hunt'))
     click(where.querySelector('[data-play]'))
-    act(() => tickMinigame(1))
+    act(() => tickMinigame(FADE.in + 1))
     expect(where.querySelector('[data-countdown]')?.textContent).toBe('2')
 
     act(() => escape())
@@ -420,5 +432,68 @@ describe('getting back out', () => {
     // Opening it again is a fresh briefing, not the round you walked out of.
     click(where.querySelector('[data-minigame="duck-hunt"]'))
     expect(getMinigameScreen()).toMatchObject({ at: 'game', run: { phase: 'briefing' } })
+  })
+})
+
+describe('finishing', () => {
+  /** A game with one flag for "over", and results it only draws when told it may. */
+  function OverWhenTold({ run }: { run: MinigameRun }) {
+    const [over, setOver] = useState(false)
+    const results = useFinish(over)
+    return (
+      <div data-game={run.phase}>
+        <button type="button" data-end onClick={() => setOver(true)} />
+        <button type="button" data-again onClick={() => setOver(false)} />
+        {results ? <div data-results /> : null}
+      </div>
+    )
+  }
+
+  const intoTheRound = (where: HTMLDivElement) => {
+    registerMinigame('zombie-tag', { newGame: () => ({}), Panel: OverWhenTold })
+    act(() => openMinigame('zombie-tag'))
+    click(where.querySelector('[data-play]'))
+    act(() => tickMinigame(FADE.in + 3.5))
+  }
+
+  it('says Finish and holds the results back while the game dims for two seconds', () => {
+    const where = mount()
+    intoTheRound(where)
+    click(where.querySelector('[data-end]'))
+
+    expect(getMinigameScreen()).toMatchObject({ at: 'game', run: { phase: 'finishing' } })
+    expect(where.querySelector('[data-finish]')?.textContent).toBe('Finish')
+    expect(where.querySelector('[data-results]')).toBeNull()
+
+    act(() => tickMinigame(FADE.dim / 2))
+    expect(Number(where.querySelector('[data-curtain]')?.getAttribute('data-curtain'))).toBeCloseTo(0.5, 1)
+    expect(where.querySelector('[data-results]')).toBeNull()
+
+    act(() => tickMinigame(FADE.dim / 2))
+    expect(getMinigameScreen()).toMatchObject({ at: 'game', run: { phase: 'over' } })
+    expect(where.querySelector('[data-finish]')).toBeNull()
+    expect(where.querySelector('[data-results]')).not.toBeNull()
+  })
+
+  it('says it again for a round the game started over by itself', () => {
+    const where = mount()
+    intoTheRound(where)
+    click(where.querySelector('[data-end]'))
+    act(() => tickMinigame(FADE.dim))
+
+    click(where.querySelector('[data-again]'))
+    expect(where.querySelector('[data-results]')).toBeNull()
+    click(where.querySelector('[data-end]'))
+    expect(getMinigameScreen()).toMatchObject({ at: 'game', run: { phase: 'finishing' } })
+    expect(where.querySelector('[data-results]')).toBeNull()
+  })
+
+  it('is nothing to a round that has not started', () => {
+    const where = mount()
+    registerMinigame('zombie-tag', { newGame: () => ({}), Panel: OverWhenTold })
+    act(() => openMinigame('zombie-tag'))
+    act(() => finishMinigame())
+    expect(getMinigameScreen()).toMatchObject({ at: 'game', run: { phase: 'briefing' } })
+    expect(where.querySelector('[data-finish]')).toBeNull()
   })
 })
