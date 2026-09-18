@@ -205,7 +205,7 @@ describe('the stand-ins', () => {
     }
     expect(wiped).toBeGreaterThan(0)
     expect(runs[1].g.players.map((p) => p.score)).toEqual(g.players.map((p) => p.score))
-    expect(TURN.length).toBe(45)
+    expect(TURN.length).toBe(30)
   })
 })
 

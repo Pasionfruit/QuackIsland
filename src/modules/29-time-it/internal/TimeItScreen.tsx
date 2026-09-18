@@ -6,6 +6,11 @@
  * stopwatch's digits while they can be seen, whether you have stopped, and the
  * results with everybody's time and how far off it was.
  *
+ * The target sits in the middle of the top of the screen, where every
+ * minigame's clock goes. Through the three-two-one before the stopwatch starts
+ * it is also spelled out over the stage - "Aim for X seconds" - with the
+ * thirty-second limit under it.
+ *
  * **Left click to stop the stopwatch.** Anywhere on the stage, once it has
  * started; once only.
  */
@@ -13,10 +18,10 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { TopTimer, isHeld, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { TimeItScene } from './TimeItScene'
-import { COLOURS, offBy, placings, showing, stopwatch, targetFor, type Game } from './rules'
+import { COLOURS, WATCH, offBy, placings, showing, stopwatch, targetFor, type Game } from './rules'
 import { myId, newGame, waitingGame } from './setup'
 import { useWatchNet } from './useWatchNet'
 
@@ -84,6 +89,7 @@ export function TimeItScreen({ run }: { run: MinigameRun }) {
   const t = stopwatch(game)
   const target = ready ? targetFor(game.seed) : 0
   const stopped = !!mine && mine.stopped !== null
+  const briefing = ready && !game.over && isHeld(run)
 
   let readout = ''
   let caption = ''
@@ -105,9 +111,11 @@ export function TimeItScreen({ run }: { run: MinigameRun }) {
       <div style={hud}>
         <span style={{ fontWeight: 700, fontSize: 16 }}>Time It</span>
         {ready ? (
-          <span style={{ ...pill, background: LOOK.sun, color: LOOK.ink, fontSize: 14 }} data-target={target.toFixed(2)}>
-            target {target.toFixed(2)}s
-          </span>
+          <TopTimer>
+            <span style={{ ...pill, background: LOOK.sun, color: LOOK.ink, fontSize: 14 }} data-target={target.toFixed(2)}>
+              target {target.toFixed(2)}s
+            </span>
+          </TopTimer>
         ) : (
           <span style={{ color: LOOK.faded }}>waiting for the host…</span>
         )}
@@ -131,7 +139,13 @@ export function TimeItScreen({ run }: { run: MinigameRun }) {
 
       <div style={{ ...board, cursor: ready && !game.over && t >= 0 && !stopped ? 'pointer' : 'default' }} onPointerDown={onPointerDown} onContextMenu={(e) => e.preventDefault()} data-board>
         <Stage live={live} />
-        {readout ? (
+        {briefing ? (
+          <div style={aimWrap} data-aim={target.toFixed(2)}>
+            <div style={aimBox}>Aim for {target.toFixed(2)} seconds</div>
+            <div style={captionStyle}>{WATCH.limit} second limit</div>
+          </div>
+        ) : null}
+        {!briefing && readout ? (
           <div style={readoutWrap}>
             <div style={{ ...readoutBox, color: t >= 0 && !showing(game) ? LOOK.faded : '#fff' }} data-readout={readout} data-stopped={stopped ? 1 : 0}>
               {readout}
@@ -272,6 +286,29 @@ const readoutBox: React.CSSProperties = {
   font: `700 44px/1.1 ${MONO}`,
   textAlign: 'center',
   fontVariantNumeric: 'tabular-nums',
+}
+
+const aimWrap: React.CSSProperties = {
+  position: 'absolute',
+  left: 0,
+  right: 0,
+  top: 16,
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: 6,
+  padding: '0 16px',
+  pointerEvents: 'none',
+}
+
+const aimBox: React.CSSProperties = {
+  padding: '8px 22px',
+  borderRadius: 16,
+  background: LOOK.sun,
+  boxShadow: '0 4px 0 #d79a22',
+  color: LOOK.ink,
+  font: `700 32px/1.2 ${FONT}`,
+  textAlign: 'center',
 }
 
 const captionStyle: React.CSSProperties = {

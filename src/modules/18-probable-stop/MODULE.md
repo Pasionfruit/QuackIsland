@@ -212,7 +212,7 @@ round, and every guest agreeing on the result.
   That is the brief's odds. If it feels too punishing, the lever is
   `GAME.safePaths`.
 - **A guest's wish arriving in the last few milliseconds** may land after the
-  countdown ends on the host, and not count. The countdown is ten seconds.
+  countdown ends on the host, and not count. The countdown is five seconds.
 - **Much of the plumbing is the other minigames' again** - the fixed camera fit,
   the host/guest hook shape, the results card. This is the third copy, which is
   the point Messy Maze's notes said it should move into `15-minigames`. Not done

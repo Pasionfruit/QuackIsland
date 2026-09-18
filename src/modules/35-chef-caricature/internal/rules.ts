@@ -1,7 +1,7 @@
 /**
  * The rules of Chef Caricature, as arithmetic.
  *
- * **Turn by turn**, in an order from the seed, each player gets forty-five
+ * **Turn by turn**, in an order from the seed, each player gets thirty
  * seconds at the easel while everybody else watches. An outline of an ingredient
  * or a dish is on the board. **Hold the pen down and trace it without letting
  * go.** The moment your ink has gone all the way round and enclosed the shape -
@@ -28,7 +28,7 @@ export const TURN = {
   /** "Next up", seconds. */
   intro: 3,
   /** A turn at the easel, seconds. */
-  length: 45,
+  length: 30,
   /** The dishes a turn fed the duck, shown for this long. */
   result: 3,
 } as const
@@ -288,8 +288,9 @@ export function stepGame(game: Game, dt: number): Game {
   tick(game, dt)
   if (game.over) return game
   if (game.players[drawer(game)]?.left && phase(game) !== 'result') {
-    // The drawer has gone: straight to their result.
-    game.startsAt = game.elapsed - TURN.length
+    // The drawer has gone: straight to their result. A hair further back than
+    // the turn's length, so rounding cannot leave it a hair short of over.
+    game.startsAt = game.elapsed - TURN.length - 1e-6
     game.stroke = null
   }
   if (game.elapsed >= game.startsAt + TURN.length + TURN.result) nextTurn(game)

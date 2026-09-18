@@ -1,7 +1,7 @@
 /**
  * 35-chef-caricature - the public contract.
  *
- * Minigame 28. Turn by turn, everybody gets forty-five seconds at the easel to
+ * Minigame 28. Turn by turn, everybody gets thirty seconds at the easel to
  * trace as many ingredient and dish outlines as they can while everybody else
  * watches. Three quarters of an outline covered without letting go feeds the
  * hungry duck a point; letting go wipes the attempt. Most dishes wins.

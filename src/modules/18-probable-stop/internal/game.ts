@@ -31,7 +31,7 @@ export const GAME = {
    */
   safePaths: [2, 2, 2, 2, 1, 1] as readonly number[],
   /** Seconds to choose, each round. */
-  chooseTime: 10,
+  chooseTime: 5,
   /**
    * What the countdown drops to once everybody still in has confirmed.
    *

@@ -2,7 +2,7 @@
 
 ## What this is
 
-Minigame 28. **Turn by turn, everybody gets forty-five seconds at the easel while
+Minigame 28. **Turn by turn, everybody gets thirty seconds at the easel while
 everybody else watches.** An outline of an ingredient or a dish is on the board.
 
 - **Tracing it:** hold left click and trace it without letting go. The moment
@@ -66,7 +66,7 @@ The rest of the pen:
 ## Turns and the end
 
 Everybody gets one turn, in an order shuffled by the seed. Each turn is three
-seconds of *Next up*, forty-five seconds of drawing, and three seconds of *fed
+seconds of *Next up*, thirty seconds of drawing, and three seconds of *fed
 the duck N dishes*.
 
 - **Somebody who has left** has their turn skipped.
@@ -233,8 +233,8 @@ testing, not because anybody else needs them.
   dishes in a turn. A person with a mouse will manage far fewer; how many feels
   fair - and so whether 0.07 of reach and a 0.06 gap are the right numbers - wants
   somebody to play it.
-- **Eight players is six and a half minutes**, most of it watching. That is what
-  the brief asks for; a shorter turn is a one-number change (`TURN.length`).
+- **Eight players is just under five minutes**, most of it watching. That is what
+  the turn was cut from forty-five seconds to thirty; it is a one-number change (`TURN.length`).
 - **The duck eats whatever you drew, not the outline:** the plate that flies into
   its beak shows your ink.
 

@@ -65,7 +65,24 @@ export function useWatchNet(): WatchNet {
     // so this stops dead - the host's own simulation included. A round that
     // carried on behind the card would make the card a lie. See
     // `15-minigames/internal/pause.ts`.
-    if (paused) return false
+    //
+    // Held still is not silent, though: the host still says what the round is,
+    // and a guest with no round yet takes it, so everybody can read the target
+    // during the three-two-one before the stopwatch starts.
+    if (paused) {
+      if (net.host) {
+        if (game.players.length > 0 && net.status === 'joined' && now - sentAt.current >= SEND_MS) {
+          sentAt.current = now
+          sendToRoom(encodeSnapshot(game))
+        }
+        return false
+      }
+      const first = latest.current
+      if (game.players.length > 0 || !first || first.snap === applied.current) return false
+      applied.current = first.snap
+      applySnapshot(game, first.snap, myId())
+      return game.players.length > 0
+    }
 
     if (net.host) {
       if (game.players.length === 0) return false

@@ -213,7 +213,7 @@ describe('the pen', () => {
       if (trace(g, d, { off: 0.02 }) === 'accepted') dishes += 1
       wait(g, 1.5)
     }
-    expect(dishes).toBeGreaterThan(20)
+    expect(dishes).toBeGreaterThan(12)
     expect(g.players[d].score).toBe(dishes)
     expect(penDown(g, d, 0, 0)).toBe(false)
   })
