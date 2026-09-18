@@ -35,7 +35,9 @@ export function SharingIsCaringScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the round from here.
   const [round, setRound] = useState<Round>(() => (getNet().host ? newRound() : waitingRound()))
   // Held back through the two seconds of Finish; see `useFinish`.
-  const results = useFinish(round.over)
+  const results = useFinish(round.over, () =>
+    placings(round).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: COLOURS[e.index % COLOURS.length], mine: e.player.id === me })),
+  )
   const paused = useRef(run.paused)
   paused.current = run.paused
 

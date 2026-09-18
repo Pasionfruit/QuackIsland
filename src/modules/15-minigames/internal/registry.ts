@@ -24,6 +24,7 @@
 import type { ReactNode } from 'react'
 import type { MinigameId } from './catalogue'
 import type { Pauser } from './pause'
+import type { Standing } from './podium'
 
 /**
  * Where a game is in its own life. The six every minigame has.
@@ -96,6 +97,12 @@ export interface MinigameRun {
    * note at the top of this file for why this is not typed more tightly.
    */
   game: unknown
+  /**
+   * How everybody came out, as the game said when it finished - or `null`
+   * until then, and for a game that did not say. What the podium is drawn
+   * from; see `podium.ts`.
+   */
+  standings: Standing[] | null
 }
 
 /** How long the three-two-one runs, in seconds. Three, counted down to go. */
@@ -162,7 +169,7 @@ export function forgetBuilds(): void {
  */
 export function freshRun(id: MinigameId): MinigameRun {
   const build = buildFor(id)
-  return { id, phase: 'briefing', countdown: 0, started: 0, paused: false, pausedBy: null, game: build ? build.newGame() : null }
+  return { id, phase: 'briefing', countdown: 0, started: 0, paused: false, pausedBy: null, game: build ? build.newGame() : null, standings: null }
 }
 
 /**
@@ -184,23 +191,25 @@ export function beginRun(run: MinigameRun): MinigameRun {
     paused: false,
     pausedBy: null,
     game: build ? build.newGame() : null,
+    standings: null,
   }
 }
 
 /**
  * The round is over: two seconds of **Finish** before the results.
  *
- * Called by the game, because the game is the only thing that knows. It is the
- * one thing a build has to say out loud, and saying it twice is nothing - which
+ * Called by the game, because the game is the only thing that knows - and it
+ * hands over how everybody came out while it is at it, which is what the
+ * podium is drawn from. It is the one thing a build has to say out loud, and saying it twice is nothing - which
  * matters, because it is said from a React effect watching a flag.
  *
  * Also from `over`: a game's own "again" button starts a new round inside a run
  * that is already over, and that round ending deserves its Finish as much as the
  * first one did. `useFinish` only says it on the edge, so this is never a loop.
  */
-export function finishRun(run: MinigameRun): MinigameRun {
+export function finishRun(run: MinigameRun, standings: readonly Standing[] | null = null): MinigameRun {
   if (run.phase !== 'playing' && run.phase !== 'over') return run
-  return { ...run, phase: 'finishing', countdown: FADE.dim, paused: false, pausedBy: null }
+  return { ...run, phase: 'finishing', countdown: FADE.dim, paused: false, pausedBy: null, standings: standings ? [...standings] : null }
 }
 
 /**

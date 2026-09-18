@@ -60,7 +60,9 @@ export function TriathlonScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the race from here.
   const [race, setRace] = useState<Race>(() => (getNet().host ? newRace() : waitingRace()))
   // Held back through the two seconds of Finish; see `useFinish`.
-  const results = useFinish(race.over)
+  const results = useFinish(race.over, () =>
+    placings(race).map((e) => ({ id: e.racer.id, place: e.place, name: nameOf(e.racer.id), colour: COLOURS[e.index % COLOURS.length], mine: e.racer.id === me })),
+  )
   const paused = useRef(run.paused)
   paused.current = run.paused
 

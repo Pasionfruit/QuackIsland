@@ -1,5 +1,5 @@
 /**
- * The two one-shots the screen itself plays: the three-two-one, and Finish.
+ * What the screen itself plays: the three-two-one, Finish, and the podium.
  *
  * **Not on the island's audio bus.** `08-audio` is the body's cues - footsteps,
  * a jump, a swim stroke - mixed in three dimensions and pitched by how fast you
@@ -21,6 +21,8 @@ import { assetUrl } from '../../00-core'
 
 export const COUNTDOWN_SOUND = 'audio/Countdown.mp3'
 export const FINISH_SOUND = 'audio/Finish.mp3'
+/** Under the podium. Long enough to cover it, so it is played once rather than looped. */
+export const PODIUM_MUSIC = 'Podium_Music.mp3'
 
 /** How loud, against the file's own level. Interface, so under the game. */
 export const SCREEN_VOLUME = 0.55
@@ -93,6 +95,19 @@ export function holdScreenSounds(hold: boolean): void {
     }
   }
   held.clear()
+}
+
+/** Stops one of them, if it is going. For the podium music, when the podium goes. */
+export function stopOne(id: string): void {
+  const player = players.get(id)
+  if (!player) return
+  held.delete(player)
+  try {
+    player.pause()
+    player.currentTime = 0
+  } catch {
+    // As below.
+  }
 }
 
 /** Stops whichever of them is going. For leaving a round part way through one. */

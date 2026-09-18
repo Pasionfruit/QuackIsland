@@ -42,7 +42,9 @@ export function HelpingDadScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the game from here.
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
   // Held back through the two seconds of Finish; see `useFinish`.
-  const results = useFinish(game.over)
+  const results = useFinish(game.over, () =>
+    placings(game).map((e) => ({ id: e.torch.id, place: e.place, name: nameOf(e.torch.id), colour: COLOURS[e.index % COLOURS.length], mine: e.torch.id === me })),
+  )
   const paused = useRef(run.paused)
   paused.current = run.paused
 

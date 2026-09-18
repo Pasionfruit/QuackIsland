@@ -52,7 +52,16 @@ const FONT =
 export function ZombieTagScreen({ run }: { run: MinigameRun }) {
   const [round, setRound] = useState<Round>(() => (getNet().host ? newRound() : emptyRound()))
   // Held back through the two seconds of Finish; see `useFinish`.
-  const results = useFinish(round.over)
+  const results = useFinish(round.over, () => {
+    const lasted = (b: { caughtAt: number | null }) => b.caughtAt ?? Infinity
+    const order = placings(round)
+    return order.map((b) => ({
+      id: b.id,
+      place: 1 + order.filter((o) => lasted(o) > lasted(b)).length,
+      name: nameOf(b.id),
+      mine: b.id === me,
+    }))
+  })
   // Read in the frame callback rather than closed over, so pausing takes
   // effect on the very next frame instead of whenever the effect re-runs.
   const paused = useRef(run.paused)

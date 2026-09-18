@@ -30,6 +30,7 @@ import { getNet, useNet } from '../../09-net'
 import { Briefing } from './Briefing'
 import { Dashboard } from './Dashboard'
 import { Paused } from './Paused'
+import { Podium } from './PodiumScreen'
 import { minigameById } from './catalogue'
 import { FONT, ISLAND, bar, body, button, screen, wordmark } from './look'
 import { Countdown, Curtain, Finish } from './Transitions'
@@ -111,6 +112,18 @@ export function MinigameScreen() {
     return (
       <>
         <Briefing run={current} />
+        {over}
+      </>
+    )
+  }
+
+  // Over, and the game said how everybody came out: the podium, in place of
+  // the game. Taking the game down takes its canvas with it, so nothing is
+  // drawn every frame under a page that covers it.
+  if (current.phase === 'over' && current.standings) {
+    return (
+      <>
+        <Podium run={current} />
         {over}
       </>
     )

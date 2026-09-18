@@ -147,7 +147,7 @@ try {
       return log
     })()`)
     say('steered', JSON.stringify(log), await page.shot('3-in.png'))
-    await page.waitFor(`!!document.querySelector('[data-again]')`, 120000)
+    await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 120000)
     say('results', await page.shot('4-results.png'))
   } else if (opt.steer && opt.game === 'time-it') {
     const state = () => page.eval(`(() => { const g = ${gameState('time-it')}; const me = g.players.find((p) => p.mine); return { over: g.over, elapsed: +g.elapsed.toFixed(2), stopped: me.stopped, all: g.players.map((p) => p.stopped) } })()`)
@@ -166,7 +166,7 @@ try {
     const after = await state()
     say('stopped', JSON.stringify(did), JSON.stringify(after))
     if (!did || after.stopped === null || Math.abs(after.stopped - did.target) > 0.15) throw new Error('the stop did not land on the target: ' + JSON.stringify({ did, after }))
-    await page.waitFor(`!!document.querySelector('[data-again]')`, 40000)
+    await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 40000)
     await sleep(600)
     say('results', JSON.stringify(await state()), await page.shot('6-results.png'))
   } else if (opt.steer && opt.game === 'feeding-time') {
@@ -204,7 +204,7 @@ try {
     say('flicked', flicks, 'times;', JSON.stringify(end))
     if (end.throws === 0) throw new Error('no flick threw a cracker')
     if (end.score === 0) throw new Error('never fed a duck')
-    await page.waitFor(`!!document.querySelector('[data-again]')`, 90000)
+    await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 90000)
     say('results', await page.shot('5-results.png'))
   } else if (opt.steer && opt.game === 'find-yourself') {
     const state = () => page.eval(`(() => { const g = ${gameState('find-yourself')}; const me = g.players.find((p) => p.mine); return { stage: g.stage, phase: g.phase, clock: +g.clock.toFixed(2), score: me.score, picks: me.picks, scores: g.players.map((p) => p.score) } })()`)
@@ -244,7 +244,7 @@ try {
     const end = await state()
     say('picks', JSON.stringify(log), 'final', JSON.stringify(end))
     if (end.score !== 1 + 3) throw new Error(`expected 4 points for stages 1 and 3 right and 2 wrong, got ${end.score}`)
-    await page.waitFor(`!!document.querySelector('[data-again]')`, 30000)
+    await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 30000)
     say('results', await page.shot('7-results.png'))
   } else if (opt.steer && opt.game === 'sprint-triathlon') {
     const state = () => page.eval(`(() => { const r = ${gameState('sprint-triathlon')}; const me = r.racers.find((x) => x.mine); return { over: r.over, elapsed: +r.elapsed.toFixed(2), strokes: me.strokes, pedals: me.pedals, typed: me.typed, mistakes: me.mistakes, swimAt: me.swimAt, bikeAt: me.bikeAt, finishAt: me.finishAt, place: me.place, others: r.racers.filter((x) => !x.mine).map((x) => x.id + ':' + [x.strokes, x.pedals, x.typed].join('/')) } })()`)
@@ -285,7 +285,7 @@ try {
     }
     const end = await state()
     if (end.finishAt === null) throw new Error('never finished: ' + JSON.stringify(end))
-    await page.waitFor(`!!document.querySelector('[data-again]')`, 120000)
+    await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 120000)
     say('results', await page.shot('6-results.png'))
   } else if (opt.steer && opt.game === 'wack-attack') {
     const state = () => page.eval(`(() => { const g = ${gameState('wack-attack')}; const me = g.players.find((p) => p.mine); return { over: g.over, elapsed: +g.elapsed.toFixed(2), score: me.score, whacks: me.whacks, golden: me.golden, swings: me.swings, scores: g.players.map((p) => p.score) } })()`)
@@ -314,7 +314,7 @@ try {
     const end = await state()
     say('swung', swings, 'times;', JSON.stringify(end))
     if (end.whacks === 0) throw new Error('never whacked a mole')
-    await page.waitFor(`!!document.querySelector('[data-again]')`, 90000)
+    await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 90000)
     say('results', await page.shot('5-results.png'))
   } else if (opt.steer && opt.game === 'make-the-cut') {
     const state = () => page.eval(`(() => { const g = ${gameState('make-the-cut')}; const me = g.players.findIndex((p) => p.mine); return { phase: g.phase, clock: +g.clock.toFixed(2), turn: g.turn, turns: g.turns, me, out: g.players[me].out, cuts: g.players[me].cuts, last: g.last, standing: g.players.filter((p) => !p.out).length, cut: g.cut.map((c) => (c ? c.player + (c.deadly ? '!' : '') : '.')).join(' ') } })()`)
@@ -349,7 +349,7 @@ try {
     }
     say('my cuts', JSON.stringify(log))
     if (log.length === 0) throw new Error('never got to cut')
-    await page.waitFor(`!!document.querySelector('[data-again]')`, 240000)
+    await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 240000)
     say('results', await page.shot('7-results.png'))
   } else if (opt.steer && opt.game === 'lady-luck') {
     const state = () => page.eval(`(() => { const g = ${gameState('lady-luck')}; const me = g.players.find((p) => p.mine); return { over: g.over, elapsed: +g.elapsed.toFixed(2), score: me.score, misses: me.misses, cooldown: +me.cooldown.toFixed(2), claims: g.claims.length, lucky: g.lucky.map((l) => l.clover), scores: g.players.map((p) => p.score) } })()`)
@@ -395,7 +395,7 @@ try {
     }
     say('claimed', claimed, 'of', tried, 'clicks on four-leaf clovers')
     if (claimed === 0) throw new Error('never claimed a four-leaf clover')
-    await page.waitFor(`!!document.querySelector('[data-again]')`, 90000)
+    await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 90000)
     say('results', await page.shot('4-results.png'))
   } else if (opt.steer && opt.game === 'let-him-cook') {
     const state = () => page.eval(`(() => { const g = ${gameState('let-him-cook')}; const me = g.players.findIndex((p) => p.mine); return { phase: g.phase, clock: +g.clock.toFixed(2), recipe: g.recipe, turn: g.turn, up: g.queue[0], me, out: g.players[me].out, claims: g.players[me].claims, last: g.last, left: g.players.filter((p) => !p.out).length, picks: g.picks.length } })()`)
@@ -440,7 +440,7 @@ try {
       await sleep(80)
     }
     say('my turns', JSON.stringify(log))
-    await page.waitFor(`!!document.querySelector('[data-again]')`, 300000)
+    await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 300000)
     say('results', await page.shot('7-results.png'))
   } else if (opt.steer && opt.game === 'hes-one-shot') {
     const S = await page.eval(`(async () => (await import('/src/modules/32-hes-one-shot/internal/HesOneShotScreen.tsx')).SENSITIVITY)()`)
@@ -514,7 +514,7 @@ try {
     }
     await page.eval(oneShotPlay({ mode: 'lock' }))
     say('hunted', JSON.stringify({ fired, firedAsHunter, kills, outAt, end: last && last.clock }))
-    await page.waitFor(`!!document.querySelector('[data-again]')`, 100000)
+    await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 100000)
     await sleep(400)
     const places = await page.eval(`(() => { const g = ${gameState('hes-one-shot')}; return JSON.stringify(g.players.map((p) => [p.id, p.out, p.by, p.kills])) })()`)
     say('results [id, out, by, kills]', places, await page.shot('7-results.png'))
@@ -570,7 +570,7 @@ try {
     if (log.some((l) => l[1] && l[3] !== 1)) throw new Error('an accepted drawing did not score exactly one')
     const mine = (await state()).scores
     say('scores after my turn', JSON.stringify(mine))
-    await page.waitFor(`!!document.querySelector('[data-again]')`, 200000)
+    await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 200000)
     await sleep(400)
     say('results', JSON.stringify((await state()).scores), await page.shot('7-results.png'))
   } else if (opt.steer && opt.game === 'keyboard-warrior') {
@@ -620,7 +620,7 @@ try {
       if ((await phaseNow()) === 'over') break
     }
     say('letters [index, letter, typed, reaction, winner]', JSON.stringify(log))
-    await page.waitFor(`!!document.querySelector('[data-again]')`, 60000)
+    await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 60000)
     await sleep(400)
     const end = await state()
     say('results', JSON.stringify(end.scores), await page.shot('7-results.png'))
@@ -674,7 +674,7 @@ try {
       }
       await sleep(25)
     }
-    await page.waitFor(`!!document.querySelector('[data-again]')`, 150000)
+    await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 150000)
     await sleep(500)
     const places = await page.eval(`(() => { const g = ${gameState('helping-dad')}; return g.players.map((p) => [p.id, p.finished, p.hits]) })()`)
     say('results', JSON.stringify(places), await page.shot('6-results.png'))
@@ -732,7 +732,7 @@ try {
       if (s.out) break
     }
     say('rounds [round, meant, with, moved, step]', JSON.stringify(log))
-    await page.waitFor(`!!document.querySelector('[data-again]')`, 150000)
+    await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 150000)
     await sleep(500)
     say('results', JSON.stringify(await state()), await page.shot('5-results.png'))
   } else if (opt.steer && opt.game === 'i-see-the-light') {
@@ -777,7 +777,7 @@ try {
       await sleep(red ? 25 : 90)
     }
     say('pressed space', presses, 'times across', reds, 'reds')
-    await page.waitFor(`!!document.querySelector('[data-again]')`, 150000)
+    await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 150000)
     say('results', await page.shot('4-results.png'))
   } else if (opt.steer && opt.game === 'punch-buggy') {
     const board = await page.eval(`(() => { const r = document.querySelector('[data-board]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } })()`)
@@ -833,7 +833,7 @@ try {
       await sleep(60)
     }
     say('clicked', clicks, 'times')
-    await page.waitFor(`!!document.querySelector('[data-again]')`, 60000)
+    await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 60000)
     say('results', await page.shot('4-results.png'))
   } else if (opt.steer && opt.game === 'duck-hunt') {
     let fired = 0
@@ -851,7 +851,7 @@ try {
     }
     const end = await page.eval(`(() => { const g = ${gameState('duck-hunt')}; return g.players.map((p) => ({ id: p.id, score: p.score, shots: p.shots, mine: p.mine })) })()`)
     say('clicked', fired, 'times; scores', JSON.stringify(end))
-    await page.waitFor(`!!document.querySelector('[data-again]')`, 30000)
+    await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 30000)
     say('results', await page.shot('4-results.png'))
   } else if (opt.steer && opt.game === 'probable-stop') {
     const state = () => page.eval(`(() => { const g = ${gameState('probable-stop')}; const me = g.players.find((p) => p.mine); return { round: g.round, phase: g.phase, clock: g.clock, safe: g.safe, pick: me.pick, confirmed: me.confirmed, alive: me.alive, outIn: me.outIn, left: g.players.filter((p) => p.alive).length } })()`)
@@ -886,7 +886,7 @@ try {
       await sleep(100)
     }
     say('rounds', JSON.stringify(log))
-    await page.waitFor(`!!document.querySelector('[data-again]')`, 120000)
+    await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 120000)
     say('results', await page.shot('4-results.png'))
   } else if (opt.steer) {
     await page.eval(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyD', key: 'd' }))`)

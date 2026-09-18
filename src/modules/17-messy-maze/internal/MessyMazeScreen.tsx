@@ -43,7 +43,9 @@ const FLASH_MS = 1400
 export function MessyMazeScreen({ run }: { run: MinigameRun }) {
   const [race, setRace] = useState<Race>(() => (getNet().host ? newRace() : waitingRace()))
   // Held back through the two seconds of Finish; see `useFinish`.
-  const results = useFinish(race.over)
+  const results = useFinish(race.over, () =>
+    placings(race).map((r, i) => ({ id: r.id, place: i + 1, name: nameOf(r.id), mine: r.id === me })),
+  )
   const paused = useRef(run.paused)
   paused.current = run.paused
 

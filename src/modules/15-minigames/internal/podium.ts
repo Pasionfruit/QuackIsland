@@ -32,6 +32,8 @@ export interface Standing {
   name?: string
   /** The colour they were in the game, so you can find yourself. */
   colour?: string
+  /** Whether this is the player looking at the screen. */
+  mine?: boolean
 }
 
 /**

@@ -156,6 +156,8 @@ round. Each number is rounded up, so the three is up for a whole second.
 results only when that returns true. In between: two seconds (`FADE.dim`) of a
 big **Finish** over the top, `audio/Finish.mp3`, and the game dimming to black
 behind it. A game's own "again" button gets a Finish for its next round too.
+A game that hands over its standings gets the podium instead of its own
+results; see below.
 
 **The game's state is built when the fade starts, not when the count ends** - a
 game that wants to draw its board behind the numbers has a board to draw.
@@ -167,6 +169,39 @@ The clock that calls it lives in `MinigameScreen` and stops with the screen.
 With no build registered, the round that starts is honest about being empty:
 the countdown ran, the phase really is `playing`, and what is missing is the
 game.
+
+## The podium
+
+Every built game ends on the same page. A game hands its standings to
+`useFinish(over, () => standings)` - each player's id, place, name, colour and
+whether it is you - and after the two seconds of Finish the podium takes the
+place of the game, canvas and all. The game's own results card is never drawn;
+`useFinish` answers false for a game that handed standings over.
+
+**How they stand is how they came.** First jumps for joy, second is happy, third
+keeps a straight face, and fourth and below fall flat on their faces on the
+sand in front of the steps. The steps stand second, first, third, left to
+right, the way a podium does.
+
+**Ties share a step, and skip the places after them.** Two level at the top
+both jump on the first step, the second step stands empty, and whoever came
+next is third. The ranks are worked out in `podium.ts` from the order of the
+places a game hands over, not trusted from its numbers, so a game that numbered
+its ties 1, 1, 2 still comes out 1, 1, 3.
+
+**If everybody ties, everybody loses.** All three steps stand empty and the
+whole field is on the sand. It takes two to tie: a player on their own wins.
+
+**Bottom left is the minigame dashboard, bottom right is replay.** The
+dashboard is `backOut`, the same step back escape takes. Replay is the host's,
+the same as play is: it goes out as a restart on the pause channel, so every
+screen still on the podium goes back through the black and the three-two-one
+together. A guest gets *waiting for the host* where the button is.
+`Podium_Music.mp3` plays under it and stops when it goes.
+
+It is DOM and SVG, not a scene: the island's pill, drawn flat and painted the
+colour each player was in the game, with CSS for the jump, the sway and the
+fall. Reduced motion stills all of it.
 
 ## Browsing is local; being in a game is the host's call
 
@@ -272,7 +307,9 @@ behind it.
 | `buildFor`, `isBuilt`, `builtMinigames`, `forgetBuilds` | Reading the registry. `forgetBuilds` is for tests. |
 | `freshRun`, `MinigameRun`, `MinigameBuild`, `RunPhase` | A run of one game, at its beginning. |
 | `beginRun`, `tickRun`, `countShown`, `curtain`, `finishRun`, `COUNT_FROM`, `FADE` | Fade, three-two-one and Finish. All pure. |
-| `useFinish` | A game's one line about ending: says it is over, and answers whether its results may be drawn yet. |
+| `useFinish` | A game's one line about ending: says it is over, hands over its standings for the podium, and answers whether its own results may be drawn yet (never, once it has handed standings over). |
+| `rankStandings`, `poseFor`, `Standing`, `Placed`, `Pose`, `PodiumResult` | Who stands where on the podium and how they take it. All pure. |
+| `replayMinigame` | The podium's replay: the same game again, for everybody. The host's. |
 | `openDashboard`, `openMinigame`, `playMinigame`, `tickMinigame`, `backOut`, `closeMinigames` | Moving the screen about. |
 | `pauseMinigame`, `resumeMinigame`, `restartMinigame`, `isPausable`, `pauseRun`, `resumeRun`, `restartRun` | Stopping a round, starting it again, and starting it over. |
 | `mayControl`, `iMayControl`, `useMayControl`, `nameOfPauser`, `Pauser` | Who the card belongs to, and what to call them. |
@@ -283,6 +320,10 @@ behind it.
 | `MinigameScreen` | The one component the app mounts. |
 
 ## Invariants you may rely on
+
+- **Ties share a rank and skip the ones after**: 1, 1, 3. Tested.
+- **Everybody tied means everybody on their face**, and nobody on a step.
+  Tested, and so is a lone player winning.
 
 - **Every id is unique, and so is every number.** Tested.
 - **The numbers run 1..41 with no holes.** Tested.
@@ -336,6 +377,23 @@ behind it.
   through a stage is whatever somebody last wrote down.
 
 ## How to review
+
+### The podium
+
+- **Play any built game to the end.** After **Finish**, the podium: the winner
+  jumping on the tall middle step, second smiling on the left, third straight
+  faced on the right, everybody else falling on their faces on the sand.
+- **Get a tie for first** (Time It with stand-ins is quickest to try). Both
+  jump on the top step, the second step is empty, and the next player is on
+  third.
+- **Everybody tied** (Where's Midnight with nobody finding her): empty steps,
+  everybody on the sand, and a headline saying everybody loses.
+- **Replay**, bottom right: back through the black and the three-two-one into
+  the same game. **Minigame dashboard**, bottom left: back to the grid.
+- **As a guest**: no replay button, *waiting for the host* instead, and the
+  host's replay takes you with them.
+
+### Everything else
 
 Open a lobby, leave the game on Volcano Island, and press **minigames** in the
 party panel, bottom left.

@@ -49,7 +49,9 @@ export function ChefCaricatureScreen({ run }: { run: MinigameRun }) {
   // asks React to draw it again.
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
   // Held back through the two seconds of Finish; see `useFinish`.
-  const results = useFinish(game.over)
+  const results = useFinish(game.over, () =>
+    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: COLOURS[e.index % COLOURS.length], mine: e.player.id === me })),
+  )
   const [, redraw] = useReducer((n: number) => n + 1, 0)
   const paused = useRef(run.paused)
   paused.current = run.paused

@@ -47,6 +47,15 @@ export {
 } from './internal/pause'
 
 export {
+  poseFor,
+  rankStandings,
+  type Placed,
+  type PodiumResult,
+  type Pose,
+  type Standing,
+} from './internal/podium'
+
+export {
   NO_CALL,
   encodeCall,
   followCall,
@@ -94,6 +103,7 @@ export {
   openMinigame,
   pauseMinigame,
   playMinigame,
+  replayMinigame,
   restartMinigame,
   resumeMinigame,
   tickMinigame,

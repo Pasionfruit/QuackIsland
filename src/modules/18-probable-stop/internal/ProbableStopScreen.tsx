@@ -46,7 +46,9 @@ export function ProbableStopScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the game from here.
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
   // Held back through the two seconds of Finish; see `useFinish`.
-  const results = useFinish(game.phase === 'over')
+  const results = useFinish(game.phase === 'over', () =>
+    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), mine: e.player.id === me })),
+  )
   const paused = useRef(run.paused)
   paused.current = run.paused
 

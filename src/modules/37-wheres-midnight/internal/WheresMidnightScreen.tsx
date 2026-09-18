@@ -59,7 +59,9 @@ export function WheresMidnightScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the round from here.
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
   // Held back through the two seconds of Finish; see `useFinish`.
-  const results = useFinish(game.over)
+  const results = useFinish(game.over, () =>
+    placings(game).map((e) => ({ id: e.seeker.id, place: e.place, name: nameOf(e.seeker.id), colour: COLOURS[e.index % COLOURS.length], mine: e.seeker.id === me })),
+  )
   const paused = useRef(run.paused)
   paused.current = run.paused
 

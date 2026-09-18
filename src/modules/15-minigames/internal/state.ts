@@ -43,6 +43,7 @@ import {
   type MinigameRun,
 } from './registry'
 import type { MinigameId } from './catalogue'
+import type { Standing } from './podium'
 
 export type MinigameScreenState =
   | { at: 'closed' }
@@ -152,10 +153,10 @@ export function playMinigame(): void {
  * and there is nothing to agree about, so this is the one part of a run that
  * does not go near the wire.
  */
-export function finishMinigame(): void {
+export function finishMinigame(standings: readonly Standing[] | null = null): void {
   const now = screen.get()
   if (now.at !== 'game') return
-  const next = finishRun(now.run)
+  const next = finishRun(now.run, standings)
   if (next !== now.run) screen.set({ at: 'game', run: next })
 }
 
@@ -173,21 +174,46 @@ export function finishMinigame(): void {
  * reached `playing` - a guest who joined as the host's round ended - so nobody
  * is left on a finished game with no results.
  *
+ * **Hand it `standings` and the podium takes over from the results card.** It
+ * is asked once, at the moment the round ends, so it can be as expensive as a
+ * game's own `placings` and cost nothing the rest of the time. A game that
+ * hands them over is never told to draw its own card: the podium is the
+ * results, and its replay is the "again".
+ *
  * Outside the screen (a game's own tests, mounting its panel bare) there is no
  * run to finish, and the flag is handed straight back.
  */
-export function useFinish(over: boolean): boolean {
+export function useFinish(over: boolean, standings?: () => readonly Standing[]): boolean {
   const open = useMinigameScreen()
   const phase = open.at === 'game' ? open.run.phase : null
   const was = useRef(over)
+  // Read when the round ends rather than closed over when the effect was made,
+  // so it is the final state that is ranked and not the one a frame before.
+  const tell = useRef(standings)
+  tell.current = standings
   useEffect(() => {
     const rose = over && !was.current
     was.current = over
     if (!over) return
-    if (phase === 'playing' || (rose && phase === 'over')) finishMinigame()
+    if (phase === 'playing' || (rose && phase === 'over')) finishMinigame(tell.current ? tell.current() : null)
   }, [over, phase])
   if (phase === null) return over
-  return over && phase === 'over'
+  return over && phase === 'over' && !standings
+}
+
+/**
+ * The same game again, from the three-two-one, for everybody. The podium's
+ * replay.
+ *
+ * The host's alone, the same as play: it is the host who has everybody in
+ * this game. It goes out the way a restart from the pause card does - that is
+ * already a fresh run of the same game for every screen in the lobby, and a
+ * replay is exactly that with nobody paused.
+ */
+export function replayMinigame(): void {
+  const now = screen.get()
+  if (now.at !== 'game' || now.run.phase !== 'over' || !getNet().host) return
+  announce('restart', me())
 }
 
 /**
