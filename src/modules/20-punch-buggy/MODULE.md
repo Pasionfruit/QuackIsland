@@ -51,7 +51,9 @@ throw again until it is home.
 - **Only a fist on its way out, landing on a side or a back, knocks anybody
   out.** Somebody's front - 45° either side of where they face, which is where
   their own fist is - blocks it, and so does their arm or fist if it is out
-  across the path. A blocked punch shoves them 1.4 units the way it was going
+  across the path short of their body. **A punch that lands on somebody's side
+  or back knocks them out even while their own arm is out** - the arm only
+  blocks from its shoulder, at the edge of the body, outwards. A blocked punch shoves them 1.4 units the way it was going
   (credited, for the edge) and stops. The check is swept - the fist's whole path
   this step - so a fist fast enough to pass through somebody between frames
   still meets them.

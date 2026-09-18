@@ -23,7 +23,7 @@ function play(g: Game, dt = 1 / 30, check?: (g: Game) => void): Game {
 describe('the stand-ins', () => {
   it('see somebody in front of them in the open, and nobody behind them or behind cover', () => {
     const g = createGame(11, [{ id: 'a', bot: true }, { id: 'b' }])
-    while (clock(g) < 0) stepGame(g, 0.25)
+    while (clock(g) < ROUND.guard) stepGame(g, 0.25)
     const [a, b] = g.players
     const z = lane(11)
     Object.assign(a, { x: -6, z })

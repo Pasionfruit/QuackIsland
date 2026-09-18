@@ -131,6 +131,21 @@ describe('the punch', () => {
     expect(get(round, 'b').alive).toBe(false)
   })
 
+  it('knocks out whoever it reaches in the side, even with their own arm out', () => {
+    // Side-on, arms out at every angle from straight up to just off the front,
+    // at a steady frame rate and at the slowest step the rules take.
+    for (const dt of [1 / 60, 1 / 30, 0.05]) {
+      for (const facing of [Math.PI / 2, (Math.PI * 5) / 8, Math.PI - RING.guard - 0.05, -Math.PI / 2, -(Math.PI - RING.guard - 0.05)]) {
+        const round = duel(3, facing)
+        const b = get(round, 'b')
+        Object.assign(b, { punch: 'held', reach: RING.reach, thrownAt: -5 })
+        const intents = new Map([['a', { x: 0, y: 0, clicks: 1 }]])
+        for (let t = 0; t < 0.5 && !round.over; t += dt) stepRound(round, intents, dt)
+        expect({ dt, facing, alive: b.alive, how: b.how }).toEqual({ dt, facing, alive: false, how: 'punched' })
+      }
+    }
+  })
+
   it('is blocked by somebody facing it, and shoves them instead', () => {
     const round = duel(3, Math.PI)
     const [a, b] = round.fighters

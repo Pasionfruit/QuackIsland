@@ -34,7 +34,7 @@ import {
 } from 'three'
 import { createAvatar } from '../../02-player'
 import { ARENA, arenaFor } from './arena'
-import { BODY, COLOURS, type Game, type Shot } from './rules'
+import { BODY, COLOURS, guarded, type Game, type Shot } from './rules'
 
 export const PALETTE = {
   sky: '#9fd8f0',
@@ -175,7 +175,8 @@ function BodyView({ index, live }: { index: number; live: RefObject<Game> }) {
     const g = live.current
     const p = g.players[index]
     if (!group.current || !turn.current || !p) return
-    group.current.visible = !p.left && !p.mine
+    // Hidden through the spawn guard, so nobody can be lined up before the shooting starts.
+    group.current.visible = !p.left && !p.mine && !guarded(g)
     // Eased towards where the host last had them, so fifteen snapshots a second do not stutter.
     const s = shown.current ?? (shown.current = { x: p.x, z: p.z })
     if (Math.hypot(p.x - s.x, p.z - s.z) > 3) {

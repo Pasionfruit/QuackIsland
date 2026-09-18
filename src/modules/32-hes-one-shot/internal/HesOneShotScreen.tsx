@@ -17,7 +17,7 @@ import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
 import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { HesOneShotScene, type LookRef } from './HesOneShotScene'
-import { COLOURS, GUN, PITCH_LIMIT, ROUND, clock, cooldownLeft, isStanding, placings, type Game } from './rules'
+import { COLOURS, GUN, PITCH_LIMIT, ROUND, clock, cooldownLeft, guarded, isStanding, placings, type Game } from './rules'
 import { myId, newGame, waitingGame } from './setup'
 import { useShotNet } from './useShotNet'
 
@@ -217,6 +217,11 @@ export function HesOneShotScreen({ run }: { run: MinigameRun }) {
             <span style={{ ...pill, background: LOOK.ink, color: '#fff' }} data-standing={standing}>
               {standing} standing
             </span>
+            {t >= 0 && guarded(game) && !game.over ? (
+              <span style={{ ...pill, background: LOOK.sun, color: LOOK.ink }} data-guard>
+                hidden - {Math.ceil(ROUND.guard - t)}
+              </span>
+            ) : null}
           </>
         ) : (
           <span style={{ color: LOOK.faded }}>waiting for the host…</span>
@@ -337,9 +342,11 @@ function Over({ game, me, nameOf, onAgain }: { game: Game; me: string; nameOf: (
   const headline = !mine
     ? 'Time'
     : mine.place === 1
-      ? mine.player.out === null
-        ? 'Still standing!'
-        : 'Last one standing - you win!'
+      ? mine.player.out === null && order.filter((entry) => entry.place === 1).length === 1
+        ? 'Last one standing - you win!'
+        : mine.player.out === null
+          ? 'Still standing!'
+          : 'Last one standing - you win!'
       : mine.player.out === null && !mine.player.left
         ? 'You survived'
         : `Shot down - ${ordinal(mine.place)}`

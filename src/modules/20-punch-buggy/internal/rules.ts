@@ -4,8 +4,9 @@
  * A round platform floating over the sea, and everybody on it with a fist that
  * comes off. Click and it shoots out the way you are aiming; click again and it
  * comes back. A fist that reaches somebody's side or back on its way out knocks
- * them straight out of the round; one that meets their front - where their own
- * fist is - is blocked and only shoves them. An arm that is already out knocks
+ * them straight out of the round, even if their own arm is out; one that meets
+ * their front - where their own fist is - or their arm short of their body is
+ * blocked and only shoves them. An arm that is already out knocks
  * nobody out either - but it is solid, and a shove off the edge is out too.
  * After ten seconds the platform starts to shrink. Thirty seconds; the last one
  * standing wins.
@@ -369,14 +370,19 @@ export function stepRound(round: Round, intents: ReadonlyMap<string, Intent>, dt
       // meets them.
       for (const other of round.fighters) {
         if (other === f || !other.alive) continue
-        // Their arm and fist, out in the way: a clash.
-        const clash = other.reach > 0.05 && segmentsApart(from, to, other, fistAt(other)) <= RING.fist + RING.arm
+        // Their arm and fist, out in the way: a clash. The arm starts at the
+        // edge of their body, so a punch that lands on the body is not also
+        // counted as meeting the arm at its root.
+        const shoulder = { x: other.x + Math.cos(other.facing) * RING.body, y: other.y + Math.sin(other.facing) * RING.body }
+        const clash = other.reach > 0.05 && segmentsApart(from, to, shoulder, fistAt(other)) <= RING.fist + RING.arm
         const body = toSegment(other, from, to).distance <= RING.fist + RING.body
         if (!clash && !body) continue
-        if (clash || guarded(other, f.facing)) {
-          shove(round, other, f, Math.cos(f.facing), Math.sin(f.facing), RING.blockPush)
-        } else {
+        // A side or back landed is a knockout even with their arm out; only
+        // their front, or an arm in the way short of the body, blocks.
+        if (body && !guarded(other, f.facing)) {
           knockOut(round, other, 'punched', f.id)
+        } else {
+          shove(round, other, f, Math.cos(f.facing), Math.sin(f.facing), RING.blockPush)
         }
         setPunch(round, f, 'held')
         break

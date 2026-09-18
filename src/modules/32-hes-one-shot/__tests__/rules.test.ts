@@ -15,6 +15,7 @@ import {
   clock,
   createGame,
   fire,
+  guarded,
   isHunter,
   leave,
   placings,
@@ -31,9 +32,9 @@ function game(n = 3): Game {
   return createGame(SEED, Array.from({ length: n }, (_, i) => ({ id: `p${i + 1}`, mine: i === 0 })), 7)
 }
 
-/** Past the countdown. */
+/** Past the countdown and the spawn guard. */
 function started(g: Game): Game {
-  for (let i = 0; clock(g) < 0; i++) {
+  for (let i = 0; clock(g) < ROUND.guard; i++) {
     if (i > 100) throw new Error('the countdown never finished')
     stepGame(g, 0.25)
   }
@@ -201,7 +202,7 @@ describe('the gun', () => {
     const shot = fire(g, 0)!
     expect(shot.hit).toBe(1)
     expect(Math.hypot(shot.to.x - 6, shot.to.z - OPEN)).toBeCloseTo(BODY.radius, 1)
-    expect(g.players[1]).toMatchObject({ out: 0, by: 0 })
+    expect(g.players[1]).toMatchObject({ out: clock(g), by: 0 })
     expect(g.players[0].kills).toBe(1)
     aim(g, 0, g.players[2])
     wait(g, GUN.cooldown - 0.25)
@@ -321,7 +322,7 @@ describe("a guest's shot", () => {
     put(g, 1, 6, OPEN)
     claim(g, 0, { ...facing(g, 0, g.players[1]), victim: 'p2' })
     claim(g, 1, { ...facing(g, 1, g.players[0]), victim: 'p1' })
-    expect(g.players.map((p) => p.out)).toEqual([0, 0])
+    expect(g.players.map((p) => p.out)).toEqual([clock(g), clock(g)])
     expect(placings(g).map((e) => e.place)).toEqual([1, 1])
     expect(stepGame(g, 0.01).over).toBe(true)
   })
@@ -340,28 +341,38 @@ describe("a guest's shot", () => {
 })
 
 describe('the end', () => {
-  it('comes when nobody is left standing, and the last to go wins', () => {
+  it('comes when one player is left standing, and they win', () => {
     const g = started(game(3))
     put(g, 0, -6, OPEN)
     put(g, 1, 0, OPEN)
     put(g, 2, 6, OPEN)
     aim(g, 0, g.players[1])
     fire(g, 0)
-    wait(g, 5)
-    // p1 alone standing, but the hunter p2 is still here: not over.
-    reload(g)
-    aim(g, 2, g.players[0])
-    fire(g, 2)
+    // p1 and p3 still standing: not over.
     expect(stepGame(g, 0.01).over).toBe(false)
     wait(g, 5)
-    aim(g, 1, g.players[2])
-    fire(g, 1)
+    aim(g, 2, g.players[0])
+    fire(g, 2)
     expect(stepGame(g, 0.01).over).toBe(true)
     expect(placings(g).map((e) => [e.player.id, e.place])).toEqual([
       ['p3', 1],
       ['p1', 2],
       ['p2', 3],
     ])
+  })
+
+  it('hides everybody and lets nobody be shot for the spawn guard', () => {
+    const g = game(2)
+    put(g, 0, -6, OPEN)
+    put(g, 1, 6, OPEN)
+    aim(g, 0, g.players[1])
+    expect(guarded(g)).toBe(true)
+    expect(fire(g, 0)!.hit).toBe(-1)
+    wait(g, ROUND.guard)
+    expect(guarded(g)).toBe(false)
+    reload(g)
+    aim(g, 0, g.players[1])
+    expect(fire(g, 0)!.hit).toBe(1)
   })
 
   it('comes at a minute and fifteen, and everybody standing shares first', () => {

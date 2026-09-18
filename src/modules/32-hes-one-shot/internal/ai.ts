@@ -17,7 +17,7 @@
  */
 import { createRng, hashSeed } from '../../00-core'
 import { arenaFor, lineClear, openPoint, type Point } from './arena'
-import { BODY, aimDirection, canAct, canShoot, eyeOf, fire, isStanding, walk, wrapAngle, type Game, type Player } from './rules'
+import { BODY, aimDirection, canAct, canShoot, eyeOf, fire, isTarget, walk, wrapAngle, type Game, type Player } from './rules'
 
 export const BOT = {
   /** How far a stand-in sees, metres. */
@@ -94,7 +94,7 @@ export function sightedBy(game: Game, index: number, keep: string | null): numbe
   let best = -1
   let bestDistance = Infinity
   game.players.forEach((p, i) => {
-    if (i === index || !isStanding(p)) return
+    if (i === index || !isTarget(game, p)) return
     const d = Math.hypot(p.x - bot.x, p.z - bot.z)
     if (d > BOT.sight || d >= bestDistance) return
     // Somebody already in its sights stays there while it turns; anybody else has to be in front.

@@ -5,9 +5,14 @@
 Minigame 14, free-for-all. **First person, everybody against everybody, and one
 shot eliminates.** The gun needs a second and a half between shots. Being
 eliminated does not take you out: you become a **hunter** - you still walk and
-still shoot anybody left standing, but nobody can shoot you. **The last player
-to be eliminated wins.** At a minute and fifteen, anybody still standing shares
-first.
+still shoot anybody left standing, but nobody can shoot you. **The game ends
+when one player is left standing, and they win.** At a minute and fifteen,
+anybody still standing shares first.
+
+**Spawn guard.** For the first two seconds (`ROUND.guard`) everybody is hidden
+from everybody else and cannot be shot - a shot passes straight through - so
+nobody is picked off where they spawned. The HUD shows a `hidden` count while it
+lasts, and the stand-ins do not aim at anybody until it is over.
 
 **WASD to move, the mouse to aim, left click to shoot.**
 
@@ -57,8 +62,8 @@ floor in front of somebody misses.
 
 ## The end
 
-The game ends when **nobody is left standing, at 1:15, or when there is nobody
-left who could shoot the last one standing** (everybody else has left). The host
+The game ends when **one player or nobody is left standing, at 1:15, or when
+there is nobody left who could shoot the last one standing** (everybody else has left). The host
 decides.
 
 Placings:

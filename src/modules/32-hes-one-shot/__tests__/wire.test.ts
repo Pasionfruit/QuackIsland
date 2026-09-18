@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest'
 import { sightedBy, yawTowards } from '../internal/ai'
 import { arenaFor, blocked } from '../internal/arena'
-import { BODY, claim, clock, createGame, fire, isStanding, look, report, stepGame, walk, type Game } from '../internal/rules'
+import { BODY, ROUND, claim, clock, createGame, fire, isStanding, look, report, stepGame, walk, type Game } from '../internal/rules'
 import { waitingGame } from '../internal/setup'
 import { lane } from './places'
 import { applySnapshot, decodeMove, decodeShot, decodeSnapshot, encodeMove, encodeShot, encodeSnapshot } from '../internal/wire'
@@ -17,7 +17,7 @@ function host(n = 3): Game {
 }
 
 function started(g: Game): Game {
-  while (clock(g) < 0) stepGame(g, 0.25)
+  while (clock(g) < ROUND.guard) stepGame(g, 0.25)
   return g
 }
 

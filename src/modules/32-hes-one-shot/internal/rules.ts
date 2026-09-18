@@ -4,8 +4,9 @@
  * Everybody against everybody, in first person, with a gun that needs a second
  * and a half between shots. **One shot eliminates.** Being eliminated does not
  * take you out of it: you become a hunter - you still walk, and you still shoot
- * anybody who is left standing - but nobody can shoot you any more. The last
- * player to be eliminated wins. At a minute and fifteen, anybody still standing
+ * anybody who is left standing - but nobody can shoot you any more. The game
+ * ends when one player is left standing, and they win. For the first two
+ * seconds everybody is hidden and cannot be shot, so nobody is spawn-killed. At a minute and fifteen, anybody still standing
  * shares first.
  *
  * A shot is instant and straight: from your eyes, the way you look, until it
@@ -41,6 +42,11 @@ export const ROUND = {
   countdown: 0,
   /** Seconds from the start to the end, a minute and fifteen. */
   limit: 75,
+  /**
+   * Seconds from the start that everybody is hidden and cannot be shot, so
+   * nobody is picked off from where they spawned before they can move.
+   */
+  guard: 2,
 } as const
 
 /** How far up or down anybody can look, radians. */
@@ -156,6 +162,16 @@ export function isStanding(p: Player): boolean {
   return p.out === null && !p.left
 }
 
+/** Whether the spawn guard is still up: everybody hidden, and nobody can be shot. */
+export function guarded(game: Game): boolean {
+  return clock(game) < ROUND.guard
+}
+
+/** Standing, and past the spawn guard: can be shot just now. */
+export function isTarget(game: Game, p: Player): boolean {
+  return isStanding(p) && !guarded(game)
+}
+
 /** Eliminated, and still here hunting. */
 export function isHunter(p: Player): boolean {
   return p.out !== null && !p.left
@@ -253,7 +269,7 @@ export function trace(game: Game, shooter: number, from: Vec3, dir: Vec3): { t: 
   let t = rayHit(arenaFor(game.seed), from, dir, GUN.range)
   let hit = -1
   game.players.forEach((p, index) => {
-    if (index === shooter || !isStanding(p)) return
+    if (index === shooter || !isTarget(game, p)) return
     const at = bodyHit(from, dir, p, t)
     if (at !== null && (hit < 0 || at < t)) {
       t = at
@@ -332,7 +348,7 @@ export function claim(game: Game, player: number, c: Claim): Shot | null {
   let hit = -1
   const victim = c.victim === null ? -1 : game.players.findIndex((q) => q.id === c.victim)
   const q = game.players[victim]
-  if (q && victim !== player && isStanding(q)) {
+  if (q && victim !== player && isTarget(game, q)) {
     // The nearest the shot passes to the victim's middle, seen from above.
     const flat = dir.x * dir.x + dir.z * dir.z
     const tq = flat < 1e-9 ? 0 : ((q.x - from.x) * dir.x + (q.z - from.z) * dir.z) / flat
@@ -378,14 +394,14 @@ export function tick(game: Game, dt: number): void {
 }
 
 /**
- * Whether the game is over: time is up, nobody is left standing, or there is
- * nobody left to shoot the last one standing. Only the host decides.
+ * Whether the game is over: time is up, one player or nobody is left standing,
+ * or there is nobody left to shoot the last one standing. Only the host decides.
  */
 export function judgeEnd(game: Game): boolean {
   if (game.over) return true
   const here = game.players.filter((p) => !p.left)
   const standing = here.filter((p) => p.out === null)
-  if (clock(game) >= ROUND.limit || standing.length === 0 || here.length <= 1) game.over = true
+  if (clock(game) >= ROUND.limit || standing.length <= 1 || here.length <= 1) game.over = true
   return game.over
 }
 
