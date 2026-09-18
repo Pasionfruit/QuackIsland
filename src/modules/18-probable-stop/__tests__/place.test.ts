@@ -2,14 +2,25 @@
  * Where everybody stands, and the camera that sees it.
  *
  * All of it worked out from the game alone, so the things worth checking are
- * that nobody is ever standing in the sea who should not be, that nobody
+ * that nobody is ever standing on thin air who should not be, that nobody
  * shares a spot, and that the whole place is always in view.
  */
 import { Frustum, Matrix4, PerspectiveCamera, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 import { FILL, FOV, TILT, frameScene } from '../internal/camera'
-import { GAME, choose, createGame, stepGame, type Game } from '../internal/game'
-import { BEATS, BOUNDS, PLACE, bridgeDrop, onGround, revealProgress, spotFor } from '../internal/place'
+import { GAME, choose, createGame, decideSafe, stepGame, type Game } from '../internal/game'
+import {
+  BEATS,
+  BOUNDS,
+  CONDITIONS,
+  PLACE,
+  bridgeCondition,
+  bridgeDrop,
+  deckHeight,
+  onGround,
+  revealProgress,
+  spotFor,
+} from '../internal/place'
 
 const SEED = 31337
 
@@ -62,7 +73,7 @@ describe('standing', () => {
         expect(onGround(spot, g)).toBe(true)
         expect(spot.z).toBeLessThan(PLACE.bridgeFar)
       } else {
-        expect(spot.y).toBeLessThan(PLACE.seaLevel)
+        expect(spot.y).toBeLessThan(PLACE.mistTop)
       }
     }
   })
@@ -77,7 +88,7 @@ describe('standing', () => {
     for (let lane = 0; lane < 3; lane++) expect(bridgeDrop(g, lane) === 1).toBe(!g.safe.includes(lane))
   })
 
-  it('puts the fallen on the bank for the rest of the game, apart from each other', () => {
+  it('puts the fallen on the cloud for the rest of the game, apart from each other', () => {
     const g = eight()
     g.players.forEach((p, i) => choose(g, p.id, i % 3))
     toReveal(g)
@@ -87,12 +98,12 @@ describe('standing', () => {
     const spots = fallen.map((p) => spotFor(g, p))
     for (const spot of spots) {
       expect(onGround(spot, g)).toBe(true)
-      expect(Math.abs(spot.x - PLACE.bank.x)).toBeLessThanOrEqual(PLACE.bank.width / 2)
+      expect(Math.abs(spot.x - PLACE.cloud.x)).toBeLessThanOrEqual(PLACE.cloud.width / 2)
     }
     spread(spots)
   })
 
-  it('has room on the bank for a whole lobby', () => {
+  it('has room on the cloud for a whole lobby', () => {
     const g = createGame(SEED, Array.from({ length: 16 }, (_, i) => ({ id: `p${i + 1}` })))
     g.round = 3
     for (const p of g.players) {
@@ -102,6 +113,97 @@ describe('standing', () => {
     const spots = g.players.map((p) => spotFor(g, p))
     for (const spot of spots) expect(onGround(spot, g)).toBe(true)
     spread(spots)
+  })
+})
+
+describe('the walk and the fall', () => {
+  it('has everybody out on their bridge, on its deck, when the bridges that are going go', () => {
+    const g = eight()
+    g.players.forEach((p, i) => choose(g, p.id, i % 3))
+    toReveal(g)
+    g.clock = GAME.revealTime * (1 - BEATS.drop[0])
+    for (const p of g.players) {
+      const spot = spotFor(g, p)
+      expect(spot.z).toBeLessThan(PLACE.bridgeNear)
+      expect(spot.z).toBeGreaterThan(PLACE.bridgeFar)
+      expect(Math.abs(spot.x - PLACE.lanes[p.pick])).toBeLessThan(PLACE.bridgeWidth / 2)
+      expect(spot.y).toBeCloseTo(deckHeight(spot.z), 6)
+    }
+    spread(g.players.map((p) => spotFor(g, p)))
+  })
+
+  it('drops the fallen straight down from where they were, and walks everybody else on', () => {
+    const g = eight()
+    g.players.forEach((p, i) => choose(g, p.id, i % 3))
+    toReveal(g)
+    g.clock = GAME.revealTime * (1 - BEATS.drop[0])
+    const at = new Map(g.players.map((p) => [p.id, spotFor(g, p)]))
+    g.clock = GAME.revealTime * (1 - (BEATS.drop[0] + 0.1))
+    for (const p of g.players) {
+      const was = at.get(p.id)!
+      const now = spotFor(g, p)
+      if (p.alive) {
+        expect(now.z).toBeLessThan(was.z)
+      } else {
+        expect(now.x).toBe(was.x)
+        expect(now.z).toBe(was.z)
+        expect(now.y).toBeLessThan(was.y)
+      }
+    }
+  })
+
+  it('never has anybody walk through anybody on the way across', () => {
+    const g = eight()
+    toReveal(g)
+    g.safe = [GAME.startPath]
+    for (const p of g.players) p.alive = true
+    for (let t = 0; t <= 1; t += 0.02) {
+      g.clock = GAME.revealTime * (1 - t)
+      spread(g.players.map((p) => spotFor(g, p)))
+    }
+  })
+})
+
+describe('the look of a bridge', () => {
+  it('deals three different conditions every round, from the game id alone', () => {
+    for (let id = 1; id < 200; id++) {
+      for (let round = 0; round < GAME.rounds; round++) {
+        const looks = [0, 1, 2].map((lane) => bridgeCondition({ id, round }, lane))
+        expect(new Set(looks).size).toBe(3)
+        for (const look of looks) expect(CONDITIONS).toContain(look)
+      }
+    }
+  })
+
+  it('has nothing to do with whether it holds: every condition holds as often as any other', () => {
+    const held = new Map(CONDITIONS.map((c) => [c, 0]))
+    const seen = new Map(CONDITIONS.map((c) => [c, 0]))
+    let heldAll = 0
+    let seenAll = 0
+    for (let game = 1; game <= 3000; game++) {
+      const id = game * 7919
+      const seed = game * 104729 + 17
+      for (let round = 0; round < GAME.rounds; round++) {
+        const safe = decideSafe(seed, round)
+        for (let lane = 0; lane < GAME.paths; lane++) {
+          const look = bridgeCondition({ id, round }, lane)
+          seen.set(look, seen.get(look)! + 1)
+          seenAll++
+          if (safe.includes(lane)) {
+            held.set(look, held.get(look)! + 1)
+            heldAll++
+          }
+        }
+      }
+    }
+    const overall = heldAll / seenAll
+    for (const c of CONDITIONS) expect(Math.abs(held.get(c)! / seen.get(c)! - overall), c).toBeLessThan(0.02)
+  })
+
+  it('sags in the middle and is level at the ends', () => {
+    expect(deckHeight(PLACE.bridgeNear)).toBe(0)
+    expect(deckHeight(PLACE.bridgeFar)).toBe(0)
+    expect(deckHeight((PLACE.bridgeNear + PLACE.bridgeFar) / 2)).toBeCloseTo(-PLACE.sag, 6)
   })
 })
 

@@ -1678,7 +1678,7 @@
         },
         {
           "id": "18.3",
-          "title": "The place: three bridges over the sea, a fixed camera, bridges that drop on the reveal",
+          "title": "The place: three rope bridges of varying condition across a misty valley between two peaks, a fixed camera, bridges that snap under their walkers on the reveal, a cloud for the fallen",
           "status": "done"
         },
         {
@@ -1700,7 +1700,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-16T17:36:07.100Z"
+          "at": "2026-09-18T18:15:11.351Z"
         },
         "human": {
           "status": "pending"
@@ -1709,8 +1709,9 @@
       },
       "freeze": null,
       "nonGoals": [
-        "No models: players are the island's capsule avatar and the bridges are planks",
+        "No models: players are the island's capsule avatar; the peaks, rope bridges and cloud are built in code",
         "No skill in which path is safe - it is chance, decided by the host at the reveal",
+        "No link between a bridge's condition and whether it holds - its look comes from the public game id, its fate from the secret seed",
         "No second chances: fall once and you watch the rest",
         "No sound, no score kept between games"
       ],

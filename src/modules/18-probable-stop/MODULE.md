@@ -2,17 +2,19 @@
 
 ## What this is
 
-**Minigame 3.** Six rounds. Each round there are three bridges out over the sea
-and a countdown. Stand on one - change your mind as often as you like - and when
-time runs out the bridges are revealed: the ones that hold, you cross; the ones
-that do not, drop into the sea with everybody on them. Two of the three hold in
+**Minigame 3.** Six rounds. Each round there are three rope-and-plank bridges
+slung across a misty valley between two peaks, and a countdown. Stand on one -
+change your mind as often as you like - and when time runs out everybody walks
+out across their bridge: the ones that hold, you cross; the ones that do not
+snap in the middle and drop into the mist with everybody on them. Two of the three hold in
 the first four rounds, only one in the last two. Survive all six.
 
 It plugs into `15-minigames` and nothing else in the build knows it exists.
 Importing the module registers it - one line in `src/App.tsx`.
 
 This is the **environment** and **controls** stages done. The assets stage is
-not: the players are the island's capsule avatar and the bridges are planks.
+not: the players are the island's capsule avatar, and the peaks, bridges and
+cloud are built from code rather than models.
 
 ## The rules, and where each one lives
 
@@ -83,17 +85,41 @@ Everybody starts each round on the middle path. You can see who is standing
 where - on the ledge, and counted on the cards - and follow the crowd or not.
 Paths are independent chance, so the crowd knows nothing either.
 
+## A bridge's condition is only its looks
+
+Every round deals the three bridges three different conditions - **sturdy**,
+**weathered**, **patched** or **rickety** (`bridgeCondition`) - shown on the
+bridge (plank colour, planks askew, split or missing, slack hand ropes) and
+named on its card. **It has nothing to do with whether the bridge holds.** Which
+paths hold comes from the game's secret seed at the reveal; the condition comes
+from the game's public `id` and the round, drawn apart from the seed. A rickety
+bridge is exactly as likely to hold as a sturdy one. Tested over three thousand
+games: every condition holds as often as any other, within 2%.
+
+The shiver, the snap and the fall are the same for every condition.
+
 ## The reveal
 
-Four seconds, in beats (`BEATS`): a held breath while the doomed bridges shiver,
-then they drop and take their players into the sea, while the bridges that held
-glow green and everybody on them walks across to the island. A banner says what
-happened to you. The fallen reappear on the sandbank to the left and watch the
-rest of the game from there.
+Six seconds, in beats (`BEATS`):
+
+- **walk** - everybody sets off across their bridge together, following its sag
+  (`deckHeight`), with a step in their stride. Nobody knows yet: the cards and
+  the banner wait for the snap.
+- **shiver** - the bridges that will not hold start to shake.
+- **drop** - they snap in the middle. Each half swings down against its own
+  cliff and settles; planks near the break, and some others, come away and
+  tumble. Everybody on it stops where they were and falls head over heels into
+  the mist (`fallTime`). The bridges that held glow green, and everybody on them
+  walks on to the far peak.
+
+A banner says what happened to you. The fallen reappear on a cloud off to the
+left and watch the rest of the game from there.
 
 Where everybody stands at any moment is `spotFor(game, player)` - pure, from the
 game alone - so every browser draws the same moment, and a test can check that
-nobody stands in the sea who has not fallen, and that nobody stands on anybody.
+nobody stands on thin air who has not fallen, and that nobody stands on anybody.
+The snapped bridge halves and falling planks are likewise worked out from the
+reveal's clock, not from anything a browser remembers.
 
 ## A wish is for one round
 
@@ -133,7 +159,8 @@ Exported because it is worth testing, not because anything else needs it.
 | `botIntent`, `botIntents` | The stand-ins. |
 | `newGame`, `gameRoster`, `secret`, `waitingGame`, `myId`, `ME`, `SOLO_PLAYERS` | Dealing a game from the lobby. |
 | `encodeSnapshot`, `decodeSnapshot`, `applySnapshot`, `encodeIntent`, `decodeIntent`, `SNAPSHOT_TAG`, `INTENT_TAG` | A shared game on the wire. All pure. |
-| `PLACE`, `BOUNDS`, `BEATS`, `spotFor`, `bridgeDrop`, `revealProgress`, `onGround` | Where everything is, at any moment. Pure. |
+| `PLACE`, `BOUNDS`, `BEATS`, `spotFor`, `bridgeDrop`, `fallTime`, `deckHeight`, `revealProgress`, `onGround` | Where everything is, at any moment. Pure. |
+| `CONDITIONS`, `Condition`, `bridgeCondition` | What each bridge looks like this round. Pure, and never tied to whether it holds. |
 | `frameScene`, `TILT`, `FOV`, `FILL` | Where the camera stands. Pure. |
 | `ProbableStopScreen` | The panel the registry draws. |
 
@@ -155,8 +182,13 @@ Exported because it is worth testing, not because anything else needs it.
 - **The game ends after six rounds, or as soon as nobody is left.** Tested.
 - **Survivors share first; everybody else ranks by how late they fell, sharing a
   place with whoever fell in the same round.** Tested.
-- **Nobody stands in the sea who has not fallen, nobody stands on anybody, and
-  there is room on the ledge and the bank for a whole lobby.** Tested.
+- **Nobody stands on thin air who has not fallen, nobody stands on anybody, and
+  there is room on the ledge and the cloud for a whole lobby.** Tested.
+- **When the bridges go, everybody is out on their bridge's deck, and the fallen
+  drop straight down from there.** Nobody walks through anybody on the way
+  across. Tested.
+- **Three different bridge conditions every round, from the game id alone, and
+  no condition holds more often than another.** Tested.
 - **The whole place is in frame and fills it, at any window shape.** Tested.
 - **Eight people in one game agree, round by round, on who fell and when.** Tested.
 
@@ -169,7 +201,7 @@ round, and every guest agreeing on the result.
 
 ## Deliberate non-goals
 
-- No models. Capsules and planks.
+- No models. Capsules, and bridges, peaks and a cloud built in code.
 - No skill in which path holds. It is chance, decided at the reveal.
 - No second chances and no respawns.
 - No sound, no score kept between games.
@@ -191,8 +223,10 @@ round, and every guest agreeing on the result.
 Open a lobby, leave the game on Volcano Island, press **minigames** in the party
 panel, and open **3 · Probable Stop**. Read it, then press **play**.
 
-- **Look at the place.** A sandy ledge, three bridges in three colours out to an
-  island, a sandbank on the left, all in view and still.
+- **Look at the place.** The grassy top of a peak, three rope bridges out over a
+  misty valley to a second peak, mountains beyond, a cloud on the left, all in
+  view and still. Each bridge looks different - sturdy, weathered, patched or
+  rickety - and its card says which. New looks every round.
 - **Find yourself.** The blue capsule with a ring, on the middle path, with three
   green stand-ins.
 - **Press A and D.** You walk from path to path; your bridge glows and your card
@@ -203,10 +237,13 @@ panel, and open **3 · Probable Stop**. Read it, then press **play**.
 - **Press Space, then move.** Confirm, then A: the lock clears.
 - **Confirm and wait.** Once the stand-ins have confirmed too, the countdown jumps
   to 1 and says everybody's in.
-- **Watch the reveal.** The bridges that did not hold shiver, then drop into the
-  sea with everybody on them; the others glow green and their players walk
-  across. A banner says whether yours held. The cards say *held* or *dropped*.
-- **Fall.** You reappear grey on the sandbank, and the HUD says which round you
+- **Watch the reveal.** Everybody walks out onto their bridge. The ones that did
+  not hold shiver, snap in the middle, and drop into the mist with everybody on
+  them; the others glow green and their players walk on across. Only then does a
+  banner say whether yours held, and the cards say *held* or *dropped*.
+- **Watch the conditions over a game.** Rickety bridges hold about as often as
+  sturdy ones.
+- **Fall.** You reappear grey on the cloud, and the HUD says which round you
   fell in. Your keys do nothing now.
 - **Reach round five.** The HUD turns red: only one of three paths holds.
 - **Let it end.** Survivors first, then everybody by the round they fell in,
@@ -231,8 +268,10 @@ Not yet gated.
 ## Measured
 
 Not measured against the world's budget, because it does not draw into the
-world's canvas. About twenty draw calls for the place - sea, three slabs, three
-bridges of four meshes - plus two per player, with one shadow-casting light over
+world's canvas. About sixty draw calls for the place - two peaks, their tops, one
+merged mesh for the range, the valley floor, five sheets of mist, the cloud's
+puffs as one instanced mesh, and per bridge three instanced plank meshes, two
+merged rope meshes, four posts and their trim - plus two per player, with one shadow-casting light over
 a 1024 map. The simulation is a handful of comparisons a frame.
 
 Like the other minigames, a **second WebGL context** while a game is up.

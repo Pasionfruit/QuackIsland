@@ -21,7 +21,7 @@ import { getNet, useNet, usePeers } from '../../09-net'
 import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { GAME, placings, roundsSurvived, safeCount, stillIn, type Game, type Intent } from './game'
-import { BEATS, revealProgress } from './place'
+import { BEATS, bridgeCondition, revealProgress } from './place'
 import { PALETTE, ProbableStopScene } from './ProbableStopScene'
 import { myId, newGame, waitingGame } from './setup'
 import { useGameNet } from './useGameNet'
@@ -254,7 +254,8 @@ function PathCard({
   const mine = game.players.find((p) => p.mine)
   const here = game.players.filter((p) => p.pick === lane && (p.alive || p.outIn === game.round))
   const yours = !!mine && mine.alive && mine.pick === lane
-  const revealed = game.phase !== 'choosing' && game.safe.length > 0
+  // Not until the bridges that are going go: everybody walks out not knowing.
+  const revealed = game.phase !== 'choosing' && game.safe.length > 0 && revealProgress(game) >= BEATS.drop[0]
   const held = game.safe.includes(lane)
   return (
     <button
@@ -272,6 +273,7 @@ function PathCard({
     >
       <span style={{ ...swatch, background: colour }} />
       <span style={{ fontWeight: 800 }}>path {lane + 1}</span>
+      <span style={{ color: LOOK.faded, fontStyle: 'italic' }}>{bridgeCondition(game, lane)}</span>
       <span style={{ color: LOOK.faded }}>{here.length === 1 ? '1 on it' : `${here.length} on it`}</span>
       {yours ? (
         <span style={{ fontWeight: 700, color: LOOK.you }}>{mine?.confirmed ? 'you ✓' : 'you'}</span>

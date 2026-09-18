@@ -3,8 +3,8 @@
  *
  * Six rounds. Each round there are three paths and a countdown; you stand on
  * one, and can move to another as often as you like until time runs out. Then
- * the paths are revealed: some hold, the rest drop into the sea with whoever
- * was on them. In the first four rounds two of the three paths hold. In the
+ * the paths are revealed: some hold, the rest snap and drop into the valley with
+ * whoever was on them. In the first four rounds two of the three paths hold. In the
  * last two only one does. Survive all six and you have won.
  *
  * No three.js, no React, no clock of its own: `stepGame` takes a game and how
@@ -39,8 +39,8 @@ export const GAME = {
    * confirmed by mistake to change their mind.
    */
   allInTime: 1.5,
-  /** Seconds the reveal takes: bridges drop, the rest cross. */
-  revealTime: 4,
+  /** Seconds the reveal takes: everybody sets off across, the bridges that did not hold snap, the rest cross. */
+  revealTime: 6,
   /** Which path everybody stands on when a round begins: the middle. */
   startPath: 1,
 } as const

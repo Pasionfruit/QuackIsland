@@ -3,7 +3,7 @@
  *
  * High behind the ledge, looking out along the bridges to the island: the
  * choice in front of you the way you would face it, with everybody else lined
- * up beside you and the fallen on the bank to the left. The whole place is in
+ * up beside you and the fallen on their cloud to the left. The whole place is in
  * view for the whole game, so a bridge dropping is something everybody sees at
  * once.
  *
@@ -13,8 +13,8 @@
  */
 import { BOUNDS } from './place'
 
-/** Degrees up from the sea. */
-export const TILT = 52
+/** Degrees up from level. */
+export const TILT = 34
 /** The lens. */
 export const FOV = 40
 /** How much of the frame, middle to edge, the scene may fill. */

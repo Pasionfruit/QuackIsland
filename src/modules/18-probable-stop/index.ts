@@ -59,11 +59,16 @@ export {
 export {
   BEATS,
   BOUNDS,
+  CONDITIONS,
   PLACE,
+  bridgeCondition,
   bridgeDrop,
+  deckHeight,
+  fallTime,
   onGround,
   revealProgress,
   spotFor,
+  type Condition,
   type Rect,
   type Spot,
 } from './internal/place'
