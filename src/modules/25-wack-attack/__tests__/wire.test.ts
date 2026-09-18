@@ -36,6 +36,19 @@ describe('a snapshot', () => {
     expect(copy.players[2].swungAt).toBeCloseTo(game.players[2].swungAt, 1)
   })
 
+  it('carries who is stunned, and who bonked them', () => {
+    const game = host(2)
+    while (game.elapsed < 0.5) stepGame(game, new Map(), 0.05)
+    Object.assign(game.players[0], { x: 0, y: 0, facing: 0 })
+    Object.assign(game.players[1], { x: FIELD.strike, y: 0 })
+    swing(game, 0)
+    const copy = waitingGame()
+    applySnapshot(copy, decodeSnapshot(relay(encodeSnapshot(game)))!, 'p1')
+    expect(copy.players[0].bonks).toBe(1)
+    expect(copy.players[1].stunnedUntil).toBeCloseTo(game.players[1].stunnedUntil, 1)
+    expect(copy.players[0].stunnedUntil).toBe(-Infinity)
+  })
+
   it("carries only the last few seconds' whacks, and a guest keeps the ones it has", () => {
     const game = host(2)
     const copy = waitingGame()

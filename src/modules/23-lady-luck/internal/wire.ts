@@ -3,20 +3,22 @@
  *
  * The host sends what everybody draws: the field's seed, the clock, the
  * four-leaf clovers waiting to be found, every claim, and each hunter's score,
- * cooldown, last click taken and last miss. **Not the luck seed**: where the
+ * cooldown, spam count, last click taken and last miss. **Not the luck seed**: where the
  * next four-leaf clover grows is not anybody's business until it has grown.
  *
- * A guest sends a click: which round, a number that goes up with every click,
- * and which clover, or -1 for bare grass. Said again until the host's copy of
- * that hunter has taken it, and counted once however many times it arrives.
+ * A guest sends a click: which round, a number that goes up with every click
+ * (0 for none), which clover, or -1 for bare grass, and how many times it has
+ * clicked during its cooldown, ever, this round. Said again until the host's
+ * copy of that hunter has taken it, and counted once however many times it
+ * arrives.
  */
 import { FIELD, type Claim, type Game, type Hunter, type Lucky } from './rules'
 
 export const SNAPSHOT_TAG = 'll'
 export const INTENT_TAG = 'll-in'
 
-/** `[id, score, misses, cooldown, seq, miss clover (-1 grass, -2 none), miss at]`. */
-export type WireHunter = [string, number, number, number, number, number, number]
+/** `[id, score (may be below zero), misses, cooldown, seq, miss clover (-1 grass, -2 none), miss at, spams]`. */
+export type WireHunter = [string, number, number, number, number, number, number, number]
 
 export interface Snapshot {
   id: number
@@ -44,7 +46,7 @@ export function encodeSnapshot(game: Game): Record<string, unknown> {
     l: game.lucky.map((l) => [l.clover, l.n, r2(l.since)]),
     c: game.claims.map((c) => [c.clover, c.player, r2(c.at)]),
     p: game.players.map(
-      (h): WireHunter => [h.id, h.score, h.misses, r2(h.cooldown), h.seq, h.miss ? (h.miss.clover ?? -1) : -2, h.miss ? r2(h.miss.at) : 0],
+      (h): WireHunter => [h.id, h.score, h.misses, r2(h.cooldown), h.seq, h.miss ? (h.miss.clover ?? -1) : -2, h.miss ? r2(h.miss.at) : 0, h.spams],
     ),
   }
 }
@@ -58,12 +60,12 @@ export function decodeSnapshot(message: Record<string, unknown>): Snapshot | nul
 
   const hunters: WireHunter[] = []
   for (const raw of message.p) {
-    if (!Array.isArray(raw) || raw.length !== 7) return null
-    const [id, score, misses, cooldown, seq, miss, at] = raw
+    if (!Array.isArray(raw) || raw.length !== 8) return null
+    const [id, score, misses, cooldown, seq, miss, at, spams] = raw
     if (typeof id !== 'string' || id.length === 0) return null
-    if (!isCount(score) || !isCount(misses) || !isNumber(cooldown) || cooldown < 0 || !isCount(seq)) return null
+    if (!Number.isInteger(score) || !isCount(misses) || !isNumber(cooldown) || cooldown < 0 || !isCount(seq) || !isCount(spams)) return null
     if (!(miss === -2 || miss === -1 || isClover(miss)) || !isNumber(at)) return null
-    hunters.push([id, score, misses, cooldown, seq, miss, at])
+    hunters.push([id, score, misses, cooldown, seq, miss, at, spams])
   }
 
   if (!Array.isArray(message.l) || message.l.length > FIELD.hidden) return null
@@ -98,23 +100,24 @@ export function applySnapshot(game: Game, snap: Snapshot, me: string): Game {
   game.grown = snap.lucky.reduce((most, l) => Math.max(most, l.n + 1), 0)
 
   const next: Hunter[] = []
-  for (const [id, score, misses, cooldown, seq, miss, at] of snap.hunters) {
+  for (const [id, score, misses, cooldown, seq, miss, at, spams] of snap.hunters) {
     const hunter: Hunter =
-      game.players.find((h) => h.id === id) ?? { id, mine: false, bot: false, score: 0, misses: 0, cooldown: 0, seq: 0, miss: null, missWindow: -1 }
-    Object.assign(hunter, { mine: id === me, score, misses, cooldown, seq, miss: miss === -2 ? null : { clover: miss === -1 ? null : miss, at } })
+      game.players.find((h) => h.id === id) ?? { id, mine: false, bot: false, score: 0, misses: 0, spams: 0, cooldown: 0, seq: 0, miss: null, missWindow: -1 }
+    Object.assign(hunter, { mine: id === me, score, misses, spams, cooldown, seq, miss: miss === -2 ? null : { clover: miss === -1 ? null : miss, at } })
     next.push(hunter)
   }
   game.players = next
   return game
 }
 
-export function encodeIntent(game: number, seq: number, clover: number | null): Record<string, unknown> {
-  return { t: INTENT_TAG, g: game, q: seq, c: clover ?? -1 }
+/** `seq` 0 is no click - a message only to say the spam count. */
+export function encodeIntent(game: number, seq: number, clover: number | null, spams = 0): Record<string, unknown> {
+  return { t: INTENT_TAG, g: game, q: seq, c: clover ?? -1, s: spams }
 }
 
-export function decodeIntent(message: Record<string, unknown>): { game: number; seq: number; clover: number | null } | null {
+export function decodeIntent(message: Record<string, unknown>): { game: number; seq: number; clover: number | null; spams: number } | null {
   if (message.t !== INTENT_TAG) return null
-  if (!isCount(message.g) || !isCount(message.q) || (message.q as number) < 1) return null
+  if (!isCount(message.g) || !isCount(message.q) || !isCount(message.s)) return null
   if (!(message.c === -1 || isClover(message.c))) return null
-  return { game: message.g as number, seq: message.q as number, clover: message.c === -1 ? null : (message.c as number) }
+  return { game: message.g as number, seq: message.q as number, clover: message.c === -1 ? null : (message.c as number), spams: message.s as number }
 }

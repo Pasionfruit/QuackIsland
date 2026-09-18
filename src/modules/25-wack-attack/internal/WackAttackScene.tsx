@@ -5,7 +5,8 @@
  * pill in their colour carrying a hammer, and moles: brown, with a pink nose,
  * rising out of their holes and sinking back - or gold and shining, for the
  * golden mole. A swing brings the hammer down in front of you; a whacked mole is
- * flattened into its hole with a burst in the whacker's colour.
+ * flattened into its hole with a burst in the whacker's colour. A player bonked
+ * on the head wobbles, with stars going round over it, until the stun wears off.
  *
  * Your own spot - where your hammer will land - is marked on the grass.
  *
@@ -15,9 +16,9 @@
 import { useFrame } from '@react-three/fiber'
 import { memo, useLayoutEffect, useMemo, useReducer, useRef, type RefObject } from 'react'
 import { Color, Group, type DirectionalLight, type MeshBasicMaterial } from 'three'
-import { createAvatar } from '../../02-player'
+import { PLAYER, createAvatar } from '../../02-player'
 import { frameScene } from './camera'
-import { COLOURS, FIELD, HOLES, holeAt, molesFor, strikePoint, whackOf, type Game, type Mole, type Whacker } from './rules'
+import { COLOURS, FIELD, HOLES, holeAt, isStunned, molesFor, strikePoint, whackOf, type Game, type Mole, type Whacker } from './rules'
 
 export const PALETTE = {
   background: '#bfe4c8',
@@ -34,6 +35,7 @@ export const PALETTE = {
   gold: '#ffc83d',
   handle: '#8a5a30',
   head: '#6d7278',
+  star: '#ffe14d',
   sunColour: '#fff3e0',
   ambientColour: '#eaf6ff',
   skyColour: '#e6f5ff',
@@ -221,19 +223,29 @@ function headingToYaw(heading: number): number {
   return Math.atan2(Math.cos(heading), Math.sin(heading))
 }
 
+/** Stars going round over a stunned head. */
+const STARS = 5
+
 /** One player, with a hammer that comes down in front of them on a swing. */
 function WhackerBody({ whacker, index, live }: { whacker: Whacker; index: number; live: RefObject<Game> }) {
   const holder = useRef<Group>(null)
   const hammer = useRef<Group>(null)
+  const stars = useRef<Group>(null)
   const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
 
-  useFrame(() => {
+  useFrame(({ clock }) => {
     const group = holder.current
     if (!group) return
     const g = live.current
+    const stunned = isStunned(whacker, g.elapsed) && !g.over
+    const wobble = stunned ? Math.sin(clock.elapsedTime * 14) * 0.18 : 0
     group.position.set(whacker.x, 0, whacker.y)
-    group.rotation.set(0, headingToYaw(whacker.facing), 0)
+    group.rotation.set(wobble, headingToYaw(whacker.facing), wobble * 0.6)
+    if (stars.current) {
+      stars.current.visible = stunned
+      if (stunned) stars.current.rotation.set(-wobble, clock.elapsedTime * 4, -wobble * 0.6)
+    }
     if (hammer.current) {
       const t = g.elapsed - whacker.swungAt
       // Held raised over the shoulder; down onto the grass in front; back up.
@@ -249,6 +261,17 @@ function WhackerBody({ whacker, index, live }: { whacker: Whacker; index: number
   return (
     <group ref={holder}>
       <primitive object={avatar} />
+      <group ref={stars} position={[0, PLAYER.height + 0.25, 0]} visible={false}>
+        {Array.from({ length: STARS }, (_, i) => {
+          const a = (i / STARS) * Math.PI * 2
+          return (
+            <mesh key={i} position={[Math.cos(a) * 0.45, Math.sin(a * 2) * 0.06, Math.sin(a) * 0.45]}>
+              <octahedronGeometry args={[0.11, 0]} />
+              <meshBasicMaterial color={PALETTE.star} />
+            </mesh>
+          )
+        })}
+      </group>
       <group ref={hammer} position={[0.38, 1.0, 0.05]}>
         <mesh position={[0, 0.45, 0]} castShadow>
           <cylinderGeometry args={[0.045, 0.05, 0.95, 8]} />

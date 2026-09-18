@@ -9,6 +9,9 @@
  * colour when a click will count, and its ring empties and fills back up over
  * the second after a click that did not claim - the same crosshair as Duck
  * Hunt's, drawn in the DOM so it never lags a frame behind your hand.
+ *
+ * A misclick costs a point, and so does every click while the ring is filling
+ * back up: a red "-1" says so.
  */
 import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
@@ -52,8 +55,9 @@ export function LadyLuckScreen({ run }: { run: MinigameRun }) {
   /** A click this frame: a clover, null for grass, undefined for none. */
   const clicked = useRef<number | null | undefined>(undefined)
   const crosshair = useRef<HTMLDivElement>(null)
-  /** When this browser last saw its own score go up, for the "found one" flash. */
+  /** When this browser last saw its own score go up, and down, for the flashes. */
   const [foundAt, setFoundAt] = useState(-10)
+  const [lostAt, setLostAt] = useState({ at: -10, points: 0 })
   const lastScore = useRef(0)
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
@@ -80,6 +84,7 @@ export function LadyLuckScreen({ run }: { run: MinigameRun }) {
       if (wire.advance(current, dt, click, paused.current)) setGame({ ...current })
       const mine = current.players.find((p) => p.mine)
       if (mine && mine.score > lastScore.current) setFoundAt(current.elapsed)
+      if (mine && mine.score < lastScore.current) setLostAt({ at: current.elapsed, points: lastScore.current - mine.score })
       lastScore.current = mine?.score ?? 0
       frame = requestAnimationFrame(tick)
     }
@@ -112,7 +117,11 @@ export function LadyLuckScreen({ run }: { run: MinigameRun }) {
         ) : (
           <span style={{ color: LOOK.faded }}>waiting for the host…</span>
         )}
-        {ready ? <span style={{ color: LOOK.faded, fontSize: 12 }}>find the four-leaf clovers - three are hidden at a time</span> : null}
+        {ready ? (
+          <span style={{ color: LOOK.faded, fontSize: 12 }}>
+            find the four-leaf clovers - three are hidden at a time · a misclick or a spammed click costs {FIELD.penalty}
+          </span>
+        ) : null}
         <span style={{ flex: 1 }} />
         {game.players.map((hunter, index) => (
           <span
@@ -151,6 +160,13 @@ export function LadyLuckScreen({ run }: { run: MinigameRun }) {
           <div style={toastWrap}>
             <div style={toast} data-found>
               🍀 Lucky! +1
+            </div>
+          </div>
+        ) : null}
+        {ready && !game.over && game.elapsed - lostAt.at < 0.8 && game.elapsed - foundAt >= 1.1 ? (
+          <div style={toastWrap}>
+            <div key={lostAt.at} style={{ ...toast, background: LOOK.danger }} data-lost={lostAt.points}>
+              -{lostAt.points}
             </div>
           </div>
         ) : null}
@@ -259,6 +275,7 @@ function Over({
               <span style={{ flex: 1, fontWeight: entry.hunter.id === me ? 700 : 400 }}>{nameOf(entry.hunter.id)}</span>
               <span style={{ opacity: 0.6, fontSize: 12 }}>
                 {entry.hunter.misses} {entry.hunter.misses === 1 ? 'miss' : 'misses'}
+                {entry.hunter.spams > 0 ? ` · ${entry.hunter.spams} spammed` : ''}
               </span>
               <strong style={{ minWidth: 40, textAlign: 'right' }}>🍀 {entry.hunter.score}</strong>
             </div>

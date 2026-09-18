@@ -12,6 +12,11 @@
  * claim starts its cooldown at once. Its clock and cooldowns run on between
  * snapshots.
  *
+ * **Spam is judged by the clicker's own screen.** A click while your own
+ * crosshair shows the cooldown is spam, whichever clock is ahead: a guest counts
+ * its spam and says the running count until the host has it, so a click the
+ * guest saw as fair is never punished for arriving early.
+ *
  * The same lessons as the other minigames: a click is said again until it is
  * taken and counts once; a guest keeps listening after the round ends; the host
  * never runs or sends a round nobody was dealt into; a pause stops the round for everybody. Alone, the clock stops.
@@ -19,7 +24,7 @@
 import { useEffect, useRef } from 'react'
 import { getNet, sendToRoom, subscribeRoom } from '../../09-net'
 import { botClicks } from './ai'
-import { FIELD, click, stepGame, type Game } from './rules'
+import { FIELD, click, spam, stepGame, type Game } from './rules'
 import { myId } from './setup'
 import { applySnapshot, decodeIntent, decodeSnapshot, encodeIntent, encodeSnapshot, type Snapshot } from './wire'
 
@@ -37,11 +42,13 @@ export interface FieldNet {
 }
 
 export function useFieldNet(): FieldNet {
-  const heard = useRef<{ from: string; game: number; seq: number; clover: number | null }[]>([])
+  const heard = useRef<{ from: string; game: number; seq: number; clover: number | null; spams: number }[]>([])
   const latest = useRef<{ snap: Snapshot; at: number } | null>(null)
   const applied = useRef<Snapshot | null>(null)
   const sentAt = useRef(0)
   const seq = useRef(0)
+  /** A guest's clicks during its own cooldown, this round, as a running count. */
+  const spams = useRef({ game: 0, count: 0, saidAt: 0 })
   const waiting = useRef<{ game: number; seq: number; clover: number | null; claim: boolean; firstAt: number; saidAt: number } | null>(null)
 
   useEffect(() => {
@@ -70,11 +77,16 @@ export function useFieldNet(): FieldNet {
       if (game.players.length === 0) return false
 
       const me = game.players.findIndex((p) => p.mine)
-      if (clicked !== undefined && !paused && me >= 0) click(game, me, clicked)
+      if (clicked !== undefined && !paused && me >= 0) {
+        const mine = game.players[me]
+        if (mine.cooldown > 0) spam(game, me, mine.spams + 1)
+        else click(game, me, clicked)
+      }
       for (const bot of botClicks(game)) click(game, bot.player, bot.clover)
       for (const said of heard.current.splice(0)) {
         const player = game.players.findIndex((p) => p.id === said.from)
         if (player < 0 || said.game !== game.id) continue
+        spam(game, player, said.spams)
         click(game, player, said.clover, said.seq)
       }
       stepGame(game, dt)
@@ -120,18 +132,34 @@ export function useFieldNet(): FieldNet {
       waiting.current = null
     }
 
-    if (clicked !== undefined && mine && !paused && !game.over && !waiting.current && mine.cooldown <= 0) {
-      seq.current = Math.max(seq.current, mine.seq) + 1
-      const claim = clicked !== null && game.lucky.some((l) => l.clover === clicked)
-      waiting.current = { game: game.id, seq: seq.current, clover: clicked, claim, firstAt: now, saidAt: now }
-      sendToRoom(encodeIntent(game.id, seq.current, clicked))
+    if (spams.current.game !== game.id) spams.current = { game: game.id, count: 0, saidAt: 0 }
+    const spammed = spams.current
+    if (mine) spammed.count = Math.max(spammed.count, mine.spams)
+
+    if (clicked !== undefined && mine && !paused && !game.over) {
+      if (mine.cooldown > 0) {
+        spammed.count += 1
+        spammed.saidAt = now
+        const pending = waiting.current
+        sendToRoom(encodeIntent(game.id, pending?.seq ?? 0, pending?.clover ?? null, spammed.count))
+      } else if (!waiting.current) {
+        // A click while a claim waits on the host is neither a click nor spam.
+        seq.current = Math.max(seq.current, mine.seq) + 1
+        const claim = clicked !== null && game.lucky.some((l) => l.clover === clicked)
+        waiting.current = { game: game.id, seq: seq.current, clover: clicked, claim, firstAt: now, saidAt: now }
+        sendToRoom(encodeIntent(game.id, seq.current, clicked, spammed.count))
+      }
     }
 
     const said = waiting.current
+    if (mine && !said && mine.spams < spammed.count && now - spammed.saidAt >= RESEND_MS) {
+      spammed.saidAt = now
+      sendToRoom(encodeIntent(game.id, 0, null, spammed.count))
+    }
     if (said && mine) {
       if (now - said.saidAt >= RESEND_MS) {
         said.saidAt = now
-        sendToRoom(encodeIntent(said.game, said.seq, said.clover))
+        sendToRoom(encodeIntent(said.game, said.seq, said.clover, spammed.count))
       }
       // A click that cannot be a claim has started our cooldown already.
       if (!said.claim) mine.cooldown = Math.max(mine.cooldown, FIELD.cooldown - (now - said.firstAt) / 1000)

@@ -18,8 +18,8 @@ export const INTENT_TAG = 'wa-in'
 /** How far back a snapshot's whacks go, seconds. */
 export const RECENT = 3
 
-/** `[id, x, y, facing, score, whacks, golden, swings, swung at (-1 for never)]`. */
-export type WireWhacker = [string, number, number, number, number, number, number, number, number]
+/** `[id, x, y, facing, score, whacks, golden, swings, swung at (-1 for never), stunned until (-1 for never), bonks]`. */
+export type WireWhacker = [string, number, number, number, number, number, number, number, number, number, number]
 
 export interface Snapshot {
   id: number
@@ -43,7 +43,7 @@ export function encodeSnapshot(game: Game): Record<string, unknown> {
     o: game.over ? 1 : 0,
     w: game.whacks.filter((w) => w.at >= game.elapsed - RECENT).map((w) => [w.mole, w.player, r2(w.at)]),
     f: game.players.map(
-      (p): WireWhacker => [p.id, r2(p.x), r2(p.y), r2(p.facing), p.score, p.whacks, p.golden, p.swings, Number.isFinite(p.swungAt) ? r2(p.swungAt) : -1],
+      (p): WireWhacker => [p.id, r2(p.x), r2(p.y), r2(p.facing), p.score, p.whacks, p.golden, p.swings, Number.isFinite(p.swungAt) ? r2(p.swungAt) : -1, Number.isFinite(p.stunnedUntil) ? r2(p.stunnedUntil) : -1, p.bonks],
     ),
   }
 }
@@ -57,11 +57,11 @@ export function decodeSnapshot(message: Record<string, unknown>): Snapshot | nul
 
   const whackers: WireWhacker[] = []
   for (const raw of message.f) {
-    if (!Array.isArray(raw) || raw.length !== 9) return null
-    const [id, x, y, facing, score, whacks, golden, swings, swungAt] = raw
+    if (!Array.isArray(raw) || raw.length !== 11) return null
+    const [id, x, y, facing, score, whacks, golden, swings, swungAt, stunnedUntil, bonks] = raw
     if (typeof id !== 'string' || id.length === 0) return null
-    if (![x, y, facing, swungAt].every(isNumber) || ![score, whacks, golden, swings].every(isCount)) return null
-    whackers.push([id, x, y, facing, score, whacks, golden, swings, swungAt])
+    if (![x, y, facing, swungAt, stunnedUntil].every(isNumber) || ![score, whacks, golden, swings, bonks].every(isCount)) return null
+    whackers.push([id, x, y, facing, score, whacks, golden, swings, swungAt, stunnedUntil, bonks])
   }
 
   if (!Array.isArray(message.w) || message.w.length > 64) return null
@@ -97,14 +97,23 @@ export function applySnapshot(game: Game, snap: Snapshot, me: string): Map<strin
 
   const at = new Map<string, { x: number; y: number; facing: number }>()
   const next: Whacker[] = []
-  for (const [id, x, y, facing, score, whacks, golden, swings, swungAt] of snap.whackers) {
+  for (const [id, x, y, facing, score, whacks, golden, swings, swungAt, stunnedUntil, bonks] of snap.whackers) {
     at.set(id, { x, y, facing })
     const whacker: Whacker =
-      game.players.find((p) => p.id === id) ?? { id, mine: false, bot: false, x, y, facing, score: 0, whacks: 0, golden: 0, swings: 0, swungAt: -Infinity }
+      game.players.find((p) => p.id === id) ?? { id, mine: false, bot: false, x, y, facing, score: 0, whacks: 0, golden: 0, swings: 0, swungAt: -Infinity, stunnedUntil: -Infinity, bonks: 0 }
     const host = swungAt < 0 ? -Infinity : swungAt
     // Our own swing shows the moment we make it; the host's word only moves it later.
     const swung = id === me ? Math.max(whacker.swungAt, host) : host
-    Object.assign(whacker, { mine: id === me, score, whacks, golden, swings: Math.max(id === me ? whacker.swings : 0, swings), swungAt: swung })
+    Object.assign(whacker, {
+      mine: id === me,
+      score,
+      whacks,
+      golden,
+      swings: Math.max(id === me ? whacker.swings : 0, swings),
+      swungAt: swung,
+      stunnedUntil: stunnedUntil < 0 ? -Infinity : stunnedUntil,
+      bonks,
+    })
     next.push(whacker)
   }
   game.players = next

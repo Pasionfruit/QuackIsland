@@ -22,7 +22,7 @@
 import { useEffect, useRef } from 'react'
 import { getNet, sendToRoom, subscribeRoom } from '../../09-net'
 import { botIntents } from './ai'
-import { FIELD, canSwing, stepGame, walk, type Game, type Intent } from './rules'
+import { FIELD, canSwing, isStunned, stepGame, walk, type Game, type Intent } from './rules'
 import { myId } from './setup'
 import { applySnapshot, decodeIntent, decodeSnapshot, encodeIntent, encodeSnapshot, type Snapshot } from './wire'
 
@@ -133,7 +133,8 @@ export function useFieldNet(): FieldNet {
       if (whacker.mine) {
         if (ownBefore) Object.assign(whacker, ownBefore)
         else if (target) Object.assign(whacker, target)
-        if (!game.over) walk(whacker, wish, step)
+        // Stunned, the keys do nothing: the host is holding your body still too.
+        if (!game.over && !isStunned(whacker, game.elapsed)) walk(whacker, wish, step)
         if (target) {
           const off = Math.hypot(target.x - whacker.x, target.y - whacker.y)
           if (off > SNAP_DISTANCE) {

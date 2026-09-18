@@ -4,7 +4,7 @@
 import { Frustum, Matrix4, PerspectiveCamera, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 import { FILL, FOV, POINTS, frameScene, groundHit } from '../internal/camera'
-import { FIELD, click, cloverAt, createGame, fieldFor, stepGame, type Game } from '../internal/rules'
+import { FIELD, click, cloverAt, createGame, fieldFor, spam, stepGame, type Game } from '../internal/rules'
 import { waitingGame } from '../internal/setup'
 import { applySnapshot, decodeIntent, decodeSnapshot, encodeIntent, encodeSnapshot } from '../internal/wire'
 
@@ -61,11 +61,14 @@ describe('a snapshot', () => {
 
 describe('an intent', () => {
   it('comes back as what was sent, and is refused when it is not one', () => {
-    expect(decodeIntent(relay(encodeIntent(52, 4, 17)))).toEqual({ game: 52, seq: 4, clover: 17 })
-    expect(decodeIntent(relay(encodeIntent(52, 5, null)))).toEqual({ game: 52, seq: 5, clover: null })
-    expect(decodeIntent({ t: 'll-in', g: 52, q: 0, c: 1 })).toBeNull()
-    expect(decodeIntent({ t: 'll-in', g: 52, q: 1, c: FIELD.columns * FIELD.rows })).toBeNull()
-    expect(decodeIntent({ t: 'll-in', g: 52, q: 1, c: -2 })).toBeNull()
+    expect(decodeIntent(relay(encodeIntent(52, 4, 17)))).toEqual({ game: 52, seq: 4, clover: 17, spams: 0 })
+    expect(decodeIntent(relay(encodeIntent(52, 5, null, 3)))).toEqual({ game: 52, seq: 5, clover: null, spams: 3 })
+    // No click, only spam to own up to.
+    expect(decodeIntent(relay(encodeIntent(52, 0, null, 2)))).toEqual({ game: 52, seq: 0, clover: null, spams: 2 })
+    expect(decodeIntent({ t: 'll-in', g: 52, q: -1, c: 1, s: 0 })).toBeNull()
+    expect(decodeIntent({ t: 'll-in', g: 52, q: 1, c: 1, s: -1 })).toBeNull()
+    expect(decodeIntent({ t: 'll-in', g: 52, q: 1, c: FIELD.columns * FIELD.rows, s: 0 })).toBeNull()
+    expect(decodeIntent({ t: 'll-in', g: 52, q: 1, c: -2, s: 0 })).toBeNull()
   })
 })
 
@@ -74,7 +77,7 @@ describe('eight hunters in one field', () => {
     const game = host(8)
     let seed = 3
     const random = () => ((seed = (seed * 16807) % 2147483647) / 2147483647)
-    const guests = game.players.map((p, index) => ({ id: p.id, index, copy: waitingGame(), seq: 0, said: [] as { seq: number; clover: number | null }[] }))
+    const guests = game.players.map((p, index) => ({ id: p.id, index, copy: waitingGame(), seq: 0, spams: 0, said: [] as { seq: number; clover: number | null }[] }))
     const dt = 1 / 30
 
     for (let frame = 0; !game.over; frame++) {
@@ -88,14 +91,19 @@ describe('eight hunters in one field', () => {
           const clover = copy.lucky.length > 0 && random() < 0.7 ? copy.lucky[0].clover : Math.floor(random() * FIELD.columns * FIELD.rows)
           guest.seq += 1
           guest.said.push({ seq: guest.seq, clover })
+        } else if (mine.cooldown > 0 && random() < 0.02) {
+          // Impatient: a click while the ring fills back up.
+          guest.spams += 1
         }
         // Everything not yet taken is said again, and some of it is lost.
         guest.said = guest.said.filter((s) => s.seq > game.players[guest.index].seq)
         for (const s of guest.said) {
           if (random() < 0.3) continue
-          const heard = decodeIntent(relay(encodeIntent(copy.id, s.seq, s.clover)))!
+          const heard = decodeIntent(relay(encodeIntent(copy.id, s.seq, s.clover, guest.spams)))!
+          spam(game, guest.index, heard.spams)
           click(game, guest.index, heard.clover, heard.seq)
         }
+        if (guest.said.length === 0 && random() < 0.7) spam(game, guest.index, decodeIntent(relay(encodeIntent(copy.id, 0, null, guest.spams)))!.spams)
       }
       stepGame(game, dt)
       const wire = relay(encodeSnapshot(game))
@@ -105,11 +113,15 @@ describe('eight hunters in one field', () => {
     for (const guest of guests) applySnapshot(guest.copy, decodeSnapshot(wire)!, guest.id)
 
     expect(game.claims.length).toBeGreaterThan(8)
-    // Every clover was claimed once, by one hunter, and scores add up to the claims.
+    // Every clover was claimed once, by one hunter, and scores are claims less a point a miss and a spam.
     expect(new Set(game.claims.map((c) => c.clover)).size).toBe(game.claims.length)
-    expect(game.players.reduce((n, p) => n + p.score, 0)).toBe(game.claims.length)
-    game.players.forEach((p, i) => expect(p.score).toBe(game.claims.filter((c) => c.player === i).length))
+    game.players.forEach((p, i) =>
+      expect(p.score).toBe(game.claims.filter((c) => c.player === i).length - (p.misses + p.spams) * FIELD.penalty),
+    )
     expect(game.players.some((p) => p.misses > 0)).toBe(true)
+    expect(game.players.some((p) => p.spams > 0)).toBe(true)
+    // Never more spam taken than was made.
+    game.players.forEach((p, i) => expect(p.spams).toBeLessThanOrEqual(guests[i].spams))
     for (const guest of guests) {
       expect(guest.copy.claims.map((c) => [c.clover, c.player])).toEqual(game.claims.map((c) => [c.clover, c.player]))
       expect(guest.copy.players.map((p) => [p.id, p.score])).toEqual(game.players.map((p) => [p.id, p.score]))

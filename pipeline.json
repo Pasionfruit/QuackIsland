@@ -2068,7 +2068,7 @@
         },
         {
           "id": "23.2",
-          "title": "The claim: a click on a free four-leaf clover rings it in your colour; anything else costs a second",
+          "title": "The claim: a click on a free four-leaf clover rings it in your colour; anything else costs a point and a second, and spam during that second a point a click",
           "status": "done"
         },
         {
@@ -2100,7 +2100,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-17T02:12:51.486Z"
+          "at": "2026-09-18T19:04:39.050Z"
         },
         "human": {
           "status": "pending"
@@ -2226,7 +2226,7 @@
         },
         {
           "id": "25.2",
-          "title": "The hammer: a swing lands in front of you, whacks the mole there, first whack counts, points by mole",
+          "title": "The hammer: a swing lands in front of you, whacks the mole there, first whack counts, points by mole; with no mole there it bonks a head and stuns them",
           "status": "done"
         },
         {
@@ -2258,7 +2258,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-17T02:28:05.236Z"
+          "at": "2026-09-18T19:04:12.499Z"
         },
         "human": {
           "status": "pending"
@@ -2269,7 +2269,6 @@
       "nonGoals": [
         "No models: players are the island capsule, moles and hammers are primitives",
         "No moving camera",
-        "No knocking other players about with the hammer",
         "No sound, no score kept between rounds"
       ],
       "budgets": {

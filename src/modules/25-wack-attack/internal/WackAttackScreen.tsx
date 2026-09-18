@@ -3,12 +3,13 @@
  *
  * The field is drawn in its own canvas by `WackAttackScene`; this is the shell:
  * the keys and clicks in, `useFieldNet` deciding what they do, and a HUD with
- * the clock and everybody's points, a flash for each of your own whacks, and
- * the results.
+ * the clock and everybody's points, a flash for each of your own whacks and
+ * bonks - and for being bonked yourself - and the results.
  *
  * **WASD to walk, left click to swing.** A click anywhere on the field swings:
  * the hammer comes down in front of you, the way you are facing - there is
- * nothing to aim with the mouse.
+ * nothing to aim with the mouse. Bring it down on somebody's head and they are
+ * stunned for a moment.
  */
 import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
@@ -17,7 +18,7 @@ import { getNet, useNet, usePeers } from '../../09-net'
 import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { WackAttackScene } from './WackAttackScene'
-import { COLOURS, FIELD, placings, timeLeft, type Game } from './rules'
+import { COLOURS, FIELD, isStunned, placings, timeLeft, type Game } from './rules'
 import { myId, newGame, waitingGame } from './setup'
 import { useFieldNet } from './useFieldNet'
 
@@ -26,6 +27,7 @@ const LOOK = {
   faded: '#80806a',
   paper: '#f2f0dc',
   sun: '#ffc94d',
+  bonk: '#7a5ad6',
   gold: '#e6a400',
   danger: '#c8443c',
   green: '#3f9a3a',
@@ -53,9 +55,9 @@ export function WackAttackScreen({ run }: { run: MinigameRun }) {
 
   const keys = useRef({ up: false, down: false, left: false, right: false })
   const clicked = useRef(false)
-  /** Your last points, and when: for the flash. */
-  const [flash, setFlash] = useState<{ points: number; at: number } | null>(null)
-  const lastScore = useRef(0)
+  /** What you last did, or had done to you, and when: for the flash. */
+  const [flash, setFlash] = useState<{ text: string; colour: string; at: number; points?: number } | null>(null)
+  const seen = useRef({ score: 0, bonks: 0, stunned: false })
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
 
@@ -109,10 +111,20 @@ export function WackAttackScreen({ run }: { run: MinigameRun }) {
       const current = live.current
       if (wire.advance(current, dt, walking, swung, paused.current)) setGame({ ...current })
       const mine = current.players.find((p) => p.mine)
-      if (mine && current.id === live.current.id && mine.score > lastScore.current) {
-        setFlash({ points: mine.score - lastScore.current, at: current.elapsed })
+      const was = seen.current
+      const stunned = !!mine && isStunned(mine, current.elapsed)
+      if (mine && current.id === live.current.id) {
+        if (mine.score > was.score) {
+          const points = mine.score - was.score
+          const golden = points >= FIELD.points.golden
+          setFlash({ text: golden ? `Golden mole! +${points}` : `Whack! +${points}`, colour: golden ? LOOK.gold : LOOK.green, at: current.elapsed, points })
+        } else if (mine.bonks > was.bonks) {
+          setFlash({ text: 'Bonk! Stunned them', colour: LOOK.bonk, at: current.elapsed })
+        } else if (stunned && !was.stunned) {
+          setFlash({ text: 'Bonked! Seeing stars…', colour: LOOK.danger, at: current.elapsed })
+        }
       }
-      lastScore.current = mine?.score ?? 0
+      seen.current = { score: mine?.score ?? 0, bonks: mine?.bonks ?? 0, stunned }
       frame = requestAnimationFrame(tick)
     }
     frame = requestAnimationFrame(tick)
@@ -169,8 +181,8 @@ export function WackAttackScreen({ run }: { run: MinigameRun }) {
         <Stage live={live} />
         {showFlash && flash ? (
           <div style={flashWrap}>
-            <div key={flash.at} style={{ ...flashStyle, background: flash.points >= FIELD.points.golden ? LOOK.gold : LOOK.green }} data-flash={flash.points}>
-              {flash.points >= FIELD.points.golden ? `Golden mole! +${flash.points}` : `Whack! +${flash.points}`}
+            <div key={flash.at} style={{ ...flashStyle, background: flash.colour }} data-flash={flash.points ?? flash.text}>
+              {flash.text}
             </div>
           </div>
         ) : null}
@@ -233,6 +245,7 @@ function Over({
               <span style={{ flex: 1, fontWeight: entry.whacker.id === me ? 700 : 400 }}>{nameOf(entry.whacker.id)}</span>
               <span style={{ opacity: 0.6, fontSize: 12 }}>
                 {entry.whacker.whacks} moles{entry.whacker.golden > 0 ? ` · ${entry.whacker.golden} golden` : ''}
+                {entry.whacker.bonks > 0 ? ` · ${entry.whacker.bonks} bonked` : ''}
               </span>
               <strong style={{ minWidth: 28, textAlign: 'right' }}>{entry.whacker.score}</strong>
             </div>

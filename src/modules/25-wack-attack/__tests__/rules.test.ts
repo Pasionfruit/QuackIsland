@@ -9,6 +9,7 @@ import {
   canSwing,
   createGame,
   holeAt,
+  isStunned,
   isUp,
   molesFor,
   placings,
@@ -187,6 +188,71 @@ describe('the hammer', () => {
     const p = strikePoint(game.players[0])
     expect(p.x).toBeCloseTo(1)
     expect(p.y).toBeCloseTo(2 + FIELD.strike)
+  })
+})
+
+describe('a bonk on the head', () => {
+  /** Stands whacker 1 right where whacker 0's hammer lands, well away from any hole. */
+  function faceOff(game: Game) {
+    Object.assign(game.players[0], { x: 0, y: 0, facing: 0 })
+    Object.assign(game.players[1], { x: FIELD.strike, y: 0 })
+  }
+
+  it('stuns whoever the hammer lands on, when there is no mole there', () => {
+    const game = createGame(SEED, whackers(2))
+    at(game, 0.5)
+    faceOff(game)
+    expect(swing(game, 0)).toBeNull()
+    expect(game.players[0].bonks).toBe(1)
+    expect(isStunned(game.players[1], game.elapsed)).toBe(true)
+    expect(game.players[1].stunnedUntil).toBeCloseTo(game.elapsed + FIELD.stun)
+    // No points for a head.
+    expect(game.players[0].score).toBe(0)
+  })
+
+  it('stops a stunned player walking or swinging until it wears off', () => {
+    const game = createGame(SEED, whackers(2))
+    at(game, 0.5)
+    faceOff(game)
+    swing(game, 0)
+    const stuck = { x: game.players[1].x, y: game.players[1].y }
+    const walking = new Map([['w2', { x: 1, y: 0, swings: 1 }]])
+    for (let i = 0; i < 10; i++) stepGame(game, walking, 0.05)
+    expect(game.players[1]).toMatchObject(stuck)
+    expect(canSwing(game, 1)).toBe(false)
+    expect(game.players[1].swungAt).toBe(-Infinity)
+    at(game, game.players[1].stunnedUntil + 0.01)
+    expect(canSwing(game, 1)).toBe(true)
+    stepGame(game, walking, 0.05)
+    expect(game.players[1].x).toBeGreaterThan(stuck.x)
+  })
+
+  it('cannot stun the same head again straight after, so nobody is stun-locked', () => {
+    const game = createGame(SEED, whackers(2))
+    at(game, 0.5)
+    faceOff(game)
+    swing(game, 0)
+    const until = game.players[1].stunnedUntil
+    at(game, until + 0.1)
+    faceOff(game)
+    swing(game, 0)
+    expect(game.players[1].stunnedUntil).toBe(until)
+    expect(game.players[0].bonks).toBe(1)
+    at(game, until + FIELD.stunGuard + 0.01)
+    faceOff(game)
+    swing(game, 0)
+    expect(game.players[0].bonks).toBe(2)
+  })
+
+  it('goes for the mole first when there is one under the hammer', () => {
+    const game = createGame(SEED, whackers(2))
+    const mole = molesFor(game.seed)[0]
+    at(game, mole.at + 0.1)
+    lineUp(game, 0, mole.hole)
+    const h = holeAt(mole.hole)
+    Object.assign(game.players[1], { x: h.x, y: h.y })
+    expect(swing(game, 0)).toEqual(mole)
+    expect(isStunned(game.players[1], game.elapsed)).toBe(false)
   })
 })
 

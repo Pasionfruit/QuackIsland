@@ -9,7 +9,9 @@ four-leaf clovers hidden among them. Find one and click it:
 - A new four-leaf clover grows somewhere else in the field.
 
 A click on anything else - a three-leaf clover, a claimed one, bare grass - costs
-a second before you can click again. Most claimed when the minute is up wins.
+**a point** and a second before you can click again. Every click during that
+second is spam, and costs **a point** too. Scores can go below zero. Highest
+score when the minute is up wins.
 
 Like Duck Hunt: a fixed view, mouse to aim, left click, a cooldown, a
 scoreboard, most points wins.
@@ -38,9 +40,15 @@ not: the clovers are flat heart-shaped leaves.
   every claim grows another, at least 3.5 units from the other two and from the
   one just claimed, so "as many as possible" means something. The catalogue text
   says so.
-- **A click that does not claim costs a second** (`FIELD.cooldown`), as Duck
-  Hunt's shots do. Without it, clicking every clover in a sweep finds them all
-  faster than looking does.
+- **A click that does not claim costs a point and a second** (`FIELD.penalty`,
+  `FIELD.cooldown`), as Duck Hunt's shots cost time. Without it, clicking every
+  clover in a sweep finds them all faster than looking does.
+- **Spam costs a point a click.** A click while your own crosshair's ring is
+  still filling back up is judged on the clicker's own screen, not the host's: a
+  guest counts its spam and sends the running count with its clicks (said again
+  until the host has it, taken once), so a click the guest saw as fair is never
+  punished for reaching the host a few frames early. A click while a claim is
+  still waiting on the host is neither.
 
 ## The field
 
@@ -121,14 +129,18 @@ Exported because it is worth testing, not because anything else needs it.
 - **The same seed is the same meadow; no two clovers' leaves overlap.** Tested.
 - **Always exactly three four-leaf clovers hidden, at least 3.5 apart; a new one
   grows away from the one just claimed.** Tested.
-- **A free four-leaf clover is claimed with no cooldown; anything else is a miss
-  and a second's wait; a claim is never taken from its claimer.** Tested.
+- **A free four-leaf clover is claimed with no cooldown; anything else is a miss,
+  a point lost and a second's wait; a claim is never taken from its claimer.**
+  Tested.
+- **A click during the cooldown is spam, a point lost for each, a running count
+  taken once however often it is said.** Tested.
 - **A click said twice counts once; nothing counts after the round.** Tested.
 - **Ranked by claims, level scores sharing a place.** Tested.
 - **Stand-ins spot clovers seconds after they grow, miss now and then, and take a
   sensible share of a round.** Tested.
-- **Eight hunters with a lossy network agree on every claim and score, and no
-  clover is claimed twice.** Tested.
+- **Eight hunters with a lossy network agree on every claim and score, no clover
+  is claimed twice, and a score is claims less a point per miss and per spam.**
+  Tested.
 - **The luck seed is never sent.** Tested.
 - **The whole field is in frame at any window shape, and a click on a clover is
   that clover.** Tested.
@@ -159,8 +171,9 @@ Open a lobby, leave the game on Volcano Island, press **minigames**, open
   crosshair in your colour.
 - **Hunt.** Somewhere are three with four leaves. Click one: a ring in your
   colour pops round it, "Lucky! +1", your score goes up.
-- **Click a three-leaf clover.** A ring fades out on it, and the crosshair's ring
-  empties and refills over a second; clicks during it do nothing.
+- **Click a three-leaf clover.** A ring fades out on it, a red "-1", your score
+  goes down, and the crosshair's ring empties and refills over a second.
+- **Click again while it refills.** Another "-1" for each click.
 - **Click a clover somebody has claimed.** A miss; their ring stays.
 - **Watch the stand-ins.** Rings in their colours appear now and then, and misses
   flash.

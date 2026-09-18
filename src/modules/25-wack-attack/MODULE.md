@@ -59,8 +59,13 @@ it.
   The host allows a swing up to 0.1 s early (`FIELD.swingGrace`), since a
   guest's clock is only eased to the host's.
 - **No miss penalty.** A swing at nothing just costs you the swing's time.
-- **The hammer does nothing to other players.** Bodies are solid, and that is
-  all.
+- **A swing with no mole under it bonks a head.** Anybody standing within 0.7 of
+  where the hammer lands (`FIELD.bonk`) - the nearest, if two - is **stunned for
+  1.5 s** (`FIELD.stun`): they cannot walk or swing. No points for it. A mole
+  under the hammer always comes first. Once a stun wears off, that player cannot
+  be stunned again for another 1.5 s (`FIELD.stunGuard`), so nobody is
+  stun-locked. A guest's keys do nothing while it is stunned, on its own screen
+  as on the host's.
 
 ## One field, and it is the host's
 
@@ -108,7 +113,11 @@ knobs for tuning are `BOT_IGNORES`, `BOT_REACTION` and `FIELD.botPace`.
   front of you.
 - **A whacked mole** is flattened into its hole, with a ring bursting out in the
   whacker's colour.
-- **Your own points** flash up top: "Whack! +1", or "Golden mole! +5".
+- **A stunned player** wobbles, with yellow stars going round over their head.
+- **Your own points** flash up top: "Whack! +1", or "Golden mole! +5". So does
+  "Bonk! Stunned them" when you stun somebody, and "Bonked! Seeing stars…" when
+  somebody stuns you.
+- **The results** say how many heads each player bonked.
 - **The HUD** has the clock (red for the last ten seconds), what moles are worth,
   and everybody's points.
 
@@ -144,6 +153,10 @@ Exported because it is worth testing, not because anything else needs it.
 - **Not a mole that is not up yet, is gone back down, or was whacked already; not
   from a step away.** Tested.
 - **0.4 s between swings, with 0.1 s allowed early on the host.** Tested.
+- **A swing with no mole under it stuns the head it lands on for 1.5 s - no
+  walking, no swinging - and that head cannot be stunned again for 1.5 s after.
+  A mole under the hammer comes first.** Tested.
+- **Who is stunned, and who bonked them, reach every guest.** Tested.
 - **A running swing count is dealt with once; the round ends at a minute.** Tested.
 - **Bodies stay inside the fence and out of each other.** Tested.
 - **Ranked by points, level scores sharing a place.** Tested.
@@ -156,7 +169,6 @@ Exported because it is worth testing, not because anything else needs it.
 
 - No models, no sound.
 - No moving camera.
-- No hitting other players.
 - No penalty for a swing at nothing.
 
 ## Known limitations
@@ -183,6 +195,9 @@ Open a lobby, leave the game on Volcano Island, press **minigames**, open
   "Whack! +1".
 - **Catch a golden mole.** "Golden mole! +5". It will not wait long.
 - **Swing at nothing.** The hammer comes down; nothing else happens.
+- **Swing at a stand-in's head.** Stand close, face it, click: stars go round
+  its head, it stops dead for a second and a half, "Bonk! Stunned them".
+  Swinging at it again straight after does nothing.
 - **Race a stand-in to a mole.** Whoever swings first gets it.
 - **At a minute,** the results, most points first. **Again** starts a new round.
 
@@ -192,6 +207,8 @@ Open a lobby, leave the game on Volcano Island, press **minigames**, open
 - **Guest: walk and swing.** It moves and swings at once on your own screen, and
   the host sees it.
 - **Guest: whack a mole.** Both screens show it flattened, and the same scores.
+- **Bonk each other.** The one hit sees stars on both screens and cannot move or
+  swing until it wears off.
 
 ## Gate record
 

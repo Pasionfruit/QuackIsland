@@ -12,6 +12,7 @@ import {
   fourLeaf,
   layField,
   placings,
+  spam,
   stepGame,
   timeLeft,
   type Game,
@@ -108,18 +109,39 @@ describe('a click', () => {
     click(game, 0, clover)
     expect(click(game, 1, clover)).toBe('miss')
     expect(game.claims.filter((c) => c.clover === clover)).toEqual([expect.objectContaining({ player: 0 })])
-    expect(game.players[1]).toMatchObject({ score: 0, misses: 1, cooldown: FIELD.cooldown })
+    expect(game.players[1]).toMatchObject({ score: -FIELD.penalty, misses: 1, cooldown: FIELD.cooldown })
   })
 
-  it('on a three-leaf clover or bare grass is a miss, and starts the cooldown', () => {
+  it('on a three-leaf clover or bare grass is a miss, costs a point, and starts the cooldown', () => {
     const game = createGame(SEED, LUCK, hunters(1))
     const three = plain(game)
     expect(click(game, 0, three)).toBe('miss')
     expect(game.players[0].miss).toEqual({ clover: three, at: 0 })
+    expect(game.players[0].score).toBe(-1)
     expect(click(game, 0, game.lucky[0].clover)).toBe('ignored')
     run(game, FIELD.cooldown - FIELD.cooldownGrace + 0.05)
     expect(click(game, 0, null)).toBe('miss')
     expect(game.players[0].miss?.clover).toBeNull()
+    expect(game.players[0]).toMatchObject({ score: -2, misses: 2 })
+  })
+
+  it('during the cooldown is spam, a point a click, each counted once', () => {
+    const game = createGame(SEED, LUCK, hunters(2))
+    click(game, 0, plain(game))
+    expect(spam(game, 0, 1)).toBe(1)
+    expect(spam(game, 0, 3)).toBe(2)
+    // Said again: nothing new.
+    expect(spam(game, 0, 3)).toBe(0)
+    expect(spam(game, 0, 2)).toBe(0)
+    expect(game.players[0]).toMatchObject({ spams: 3, score: -4, misses: 1 })
+    expect(game.players[0].cooldown).toBe(FIELD.cooldown)
+    // A claim afterwards still counts.
+    run(game, FIELD.cooldown)
+    expect(click(game, 0, game.lucky[0].clover)).toBe('claim')
+    expect(game.players[0].score).toBe(-3)
+    expect(game.players[1]).toMatchObject({ spams: 0, score: 0 })
+    run(game, FIELD.duration + 1)
+    expect(spam(game, 0, 9)).toBe(0)
   })
 
   it('said twice counts once, and nothing counts after the round', () => {

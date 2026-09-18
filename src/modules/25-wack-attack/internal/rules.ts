@@ -6,6 +6,8 @@
  * back down. Walk over, swing, and the mole in front of you is whacked: a point
  * for an ordinary mole, five for the golden mole - which is rarer and does not
  * stay up long. First whack on a mole takes it. Most points at a minute wins.
+ * A swing that lands on somebody's head instead stuns them: they cannot walk or
+ * swing for a moment.
  *
  * Everything here is pure. Which mole comes out of which hole, when, and for
  * how long is a function of the seed, so every browser draws the same moles at
@@ -67,6 +69,13 @@ export const FIELD = {
    * hears a guest's swing a moment after the guest made it.
    */
   downGrace: 0.2,
+
+  /** A swing with no mole under it bonks a head within this of where it lands... */
+  bonk: 0.7,
+  /** ...which stuns that player - no walking, no swinging - this long... */
+  stun: 1.5,
+  /** ...after which they cannot be stunned again for this long, so nobody is stun-locked. */
+  stunGuard: 1.5,
 } as const
 
 export interface Point {
@@ -150,6 +159,10 @@ export interface Whacker {
   swings: number
   /** When the last swing started. */
   swungAt: number
+  /** Until when this player is stunned. */
+  stunnedUntil: number
+  /** Heads bonked, as a running count. */
+  bonks: number
 }
 
 export interface Whack {
@@ -207,6 +220,8 @@ export function createGame(seed: number, entrants: readonly Entrant[], id = 1): 
       golden: 0,
       swings: 0,
       swungAt: -Infinity,
+      stunnedUntil: -Infinity,
+      bonks: 0,
     })),
     whacks: [],
   }
@@ -231,17 +246,38 @@ export function strikePoint(whacker: Whacker): Point {
   return { x: whacker.x + Math.cos(whacker.facing) * FIELD.strike, y: whacker.y + Math.sin(whacker.facing) * FIELD.strike }
 }
 
-/** Whether a swing is ready - allowing `grace` seconds early. */
+/** Whether a whacker is seeing stars at a moment. */
+export function isStunned(whacker: Whacker, time: number): boolean {
+  return time < whacker.stunnedUntil
+}
+
+/** Whether a swing is ready - allowing `grace` seconds early. A stunned player cannot swing. */
 export function canSwing(game: Game, player: number, grace = 0): boolean {
   const w = game.players[player]
-  return !!w && !game.over && game.elapsed - w.swungAt >= FIELD.swing - grace - 1e-9
+  return !!w && !game.over && !isStunned(w, game.elapsed) && game.elapsed - w.swungAt >= FIELD.swing - grace - 1e-9
+}
+
+/** The head a swing would bonk: the nearest other player under the hammer who is not stunned or just over it. */
+function headUnder(game: Game, player: number, at: Point): number {
+  let best = -1
+  let nearest: number = FIELD.bonk
+  game.players.forEach((other, index) => {
+    if (index === player || game.elapsed < other.stunnedUntil + FIELD.stunGuard) return
+    const distance = Math.hypot(other.x - at.x, other.y - at.y)
+    if (distance <= nearest) {
+      nearest = distance
+      best = index
+    }
+  })
+  return best
 }
 
 /**
  * A swing. Whacks the mole it lands on - one that is up (or has only just
  * started back down), not whacked already, its hole under the hammer or under
- * you - the nearest if there are two. Returns the mole whacked, null for a
- * swing at nothing, or undefined when the swing was not ready.
+ * you - the nearest if there are two. With no mole there, it bonks the head of
+ * anybody standing where it lands, and stuns them. Returns the mole whacked,
+ * null for a swing at no mole, or undefined when the swing was not ready.
  */
 export function swing(game: Game, player: number): Mole | null | undefined {
   if (!canSwing(game, player, FIELD.swingGrace)) return undefined
@@ -260,7 +296,14 @@ export function swing(game: Game, player: number): Mole | null | undefined {
     const distance = Math.min(fromStrike, fromBody)
     if (!best || distance < best.distance) best = { mole, distance }
   }
-  if (!best) return null
+  if (!best) {
+    const head = headUnder(game, player, at)
+    if (head >= 0) {
+      game.players[head].stunnedUntil = now + FIELD.stun
+      whacker.bonks += 1
+    }
+    return null
+  }
   game.whacks.push({ mole: best.mole.id, player, at: now })
   whacker.score += best.mole.golden ? FIELD.points.golden : FIELD.points.mole
   whacker.whacks += 1
@@ -328,7 +371,7 @@ export function stepGame(game: Game, intents: ReadonlyMap<string, Intent>, dt: n
   })
   for (const whacker of game.players) {
     const intent = intents.get(whacker.id)
-    if (intent) walk(whacker, intent, step)
+    if (intent && !isStunned(whacker, game.elapsed)) walk(whacker, intent, step)
   }
   separate(game)
   if (game.elapsed >= FIELD.duration) game.over = true

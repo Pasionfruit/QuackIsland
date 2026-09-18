@@ -8,8 +8,9 @@
  * wins.
  *
  * A click that is not a free four-leaf clover - a three-leaf one, one somebody
- * has already claimed, bare grass - costs you a second before you can click
- * again. Clicking everything is slower than looking.
+ * has already claimed, bare grass - costs you a point, and a second before you
+ * can click again. Clicking again during that second is spam, and costs a point
+ * a click. Scores can go below zero. Clicking everything loses to looking.
  *
  * Everything here is pure. The field comes from a seed everybody knows, since
  * everybody draws it; where the four-leaf clovers grow comes from a second,
@@ -47,6 +48,8 @@ export const FIELD = {
    * few frames behind.
    */
   cooldownGrace: 0.15,
+  /** Points lost for a click that is not a claim, and for each click during the cooldown. */
+  penalty: 1,
 } as const
 
 export interface Clover {
@@ -95,8 +98,11 @@ export interface Hunter {
   id: string
   mine: boolean
   bot: boolean
+  /** Claims less penalties: can go below zero. */
   score: number
   misses: number
+  /** Clicks made during the cooldown, each one a point lost, as a running count. */
+  spams: number
   /** Seconds before this hunter can click again. */
   cooldown: number
   /** The last click taken from this hunter, so a click said twice counts once. */
@@ -176,6 +182,7 @@ export function createGame(seed: number, luck: number, entrants: readonly Entran
       bot: e.bot ?? false,
       score: 0,
       misses: 0,
+      spams: 0,
       cooldown: 0,
       seq: 0,
       miss: null,
@@ -195,8 +202,9 @@ export type Outcome = 'claim' | 'miss' | 'ignored'
  * A hunter clicks `clover` - or bare grass, for null.
  *
  * A free four-leaf clover is claimed, and another grows. Anything else is a
- * miss and starts the cooldown. Nothing counts during the cooldown, after the
- * round, or for a `seq` already dealt with.
+ * miss: a point lost, and the cooldown starts. Nothing counts during the
+ * cooldown, after the round, or for a `seq` already dealt with - a click during
+ * the cooldown is `spam`'s business, not this.
  */
 export function click(game: Game, player: number, clover: number | null, seq?: number): Outcome {
   const hunter = game.players[player]
@@ -217,9 +225,25 @@ export function click(game: Game, player: number, clover: number | null, seq?: n
     return 'claim'
   }
   hunter.misses += 1
+  hunter.score -= FIELD.penalty
   hunter.cooldown = FIELD.cooldown
   hunter.miss = { clover, at: game.elapsed }
   return 'miss'
+}
+
+/**
+ * Clicks made during the cooldown, up to a running count of `total`: a point
+ * lost for each one not already dealt with. A count rather than one at a time,
+ * so a guest can say it again and again and it is taken once. The cooldown is
+ * left as it is. Returns how many were new.
+ */
+export function spam(game: Game, player: number, total: number): number {
+  const hunter = game.players[player]
+  if (!hunter || game.over || total <= hunter.spams) return 0
+  const fresh = total - hunter.spams
+  hunter.spams = total
+  hunter.score -= fresh * FIELD.penalty
+  return fresh
 }
 
 export function stepGame(game: Game, dt: number): Game {
