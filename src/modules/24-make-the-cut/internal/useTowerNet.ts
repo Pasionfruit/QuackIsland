@@ -14,8 +14,7 @@
  *
  * The same lessons as the other minigames: intents are repeated and forgotten
  * after a silence; a cut is said until it is taken and counts once; a guest keeps
- * listening after the game ends; somebody who leaves the lobby is out; pausing in
- * a lobby stops only your hands. Alone, the clock stops.
+ * listening after the game ends; somebody who leaves the lobby is out; a pause stops the round for everybody. Alone, the clock stops.
  */
 import { useEffect, useRef } from 'react'
 import { getNet, getPeers, sendToRoom, subscribeRoom } from '../../09-net'
@@ -75,10 +74,14 @@ export function useTowerNet(): TowerNet {
     const wish = paused ? NO_WALK : walking
     lastGame.current = game.id
 
+    // A pause is shared: whoever pressed it stopped the round for everybody,
+    // so this stops dead - the host's own simulation included. A round that
+    // carried on behind the card would make the card a lie. See
+    // `15-minigames/internal/pause.ts`.
+    if (paused) return false
+
     if (net.host) {
       if (game.players.length === 0) return false
-      const shared = net.status === 'joined' && net.peers > 0
-      if (paused && !shared) return false
 
       const me = game.players.findIndex((p) => p.mine)
       const intents = botIntents(game)

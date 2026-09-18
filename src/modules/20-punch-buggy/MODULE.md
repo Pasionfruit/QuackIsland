@@ -83,8 +83,7 @@ The same arrangement as the other minigames:
 - **An intent is for one round.** The count starts at zero each round; a guest
   still repeating last round's count as the next one starts is ignored.
 - A guest that goes quiet stops walking on the host; its clicks are never
-  forgotten. Walking out of a round says "standing still". Pausing in a lobby
-  stops only your hands.
+  forgotten. Walking out of a round says "standing still". a pause stops the round for everybody.
 - **The canvas is rendered once**, and the scene redraws itself from a ref each
   frame - see Duck Hunt's notes for the error a per-frame `<Canvas>` caused.
 

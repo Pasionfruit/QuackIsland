@@ -115,7 +115,8 @@ The same arrangement as the other minigames:
   copy runs ahead of the host on its own pick and confirm, and on nothing else.
 - **A guest keeps listening after the game ends**, so it sees the results and the
   next game when the host presses **again**. A new `id` is a new game.
-- **Pausing is personal.** Alone, it stops the clock; in a lobby it stops only
+- **A pause is shared.** It stops the round for everybody, and only whoever
+  stopped it can start it again. Before that change it stopped only
   your hands, and the countdown runs on.
 - **The roster is the lobby**, host first. Alone - including a lobby with only
   you in it - three stand-ins fill in.

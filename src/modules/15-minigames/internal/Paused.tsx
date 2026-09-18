@@ -2,41 +2,70 @@
  * What escape opens once a round is actually going.
  *
  * Before a round starts, escape means what it always meant: take me back. Once
- * there is something running, taking you back without asking would throw away
- * a round you are in the middle of - so it stops instead, and asks.
+ * there is something running, taking you back without asking would throw away a
+ * round you are in the middle of - so it stops instead, and asks.
  *
- * **What the second button does depends on who you are.** The host is the
- * reason anybody is in this game, so leaving takes everybody out and puts them
- * back where they were. A guest leaving takes only themselves, and they sit
- * the rest of it out until the host starts something else - there is no
- * dashboard behind it for them, because there is nothing there they could
- * choose.
+ * **It stops for everybody, and it says who stopped it.** Anybody in the lobby
+ * can pause; the card names them on every screen. See `pause.ts`.
+ *
+ * **The buttons belong to whoever paused it.** Everybody else gets the same
+ * card with the same three words on it and nothing to press, and a line telling
+ * them who they are waiting for - which is better than three dead buttons and
+ * no explanation. If the person who paused has left, the buttons come back for
+ * whoever is still here.
+ *
+ * **What the last button does depends on who you are.** The host is the reason
+ * anybody is in this game, so leaving takes everybody out and puts them back
+ * where they were. A guest leaving takes only themselves - and, because they
+ * were the one holding the pause, lets everybody else carry on.
  */
 import { FONT, ISLAND, button } from './look'
-import { backOut, resumeMinigame } from './state'
+import { nameOfPauser, type Pauser } from './pause'
+import { backOut, restartMinigame, resumeMinigame } from './state'
 
-export function Paused({ isHost }: { isHost: boolean }) {
+export function Paused({ isHost, pausedBy, me, mayControl }: { isHost: boolean; pausedBy: Pauser | null; me: string; mayControl: boolean }) {
+  const who = nameOfPauser(pausedBy, me)
+  const mine = who === 'you'
+  const gone = pausedBy !== null && !mine && mayControl
+
   return (
     <div style={backdrop}>
       <div style={card}>
-        <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 2 }}>Paused</div>
-        <div style={{ color: ISLAND.fadedInk, marginBottom: 14 }}>
-          {isHost
-            ? 'The round is stopped. Leaving takes everybody back with you.'
-            : 'The round carries on for everybody else. Escape again, or resume, to come back to it.'}
+        <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 2 }} data-paused-by={pausedBy?.id ?? ''}>
+          Paused
+        </div>
+        <div style={{ color: ISLAND.fadedInk, marginBottom: 14 }} data-pause-note>
+          {mine
+            ? isHost
+              ? 'You stopped the round for everybody. Leaving takes them all back with you.'
+              : 'You stopped the round for everybody. Leaving lets them carry on without you.'
+            : gone
+              ? `${who} stopped the round and has since left, so it is yours to start again.`
+              : `${who} stopped the round. Only ${who} can start it again.`}
         </div>
 
-        <button type="button" data-resume onClick={resumeMinigame} style={resume}>
-          resume
-        </button>
-        <button
-          type="button"
-          data-leave
-          onClick={backOut}
-          style={{ ...button, width: '100%', marginTop: 8 }}
-        >
-          {isHost ? 'back to the games' : 'leave this round'}
-        </button>
+        {mayControl ? (
+          <>
+            <button type="button" data-resume onClick={resumeMinigame} style={resume}>
+              resume
+            </button>
+            <button
+              type="button"
+              data-restart
+              onClick={restartMinigame}
+              style={{ ...button, width: '100%', marginTop: 8, padding: '9px 16px', font: `700 14px/1.2 ${FONT}` }}
+            >
+              restart the round
+            </button>
+            <button type="button" data-leave onClick={backOut} style={{ ...button, width: '100%', marginTop: 8 }}>
+              {isHost ? 'back to the games' : 'leave this round'}
+            </button>
+          </>
+        ) : (
+          <div style={waiting} data-waiting>
+            waiting for {who}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -53,7 +82,8 @@ const backdrop: React.CSSProperties = {
 }
 
 const card: React.CSSProperties = {
-  width: 320,
+  width: 340,
+  maxWidth: 'calc(100vw - 32px)',
   padding: '18px 20px',
   borderRadius: 20,
   background: ISLAND.sand,
@@ -72,4 +102,16 @@ const resume: React.CSSProperties = {
   color: ISLAND.ink,
   font: `700 16px/1.2 ${FONT}`,
   cursor: 'pointer',
+}
+
+/** Not a button: there is nothing here for anybody but the one who paused it. */
+const waiting: React.CSSProperties = {
+  width: '100%',
+  boxSizing: 'border-box',
+  padding: '10px 16px',
+  borderRadius: 999,
+  background: ISLAND.warmSand,
+  color: ISLAND.fadedInk,
+  font: `600 14px/1.2 ${FONT}`,
+  textAlign: 'center',
 }

@@ -151,8 +151,7 @@ A guest's walk is taken only as far as it could have gone since the host last
 heard (1.5 times the walking speed, plus 0.3 m) and never through anything.
 
 The same lessons as the other minigames: a guest keeps listening after the game
-ends; somebody who leaves the lobby is out; pausing in a lobby stops only your
-own hands. Alone, it stops the clock.
+ends; somebody who leaves the lobby is out; a pause stops the round for everybody. Alone, it stops the clock.
 
 ## Stand-ins
 

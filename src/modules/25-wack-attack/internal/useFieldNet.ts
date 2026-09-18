@@ -17,8 +17,7 @@
  *
  * The same lessons as the other minigames: intents are repeated and forgotten
  * after a silence; a swing is a running count; an intent is for one round; a
- * guest keeps listening after the round ends; pausing in a lobby stops only
- * your hands. Alone, the clock stops.
+ * guest keeps listening after the round ends; a pause stops the round for everybody. Alone, the clock stops.
  */
 import { useEffect, useRef } from 'react'
 import { getNet, sendToRoom, subscribeRoom } from '../../09-net'
@@ -76,10 +75,14 @@ export function useFieldNet(): FieldNet {
     const wish = paused ? { x: 0, y: 0 } : walking
     if (swings.current.game !== game.id) swings.current = { game: game.id, count: 0 }
 
+    // A pause is shared: whoever pressed it stopped the round for everybody,
+    // so this stops dead - the host's own simulation included. A round that
+    // carried on behind the card would make the card a lie. See
+    // `15-minigames/internal/pause.ts`.
+    if (paused) return false
+
     if (net.host) {
       if (game.players.length === 0) return false
-      const shared = net.status === 'joined' && net.peers > 0
-      if (paused && !shared) return false
 
       const me = game.players.findIndex((p) => p.mine)
       const intents = botIntents(game)

@@ -12,7 +12,7 @@
  * The same arrangement as Zombie Tag's, for the same reasons, and with the
  * same lessons already learned: keys are repeated and forgotten after a
  * silence, leaving says "nothing held", a guest keeps listening after the race
- * ends, and pausing in a lobby stops only your hands.
+ * ends, and a pause stops the round for everybody.
  */
 import { useEffect, useRef } from 'react'
 import { getNet, sendToRoom, subscribeRoom } from '../../09-net'
@@ -78,14 +78,19 @@ export function useRaceNet(): RaceNet {
     const now = performance.now()
     const mine = paused ? '' : held
 
+    // A pause is shared: whoever pressed it stopped the round for everybody,
+    // so this stops dead - the host's own simulation included. A round that
+    // carried on behind the card would make the card a lie. See
+    // `15-minigames/internal/pause.ts`.
+    if (paused) return false
+
     if (net.host) {
       // A race nobody was dealt into is not one to run or to send: it is a
       // guest who became host before any snapshot reached them, and sending
       // it would clear everybody's race. See the same guard in Zombie Tag.
       if (race.racers.length === 0) return false
-      const shared = net.status === 'joined' && net.peers > 0
       let stepped = false
-      if (!race.over && (!paused || shared)) {
+      if (!race.over && !paused) {
         const directions: Map<string, Point> = botDirections(race)
         const me = myId()
         for (const racer of race.racers) {

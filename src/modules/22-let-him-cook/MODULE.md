@@ -101,7 +101,7 @@ The same arrangement as the other minigames:
   move smoothly.
 - **Somebody who leaves the lobby is out** (`left`); if it was their turn, it
   ends there.
-- **Pausing in a lobby stops only your hands**: you cannot pick while paused, and
+- **a pause stops the round for everybody**: you cannot pick while paused, and
   the turn timer does not wait. Alone, the clock stops.
 - **The canvas is rendered once**, and the scene redraws itself from a ref each
   frame - see Duck Hunt's notes.

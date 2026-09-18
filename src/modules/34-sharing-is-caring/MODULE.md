@@ -94,7 +94,7 @@ The same arrangement as the other minigames:
 - **An intent is for one round.** A guest still repeating last round's direction
   as the next one is dealt is ignored. A guest that goes quiet for a second
   stops walking on the host. Walking out of a round says "standing still".
-  Pausing in a lobby stops only your hands.
+  a pause stops the round for everybody.
 - A snapshot naming a wearer who is not in it is refused whole.
 - **The canvas is rendered once**, and the scene redraws itself from a ref each
   frame.

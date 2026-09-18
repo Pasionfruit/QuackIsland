@@ -121,7 +121,7 @@ up to half a second before the letter is up by its own clock.
 
 The same lessons as the other minigames: a guest keeps listening after the game
 ends; somebody who leaves the lobby is out, and nobody waits for their attempt;
-pausing in a lobby stops only your own hands. Alone, it stops the clock.
+a pause stops the round for everybody. Alone, it stops the clock.
 
 ## Stand-ins
 

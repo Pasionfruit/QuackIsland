@@ -99,8 +99,7 @@ A guest's copy keeps its own torch where its own screen has it and takes the
 rest from the host; once the game is over, the host's word is everything. A
 guest's clock eases towards the host's, jumping if it is more than 0.4 s off.
 
-Somebody who leaves the lobby is out, and placed last. Pausing in a lobby stops
-only your own hands; alone, it stops the clock.
+Somebody who leaves the lobby is out, and placed last. a pause stops the round for everybody; alone, it stops the clock.
 
 ## Stand-ins
 

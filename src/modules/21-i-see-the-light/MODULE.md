@@ -99,7 +99,7 @@ The same arrangement as the other minigames:
   the next starts is ignored.
 - **Walking out of a race is out of it** (`left`), whether by closing the panel or
   leaving the lobby, rather than a lane left standing until the clock runs out.
-- **Pausing in a lobby stops only your hands**: while paused your presses and your
+- **a pause stops the round for everybody**: while paused your presses and your
   pointer are not judged, and the light keeps going. Alone, the clock stops.
 - **The canvas is rendered once**, and the scene redraws itself from a ref each
   frame - see Duck Hunt's notes.

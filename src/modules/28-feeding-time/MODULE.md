@@ -82,7 +82,7 @@ There is no landing marker. Reading a flick is the game.
 - **A guest's own cracker leaves its hand at once**, drawn flying from the moment
   of the flick and handed over to the host's cracker once the host has it.
   Whether it fed a duck is the host's to say.
-- **Pausing in a lobby stops only your hands.** Alone, the clock stops.
+- **a pause stops the round for everybody.** Alone, the clock stops.
 - **The canvas is rendered once**, and the scene redraws itself from a ref each
   frame - see Duck Hunt's notes.
 

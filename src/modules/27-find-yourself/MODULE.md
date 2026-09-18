@@ -72,7 +72,7 @@ your cup; your eyes are meant to.
   across one, never running past the end of a phase, since the host says when a
   phase is over. The shuffle it draws is the host's, swap for swap.
 - **Somebody who leaves the lobby is not waited for.**
-- **Pausing in a lobby stops only your hands.** Alone, the clock stops.
+- **a pause stops the round for everybody.** Alone, the clock stops.
 - **The canvas is rendered once**, and the scene redraws itself from a ref each
   frame - see Duck Hunt's notes.
 

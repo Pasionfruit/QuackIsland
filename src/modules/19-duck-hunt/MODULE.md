@@ -99,7 +99,8 @@ trip, the host takes a shot up to 0.15 s before the shooter's cooldown ends
 (`cooldownGrace`) and at a balloon up to 0.3 s after it floated away
 (`escapeGrace`) - the moments a guest's screen can be ahead of the host.
 
-Pausing is personal, as in the other minigames. Alone, three stand-ins shoot
+A pause is shared, as in the other minigames: it stops the round for
+everybody. Alone, three stand-ins shoot
 too: a moment's aim after each cooldown, their own balloons, and a miss about a
 third of the time.
 

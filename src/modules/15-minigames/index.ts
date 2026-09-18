@@ -35,6 +35,18 @@ export {
 } from './internal/catalogue'
 
 export {
+  NAME_MAX,
+  PAUSE_TAG,
+  decodePause,
+  encodePause,
+  mayControl,
+  nameOfPauser,
+  type PauseAct,
+  type PauseMessage,
+  type Pauser,
+} from './internal/pause'
+
+export {
   NO_CALL,
   encodeCall,
   followCall,
@@ -57,6 +69,7 @@ export {
   isPausable,
   pauseRun,
   registerMinigame,
+  restartRun,
   resumeRun,
   tickRun,
   type MinigameBuild,
@@ -69,12 +82,15 @@ export {
   closeMinigames,
   getMinigameCall,
   getMinigameScreen,
+  iMayControl,
   openDashboard,
   openMinigame,
   pauseMinigame,
   playMinigame,
+  restartMinigame,
   resumeMinigame,
   tickMinigame,
+  useMayControl,
   useMinigameScreen,
   useMinigameSync,
   type MinigameScreenState,

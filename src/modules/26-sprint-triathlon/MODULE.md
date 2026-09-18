@@ -82,7 +82,7 @@ who left the lobby.
 - **An account is for one race.** Its counts start at zero each race, and one
   meant for the last race is ignored.
 - **Somebody who leaves the lobby is not waited for.**
-- **Pausing in a lobby stops only your hands.** Alone, the clock stops.
+- **a pause stops the round for everybody.** Alone, the clock stops.
 - **The canvas is rendered once**, and the scene redraws itself from a ref each
   frame - see Duck Hunt's notes.
 

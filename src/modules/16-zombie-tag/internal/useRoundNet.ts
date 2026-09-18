@@ -118,9 +118,15 @@ export function useRoundNet(): RoundNet {
   const advance = (round: Round, dt: number, mine: Intent, paused: boolean): boolean => {
     const net = getNet()
     const now = performance.now()
-    // Pausing is personal. Alone, it stops the clock; in a lobby it stops only
-    // your hands, because the round is everybody's and not yours to stop.
+    // Held for the frame a pause arrives on, and for nothing else now that a
+    // pause stops the round above.
     const mineNow = paused ? NO_INTENT : mine
+
+    // A pause is shared: whoever pressed it stopped the round for everybody,
+    // so this stops dead - the host's own simulation included. A round that
+    // carried on behind the card would make the card a lie. See
+    // `15-minigames/internal/pause.ts`.
+    if (paused) return false
 
     if (net.host) {
       // A round nobody was dealt into is not a round to run. This is a guest
@@ -128,9 +134,8 @@ export function useRoundNet(): RoundNet {
       // stepped, an empty arena is over on its first frame, and sent, it would
       // end the game for everybody who is actually playing it.
       if (round.bodies.length === 0) return false
-      const shared = net.status === 'joined' && net.peers > 0
       let stepped = false
-      if (!round.over && (!paused || shared)) {
+      if (!round.over && !paused) {
         // Everything nobody is driving, then everybody who is.
         const intents = crowdIntents(round)
         for (const [id, entry] of heard.current) {

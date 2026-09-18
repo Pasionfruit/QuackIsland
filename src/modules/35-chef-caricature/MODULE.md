@@ -147,8 +147,7 @@ twice. The browser run caught it (a drawing scoring two); the other minigames
 avoid it by handling input inside the frame.
 
 The same lessons as the other minigames: a guest keeps listening after the game
-ends; somebody who leaves the lobby is out; pausing in a lobby stops only your
-hands, and lifts your pen. Alone, the clock stops.
+ends; somebody who leaves the lobby is out; a pause stops the round for everybody, and lifts your pen. Alone, the clock stops.
 
 ## Stand-ins
 

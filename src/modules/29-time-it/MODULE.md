@@ -70,7 +70,7 @@ everybody's times, come out at the end.
   the round is over, and counted once.
 - **A guest's clock runs on between snapshots**, eased towards the host's.
 - **Somebody who leaves the lobby is not waited for.**
-- **Pausing in a lobby stops only your hands.** Alone, the clock stops.
+- **a pause stops the round for everybody.** Alone, the clock stops.
 - **The canvas is rendered once**, and the scene redraws itself from a ref each
   frame - see Duck Hunt's notes.
 

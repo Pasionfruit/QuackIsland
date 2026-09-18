@@ -23,6 +23,7 @@
  */
 import type { ReactNode } from 'react'
 import type { MinigameId } from './catalogue'
+import type { Pauser } from './pause'
 
 /**
  * Where a game is in its own life. The four every minigame has.
@@ -42,13 +43,23 @@ export interface MinigameRun {
   /**
    * Stopped where it stands, with a card over it.
    *
-   * **Personal, not shared**, the same as Garden Goofs' pause and for the same
-   * reason: there is no message for it. A guest who pauses stops their own
-   * clock and everybody else carries on, which is the honest consequence of a
-   * round that each browser is running its own copy of. Nothing is lost by it
-   * and nothing else has to know.
+   * **Shared**: anybody can stop the round and it stops for everybody. This is
+   * the one thing a guest can press that moves every screen in the lobby - see
+   * `pause.ts` for why, and for who is allowed to start it again.
+   *
+   * A game's own panel is handed this and is expected to stop dead on it, the
+   * host's simulation included. A round that kept running behind the card would
+   * make the card a lie.
    */
   paused: boolean
+  /**
+   * Who stopped it, or `null` while it is running.
+   *
+   * Always in step with `paused` - the two are only ever set together, by
+   * `pauseRun` and `resumeRun` - and kept as two fields rather than one because
+   * every game already reads the boolean and none of them care who.
+   */
+  pausedBy: Pauser | null
   /**
    * The game's own state, in whatever shape that game needs.
    *
@@ -122,7 +133,7 @@ export function forgetBuilds(): void {
  */
 export function freshRun(id: MinigameId): MinigameRun {
   const build = buildFor(id)
-  return { id, phase: 'briefing', countdown: 0, paused: false, game: build ? build.newGame() : null }
+  return { id, phase: 'briefing', countdown: 0, paused: false, pausedBy: null, game: build ? build.newGame() : null }
 }
 
 /**
@@ -141,8 +152,21 @@ export function beginRun(run: MinigameRun): MinigameRun {
     phase: 'counting',
     countdown: COUNT_FROM,
     paused: false,
+    pausedBy: null,
     game: build ? build.newGame() : null,
   }
+}
+
+/**
+ * Start the whole round again, from the three-two-one and a new game.
+ *
+ * Not `beginRun` on the run you have - that only moves a briefing on, and a run
+ * that is counting or playing is neither. A restart is a fresh run of the same
+ * game taken straight to the countdown, which is exactly what `freshRun` and
+ * `beginRun` are between them, and is why this is two calls and no new rules.
+ */
+export function restartRun(run: MinigameRun): MinigameRun {
+  return beginRun(freshRun(run.id))
 }
 
 /**
@@ -171,16 +195,16 @@ export function isPausable(run: MinigameRun): boolean {
   return run.phase === 'counting' || run.phase === 'playing'
 }
 
-/** Stops it where it stands. Does nothing to a briefing. */
-export function pauseRun(run: MinigameRun): MinigameRun {
+/** Stops it where it stands, and remembers who did. Does nothing to a briefing. */
+export function pauseRun(run: MinigameRun, by: Pauser): MinigameRun {
   if (!isPausable(run) || run.paused) return run
-  return { ...run, paused: true }
+  return { ...run, paused: true, pausedBy: by }
 }
 
 /** Starts it again from exactly where it stopped. */
 export function resumeRun(run: MinigameRun): MinigameRun {
   if (!run.paused) return run
-  return { ...run, paused: false }
+  return { ...run, paused: false, pausedBy: null }
 }
 
 /**

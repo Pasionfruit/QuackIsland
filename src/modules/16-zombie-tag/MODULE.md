@@ -157,8 +157,10 @@ The parts that are easy to get wrong, and what is done about each:
 - **A guest is eased towards the host**, and snapped when the gap is too big to
   have walked, such as a fresh round.
 
-**Pausing is personal, the same as `15-minigames` says.** Alone, pausing stops
-the clock. In a lobby it stops only your hands: your body stands still and the
+**A pause is shared, the same as `15-minigames` says.** Anybody can stop the
+round and it stops for everybody - the host's simulation included - and only
+whoever stopped it can start it again. Alone, that is just you. Before that
+change it stopped only your hands: your body stood still and the
 round carries on, host or guest, because the round is everybody's.
 
 **Only the host can press again.** A guest's card says it is waiting for them.

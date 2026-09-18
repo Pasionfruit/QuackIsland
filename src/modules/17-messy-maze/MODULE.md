@@ -161,7 +161,8 @@ The same arrangement as Zombie Tag, with the lessons already learned from it:
   of silence. Leaving a race sends "nothing held".
 - **A guest keeps listening after the race ends**, so it sees the results and
   the next race when the host presses **again**. A new seed is a new race.
-- **Pausing is personal.** Alone it stops the clock; in a lobby it stops only
+- **A pause is shared.** It stops the race for everybody, and only whoever
+  stopped it can start it again. Before that change it stopped only
   your hands.
 
 **The roster is the lobby**, host first, read when the race is dealt. Alone -

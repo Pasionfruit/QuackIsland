@@ -73,7 +73,7 @@ seed.
 - **A guest's own click shows at once.** A click on a four-leaf clover is ringed
   in white until the host says whose it is; a click that cannot be a claim starts
   the cooldown on the spot. Clock and cooldowns run on between snapshots.
-- **Pausing in a lobby stops only your hands.** Alone, the clock stops.
+- **a pause stops the round for everybody.** Alone, the clock stops.
 - **The canvas is rendered once**, and the scene redraws itself from a ref each
   frame - see Duck Hunt's notes.
 

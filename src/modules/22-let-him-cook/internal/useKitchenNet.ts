@@ -10,7 +10,7 @@
  * The same arrangement, and the same lessons, as the other minigames: a pick is
  * said again until the turn moves on; a guest keeps listening after the game
  * ends; the host never runs or sends a kitchen nobody was dealt into; somebody
- * who leaves the lobby is out; pausing in a lobby stops only your hands - the
+ * who leaves the lobby is out; a pause stops the round for everybody - the
  * turn timer does not wait for you. Alone, the clock stops.
  */
 import { useEffect, useRef } from 'react'
@@ -72,10 +72,14 @@ export function useKitchenNet(): KitchenNet {
     const net = getNet()
     const now = performance.now()
 
+    // A pause is shared: whoever pressed it stopped the round for everybody,
+    // so this stops dead - the host's own simulation included. A round that
+    // carried on behind the card would make the card a lie. See
+    // `15-minigames/internal/pause.ts`.
+    if (paused) return false
+
     if (net.host) {
       if (game.players.length === 0) return false
-      const shared = net.status === 'joined' && net.peers > 0
-      if (paused && !shared) return false
 
       const me = game.players.findIndex((p) => p.mine)
       if (choice !== null && !paused && me >= 0) pick(game, me, choice)

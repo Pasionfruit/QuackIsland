@@ -12,8 +12,7 @@
  * lag reads as the animal being heavy rather than as the controls being broken.
  *
  * The same lessons as the other minigames: a guest keeps listening after the
- * race ends; somebody who leaves the lobby stops where they are; pausing in a
- * lobby stops only your own hands. Alone, the clock stops.
+ * race ends; somebody who leaves the lobby stops where they are; a pause stops the round for everybody. Alone, the clock stops.
  */
 import { useEffect, useRef } from 'react'
 import { getNet, getPeers, sendToRoom, subscribeRoom } from '../../09-net'
@@ -62,10 +61,14 @@ export function useRaceNet(): RaceNet {
     const net = getNet()
     const now = performance.now()
 
+    // A pause is shared: whoever pressed it stopped the round for everybody,
+    // so this stops dead - the host's own simulation included. A round that
+    // carried on behind the card would make the card a lie. See
+    // `15-minigames/internal/pause.ts`.
+    if (paused) return false
+
     if (net.host) {
       if (game.racers.length === 0) return false
-      const shared = net.status === 'joined' && net.peers > 0
-      if (paused && !shared) return false
 
       const me = game.racers.findIndex((r) => r.mine)
       if (me >= 0) {

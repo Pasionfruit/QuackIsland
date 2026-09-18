@@ -111,7 +111,7 @@ next message saying something else. A guest also applies its own pick locally at
 once, so its card lights up on the press rather than a round trip later.
 
 Somebody who leaves the lobby stops where they are and keeps the ground they
-made. Pausing stops only your own hands. Alone, the clock stops.
+made. A pause stops the round for everybody. Alone, the clock stops.
 
 ## Stand-ins
 

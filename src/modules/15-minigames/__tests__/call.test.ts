@@ -117,27 +117,30 @@ describe('following the host', () => {
 describe('pausing a round', () => {
   afterEach(forgetBuilds)
 
+  /** Whoever pressed it. A pause now carries a person; see `pause.ts`. */
+  const BEA = { id: 'p2', name: 'bea' }
+
   it('has nothing to pause on a briefing', () => {
     const run = freshRun('zombie-tag')
     expect(isPausable(run)).toBe(false)
-    expect(pauseRun(run)).toBe(run)
+    expect(pauseRun(run, BEA)).toBe(run)
   })
 
   it('pauses a countdown and a round alike', () => {
     const counting = beginRun(freshRun('zombie-tag'))
     expect(isPausable(counting)).toBe(true)
-    expect(pauseRun(counting).paused).toBe(true)
+    expect(pauseRun(counting, BEA).paused).toBe(true)
 
     const playing = tickRun(counting, 9)
     expect(isPausable(playing)).toBe(true)
-    expect(pauseRun(playing).paused).toBe(true)
+    expect(pauseRun(playing, BEA).paused).toBe(true)
   })
 
   it('stops the countdown where it stands', () => {
     let run = tickRun(beginRun(freshRun('zombie-tag')), 1)
     expect(countShown(run)).toBe(2)
 
-    run = pauseRun(run)
+    run = pauseRun(run, BEA)
     // However long the card is up for, it comes back on the same number.
     run = tickRun(run, 30)
     expect(countShown(run)).toBe(2)
@@ -150,7 +153,7 @@ describe('pausing a round', () => {
   })
 
   it('starts a round unpaused, however the last one ended', () => {
-    const paused = pauseRun(beginRun(freshRun('zombie-tag')))
+    const paused = pauseRun(beginRun(freshRun('zombie-tag')), BEA)
     expect(paused.paused).toBe(true)
     expect(freshRun('zombie-tag').paused).toBe(false)
     expect(beginRun(freshRun('zombie-tag')).paused).toBe(false)
@@ -159,14 +162,14 @@ describe('pausing a round', () => {
   it('does nothing when asked for a state it is already in', () => {
     const run = beginRun(freshRun('zombie-tag'))
     expect(resumeRun(run)).toBe(run)
-    const stopped = pauseRun(run)
-    expect(pauseRun(stopped)).toBe(stopped)
+    const stopped = pauseRun(run, BEA)
+    expect(pauseRun(stopped, BEA)).toBe(stopped)
   })
 
   it('leaves the game its own state untouched either way', () => {
     registerMinigame('zombie-tag', { newGame: () => ({ zombies: 6 }), Panel: () => null })
     const run = beginRun(freshRun('zombie-tag'))
-    expect(pauseRun(run).game).toBe(run.game)
-    expect(resumeRun(pauseRun(run)).game).toBe(run.game)
+    expect(pauseRun(run, BEA).game).toBe(run.game)
+    expect(resumeRun(pauseRun(run, BEA)).game).toBe(run.game)
   })
 })

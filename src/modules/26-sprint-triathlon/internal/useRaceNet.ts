@@ -14,8 +14,7 @@
  *
  * The same lessons as the other minigames: an account is repeated four times a
  * second and on every change; it is for one race; a guest keeps listening after
- * the race ends; somebody who leaves the lobby is not waited for; pausing in a
- * lobby stops only your hands. Alone, the clock stops.
+ * the race ends; somebody who leaves the lobby is not waited for; a pause stops the round for everybody. Alone, the clock stops.
  */
 import { useEffect, useRef } from 'react'
 import { getNet, getPeers, sendToRoom, subscribeRoom } from '../../09-net'
@@ -58,10 +57,14 @@ export function useRaceNet(): RaceNet {
     const net = getNet()
     const now = performance.now()
 
+    // A pause is shared: whoever pressed it stopped the round for everybody,
+    // so this stops dead - the host's own simulation included. A round that
+    // carried on behind the card would make the card a lie. See
+    // `15-minigames/internal/pause.ts`.
+    if (paused) return false
+
     if (net.host) {
       if (race.racers.length === 0) return false
-      const shared = net.status === 'joined' && net.peers > 0
-      if (paused && !shared) return false
       if (!race.over) {
         report(race, myId(), mine)
         for (const racer of race.racers) if (racer.bot) report(race, racer.id, botSelf(race, racer))

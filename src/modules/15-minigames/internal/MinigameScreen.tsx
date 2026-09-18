@@ -15,10 +15,12 @@
  * anything is running.** On the dashboard or a briefing there is nothing to
  * lose, so it steps back the way the button does. Once a round is counting or
  * playing, stepping back would throw away a round you are in the middle of, so
- * it stops the round and puts a card over it instead - see `Paused`.
+ * it stops the round - for everybody - and puts a card over it instead. Escape
+ * on a card somebody else put up does nothing, for the same reason the buttons
+ * on it are theirs: see `Paused` and `pause.ts`.
  */
 import { useEffect } from 'react'
-import { useNet } from '../../09-net'
+import { getNet, useNet } from '../../09-net'
 import { Briefing } from './Briefing'
 import { Dashboard } from './Dashboard'
 import { Paused } from './Paused'
@@ -30,6 +32,7 @@ import {
   pauseMinigame,
   resumeMinigame,
   tickMinigame,
+  useMayControl,
   useMinigameScreen,
 } from './state'
 
@@ -39,6 +42,7 @@ const TICK_MS = 100
 export function MinigameScreen() {
   const open = useMinigameScreen()
   const net = useNet()
+  const mayControl = useMayControl()
   const showing = open.at !== 'closed'
   const run = open.at === 'game' ? open.run : null
   const counting = run?.phase === 'counting' && !run.paused
@@ -53,13 +57,15 @@ export function MinigameScreen() {
       if (e.code !== 'Escape') return
       // Nothing running: escape is still the way back. Something running:
       // stop it and ask, rather than throwing away a round in progress.
+      // Already stopped: only whoever stopped it can take the card down, so
+      // for anybody else escape is the same nothing the buttons are.
       if (!pausable) backOut()
-      else if (paused) resumeMinigame()
-      else pauseMinigame()
+      else if (!paused) pauseMinigame()
+      else if (mayControl) resumeMinigame()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [showing, pausable, paused])
+  }, [showing, pausable, paused, mayControl])
 
   useEffect(() => {
     if (!counting) return
@@ -75,7 +81,7 @@ export function MinigameScreen() {
     return (
       <>
         <Briefing run={open.run} />
-        {open.run.paused ? <Paused isHost={net.host} /> : null}
+        {open.run.paused ? <PauseCard run={open.run} isHost={net.host} mayControl={mayControl} /> : null}
       </>
     )
   }
@@ -85,7 +91,7 @@ export function MinigameScreen() {
     return (
       <>
         <NotBuilt run={open.run} />
-        {open.run.paused ? <Paused isHost={net.host} /> : null}
+        {open.run.paused ? <PauseCard run={open.run} isHost={net.host} mayControl={mayControl} /> : null}
       </>
     )
   }
@@ -98,9 +104,14 @@ export function MinigameScreen() {
   return (
     <>
       <Panel key={open.run.id} run={open.run} />
-      {open.run.paused ? <Paused isHost={net.host} /> : null}
+      {open.run.paused ? <PauseCard run={open.run} isHost={net.host} mayControl={mayControl} /> : null}
     </>
   )
+}
+
+/** The card, handed everything it needs to name the person who put it up. */
+function PauseCard({ run, isHost, mayControl }: { run: MinigameRun; isHost: boolean; mayControl: boolean }) {
+  return <Paused isHost={isHost} pausedBy={run.pausedBy} me={getNet().id ?? 'you'} mayControl={mayControl} />
 }
 
 /**

@@ -15,8 +15,15 @@
  */
 import { useEffect, useRef } from 'react'
 import { createStore, useStore } from '../../00-core'
-import { useNet } from '../../09-net'
+import { getMyName, getNet, getPeers, sendToRoom, subscribeRoom, useNet, usePeers } from '../../09-net'
 import { hostChoice } from '../../13-modes'
+import {
+  decodePause,
+  encodePause,
+  mayControl,
+  type PauseAct,
+  type Pauser,
+} from './pause'
 import {
   NO_CALL,
   encodeCall,
@@ -27,7 +34,9 @@ import {
 import {
   beginRun,
   freshRun,
+  isPausable,
   pauseRun,
+  restartRun,
   resumeRun,
   tickRun,
   type MinigameRun,
@@ -56,6 +65,42 @@ const call = hostChoice<MinigameCall>('minigame', isMinigameCall, NO_CALL)
 /** Where the screen is, for React. */
 export function useMinigameScreen(): MinigameScreenState {
   return useStore(screen)
+}
+
+/**
+ * Whether this browser may work the buttons on the pause card, for React.
+ *
+ * Re-read when the lobby changes as well as when the screen does, because one
+ * of the two answers depends on who is still here: the moment the person who
+ * paused drops out, the card becomes everybody's.
+ */
+export function useMayControl(): boolean {
+  const open = useStore(screen)
+  const peers = usePeers()
+  if (open.at !== 'game') return false
+  return mayControl(open.run.pausedBy, getNet().id ?? 'you', [getNet().id ?? 'you', ...peers.map((peer) => peer.id)])
+}
+
+/**
+ * Listens for somebody else stopping the round.
+ *
+ * Not `hostChoice`: that is host-owned by construction, and the whole point of
+ * this one is that a guest can press it. It is a plain broadcast, applied by
+ * everybody who hears it, the sender included - they have already applied it
+ * locally, and applying it twice is what `pauseRun` and `resumeRun` returning
+ * the same run make harmless.
+ *
+ * Nothing is repeated and nothing is asked for: a pause is a moment, not a
+ * setting, so somebody who joins mid-pause is not dragged into it.
+ */
+export function usePauseSync(): void {
+  useEffect(() => {
+    return subscribeRoom((_from, raw) => {
+      const said = decodePause(raw)
+      if (!said) return
+      apply(said.act, said.by)
+    })
+  }, [])
 }
 
 /** Where the screen is, for anything outside React. */
@@ -111,20 +156,64 @@ export function tickMinigame(dt: number): void {
   if (next !== now.run) screen.set({ at: 'game', run: next })
 }
 
-/** Stops the round where it stands and puts a card over it. */
-export function pauseMinigame(): void {
+/** Who this browser is, as the pause card names them. */
+export function me(): Pauser {
+  return { id: getNet().id ?? 'you', name: getMyName() }
+}
+
+/** Everybody in the lobby, this browser included. Alone, just you. */
+function here(): string[] {
+  return [me().id, ...getPeers().map((peer) => peer.id)]
+}
+
+/** Whether this browser may work the buttons on the card that is up. */
+export function iMayControl(): boolean {
+  const now = screen.get()
+  if (now.at !== 'game') return false
+  return mayControl(now.run.pausedBy, me().id, here())
+}
+
+/**
+ * Applies one of the three to the screen. Local only - the sending is separate,
+ * so a message arriving off the wire and a button pressed here go through
+ * exactly the same code.
+ */
+function apply(act: PauseAct, by: Pauser): void {
   const now = screen.get()
   if (now.at !== 'game') return
-  const next = pauseRun(now.run)
+  const next = act === 'pause' ? pauseRun(now.run, by) : act === 'resume' ? resumeRun(now.run) : restartRun(now.run)
   if (next !== now.run) screen.set({ at: 'game', run: next })
 }
 
-/** Starts it again from exactly where it stopped. */
-export function resumeMinigame(): void {
+/** Does it here and tells the lobby. Every shared pause goes through this. */
+function announce(act: PauseAct, by: Pauser): void {
+  apply(act, by)
+  if (getNet().status === 'joined') sendToRoom(encodePause({ act, by }))
+}
+
+/**
+ * Stops the round where it stands, for everybody, and says who did it.
+ *
+ * Anybody may. This is the one thing a guest can press that moves every screen
+ * in the lobby, and it is deliberate: a round somebody has had to walk away
+ * from is not a round worth finishing without them.
+ */
+export function pauseMinigame(): void {
   const now = screen.get()
-  if (now.at !== 'game') return
-  const next = resumeRun(now.run)
-  if (next !== now.run) screen.set({ at: 'game', run: next })
+  if (now.at !== 'game' || !isPausable(now.run) || now.run.paused) return
+  announce('pause', me())
+}
+
+/** Starts it again from exactly where it stopped. Only whoever stopped it. */
+export function resumeMinigame(): void {
+  if (!iMayControl()) return
+  announce('resume', me())
+}
+
+/** Starts the whole round again, from the three-two-one. Only whoever stopped it. */
+export function restartMinigame(): void {
+  if (!iMayControl()) return
+  announce('restart', me())
 }
 
 /**
@@ -140,6 +229,13 @@ export function resumeMinigame(): void {
  */
 export function backOut(): void {
   const now = screen.get()
+  // Walking out of a round you stopped lets everybody else carry on. Without
+  // this, the one person who could dismiss the card leaves the lobby looking at
+  // it - which is the same deadlock `mayControl` guards against, arriving by
+  // the front door instead.
+  if (now.at === 'game' && now.run.paused && iMayControl()) {
+    if (getNet().status === 'joined') sendToRoom(encodePause({ act: 'resume', by: me() }))
+  }
   screen.set(now.at === 'game' ? { at: 'dashboard' } : CLOSED)
   if (now.at === 'game') call.set(NO_CALL)
 }
@@ -163,6 +259,7 @@ export function closeMinigames(): void {
  */
 export function useMinigameSync(): void {
   call.useSync()
+  usePauseSync()
   const net = useNet()
   const current = call.use()
   const last = useRef<MinigameCall>(NO_CALL)

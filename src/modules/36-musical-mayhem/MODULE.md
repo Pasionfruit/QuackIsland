@@ -20,13 +20,15 @@ one import line in `src/App.tsx`. Nothing else in the build knows it exists.
 
 ## The floor and the chairs
 
-The floor is a disc of radius **8.5 m** and nobody leaves it. A body is a circle
-of radius **0.45 m** and runs at **5.2 m/s**.
+The floor is a disc of radius **5.5 m** and nobody leaves it. A body is a circle
+of radius **0.45 m** and runs at **5.2 m/s**. The floor is sized to the ring
+rather than picked: a floor much wider than the chairs leaves the game happening
+in a dot in the middle of it.
 
-The chairs stand on a ring whose radius is `chairs × 1.35 / 2π`, never under
+The chairs stand on a ring whose radius is `chairs × 1.6 / 2π`, never under
 **0.95 m**. That spacing is the whole geometry of the game and it is chosen, not
-found: at **1.35 m** apart two neighbouring chairs (radius **0.42 m**) leave a
-gap of **0.51 m**, which a **0.9 m** body cannot fit through. **From three chairs
+found: at **1.6 m** apart two neighbouring chairs (radius **0.42 m**) leave a
+gap of **0.76 m**, which a **0.9 m** body cannot fit through. **From three chairs
 up, nobody can cut across the ring** - you go round it, the way you do in the
 real game. `chairAt` faces every chair outwards, so everybody sits facing out.
 
@@ -102,7 +104,7 @@ message carries it. The host takes a press when a count goes up.
 
 A guest eases its clock towards the host's and jumps if they are more than
 **0.4 s** apart. Somebody who leaves the lobby is freed from their chair and
-counted out. Pausing stops only your own hands.
+counted out. A pause stops the round for everybody.
 
 The cost is that a guest's own body answers its keys a round trip late. On a
 relay in the same town that is a few frames.

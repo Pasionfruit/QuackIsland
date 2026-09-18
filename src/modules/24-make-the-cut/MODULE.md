@@ -80,7 +80,7 @@ knows**, the cost of it running the game, as in Probable Stop.
   gently while walking, quickly once still, at once if more than 2.5 out.
   Everybody else eases towards where the host says.
 - **Somebody who goes quiet stops walking** on the host.
-- **Pausing in a lobby stops only your hands**; the turn timer does not wait.
+- **a pause stops the round for everybody**; the turn timer does not wait.
   Alone, the clock stops.
 - **The canvas is rendered once**, and the scene redraws itself from a ref each
   frame - see Duck Hunt's notes.

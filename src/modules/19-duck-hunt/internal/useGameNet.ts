@@ -76,10 +76,14 @@ export function useGameNet(): GameNet {
     const net = getNet()
     const now = performance.now()
 
+    // A pause is shared: whoever pressed it stopped the round for everybody,
+    // so this stops dead - the host's own simulation included. A round that
+    // carried on behind the card would make the card a lie. See
+    // `15-minigames/internal/pause.ts`.
+    if (paused) return false
+
     if (net.host) {
       if (game.players.length === 0) return false
-      const shared = net.status === 'joined' && net.peers > 0
-      if (paused && !shared) return false
 
       const me = game.players.findIndex((p) => p.mine)
       if (trigger && me >= 0 && !paused) fire(game, { shooter: me, balloon: trigger.balloon, point: trigger.point })

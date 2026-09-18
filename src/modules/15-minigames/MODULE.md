@@ -199,19 +199,56 @@ together it is the next thing that has to change.
 On the dashboard or a briefing there is nothing to lose, so escape steps back
 the way the button does. Once a round is counting or playing, stepping back
 would throw away a round you are in the middle of — so it stops the round and
-puts a card over it, offering **resume** and a way out.
+puts a card over it, offering **resume**, **restart the round** and a way out.
 
-**Pausing is personal, not shared**, the same as Garden Goofs' pause and for
-the same reason: there is no message for it. A guest who pauses stops their own
-clock and everybody else carries on, which is the honest consequence of a round
-each browser runs its own copy of.
+### A pause is shared, and it belongs to whoever pressed it
+
+**Anybody can stop the round, and it stops for everybody.** This is the one
+thing a guest can press that moves every screen in the lobby. It is deliberate:
+a round somebody has had to walk away from is not a round worth finishing
+without them, and a pause that stopped only your own hands while the round ran
+on without you was a card that lied about what was happening.
+
+**The card names who stopped it**, on every screen, and **the buttons are
+theirs.** Everybody else gets the same card with nothing to press and a line
+saying who they are waiting for — which is better than three dead buttons and no
+explanation. Two people reaching for the same round at once is how you get a
+round that resumes half a second after somebody paused it to answer the door.
+
+**Unless they are gone.** If whoever paused has left the lobby, the buttons come
+back for whoever is still here — otherwise closing a browser strands everybody
+in front of a card nobody can dismiss. That is the whole of the exception, and
+it is the only reason `mayControl` needs to know who is in the room.
+
+**Walking out of a round you stopped lets everybody else carry on.** `backOut`
+sends a resume on the way past, because the one person who could dismiss the
+card leaving the lobby looking at it is the same deadlock by the front door.
+
+It does **not** ride on `hostChoice` like the call does: that is host-owned by
+construction, and the whole point of this one is that a guest can press it. It
+is a plain broadcast, applied by everybody who hears it — the sender included,
+which is harmless because `pauseRun` and `resumeRun` return the same run when
+there is nothing to do. Nothing is repeated and nothing is asked for: a pause is
+a moment, not a setting, so somebody who joins mid-pause is not dragged into it
+— and, for the same reason, is not told about one already up.
+
+### Restart
+
+**Restart** starts the whole round again, from the three-two-one and a new game
+state, for everybody. It is `beginRun(freshRun(id))` and no new rules: a fresh
+run of the same game, taken straight to the countdown.
+
+### What stops
 
 A paused countdown does not count. Pressing escape on "two" and coming back to
 "two" is the only behaviour anybody would expect, and there is a test for it.
 
-The build's `Panel` is handed the run so a game can stop simulating while the
-card is up. A game that kept going behind a pause card would be a pause card
-with a game going on behind it.
+The build's `Panel` is handed the run, and **every game stops dead on it — the
+host's own simulation included.** Each game's net hook returns at the top of
+`advance` while `paused`, so no clock advances, no stand-in moves, no snapshot
+is sent and no input is queued up to arrive in a burst on resume. A game that
+kept going behind a pause card would be a pause card with a game going on
+behind it.
 
 ## Public contract
 
@@ -227,7 +264,9 @@ with a game going on behind it.
 | `freshRun`, `MinigameRun`, `MinigameBuild`, `RunPhase` | A run of one game, at its beginning. |
 | `beginRun`, `tickRun`, `countShown`, `COUNT_FROM` | The three-two-one. All pure. |
 | `openDashboard`, `openMinigame`, `playMinigame`, `tickMinigame`, `backOut`, `closeMinigames` | Moving the screen about. |
-| `pauseMinigame`, `resumeMinigame`, `isPausable`, `pauseRun`, `resumeRun` | Stopping a round and starting it again. |
+| `pauseMinigame`, `resumeMinigame`, `restartMinigame`, `isPausable`, `pauseRun`, `resumeRun`, `restartRun` | Stopping a round, starting it again, and starting it over. |
+| `mayControl`, `iMayControl`, `useMayControl`, `nameOfPauser`, `Pauser` | Who the card belongs to, and what to call them. |
+| `encodePause`, `decodePause`, `PAUSE_TAG`, `PauseAct`, `PauseMessage` | A pause on the wire. |
 | `useMinigameSync`, `getMinigameCall` | Taking a guest where the host went. Mount the hook once. |
 | `encodeCall`, `parseCall`, `followCall`, `isMinigameCall`, `NO_CALL` | The call itself. All pure. |
 | `useMinigameScreen`, `getMinigameScreen`, `MinigameScreenState` | Where the screen is. |

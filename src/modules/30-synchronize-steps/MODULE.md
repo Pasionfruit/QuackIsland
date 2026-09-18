@@ -71,7 +71,7 @@ highlighted button; everybody else's shows as a tick.
 - **A guest's clock runs on between snapshots**, eased towards the host's, so the
   timer bar runs smoothly.
 - **Somebody who leaves the lobby is out** where they stand, that round.
-- **Pausing in a lobby stops only your hands.** Alone, the clock stops.
+- **a pause stops the round for everybody.** Alone, the clock stops.
 - **The canvas is rendered once**, and the scene redraws itself from a ref each
   frame - see Duck Hunt's notes.
 

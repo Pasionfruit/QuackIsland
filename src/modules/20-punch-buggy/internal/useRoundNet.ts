@@ -9,8 +9,7 @@
  * The same arrangement, and the same lessons, as the other minigames: intents
  * are repeated and forgotten after a silence; a guest walking out sends
  * "standing still"; a guest keeps listening after the round ends; the host never
- * runs or sends a round nobody was dealt into; pausing in a lobby stops only
- * your hands.
+ * runs or sends a round nobody was dealt into; a pause stops the round for everybody.
  */
 import { useEffect, useRef } from 'react'
 import { getNet, sendToRoom, subscribeRoom } from '../../09-net'
@@ -65,11 +64,16 @@ export function useRoundNet(): RoundNet {
     lastClicks.current = wish.clicks
     lastRound.current = round.id
 
+    // A pause is shared: whoever pressed it stopped the round for everybody,
+    // so this stops dead - the host's own simulation included. A round that
+    // carried on behind the card would make the card a lie. See
+    // `15-minigames/internal/pause.ts`.
+    if (paused) return false
+
     if (net.host) {
       if (round.fighters.length === 0) return false
-      const shared = net.status === 'joined' && net.peers > 0
       let stepped = false
-      if (!round.over && (!paused || shared)) {
+      if (!round.over && !paused) {
         const intents = botIntents(round)
         for (const [id, entry] of heard.current) {
           // Last round's clicks are not this round's.

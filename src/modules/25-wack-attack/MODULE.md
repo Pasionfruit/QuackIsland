@@ -81,7 +81,7 @@ it.
   - **Everybody else** eases towards where the host says.
 - **Somebody who goes quiet stops walking** on the host; their swings are never
   lost.
-- **Pausing in a lobby stops only your hands.** Alone, the clock stops.
+- **a pause stops the round for everybody.** Alone, the clock stops.
 - **The canvas is rendered once**, and the scene redraws itself from a ref each
   frame - see Duck Hunt's notes.
 

@@ -14,8 +14,7 @@
  *
  * The same lessons as the other minigames: a click is said again until it is
  * taken and counts once; a guest keeps listening after the round ends; the host
- * never runs or sends a round nobody was dealt into; pausing in a lobby stops
- * only your hands. Alone, the clock stops.
+ * never runs or sends a round nobody was dealt into; a pause stops the round for everybody. Alone, the clock stops.
  */
 import { useEffect, useRef } from 'react'
 import { getNet, sendToRoom, subscribeRoom } from '../../09-net'
@@ -63,10 +62,14 @@ export function useSearchNet(): SearchNet {
     const net = getNet()
     const now = performance.now()
 
+    // A pause is shared: whoever pressed it stopped the round for everybody,
+    // so this stops dead - the host's own simulation included. A round that
+    // carried on behind the card would make the card a lie. See
+    // `15-minigames/internal/pause.ts`.
+    if (paused) return false
+
     if (net.host) {
       if (game.players.length === 0) return false
-      const shared = net.status === 'joined' && net.peers > 0
-      if (paused && !shared) return false
 
       const me = game.players.findIndex((p) => p.mine)
       if (clicked && !paused && me >= 0) select(game, me, clicked)
