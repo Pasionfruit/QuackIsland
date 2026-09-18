@@ -5,7 +5,8 @@
 Minigame 23. **Musical chairs, with pushing.** A ring of chairs stands in the
 middle of a round dance floor, **one fewer than the players still in**.
 
-- **While the music plays** everybody runs round it. Nobody can sit.
+- **While the music plays** everybody runs round it. Nobody can sit - **try,
+  and you are thrown to the edge of the floor** - and nobody can camp by a chair.
 - **When it stops** - after a time nobody can know - find an empty chair and sit.
 - **Anybody can push whoever is in front of them**: knocked back, stunned for a
   moment, and off their chair if they were on one.
@@ -52,6 +53,32 @@ be a fade into a scramble everybody else had already started. There is a mute
 button in the HUD, and the speakers on the floor thump in time so somebody
 playing with the sound off can still see the music stop.
 
+## No camping, and no sitting early
+
+Three rules, all in `rules.ts` and all run by the host, so a guest cannot dodge
+them:
+
+- **Trying to sit while the music plays throws you to the edge of the floor**
+  (`throwOut`): straight out from the middle, the way you already were, to the
+  rim, and **stunned for 1 s** (`KEEP.stun`). The press is the attempt - you do
+  not have to be near a chair. With the whole floor between you and the chairs,
+  everybody else has a head start when the music stops.
+- **Nobody stands near the chairs while the music plays.** Anybody closer to the
+  middle than `keepOut` - the ring's radius plus **1.4 m** (`KEEP.clear`) - is
+  shoved back out at **7 m/s**, faster than a run, so it cannot be held. That
+  covers both standing in front of a chair and standing inside the ring. 1.4 m is
+  more than `CHAIR.reach` (1.3 m), so **when the music stops nobody is already
+  in reach of a chair**: everybody has to run in.
+- **You have to keep going round.** Anybody who has not got **0.8 rad** round
+  the ring in **2 s** (`KEEP.lap`, `KEEP.idle`) is thrown to the edge as above.
+  Standing still or shuffling back and forth on one spot does not count as going
+  round. Time spent stunned does not count against you.
+
+The HUD warns you (*keep going round or be thrown out!*) once you have been
+idle for half of that, and says *thrown to the edge!* when it happens. How long
+since each player got round and since they were thrown are on the wire so a
+guest sees the same warnings.
+
 ## The scramble, and why it settles
 
 A scramble ends when **every chair holds somebody who has been sitting a whole
@@ -90,7 +117,8 @@ chairs, and who got which chair first has to have one answer. So there is one
 simulation, it is the host's, and it sends a snapshot **15 times a second**: the
 clock, the round, the phase and when it began, how many chairs, and every player
 - where, facing which way, on which chair, how long they have sat, how stunned,
-how long since they pushed, when they went out, whether they have left.
+how long since they pushed, how long since they got round the ring, how long
+since they were thrown out, when they went out, whether they have left.
 
 **The seed is never sent.** `musicFor` turns the seed into the exact moment the
 music will stop, so a guest holding it could sit on the beat every round. A
@@ -177,8 +205,12 @@ Mayhem** and press play.
 
 - **The countdown**, then the tune, and the speakers thumping with it.
 - **Run with WASD.** The body should go where the keys point, W away from you.
-- **Press space while the music is playing.** Nothing should happen - the pill
-  should still say *keep moving*.
+- **Press space while the music is playing.** You should be thrown to the edge
+  of the floor, reel for a second, and the pill should say *thrown to the edge!*
+- **Try to stand in front of a chair, or in the middle, while the music plays.**
+  You should be shoved back out, and never be close enough to sit when it stops.
+- **Stop, or shuffle on the spot, while the music plays.** After a second the
+  pill should warn you; after two you should be thrown to the edge.
 - **When the music stops** it should stop dead, the pill should say *SIT DOWN!*
   and the free chairs should start glowing.
 - **Press space next to a free chair.** You should drop onto it. Try it a metre
@@ -201,6 +233,8 @@ Mayhem** and press play.
   with exactly one marked as their own.
 - **A guest holding a key** should move on the host's screen.
 - **A guest's push** should knock the host back on the host's screen.
+- **A guest pressing space during the music** should be thrown to the edge on
+  every screen.
 - **A guest must not be able to sit before the music stops** - and must not sit
   the instant it does, every round, which would mean the seed had leaked.
 - **A guest closing their browser** should free their chair and count them out.

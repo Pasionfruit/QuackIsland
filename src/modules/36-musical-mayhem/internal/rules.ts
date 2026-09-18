@@ -13,6 +13,13 @@
  * has not settled after ten seconds, whoever is standing then is out. A chair
  * goes, and the music starts again, until only one player is left.
  *
+ * **No camping.** While the music plays nobody may stand within a sit of a
+ * chair or in the middle of the ring - anybody there is shoved back out, faster
+ * than they can run - and everybody has to keep going round: stand about, or
+ * shuffle on the spot, for too long and you are thrown to the edge of the floor.
+ * **Try to sit before the music stops** and you are thrown there too, stunned,
+ * with the whole floor between you and the chairs.
+ *
  * Bodies bump each other apart, cannot walk through chairs, and stay on the
  * floor. A seated body does not move, except by being pushed off.
  *
@@ -82,6 +89,22 @@ export const ROUND = {
   result: 2.5,
 } as const
 
+export const KEEP = {
+  /**
+   * While the music plays, nobody stands nearer the ring of chairs than this,
+   * metres out from it. More than `CHAIR.reach`, so when the music stops nobody
+   * is already in reach of a chair: everybody has to run in for one.
+   */
+  clear: 1.4,
+  /** How fast somebody inside that is shoved back out, metres a second: faster than a run, so it cannot be held. */
+  shove: 7,
+  /** How far round the ring you must get, radians, and inside how many seconds, or you are camping. */
+  lap: 0.8,
+  idle: 2,
+  /** Seconds a body thrown to the edge is stunned. */
+  stun: 1,
+} as const
+
 export type Phase = 'countdown' | 'music' | 'scramble' | 'result' | 'over'
 
 export interface Player {
@@ -103,6 +126,11 @@ export interface Player {
   stunned: number
   /** When they last pushed, in `elapsed`. */
   pushAt: number
+  /** Where round the ring they last made progress from, radians, and when, in `elapsed`. */
+  lapFrom: number
+  lapAt: number
+  /** When they were last thrown to the edge, in `elapsed`. */
+  thrownAt: number
   /** The round they went out in, or null while still in. */
   out: number | null
   left: boolean
@@ -177,7 +205,7 @@ export function createGame(seed: number, entrants: readonly Entrant[], id = 1): 
     over: entrants.length === 0,
     players: entrants.map((e, i) => {
       const at = startAt(entrants.length, i)
-      return { id: e.id, mine: e.mine ?? false, bot: e.bot ?? false, x: at.x, z: at.z, vx: 0, vz: 0, facing: at.facing, seat: null, seatedAt: null, stunned: 0, pushAt: -PUSH.cooldown, out: null, left: false }
+      return { id: e.id, mine: e.mine ?? false, bot: e.bot ?? false, x: at.x, z: at.z, vx: 0, vz: 0, facing: at.facing, seat: null, seatedAt: null, stunned: 0, pushAt: -PUSH.cooldown, lapFrom: Math.atan2(at.x, at.z), lapAt: 0, thrownAt: -Infinity, out: null, left: false }
     }),
     hands: entrants.map(() => ({ x: 0, z: 0 })),
     round: 0,
@@ -223,10 +251,34 @@ export function chairInReach(game: Game, player: number): number {
   return best
 }
 
-/** A player sits in the nearest empty chair in reach - only once the music has stopped. Returns the chair, or -1. */
+/** How far out from the middle nobody may stand while the music plays. */
+export function keepOut(game: Game): number {
+  return (game.chairs <= 1 ? 0 : ringRadius(game.chairs)) + KEEP.clear
+}
+
+/** Thrown to the edge of the floor, the way they already were from the middle, and stunned there. */
+export function throwOut(game: Game, player: number): void {
+  const p = game.players[player]
+  const d = Math.hypot(p.x, p.z)
+  const ux = d < 1e-6 ? Math.sin(p.facing) : p.x / d
+  const uz = d < 1e-6 ? Math.cos(p.facing) : p.z / d
+  const r = FLOOR.radius - BODY.radius
+  Object.assign(p, { x: ux * r, z: uz * r, vx: 0, vz: 0, stunned: KEEP.stun, thrownAt: game.elapsed, lapFrom: Math.atan2(ux, uz), lapAt: game.elapsed })
+}
+
+/**
+ * A player sits in the nearest empty chair in reach - only once the music has
+ * stopped. Trying while it still plays throws them to the edge of the floor.
+ * Returns the chair, or -1.
+ */
 export function sit(game: Game, player: number): number {
   const p = game.players[player]
-  if (!p || !canAct(game, p) || game.phase !== 'scramble' || p.seat !== null) return -1
+  if (!p || !canAct(game, p) || p.seat !== null) return -1
+  if (game.phase === 'music') {
+    throwOut(game, player)
+    return -1
+  }
+  if (game.phase !== 'scramble') return -1
   const chair = chairInReach(game, player)
   if (chair < 0) return -1
   const c = chairAt(game.chairs, chair)
@@ -293,6 +345,18 @@ function move(game: Game, dt: number): void {
     }
     p.x += (wx + p.vx) * dt
     p.z += (wz + p.vz) * dt
+    if (game.phase === 'music') {
+      // Nobody camps by a chair or in the middle: shoved back out, faster than a run.
+      const d = Math.hypot(p.x, p.z)
+      const min = keepOut(game)
+      if (d < min) {
+        const out = Math.min(min - d, KEEP.shove * dt)
+        const ux = d < 1e-6 ? Math.sin(p.facing) : p.x / d
+        const uz = d < 1e-6 ? Math.cos(p.facing) : p.z / d
+        p.x += ux * out
+        p.z += uz * out
+      }
+    }
     const decay = Math.exp(-PUSH.friction * dt)
     p.vx *= decay
     p.vz *= decay
@@ -353,6 +417,30 @@ export function tick(game: Game, dt: number): void {
   game.elapsed += step
   for (const p of game.players) p.stunned = Math.max(0, p.stunned - step)
   move(game, step)
+  if (game.phase === 'music') camping(game)
+}
+
+/**
+ * While the music plays, everybody has to keep going round. Anybody who has not
+ * got `KEEP.lap` round the ring in `KEEP.idle` seconds - standing still, or
+ * shuffling back and forth on one spot - is thrown to the edge. Being stunned,
+ * or sat, does not count against you.
+ */
+function camping(game: Game): void {
+  game.players.forEach((p, i) => {
+    if (!isIn(p) || p.seat !== null) return
+    const at = Math.atan2(p.x, p.z)
+    const gone = Math.abs(Math.atan2(Math.sin(at - p.lapFrom), Math.cos(at - p.lapFrom)))
+    if (gone >= KEEP.lap || p.stunned > 0 || p.lapAt < game.phaseAt) {
+      p.lapFrom = at
+      p.lapAt = game.elapsed
+    } else if (game.elapsed - p.lapAt >= KEEP.idle) throwOut(game, i)
+  })
+}
+
+/** Seconds a player has gone without getting round the ring, while the music plays; 0 otherwise. */
+export function idleFor(game: Game, p: Player): number {
+  return game.phase === 'music' && isIn(p) && p.seat === null ? Math.max(0, game.elapsed - Math.max(p.lapAt, game.phaseAt)) : 0
 }
 
 /** A new round: a chair fewer, everybody up, the music on. */

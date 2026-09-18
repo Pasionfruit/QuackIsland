@@ -23,7 +23,7 @@ import { getNet, useNet, usePeers } from '../../09-net'
 import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { MusicalMayhemScene } from './MusicalMayhemScene'
-import { COLOURS, ROUND, isIn, isSafe, phase, phaseTime, placings, type Game, type Player } from './rules'
+import { COLOURS, KEEP, ROUND, idleFor, isIn, isSafe, phase, phaseTime, placings, type Game, type Player } from './rules'
 import { myId, newGame, waitingGame } from './setup'
 import { createTune } from './tune'
 import { useMayhemNet } from './useMayhemNet'
@@ -169,7 +169,11 @@ export function MusicalMayhemScreen({ run }: { run: MinigameRun }) {
       : at === 'countdown'
         ? `starting in ${Math.max(1, Math.ceil(ROUND.countdown - phaseTime(game)))}…`
         : at === 'music'
-          ? '🎵 keep moving - you cannot sit yet'
+          ? mine && game.elapsed - mine.thrownAt < 1.5
+            ? 'thrown to the edge! no sitting or camping'
+            : mine && idleFor(game, mine) > KEEP.idle / 2
+              ? '⚠️ keep going round or be thrown out!'
+              : '🎵 keep moving - sit now and you are thrown out'
           : at === 'scramble'
             ? mine && mine.seat !== null
               ? isSafe(game, mine)

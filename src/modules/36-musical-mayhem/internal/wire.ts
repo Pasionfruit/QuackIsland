@@ -6,8 +6,9 @@
  * one simulation and it is the host's. It sends a snapshot fifteen times a
  * second: the clock, the round, the phase and when it began, how many chairs,
  * and every player - where, facing which way, on which chair, how long they have
- * sat, how stunned, how long since they pushed, when they went out, whether they
- * have left.
+ * sat, how stunned, how long since they pushed, how long since they last got
+ * round the ring, how long since they were thrown to the edge, when they went
+ * out, whether they have left.
  *
  * **The seed never goes on the wire.** How long the music plays is the seed and
  * the round put through `musicFor`, so a guest holding the seed could work out
@@ -29,8 +30,8 @@ export const HANDS_TAG = 'mm-in'
 
 const PHASES = ['countdown', 'music', 'scramble', 'result'] as const
 
-/** `[id, x cm, z cm, facing mrad, seat or -1, sat cs or -1, stun cs, since pushed cs, out round or -1, left 0/1]`. */
-export type WirePlayer = [string, number, number, number, number, number, number, number, number, number]
+/** `[id, x cm, z cm, facing mrad, seat or -1, sat cs or -1, stun cs, since pushed cs, since got round cs, since thrown cs, out round or -1, left 0/1]`. */
+export type WirePlayer = [string, number, number, number, number, number, number, number, number, number, number, number]
 
 export interface Snapshot {
   id: number
@@ -79,6 +80,8 @@ export function encodeSnapshot(game: Game): Record<string, unknown> {
         p.seatedAt === null ? -1 : Math.min(LONG, cs(game.elapsed - p.seatedAt)),
         cs(p.stunned),
         Math.min(LONG, cs(game.elapsed - p.pushAt)),
+        Math.min(LONG, cs(game.elapsed - p.lapAt)),
+        Math.min(LONG, cs(game.elapsed - p.thrownAt)),
         p.out ?? -1,
         p.left ? 1 : 0,
       ],
@@ -96,14 +99,15 @@ export function decodeSnapshot(message: Record<string, unknown>): Snapshot | nul
   if (!isCount(message.c) || message.c < 1 || message.c >= Math.max(2, count)) return null
   const players: WirePlayer[] = []
   for (const raw of message.p) {
-    if (!Array.isArray(raw) || raw.length !== 10) return null
-    const [id, x, z, facing, seat, sat, stun, pushed, out, left] = raw
+    if (!Array.isArray(raw) || raw.length !== 12) return null
+    const [id, x, z, facing, seat, sat, stun, pushed, lap, thrown, out, left] = raw
     if (typeof id !== 'string' || id.length === 0) return null
     if (!isInt(x) || Math.abs(x) > REACH || !isInt(z) || Math.abs(z) > REACH || !isInt(facing) || Math.abs(facing) > 3142) return null
     if (!isInt(seat) || seat < -1 || seat >= (message.c as number)) return null
     if (!isInt(sat) || sat < -1 || sat > LONG || !isCount(stun) || stun > 100 || !isCount(pushed) || pushed > LONG) return null
+    if (!isCount(lap) || lap > LONG || !isCount(thrown) || thrown > LONG) return null
     if (!isInt(out) || out < -1 || out > MAX_PLAYERS * 4 || (left !== 0 && left !== 1)) return null
-    players.push([id, x, z, facing, seat, sat, stun, pushed, out, left])
+    players.push([id, x, z, facing, seat, sat, stun, pushed, lap, thrown, out, left])
   }
   return {
     id: message.g as number,
@@ -128,7 +132,7 @@ export function applySnapshot(game: Game, snap: Snapshot, me: string): Game {
   const before = game.players
   const at = game.elapsed
   game.players = snap.players.map(
-    ([id, x, z, facing, seat, sat, stun, pushed, out, left]): Player => ({
+    ([id, x, z, facing, seat, sat, stun, pushed, lap, thrown, out, left]): Player => ({
       id,
       mine: id === me,
       bot: before.find((p) => p.id === id)?.bot ?? false,
@@ -141,6 +145,9 @@ export function applySnapshot(game: Game, snap: Snapshot, me: string): Game {
       seatedAt: sat < 0 ? null : at - sat / 100,
       stunned: stun / 100,
       pushAt: at - pushed / 100,
+      lapFrom: Math.atan2(x, z),
+      lapAt: at - lap / 100,
+      thrownAt: thrown >= LONG ? -Infinity : at - thrown / 100,
       out: out < 0 ? null : out,
       left: left === 1,
     }),

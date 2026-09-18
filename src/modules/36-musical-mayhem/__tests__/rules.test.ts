@@ -7,11 +7,13 @@ import {
   BODY,
   CHAIR,
   FLOOR,
+  KEEP,
   PUSH,
   ROUND,
   chairAt,
   createGame,
   isIn,
+  keepOut,
   leave,
   musicFor,
   phase,
@@ -122,6 +124,60 @@ describe('the music', () => {
   })
 })
 
+describe('no camping', () => {
+  it('throws anybody who tries to sit while the music plays to the edge of the floor, stunned', () => {
+    const g = game(4)
+    until(g, 'music')
+    byChair(g, 0, 0)
+    expect(sit(g, 0)).toBe(-1)
+    const p = g.players[0]
+    expect(Math.hypot(p.x, p.z)).toBeCloseTo(FLOOR.radius - BODY.radius, 5)
+    expect(p.stunned).toBe(KEEP.stun)
+    expect(p.thrownAt).toBe(g.elapsed)
+    // Stunned, so a second try does nothing more.
+    expect(sit(g, 0)).toBe(-1)
+    expect(p.stunned).toBe(KEEP.stun)
+  })
+
+  it('keeps everybody out of reach of the chairs, and out of the middle, while the music plays', () => {
+    for (const n of [2, 4, 8]) {
+      const g = game(n)
+      until(g, 'music')
+      expect(keepOut(g)).toBeGreaterThan((g.chairs <= 1 ? 0 : chairAt(g.chairs, 0).z) + CHAIR.reach)
+      // Everybody runs straight for the middle and holds it.
+      g.players.forEach((p, i) => {
+        g.hands[i] = { x: -Math.sin(Math.atan2(p.x, p.z)), z: -Math.cos(Math.atan2(p.x, p.z)) }
+      })
+      wait(g, 1)
+      for (const p of g.players) {
+        for (let c = 0; c < g.chairs; c++) {
+          const at = chairAt(g.chairs, c)
+          expect(Math.hypot(p.x - at.x, p.z - at.z), `${n}`).toBeGreaterThan(CHAIR.reach)
+        }
+      }
+    }
+  })
+
+  it('throws out anybody who stands about, or shuffles on the spot, instead of going round', () => {
+    const g = game(3)
+    until(g, 'music')
+    const r = keepOut(g) + 0.5
+    Object.assign(g.players[0], { x: 0, z: r })
+    Object.assign(g.players[1], { x: 0, z: -r })
+    wait(g, KEEP.idle / 2)
+    // One goes round, the other shuffles back and forth where it is.
+    for (let t = 0; t < KEEP.idle && phase(g) === 'music'; t += 1 / 60) {
+      const a = Math.atan2(g.players[0].x, g.players[0].z)
+      g.hands[0] = { x: Math.cos(a), z: -Math.sin(a) }
+      g.hands[1] = { x: Math.sin(t * 12), z: 0 }
+      stepGame(g, 1 / 60)
+    }
+    expect(g.players[0].thrownAt).toBe(-Infinity)
+    expect(g.players[1].thrownAt).toBeGreaterThan(0)
+    expect(Math.hypot(g.players[1].x, g.players[1].z)).toBeGreaterThan(FLOOR.radius - BODY.radius - 0.1)
+  })
+})
+
 describe('the push', () => {
   it('knocks back and stuns whoever is in front, and nobody behind', () => {
     const g = game(3)
@@ -208,12 +264,15 @@ describe('the rounds', () => {
   it('stop at the last one in, who wins; the rest placed by when they went', () => {
     const g = game(3)
     until(g, 'scramble')
+    // Standing about through the music gets you thrown out and stunned: let it wear off.
+    wait(g, KEEP.stun)
     byChair(g, 0, 0)
     sit(g, 0)
     byChair(g, 1, 1)
     sit(g, 1)
     until(g, 'result')
     until(g, 'scramble')
+    wait(g, KEEP.stun)
     byChair(g, 1, 0)
     sit(g, 1)
     wait(g, ROUND.settle + ROUND.result + 0.2)
@@ -241,16 +300,20 @@ describe('the stand-ins', () => {
     const runs = [1, 2].map(() => {
       const g = createGame(SEED, Array.from({ length: 6 }, (_, i) => ({ id: `b${i}`, bot: true })), 1)
       let pushes = 0
+      let thrown = 0
       let last = g.players.map((p) => p.pushAt)
       for (let i = 0; i < 60 * 240 && !g.over; i++) {
         botPlay(g)
         stepGame(g, 1 / 60)
         pushes += g.players.filter((p, j) => p.pushAt !== last[j]).length
         last = g.players.map((p) => p.pushAt)
+        thrown += g.players.filter((p) => p.thrownAt === g.elapsed).length
       }
-      return { g, pushes }
+      return { g, pushes, thrown }
     })
-    const [{ g, pushes }] = runs
+    const [{ g, pushes, thrown }] = runs
+    // They keep going round while the music plays, and never sit early.
+    expect(thrown).toBe(0)
     expect(g.over).toBe(true)
     expect(g.players.filter((p) => p.out === null)).toHaveLength(1)
     expect(g.players.map((p) => p.out).filter((o) => o !== null).sort()).toEqual([1, 2, 3, 4, 5])
