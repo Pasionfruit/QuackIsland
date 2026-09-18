@@ -168,3 +168,14 @@ export function hopAt(from: number, to: number, t: number): { x: number; y: numb
   const arc = from === to ? 0 : (0.6 + 0.1 * Math.abs(from - to)) * 4 * k * (1 - k)
   return { x, y: base + arc }
 }
+
+/**
+ * Where a player walking from step `from` down to step `to` is, `time` seconds
+ * after setting off: one hop down a step every `perStep` seconds.
+ */
+export function walkAt(from: number, to: number, time: number, perStep: number): { x: number; y: number } {
+  const steps = from - to
+  if (steps <= 0 || time <= 0) return hopAt(from, from, 1)
+  const done = Math.min(steps - 1, Math.floor(time / perStep))
+  return hopAt(from - done, from - done - 1, (time - done * perStep) / perStep)
+}

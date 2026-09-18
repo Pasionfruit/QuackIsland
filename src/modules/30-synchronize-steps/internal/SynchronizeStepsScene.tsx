@@ -8,9 +8,9 @@
  * While picking, a bubble over your own head shows your pick, and a bubble over
  * anybody else's says only that they have picked. At the reveal every bubble
  * shows its number - green if it was alone and they stay, yellow for a pair,
- * red for a crowd - and a moment later everybody hops down to where it takes
- * them, the further the drop the higher the hop. Reach the bottom and you land
- * on the ground past the last step.
+ * red for a crowd - and a moment later everybody walks down to where it takes
+ * them, hopping down one step at a time. Reach the bottom and you land on the
+ * ground past the last step, and the game is over.
  *
  * **Drawn from a ref, redrawn every frame from inside the canvas.** The canvas
  * itself is rendered once by the screen; see Duck Hunt's notes.
@@ -19,7 +19,7 @@ import { useFrame } from '@react-three/fiber'
 import { memo, useLayoutEffect, useMemo, useReducer, useRef, type RefObject } from 'react'
 import { CanvasTexture, Color, Group, InstancedMesh, Matrix4, SRGBColorSpace, type DirectionalLight, type Sprite } from 'three'
 import { createAvatar } from '../../02-player'
-import { STAIRS, frameScene, hopAt, laneZ, stepX, stepY } from './camera'
+import { STAIRS, frameScene, hopAt, laneZ, stepX, stepY, walkAt } from './camera'
 import { COLOURS, TOWER, type Game, type Stepper } from './rules'
 
 export const PALETTE = {
@@ -39,8 +39,8 @@ export const PALETTE = {
   groundColour: '#5a7a3a',
 } as const
 
-/** When in the reveal the hop starts, and how long it takes. */
-export const HOP = { start: 0.35, time: 0.6 } as const
+/** When in the reveal the walk down starts, and how long each step of it takes. */
+export const HOP = { start: 0.35, step: 0.15 } as const
 
 const textures = new Map<string, CanvasTexture>()
 
@@ -169,9 +169,9 @@ const Staircase = memo(function Staircase({ lanes }: { lanes: number }) {
 /** Where a player stands this frame, and the step the hop set out from. */
 function placeOf(game: Game, stepper: Stepper): { x: number; y: number } {
   if (game.phase === 'reveal') {
-    const t = (game.clock - HOP.start) / HOP.time
-    if (stepper.out && stepper.out.round === game.round) return hopAt(stepper.out.from, 0, t)
-    if (!stepper.out && stepper.last) return hopAt(stepper.step + stepper.last.moved, stepper.step, t)
+    const t = game.clock - HOP.start
+    if (stepper.out && stepper.out.round === game.round) return walkAt(stepper.out.from, 0, t, HOP.step)
+    if (!stepper.out && stepper.last) return walkAt(stepper.step + stepper.last.moved, stepper.step, t, HOP.step)
   }
   return hopAt(stepper.step, stepper.step, 1)
 }

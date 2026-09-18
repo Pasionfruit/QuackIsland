@@ -5,8 +5,8 @@
 **Minigame 19.** Everybody starts on top of a tower twenty steps high. Every two
 seconds everybody picks how far to go down: 1, 4 or 6. Then the picks are
 revealed. If exactly two picked the same number, both go down that far. If three
-or more did, they all drop eight. Anybody alone on a number stays put. Reach the
-bottom and you are out. Highest at the end wins.
+or more did, they all drop eight. Anybody alone on a number stays put. The game
+ends as soon as anybody reaches the bottom. Highest at the end wins.
 
 It plugs into `15-minigames` and nothing else in the build knows it exists.
 Importing the module registers it - one line in `src/App.tsx`.
@@ -23,7 +23,7 @@ not: the players are the island's capsule and the staircase is boxes.
 | Two players choose the same number: both move down that many | `moveFor`, `resolve` |
 | 3 or more choose the same number: all jump 8 down | `TOWER.crowdDrop`, `moveFor` |
 | The only player on an option stays still | `moveFor` |
-| Eliminated on reaching the bottom | `resolve` sets `out` |
+| Eliminated on reaching the bottom, and the game ends | `resolve` sets `out`, `reachedBottom` ends it |
 | Winner by the final top-to-bottom order | `placings` |
 | 1 / 4 / 6 to choose, mouse to select an option | the screen: number keys (top row or numpad) and three buttons |
 
@@ -31,10 +31,11 @@ not: the players are the island's capsule and the staircase is boxes.
 
 - **Picking** lasts two seconds. You can pick, and change your pick, as often as
   you like; the last one counts.
-- **The reveal** lasts 1.3 seconds. Everybody's pick is shown, grouped by number,
-  and everybody hops to where it takes them.
+- **The reveal** lasts 1.9 seconds. Everybody's pick is shown, grouped by number,
+  and everybody walks down to where it takes them, one step at a time.
 - **Moves** can take you below the bottom. You stop at nought, and you are out.
-- **The end** comes when one player or none is left on the tower. It also comes
+- **The end** comes as soon as anybody reaches the bottom, or when one player or
+  none is left on the tower (somebody leaving the lobby does not end it). It also comes
   after thirty rounds: two players who keep picking different numbers never move,
   so without a limit the game would never end.
 - **Placing:** anybody still on the tower is placed by how high they are. Then
@@ -46,8 +47,9 @@ not: the players are the island's capsule and the staircase is boxes.
 - **A player who has not picked by the end of a round gets a pick at random**,
   shown as "(late)". Without this, not picking would be the best move in the game,
   since you would never move.
-- **Last one standing ends the game.** The brief does not say. Otherwise the last
-  player would sit there alone, never able to match anybody.
+- **The first to the bottom ends the game.** Everybody still up is placed by
+  height; everybody who went down that round by the step they fell from.
+- **Last one standing also ends it**, for when everybody else leaves the lobby.
 - **Two left on the same step can only tie**, since any move takes them both down
   the same amount. That follows from the rules, and they share a place.
 - **Thirty rounds** is about a minute and a half at most.
@@ -89,7 +91,7 @@ towards the numbers fewest players picked last round, but only as a lean.
 - **The reveal:** every bubble shows its number, green if the player was alone,
   yellow for a pair, red for a crowd. Cards across the top say what each number
   did ("pair - down 4", "crowd - down 8", "alone - stays", "nobody") and who
-  picked it. A moment later everybody hops, with a higher hop for a longer drop.
+  picked it. A moment later everybody walks down, hopping one step at a time.
 - **Out:** you land on the ground past the bottom step, and your HUD pill says
   "out".
 - **The end:** the results card, highest first, gives each player's step, or the
@@ -112,12 +114,12 @@ Exported because it is worth testing, not because anything else needs it.
 | Export | What it is |
 | --- | --- |
 | `TOWER`, `PHASES`, `COLOURS` | The rules and the look, as numbers. |
-| `createGame`, `choose`, `moveFor`, `resolve`, `stepGame`, `leave`, `onTower`, `placings` | The game. Pure. |
+| `createGame`, `choose`, `moveFor`, `resolve`, `stepGame`, `leave`, `onTower`, `reachedBottom`, `placings` | The game. Pure. |
 | `Game`, `Stepper`, `Move`, `Phase`, `Entrant` | Its shapes. |
 | `botChoices`, `BOT_PICKS` | The stand-ins. |
 | `newGame`, `gameRoster`, `nextSeed`, `waitingGame`, `myId`, `ME`, `SOLO_STEPPERS`, `MAX_STEPPERS` | Dealing a game. |
 | `encodeSnapshot`, `decodeSnapshot`, `applySnapshot`, `encodeIntent`, `decodeIntent`, `HIDDEN`, `SNAPSHOT_TAG`, `INTENT_TAG`, `WireStepper` | A shared tower on the wire. Pure. |
-| `frameScene`, `pointsFor`, `POINTS`, `STAIRS`, `LANES`, `stepX`, `stepY`, `laneZ`, `hopAt`, `TILT`, `FOV`, `FILL` | The staircase and the camera. Pure. |
+| `frameScene`, `pointsFor`, `POINTS`, `STAIRS`, `LANES`, `stepX`, `stepY`, `laneZ`, `hopAt`, `walkAt`, `TILT`, `FOV`, `FILL` | The staircase and the camera. Pure. |
 | `SynchronizeStepsScreen` | The panel the registry draws. |
 
 ## Invariants you may rely on
@@ -128,8 +130,10 @@ Exported because it is worth testing, not because anything else needs it.
 - **Anybody who has not picked gets a random pick, the same one for the same seed.**
   Tested.
 - **Nobody out is counted in a pick.** Tested.
-- **The bottom is out; the game ends with one or none left, or after thirty
-  rounds.** Tested.
+- **The bottom is out and ends the game; so does one or none left, or thirty
+  rounds. Leaving the lobby does not end it.** Tested.
+- **The walk down goes one step at a time and is done before the reveal is.**
+  Tested.
 - **Placed by height, then by how late and from how high they went out, level
   sharing.** Tested.
 - **Stand-ins pick once each in the first second and a half, and their games end.**
@@ -167,10 +171,11 @@ Open a lobby, leave the game on Volcano Island, press **minigames**, open
 - **Press 4.** The 4 button lights up and a 4 appears over your head. Press 6: it
   changes. Click 1: it changes again.
 - **The reveal.** Cards across the top say what each number did and who picked
-  it. Everybody hops down to their new step.
+  it. Everybody walks down to their new step, one step at a time.
 - **Sit a round out.** A pick is made for you, marked "(late)".
 - **Press a number during the reveal.** It does not carry into the next round.
-- **Reach the bottom.** You land on the ground and your pill says "out".
+- **Reach the bottom.** You land on the ground, your pill says "out", and the
+  game ends.
 - **The end.** The results run top to bottom.
 
 ### With two browsers

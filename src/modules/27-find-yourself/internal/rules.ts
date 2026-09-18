@@ -7,6 +7,9 @@
  * think their own face is under. Three stages, each shuffle longer and faster
  * than the last, worth 1, 2 and 3 points. Most points wins.
  *
+ * The faces are dealt once, at the start: each later stage starts with them
+ * where the last shuffle left them.
+ *
  * Everything here is pure. Where the faces start and how the cups move comes
  * from the game's seed, so every browser animates the same shuffle; who picked
  * what is the host's to say, and nobody else's until the cups come up.
@@ -60,14 +63,22 @@ export interface Stage {
   swaps: [number, number][]
 }
 
-/** Stage `stage`'s faces and shuffle. */
+/**
+ * Stage `stage`'s faces and shuffle. The first stage deals the faces at random;
+ * every later one starts with them where the last stage's shuffle left them.
+ */
 export function dealStage(seed: number, stage: number, players: number): Stage {
   const random = createRng(hashSeed(seed, `find-yourself:stage:${stage}`))
   const cups = cupCount(players)
-  const faces = Array.from({ length: cups }, (_, i) => (i < players ? i : -1))
-  for (let i = faces.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1))
-    ;[faces[i], faces[j]] = [faces[j], faces[i]]
+  let faces: number[]
+  if (stage > 0) {
+    faces = facesBySlot(stageFor(seed, stage - 1, players))
+  } else {
+    faces = Array.from({ length: cups }, (_, i) => (i < players ? i : -1))
+    for (let i = faces.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1))
+      ;[faces[i], faces[j]] = [faces[j], faces[i]]
+    }
   }
   const swaps: [number, number][] = []
   let last: [number, number] | null = null

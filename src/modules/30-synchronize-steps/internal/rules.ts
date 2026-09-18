@@ -8,10 +8,10 @@
  * - **Three or more** picked the same number: all of them drop eight.
  * - **Alone** on a number: you stay where you are.
  *
- * Reaching the bottom is out. The game ends when one player or none is left on
- * the tower - or after thirty rounds, since two players who never match would
- * never move - and everybody is placed top to bottom: still on the tower by how
- * high, then everybody out, the later the better, and from higher up the better.
+ * Reaching the bottom is out, and the game ends as soon as anybody does - or when
+ * one player or none is left on the tower, or after thirty rounds, since two
+ * players who never match would never move. Everybody is placed top to bottom:
+ * still on the tower by how high, then everybody out, from higher up the better.
  *
  * A player who has not picked by the end of a round has a pick made for them at
  * random: sitting it out would otherwise be the best move there is.
@@ -29,8 +29,8 @@ export const TOWER = {
   crowdDrop: 8,
   /** Seconds to pick. */
   choose: 2,
-  /** Seconds the picks are shown and everybody moves. */
-  reveal: 1.3,
+  /** Seconds the picks are shown and everybody walks down, a step at a time. */
+  reveal: 1.9,
   /** The most rounds a game has. */
   rounds: 30,
 } as const
@@ -97,6 +97,11 @@ export function onTower(game: Game): Stepper[] {
   return game.players.filter((p) => !p.out)
 }
 
+/** Whether anybody has walked off the bottom of the tower. Somebody who left the lobby does not count. */
+export function reachedBottom(game: Game): boolean {
+  return game.players.some((p) => p.out !== null && p.last !== null)
+}
+
 /** A player picks, or changes their pick. Only while picking, only a real option, only while still on the tower. */
 export function choose(game: Game, player: number, pick: number, round = game.round): boolean {
   const stepper = game.players[player]
@@ -148,7 +153,7 @@ export function stepGame(game: Game, dt: number): Game {
     game.clock = 0
   } else if (game.phase === 'reveal' && game.clock >= TOWER.reveal) {
     game.clock = 0
-    if (onTower(game).length <= 1 || game.round + 1 >= TOWER.rounds) {
+    if (reachedBottom(game) || onTower(game).length <= 1 || game.round + 1 >= TOWER.rounds) {
       game.phase = 'over'
     } else {
       game.round += 1

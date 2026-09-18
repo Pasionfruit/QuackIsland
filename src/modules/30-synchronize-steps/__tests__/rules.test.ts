@@ -3,8 +3,8 @@
  */
 import { describe, expect, it } from 'vitest'
 import { BOT_PICKS, botChoices } from '../internal/ai'
-import { hopAt, stepX, stepY } from '../internal/camera'
-import { TOWER, choose, createGame, leave, moveFor, onTower, placings, resolve, stepGame, type Game } from '../internal/rules'
+import { hopAt, stepX, stepY, walkAt } from '../internal/camera'
+import { TOWER, choose, createGame, leave, moveFor, onTower, placings, reachedBottom, resolve, stepGame, type Game } from '../internal/rules'
 
 const SEED = 424242
 
@@ -99,24 +99,46 @@ describe('a round', () => {
 })
 
 describe('the end', () => {
-  it('puts anybody who reaches the bottom out, and ends when one is left', () => {
+  it('puts anybody who reaches the bottom out, and ends there and then', () => {
     const g = game(3)
     round(g, [6, 6, 1]) // 14 14 20
     round(g, [6, 6, 4]) // 8 8 20
     round(g, [1, 6, 6]) // 8 2 14
     expect(g.phase).toBe('choose')
+    expect(reachedBottom(g)).toBe(false)
     round(g, [4, 4, 6]) // 4 0 14
     expect(g.players.map((p) => p.step)).toEqual([4, 0, 14])
     expect(g.players[1].out).toEqual({ round: 3, from: 2 })
+    expect(reachedBottom(g)).toBe(true)
     expect(onTower(g)).toHaveLength(2)
-    round(g, [4, 6, 4]) // p1 and p3 pair on 4: 0, 10
-    expect(g.players[0].out).toEqual({ round: 4, from: 4 })
     expect(g.phase).toBe('over')
     expect(placings(g).map((e) => [e.stepper.id, e.place])).toEqual([
       ['p3', 1],
       ['p1', 2],
       ['p2', 3],
     ])
+  })
+
+  it('does not end because somebody left the lobby', () => {
+    const g = game(3)
+    leave(g, 2)
+    expect(reachedBottom(g)).toBe(false)
+    round(g, [1, 4, 6])
+    expect(g.phase).toBe('choose')
+  })
+
+  it('walks down a step at a time', () => {
+    expect(walkAt(20, 12, 0, 0.15)).toEqual(hopAt(20, 20, 1))
+    for (let i = 0; i < 8; i++) {
+      expect(walkAt(20, 12, (i + 1) * 0.15 - 1e-9, 0.15).x).toBeCloseTo(stepX(20 - i - 1), 3)
+      const mid = walkAt(20, 12, i * 0.15 + 0.075, 0.15)
+      const hop = hopAt(20 - i, 20 - i - 1, 0.5)
+      expect(mid.x).toBeCloseTo(hop.x, 6)
+      expect(mid.y).toBeCloseTo(hop.y, 6)
+    }
+    expect(walkAt(20, 12, 5, 0.15)).toEqual(hopAt(13, 12, 1))
+    // The longest walk, eight steps, is done before the reveal is over.
+    expect(0.35 + TOWER.crowdDrop * 0.15).toBeLessThan(TOWER.reveal)
   })
 
   it('ends with everybody out at once if a crowd takes them all down, placed by where they fell from', () => {

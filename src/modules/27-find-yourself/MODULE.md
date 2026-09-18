@@ -36,7 +36,8 @@ not: the faces are the island's capsule and the cups are cylinders.
 ## A stage
 
 - **The deal.** A cup for every player and at least one spare, never fewer than
-  five. Faces are dealt afresh each stage, from the seed.
+  five. Faces are dealt once, from the seed; each later stage starts with
+  them where the last stage's shuffle left them.
 - **Show, 2.5 s.** The cups are up and a banner says which colour is yours.
 - **Cover, 0.7 s.** The cups come down.
 - **Shuffle.** Two cups trade places at a time, easing out and back in, one in
@@ -108,7 +109,7 @@ Exported because it is worth testing, not because anything else needs it.
 ## Invariants you may rely on
 
 - **A cup for every player and a spare, never fewer than five; every player under
-  exactly one cup; dealt afresh each stage.** Tested.
+  exactly one cup; each stage starts where the last one ended.** Tested.
 - **More swaps, each quicker, every stage; never the same pair twice running.** Tested.
 - **Cups end up where the swaps take them.** Tested with a worked example.
 - **Mid-swap, two cups are partway between their slots, passing on opposite

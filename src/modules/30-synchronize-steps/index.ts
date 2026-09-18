@@ -31,6 +31,7 @@ export {
   moveFor,
   onTower,
   placings,
+  reachedBottom,
   resolve,
   stepGame,
   type Entrant,
@@ -57,6 +58,6 @@ export {
   type WireStepper,
 } from './internal/wire'
 
-export { FILL, FOV, LANES, POINTS, STAIRS, TILT, frameScene, hopAt, laneZ, pointsFor, stepX, stepY, type Shot } from './internal/camera'
+export { FILL, FOV, LANES, POINTS, STAIRS, TILT, frameScene, hopAt, laneZ, pointsFor, stepX, stepY, walkAt, type Shot } from './internal/camera'
 
 export { SynchronizeStepsScreen } from './internal/SynchronizeStepsScreen'

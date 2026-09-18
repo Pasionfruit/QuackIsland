@@ -42,7 +42,13 @@ describe('the cups', () => {
     expect(cupCount(8)).toBe(9)
   })
 
-  it('hide every player once and the rest nothing, dealt differently each stage', () => {
+  it('start each stage with the faces where the last one left them', () => {
+    for (let s = 1; s < TABLE.points.length; s++) {
+      expect(dealStage(SEED, s, 4).faces).toEqual(facesBySlot(dealStage(SEED, s - 1, 4)))
+    }
+  })
+
+  it('hide every player once and the rest nothing, shuffled differently each stage', () => {
     for (let n = 1; n <= 8; n++) {
       const stage = dealStage(SEED, 0, n)
       expect(stage.faces).toHaveLength(cupCount(n))
