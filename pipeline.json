@@ -127,7 +127,8 @@
         "35-chef-caricature",
         "36-musical-mayhem",
         "37-wheres-midnight",
-        "38-pet-race"
+        "38-pet-race",
+        "39-ill-just-wait"
       ]
     }
   ],
@@ -175,7 +176,8 @@
         "35-chef-caricature",
         "36-musical-mayhem",
         "37-wheres-midnight",
-        "38-pet-race"
+        "38-pet-race",
+        "39-ill-just-wait"
       ],
       "generation": 1,
       "contract": {
@@ -364,7 +366,8 @@
         "33-keyboard-warrior",
         "34-sharing-is-caring",
         "35-chef-caricature",
-        "36-musical-mayhem"
+        "36-musical-mayhem",
+        "39-ill-just-wait"
       ],
       "generation": 1,
       "contract": {
@@ -881,7 +884,8 @@
         "35-chef-caricature",
         "36-musical-mayhem",
         "37-wheres-midnight",
-        "38-pet-race"
+        "38-pet-race",
+        "39-ill-just-wait"
       ],
       "generation": 1,
       "contract": {
@@ -1397,7 +1401,8 @@
         "35-chef-caricature",
         "36-musical-mayhem",
         "37-wheres-midnight",
-        "38-pet-race"
+        "38-pet-race",
+        "39-ill-just-wait"
       ],
       "generation": 1,
       "contract": {
@@ -3370,6 +3375,84 @@
         "No racer-on-racer collision: pets run through each other, so nobody can be blocked out of a win",
         "No lap counting, no checkpoints: one run, one line",
         "No sound, no score kept between games"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "39-ill-just-wait",
+      "phase": "P6",
+      "title": "Minigame 24, I'll Just Wait: a race through three clock-reading targets said in harder words each time - \"Quarter till 4:05\" - winding from 12:00 with left and right click, Space to confirm, wrong resets to 12:00; everybody's clock on show, first to all three wins",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "39.1",
+          "title": "The targets: a seeded time for each of three, worded against the hour, then against a precise time, then in two steps, with unusual minutes",
+          "status": "done"
+        },
+        {
+          "id": "39.2",
+          "title": "The race: right moves you on, wrong resets to 12:00, first to all three wins and ends it, else a time limit",
+          "status": "done"
+        },
+        {
+          "id": "39.3",
+          "title": "The controls: hold left click to wind forward, right click back - a press is a minute, a hold sweeps and speeds up - Space to confirm",
+          "status": "done"
+        },
+        {
+          "id": "39.4",
+          "title": "A still camera on a stage with your big wall clock, and everybody in a row with their own small clock on show",
+          "status": "done"
+        },
+        {
+          "id": "39.5",
+          "title": "One game shared across the lobby, everybody's reading on the wire, answers checked on your screen and by the host, stand-ins only when alone",
+          "status": "done"
+        },
+        {
+          "id": "39.6",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "39.7",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-18T23:33:17.968Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: players are the island capsule, the clocks are primitives on a painted face",
+        "No moving camera",
+        "No sound of its own"
       ],
       "budgets": {
         "drawCallsMax": 0,

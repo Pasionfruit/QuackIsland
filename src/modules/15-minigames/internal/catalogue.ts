@@ -504,14 +504,23 @@ const ENTRIES = [
     done: { environment: true, controls: true, assets: false },
   },
   {
-    id: 'reserved-24',
+    id: 'ill-just-wait',
     number: 24,
-    title: 'Free slot',
+    title: "I'll Just Wait",
     kind: 'free-for-all',
-    description: [],
-    controls: [],
-    reserved: true,
-    done: { environment: false, controls: false, assets: false },
+    description: [
+      'A race through three clock-reading targets. Each goes up at the top in awkward words - "Quarter till 4:05" - and each is harder than the last, with minutes that are rarely round ones. Your clock starts at 12:00: wind it to the target and confirm.',
+      'Right, and you are on to the next target. Wrong, and your clock goes back to 12:00 to try again. Everybody can see everybody else’s clock - so you could always just wait for somebody to show you. The first to get all three wins, and that ends it.',
+    ],
+    controls: [
+      { input: 'Hold Left Click', does: 'Move clock forward' },
+      { input: 'Hold Right Click', does: 'Move clock backward' },
+      { input: 'Space', does: 'Confirm time' },
+    ],
+    reserved: false,
+    // Built: see `39-ill-just-wait`. The assets stage is still to do - the
+    // clocks are primitives on a painted face and the players are the island's capsule.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'short-song-rhythm',

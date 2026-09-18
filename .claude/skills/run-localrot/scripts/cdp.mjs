@@ -166,6 +166,12 @@ export class Page {
 
 /** Each game's screen component, and an element inside it to start the search from. */
 export const GAMES = {
+  'ill-just-wait': {
+    title: "I'll Just Wait",
+    screen: 'IllJustWaitScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
   'pet-race': {
     title: 'Pet Race',
     screen: 'PetRaceScreen',
