@@ -5,9 +5,9 @@
  * shell: the keys and the mouse in, `useRoundNet` deciding what they do, and a
  * HUD with the clock, who is still standing, and what your fist is doing.
  *
- * **WASD to move, left click to punch - and left click again to pull it back.**
- * A click anywhere on the platform's view counts: the punch goes the way you
- * face, not where the pointer is, so there is nothing to aim with the mouse.
+ * **WASD to move, the mouse to aim, left click to punch - and left click again
+ * to pull it back.** You face the pointer whenever your arm is home; the punch
+ * goes where you were aiming when you threw it.
  */
 import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
@@ -16,7 +16,7 @@ import { getNet, useNet, usePeers } from '../../09-net'
 import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { PunchBuggyScene } from './PunchBuggyScene'
-import { COLOURS, placings, standing, timeLeft, type Intent, type Round } from './rules'
+import { COLOURS, placings, standing, timeLeft, type Intent, type Point, type Round } from './rules'
 import { myId, newRound, waitingRound } from './setup'
 import { useRoundNet } from './useRoundNet'
 
@@ -47,6 +47,8 @@ export function PunchBuggyScreen({ run }: { run: MinigameRun }) {
   const wire = useRoundNet()
   const live = useRef(round)
   live.current = round
+  /** Where the pointer is on the platform, from the scene. */
+  const aimAt = useRef<Point | null>(null)
 
   const keys = useRef({ up: false, down: false, left: false, right: false })
   const clicks = useRef(0)
@@ -109,6 +111,11 @@ export function PunchBuggyScreen({ run }: { run: MinigameRun }) {
         y: (k.down ? 1 : 0) - (k.up ? 1 : 0),
         clicks: clicks.current,
       }
+      const me = current.fighters.find((f) => f.mine)
+      const at = aimAt.current
+      // Right on top of yourself there is no way to point: keep the last one.
+      if (me && at && Math.hypot(at.x - me.x, at.y - me.y) > 0.3) mine.aim = Math.atan2(at.y - me.y, at.x - me.x)
+      else if (me) mine.aim = me.facing
       if (wire.advance(current, dt, mine, paused.current)) setRound({ ...current })
       frame = requestAnimationFrame(tick)
     }
@@ -148,7 +155,7 @@ export function PunchBuggyScreen({ run }: { run: MinigameRun }) {
       </div>
 
       <div style={board} onPointerDown={onPointerDown} onContextMenu={(e) => e.preventDefault()} data-board>
-        <Stage live={live} />
+        <Stage live={live} aim={aimAt} />
       </div>
 
       {results && ready ? <Over round={round} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
@@ -166,7 +173,7 @@ function PunchPill({ fighter, colour }: { fighter: Round['fighters'][number]; co
       ? 'click to punch'
       : fighter.punch === 'back'
         ? 'pulling back…'
-        : 'click to pull back'
+        : 'click to pull back - you cannot move'
   return (
     <span style={{ ...pill, background: fighter.alive ? colour : LOOK.faded, color: '#fff' }} data-punch={fighter.punch}>
       {text}
@@ -175,7 +182,7 @@ function PunchPill({ fighter, colour }: { fighter: Round['fighters'][number]; co
 }
 
 /** The canvas, rendered once - see `PunchBuggyScene`. */
-const Stage = memo(function Stage({ live }: { live: RefObject<Round> }) {
+const Stage = memo(function Stage({ live, aim }: { live: RefObject<Round>; aim: RefObject<Point | null> }) {
   return (
     <Canvas
       shadows={SHADOWS}
@@ -187,7 +194,7 @@ const Stage = memo(function Stage({ live }: { live: RefObject<Round> }) {
         gl.toneMappingExposure = 1.05
       }}
     >
-      <PunchBuggyScene live={live} />
+      <PunchBuggyScene live={live} aim={aim} />
     </Canvas>
   )
 })
@@ -288,7 +295,7 @@ const pill: React.CSSProperties = {
   whiteSpace: 'nowrap',
 }
 
-const board: React.CSSProperties = { flex: 1, minHeight: 0, width: '100%', position: 'relative', cursor: 'pointer' }
+const board: React.CSSProperties = { flex: 1, minHeight: 0, width: '100%', position: 'relative', cursor: 'crosshair' }
 
 const overBackdrop: React.CSSProperties = {
   position: 'fixed',

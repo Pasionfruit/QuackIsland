@@ -803,8 +803,35 @@ try {
       await page.eval(`window.dispatchEvent(new KeyboardEvent('${down ? 'keydown' : 'keyup'}', { code: '${code}', key: '${code.slice(3).toLowerCase()}' }))`)
     }
     const clickBoard = () => page.eval(`document.querySelector('[data-board]').dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX: ${board.x}, clientY: ${board.y}, bubbles: true }))`)
+    // Aim: a real pointermove on the canvas at the target's spot on screen, put
+    // there with the game's own camera fit, so it goes through the game's ray.
+    const aimAt = (x, z) => page.eval(`(async () => {
+      const cam = await import('/src/modules/20-punch-buggy/internal/camera.ts')
+      const canvas = [...document.querySelectorAll('[data-board] canvas')].pop()
+      const rect = canvas.getBoundingClientRect()
+      const aspect = rect.width / rect.height
+      const shot = cam.frameScene(aspect)
+      const at = { x: ${x}, y: 0.85, z: ${z} }
+      const sub = (p, q) => ({ x: p.x - q.x, y: p.y - q.y, z: p.z - q.z })
+      const dot = (p, q) => p.x * q.x + p.y * q.y + p.z * q.z
+      const norm = (p) => { const l = Math.hypot(p.x, p.y, p.z); return { x: p.x / l, y: p.y / l, z: p.z / l } }
+      const cross = (p, q) => ({ x: p.y * q.z - p.z * q.y, y: p.z * q.x - p.x * q.z, z: p.x * q.y - p.y * q.x })
+      const eye = { x: shot.x, y: shot.y, z: shot.z }
+      const forward = norm(sub(shot.target, eye))
+      const right = norm(cross(forward, { x: 0, y: 1, z: 0 }))
+      const up = cross(right, forward)
+      const rel = sub(at, eye)
+      const depth = dot(rel, forward)
+      const half = Math.tan((cam.FOV * Math.PI) / 360)
+      const clientX = rect.left + ((dot(rel, right) / (depth * half * aspect) + 1) / 2) * rect.width
+      const clientY = rect.top + ((1 - dot(rel, up) / (depth * half)) / 2) * rect.height
+      canvas.dispatchEvent(new PointerEvent('pointermove', { clientX, clientY, bubbles: true }))
+      return true
+    })()`)
     let clicks = 0
     let shotPunch = false
+    let shotShrink = false
+    let shotOutro = false
     for (let i = 0; i < 1000; i++) {
       const s = await page.eval(`(() => {
         const r = ${gameState('punch-buggy')}
@@ -812,21 +839,39 @@ try {
         const others = r.fighters.filter((f) => !f.mine && f.alive)
         others.sort((a, b) => Math.hypot(a.x - me.x, a.y - me.y) - Math.hypot(b.x - me.x, b.y - me.y))
         const t = others[0]
-        return { over: r.over, elapsed: r.elapsed, alive: me.alive, how: me.how, by: me.by, out: r.fighters.filter((f) => !f.alive).map((f) => f.id + ":" + f.how + ":" + f.by + "@" + (f.outAt ?? 0).toFixed(2)), punch: me.punch, x: me.x, y: me.y, facing: me.facing, target: t ? { x: t.x, y: t.y } : null, standing: r.fighters.filter((f) => f.alive).length }
+        return { over: r.over, decidedAt: r.decidedAt, elapsed: r.elapsed, alive: me.alive, how: me.how, by: me.by, out: r.fighters.filter((f) => !f.alive).map((f) => f.id + ":" + f.how + ":" + f.by + "@" + (f.outAt ?? 0).toFixed(2)), punch: me.punch, x: me.x, y: me.y, facing: me.facing, target: t ? { x: t.x, y: t.y, facing: t.facing } : null, standing: r.fighters.filter((f) => f.alive).length }
       })()`)
-      if (s.over || !s.alive) {
+      if (!shotOutro && s.decidedAt != null && !s.over) {
+        shotOutro = true
+        await sleep(250)
+        say('outro - the last one out, before Finish', JSON.stringify(s), await page.shot('5-outro.png'))
+      }
+      if (!shotShrink && s.elapsed > 18) {
+        shotShrink = true
+        say('shrinking', JSON.stringify(s), await page.shot('6-shrink.png'))
+      }
+      if (s.over) {
         for (const code of [...held]) await key(code, false)
         say('ended', JSON.stringify(s))
         break
       }
+      if (!s.alive) {
+        for (const code of [...held]) await key(code, false)
+        await sleep(60)
+        continue
+      }
       if (s.target) {
+        await aimAt(s.target.x, s.target.y)
         const dx = s.target.x - s.x
         const dy = s.target.y - s.y
         const distance = Math.hypot(dx, dy)
-        // Keep off the edge first.
-        const edge = Math.hypot(s.x, s.y) > 8
-        const wx = edge ? -s.x : dx
-        const wy = edge ? -s.y : dy
+        // Keep off the edge first - it closes in after ten seconds. A target
+        // facing us blocks, so circle round to its side.
+        const edge = Math.hypot(s.x, s.y) > (s.elapsed < 10 ? 8 : Math.max(2.5, 8 - (s.elapsed - 10) * 0.33))
+        const back = Math.atan2(-dy, -dx) - s.target.facing
+        const facingUs = Math.abs(Math.atan2(Math.sin(back), Math.cos(back))) < 1.1
+        const wx = edge ? -s.x : facingUs ? -dy + dx * 0.2 : dx
+        const wy = edge ? -s.y : facingUs ? dx + dy * 0.2 : dy
         await key('KeyD', wx > 0.3 * Math.hypot(wx, wy))
         await key('KeyA', wx < -0.3 * Math.hypot(wx, wy))
         await key('KeyS', wy > 0.3 * Math.hypot(wx, wy))

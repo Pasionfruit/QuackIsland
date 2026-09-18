@@ -3,11 +3,13 @@
 ## What this is
 
 **Minigame 8.** A round platform floating high over the sea, and everybody on
-it with a fist that comes off. Click and it shoots out the way you are facing;
-click again and it comes back. A fist that reaches somebody on its way out
-knocks them straight out of the round. An arm that is already out does not -
-but it is solid, and walking into people with it shoves them, and a shove off
-the edge is out too. Thirty seconds; the last one standing wins.
+it with a fist that comes off. Aim with the mouse, click and it shoots out where
+you aim; click again and it comes back. A fist that reaches somebody's **side
+or back** on its way out knocks them straight out of the round; one that meets
+their **front, their arm or their fist** is blocked, and only shoves them. An arm
+that is already out knocks nobody out either - but it is solid, and a shove off
+the edge is out too. After ten seconds the platform starts to shrink. Thirty
+seconds; the last one standing wins.
 
 It plugs into `15-minigames` and nothing else in the build knows it exists.
 Importing the module registers it - one line in `src/App.tsx`.
@@ -22,36 +24,48 @@ not: the fighters are the island's capsule and the fists are spheres.
 | A floating platform | `RING.radius`; past it is the sea |
 | Everyone has an extendable punch | `Punch`, `RING.reach`, `fistAt` |
 | Click to launch, click again to retract | `click` - `in` → `out`; `out` or `held` → `back` |
-| A direct hit eliminates immediately | `stepRound` - a fist **on its way out** that meets a body |
-| Knock opponents off the platform | an arm that is out shoves (`RING.arm`); off the edge is out |
-| Stay mobile, avoid incoming punches | `RING.speed`, slower with your arm out (`RING.armedPace`) |
+| A direct hit eliminates immediately | `stepRound` - a fist **on its way out** that meets a side or a back |
+| Hitting somebody's punch is not a knockout | `guarded`, `RING.guard` - their front 90°, and their arm, block |
+| Knock opponents off the platform | an arm that is out shoves (`RING.arm`); a blocked punch shoves (`RING.blockPush`); off the edge is out |
+| The map shrinks after ten seconds | `radiusAt`, `RING.shrinkFrom`, `RING.radiusAtEnd` |
+| Rooted with your punch out | `rooted`, `RING.commit` - no walking until it is on its way back |
+| See the last knockout before the end | `Round.decidedAt`, `RING.outro` |
 | Thirty seconds on the clock (the catalogue) | `RING.duration` |
-| WASD - move; left click - extend or retract | the screen |
+| WASD - move; mouse - aim; left click - extend or retract | the screen |
 
 ## The punch
 
-`in` at your side → a click → `out`, flying the way you face at 26 units a
-second → at full reach (6), or on meeting somebody, `held` → a click → `back`,
-home at 30 a second → `in`. A click while it is `out` pulls it back early. A
-click while it is coming `back` does nothing: you cannot throw again until it is
-home.
+`in` at your side → a click → `out`, flying where you aim at 26 units a second
+→ at full reach (6), or on meeting somebody, `held` → a click → `back`, home at
+30 a second → `in`. A click while it is coming `back` does nothing: you cannot
+throw again until it is home.
 
-- **Only a fist on its way out knocks anybody out.** That is what "directly
-  hits" means here. The check is swept - the fist's whole path this step against
-  every body - so a fist fast enough to pass through somebody between frames
-  still meets them. It stops where it lands.
+- **You aim with the mouse.** The pointer is found on the platform at shoulder
+  height and you face it whenever your arm is home - walking does not turn you.
+  The aim travels in the intent (`aim`, radians); an intent without one faces
+  the way it walks, as before.
+- **Throwing roots you.** From the throw until the arm is on its way back you
+  cannot walk at all, and it cannot be pulled back for half a second
+  (`RING.commit`). A click to pull back inside that half second waits and pulls
+  back the moment it can - it is not lost. Coming back, you walk at 60%.
+- **Only a fist on its way out, landing on a side or a back, knocks anybody
+  out.** Somebody's front - 45° either side of where they face, which is where
+  their own fist is - blocks it, and so does their arm or fist if it is out
+  across the path. A blocked punch shoves them 1.4 units the way it was going
+  (credited, for the edge) and stops. The check is swept - the fist's whole path
+  this step - so a fist fast enough to pass through somebody between frames
+  still meets them.
 - **An arm that is out is solid.** Held out, or coming back, it shoves anybody
-  it touches clear of it. That is how you knock somebody off the edge without
-  landing a punch: put your arm out and walk them off.
-- **Your facing is locked while your arm is out**, and you move at 60% - the
-  punch goes where you were facing when you threw it, and throwing it is a
-  commitment.
-- **You face the way you walk.** There is nothing to aim with the mouse; a click
-  anywhere on the view punches.
+  it touches clear of it.
+- **Your facing is locked while your arm is out** - the punch goes where you
+  were aiming when you threw it.
 
 ## The edge
 
-A body whose middle is past the platform's edge falls. If an arm shoved them in
+The platform is whole for the first ten seconds, then closes in steadily from a
+radius of 11 to 4.5 at thirty (`radiusAt`). The scene draws it at the same
+radius from the round's clock, so guests see the edge the host drops people off.
+A body whose middle is past the edge falls. If an arm shoved them in
 the second before (`RING.shoveMemory`), whoever's arm it was gets the credit on
 the results: "knocked off by". Wandering off on your own is just "fell off".
 
@@ -64,7 +78,11 @@ Bodies are solid against each other.
 
 ## The end
 
-At one left standing, or at thirty seconds. Whoever is still standing shares
+At one left standing - **plus 1.2 seconds** (`RING.outro`) - or at thirty
+seconds. The round is decided at the knockout (`decidedAt`), then runs on with
+nobody moving and only the clock going, so the last one out is seen to fly on
+every browser before Finish comes down. The clock runs out at once: there is no
+knockout to watch. Whoever is still standing shares
 first - one person if somebody won outright, more if the clock ran out.
 Everybody else is ranked by how long they lasted, sharing a place with anybody
 who went out on the same frame.
@@ -88,9 +106,11 @@ The same arrangement as the other minigames:
   frame - see Duck Hunt's notes for the error a per-frame `<Canvas>` caused.
 
 **The roster is the lobby**, host first, up to eight - eight colours. Alone,
-three stand-ins fill in: they keep off the edge, go for the nearest fighter, line
-up, wait a moment, throw, pull back, and sidestep a fist coming straight at them
-some of the time. They walk at 80%, throw nothing in the first two and a half
+three stand-ins fill in: they keep off the edge, wherever it has got to, aim at
+the nearest fighter, circle round to their side if that fighter is facing them,
+wait a moment, throw, pull back, and sidestep a fist coming straight at them
+some of the time. A target near the edge gets thrown at even from the front: a
+blocked punch still shoves. They walk at 80%, throw nothing in the first two and a half
 seconds (`BOT_OPENING`), and wait 0.7 to 1.7 seconds after that before throwing.
 Without those, they knocked out two of four players inside a second and a half,
 before a person had found which pill was theirs. Everybody also starts well out
@@ -101,8 +121,10 @@ reaches.
 
 - Everybody is the island pill in their own colour, with a ring under you.
 - An arm stretches out from the body the way it faces, the fist on its end.
-- Somebody punched is thrown back, spinning, away from whoever hit them; somebody
-  off the edge drops. Either way they are gone in a second.
+- Somebody punched flashes white where it landed, and is thrown back, spinning,
+  away from whoever hit them; somebody off the edge drops. Either way they are
+  gone in a second - and the one that ends the round is watched all the way out.
+- The platform - sand, rim and rock - shrinks with the edge.
 - The HUD has the clock (red for the last five seconds), how many are standing,
   and what your fist is doing and what a click will do about it.
 
@@ -129,13 +151,21 @@ Exported because it is worth testing, not because anything else needs it.
 
 ## Invariants you may rely on
 
-- **A click sends a fist out if it is in, and back if it is out; nothing else.**
+- **A click sends a fist out if it is in, and back if it is out and has been for
+  half a second; nothing else. A click too soon waits.** Tested.
+- **Only a fist on its way out knocks anybody out, and only in the side or the
+  back**, even from a step long enough to pass through them, never past its
+  reach, never its own thrower. Tested.
+- **A front, or an arm out across the path, blocks and is shoved.** Tested.
+- **The punch goes where it is aimed; nobody walks with their arm out.** Tested.
+- **The platform is whole for ten seconds, then shrinks; the edge drops people.**
   Tested.
-- **Only a fist on its way out knocks anybody out**, even from a step long enough
-  to pass through them, never past its reach, never its own thrower. Tested.
+- **The round is over 1.2 seconds after it is decided, with nobody moving in
+  between.** Tested.
 - **An arm that is out shoves instead**, and a shove off the edge in the last
   second is credited. Tested.
-- **The facing locks and the pace drops while an arm is out.** Tested.
+- **The facing locks while an arm is out, and the pace drops while it comes back.**
+  Tested.
 - **Off the edge is out.** Tested.
 - **A body is the island pill's size, and bodies are solid.** Tested.
 - **The round ends at one standing or at thirty seconds; the standing share
@@ -151,7 +181,6 @@ Exported because it is worth testing, not because anything else needs it.
 - No models, no sound.
 - No health: one direct hit is out.
 - No moving camera.
-- No aiming with the mouse: the punch goes the way you face.
 
 ## Known limitations
 
@@ -168,14 +197,18 @@ Open a lobby, leave the game on Volcano Island, press **minigames**, open
 
 - **Look at the platform.** A round of sand on a rock, the sea far below, four
   fighters in four colours round it facing the middle, a ring under you.
-- **Walk with WASD.** You turn to face the way you walk.
-- **Click.** Your arm shoots out the way you face and stays out; the HUD says
-  "click to pull back". Click again: it comes home, and you can punch again.
-- **Walk with your arm out.** Slower, and you keep facing the same way.
-- **Punch somebody.** They are thrown back, spinning, and gone; your fist stops
-  where it hit.
-- **Hold your arm out and walk into somebody.** They are shoved, not knocked out.
-  Shove them off the edge: they drop, and the results say you knocked them off.
+- **Move the mouse.** You turn to face the pointer. **Walk with WASD**: you keep
+  facing it.
+- **Click.** Your arm shoots out where you aim and stays out, and you cannot
+  walk. Click straight away: nothing for half a second, then it comes home.
+- **Punch somebody in the side or back.** A white flash, they are thrown back,
+  spinning, and gone; your fist stops where it hit.
+- **Punch somebody facing you, or through their arm.** They are shoved back, not
+  knocked out. Shove them off the edge: they drop, and the results say you
+  knocked them off.
+- **Wait past ten seconds.** The platform shrinks; stand near the edge and it
+  drops you.
+- **Knock out the last stand-in.** You see them fly for a second before Finish.
 - **Walk off the edge yourself.** You drop, and the HUD says so.
 - **Watch the stand-ins.** They close in, throw, pull back, and mostly stay on.
 - **Let the clock run out with more than one standing.** They share first.

@@ -55,5 +55,5 @@ export function newRound({ seed = nextSeed(), roster = roundRoster(), me = myId(
 
 /** A platform with nobody on it yet, for a guest to hold until the host's first snapshot. */
 export function waitingRound(): Round {
-  return { seed: 0, id: 0, fighters: [], elapsed: 0, over: false }
+  return { seed: 0, id: 0, fighters: [], elapsed: 0, decidedAt: null, over: false }
 }

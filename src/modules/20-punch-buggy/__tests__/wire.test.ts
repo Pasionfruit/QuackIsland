@@ -20,7 +20,8 @@ describe('a snapshot', () => {
     const round = host()
     const [a, b] = round.fighters
     Object.assign(a, { x: 0, y: 0, facing: 0 })
-    Object.assign(b, { x: 3, y: 0 })
+    // Its back to p1, so the punch lands.
+    Object.assign(b, { x: 3, y: 0, facing: 0 })
     for (let i = 0; i < 30; i++) stepRound(round, new Map([['p1', { x: 0, y: 0, clicks: 1 }]]), 1 / 60)
     expect(b.alive).toBe(false)
 
@@ -73,6 +74,11 @@ describe('an intent', () => {
       round: 12,
       intent: { x: 0.5, y: -0.5, clicks: 7 },
     })
+  })
+
+  it('carries the aim, when there is one', () => {
+    expect(decodeIntent(relay(encodeIntent({ x: 0, y: 1, clicks: 2, aim: 1.25 }, 3)))!.intent.aim).toBeCloseTo(1.25)
+    expect(decodeIntent({ t: 'pb-in', r: 1, x: 0, y: 0, n: 0, a: 'left' })).toBeNull()
   })
 
   it('cannot ask for more than full speed, and is refused when it is not one', () => {

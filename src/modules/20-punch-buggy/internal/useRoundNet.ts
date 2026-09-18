@@ -38,6 +38,7 @@ export function useRoundNet(): RoundNet {
   const sentAt = useRef(0)
   const saidAt = useRef(0)
   const lastSaid = useRef('')
+  const lastAim = useRef('')
 
   useEffect(() => {
     const stop = subscribeRoom((from, raw) => {
@@ -93,8 +94,13 @@ export function useRoundNet(): RoundNet {
     }
 
     // Nothing to say until there is a round to say it about.
+    // The aim moves with every twitch of the mouse, so a change in it alone
+    // waits for the next send slot; a click or a key goes at once.
     const said = `${round.id}:${wish.x.toFixed(2)}:${wish.y.toFixed(2)}:${wish.clicks}`
-    if (round.id !== 0 && (said !== lastSaid.current || now - saidAt.current >= REPEAT_MS)) {
+    const aimed = wish.aim === undefined ? '' : wish.aim.toFixed(2)
+    const changed = said !== lastSaid.current || (aimed !== lastAim.current && now - saidAt.current >= SEND_MS)
+    if (round.id !== 0 && (changed || now - saidAt.current >= REPEAT_MS)) {
+      lastAim.current = aimed
       lastSaid.current = said
       saidAt.current = now
       sendToRoom(encodeIntent(wish, round.id))

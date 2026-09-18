@@ -10,6 +10,7 @@ import {
   createRound,
   fistAt,
   placings,
+  radiusAt,
   spawns,
   stepRound,
   timeLeft,
@@ -20,12 +21,15 @@ import {
 const SEED = 99
 const still = new Map<string, Intent>()
 
-/** Two fighters face to face, `gap` apart edge to edge, a facing b. */
-function duel(gap: number): Round {
+/**
+ * Two fighters `gap` apart edge to edge, a facing b - and b with its back to a
+ * unless `bFacing` says otherwise, so a punch from a is not blocked.
+ */
+function duel(gap: number, bFacing = 0): Round {
   const round = createRound(SEED, [{ id: 'a' }, { id: 'b' }])
   const [a, b] = round.fighters
   Object.assign(a, { x: -gap / 2 - RING.body, y: 0, facing: 0 })
-  Object.assign(b, { x: gap / 2 + RING.body, y: 0, facing: Math.PI })
+  Object.assign(b, { x: gap / 2 + RING.body, y: 0, facing: bFacing })
   return round
 }
 
@@ -77,16 +81,17 @@ describe('the punch', () => {
     expect(a.reach).toBe(0)
   })
 
-  it('can be pulled back before it gets all the way out', () => {
+  it('cannot be pulled back until it has been out half a second, and a click too soon waits', () => {
     const round = duel(14)
     const a = get(round, 'a')
     stepRound(round, new Map([['a', { x: 0, y: 0, clicks: 1 }]]), 0.05)
-    stepRound(round, new Map([['a', { x: 0, y: 0, clicks: 1 }]]), 0.05)
-    const reached = a.reach
-    expect(reached).toBeLessThan(RING.reach)
-    stepRound(round, new Map([['a', { x: 0, y: 0, clicks: 2 }]]), 1 / 120)
-    expect(a.punch).toBe('back')
-    expect(a.reach).toBeLessThan(reached)
+    const early = new Map([['a', { x: 0, y: 0, clicks: 2 }]])
+    run(round, RING.commit - 0.15, early)
+    expect(a.punch).toBe('held')
+    expect(a.clicks).toBe(1)
+    run(round, 0.2, early)
+    expect(a.clicks).toBe(2)
+    expect(['back', 'in']).toContain(a.punch)
   })
 
   it('cannot be thrown again until it is home', () => {
@@ -108,7 +113,7 @@ describe('the punch', () => {
     expect(a.punch).toBe('held')
   })
 
-  it('knocks out whoever it reaches on the way out, and stops there', () => {
+  it('knocks out whoever it reaches in the back on the way out, and stops there', () => {
     const round = duel(3)
     const [a, b] = round.fighters
     run(round, 0.5, new Map([['a', { x: 0, y: 0, clicks: 1 }]]))
@@ -117,7 +122,49 @@ describe('the punch', () => {
     expect(b.by).toBe('a')
     expect(a.punch).toBe('held')
     expect(a.reach).toBeLessThan(RING.reach)
-    expect(round.over).toBe(true)
+    expect(round.decidedAt).not.toBeNull()
+  })
+
+  it('knocks out whoever it reaches in the side', () => {
+    const round = duel(3, Math.PI / 2)
+    run(round, 0.5, new Map([['a', { x: 0, y: 0, clicks: 1 }]]))
+    expect(get(round, 'b').alive).toBe(false)
+  })
+
+  it('is blocked by somebody facing it, and shoves them instead', () => {
+    const round = duel(3, Math.PI)
+    const [a, b] = round.fighters
+    const x = b.x
+    run(round, 0.5, new Map([['a', { x: 0, y: 0, clicks: 1 }]]))
+    expect(b.alive).toBe(true)
+    expect(b.x).toBeGreaterThan(x + 1)
+    expect(b.shovedBy).toBe('a')
+    expect(a.punch).toBe('held')
+    expect(a.reach).toBeLessThan(RING.reach)
+  })
+
+  it('is blocked by an arm held out across its path', () => {
+    const round = createRound(SEED, ['a', 'b', 'c'].map((id) => ({ id })))
+    const [a, b, c] = round.fighters
+    Object.assign(a, { x: -4, y: 0, facing: 0 })
+    // b is side-on to a, but its arm is out across a's line.
+    Object.assign(b, { x: 0, y: -3, facing: Math.PI / 2, punch: 'held', reach: 4, thrownAt: -5 })
+    Object.assign(c, { x: 0, y: 8, facing: 0 })
+    run(round, 0.5, new Map([['a', { x: 0, y: 0, clicks: 1 }]]))
+    expect(b.alive).toBe(true)
+    expect(a.punch).toBe('held')
+    expect(a.reach).toBeLessThan(RING.reach)
+  })
+
+  it('goes where it is aimed, not where you walk', () => {
+    const round = duel(14)
+    const a = get(round, 'a')
+    stepRound(round, new Map([['a', { x: 1, y: 0, clicks: 0, aim: Math.PI / 2 }]]), 1 / 60)
+    expect(a.facing).toBeCloseTo(Math.PI / 2)
+    stepRound(round, new Map([['a', { x: 1, y: 0, clicks: 1, aim: Math.PI / 2 }]]), 1 / 60)
+    const fist = fistAt(a)
+    expect(fist.y).toBeGreaterThan(a.y)
+    expect(fist.x).toBeCloseTo(a.x)
   })
 
   it('misses somebody who is not in front of it', () => {
@@ -154,15 +201,19 @@ describe('the punch', () => {
     expect(get(round, 'a').alive).toBe(true)
   })
 
-  it('locks the facing while the arm is out, and slows you down', () => {
+  it('stands you still and locks your aim while the arm is out, and slows you while it comes back', () => {
     const round = duel(14)
     const a = get(round, 'a')
     run(round, 0.2, new Map([['a', { x: 0, y: 0, clicks: 1 }]]))
     const x = a.x
-    stepRound(round, new Map([['a', { x: 0, y: 1, clicks: 1 }]]), 0.05)
+    run(round, 1, new Map([['a', { x: 0, y: 1, clicks: 1, aim: 2 }]]))
+    expect(a.punch).toBe('held')
+    expect(a.facing).toBe(0)
+    expect([a.x, a.y]).toEqual([x, 0])
+    stepRound(round, new Map([['a', { x: 0, y: 1, clicks: 2, aim: 2 }]]), 0.05)
+    expect(a.punch).toBe('back')
     expect(a.facing).toBe(0)
     expect(a.y).toBeCloseTo(RING.speed * RING.armedPace * 0.05, 5)
-    expect(a.x).toBe(x)
   })
 
   it('reaches somebody even from a step long enough to pass through them', () => {
@@ -209,6 +260,29 @@ describe('the edge', () => {
   })
 })
 
+describe('the shrinking platform', () => {
+  it('is whole for ten seconds, then closes in to its smallest at the end', () => {
+    expect(radiusAt(0)).toBe(RING.radius)
+    expect(radiusAt(RING.shrinkFrom)).toBe(RING.radius)
+    expect(radiusAt(20)).toBeLessThan(RING.radius)
+    expect(radiusAt(20)).toBeGreaterThan(RING.radiusAtEnd)
+    expect(radiusAt(RING.duration)).toBeCloseTo(RING.radiusAtEnd)
+  })
+
+  it('drops somebody standing still once the edge passes them', () => {
+    const round = duel(14)
+    const a = get(round, 'a')
+    Object.assign(a, { x: -8, y: 0 })
+    Object.assign(get(round, 'b'), { x: 0, y: 0 })
+    run(round, RING.shrinkFrom)
+    expect(a.alive).toBe(true)
+    run(round, 10)
+    expect(a.alive).toBe(false)
+    expect(a.how).toBe('fell')
+    expect(a.by).toBeNull()
+  })
+})
+
 describe('bodies', () => {
   it('are solid', () => {
     const round = duel(14)
@@ -229,9 +303,20 @@ describe('bodies', () => {
 })
 
 describe('the end', () => {
-  it('comes when one is left standing', () => {
+  it('comes when one is left standing - once the last one out has had time to fly', () => {
     const round = duel(3)
-    run(round, 1, new Map([['a', { x: 0, y: 0, clicks: 1 }]]))
+    while (round.decidedAt === null) stepRound(round, new Map([['a', { x: 0, y: 0, clicks: 1 }]]), 1 / 60)
+    const decided = round.decidedAt
+    expect(get(round, 'b').alive).toBe(false)
+    expect(round.over).toBe(false)
+    const a = get(round, 'a')
+    const where = [a.x, a.y]
+    run(round, RING.outro - 0.1, new Map([['a', { x: 1, y: 0, clicks: 1 }]]))
+    // Nobody moves while it plays out; the clock does.
+    expect(round.over).toBe(false)
+    expect([a.x, a.y]).toEqual(where)
+    expect(round.elapsed).toBeGreaterThan(decided + RING.outro - 0.2)
+    run(round, 0.2)
     expect(round.over).toBe(true)
     expect(placings(round).map((p) => [p.fighter.id, p.place])).toEqual([
       ['a', 1],
@@ -243,6 +328,9 @@ describe('the end', () => {
     const round = createRound(SEED, ['a', 'b', 'c'].map((id) => ({ id })))
     get(round, 'c').alive = false
     get(round, 'c').outAt = 3
+    // Near the middle, where the shrinking edge never reaches.
+    Object.assign(get(round, 'a'), { x: -1.5, y: 0 })
+    Object.assign(get(round, 'b'), { x: 1.5, y: 0 })
     run(round, 31)
     expect(round.over).toBe(true)
     expect(round.elapsed).toBe(RING.duration)

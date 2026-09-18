@@ -11,10 +11,10 @@
  */
 import { useFrame } from '@react-three/fiber'
 import { memo, useLayoutEffect, useMemo, useReducer, useRef, type RefObject } from 'react'
-import { Color, Group, type DirectionalLight, type Mesh } from 'three'
+import { Color, Group, Plane, Raycaster, Vector3, type DirectionalLight, type Mesh, type MeshBasicMaterial } from 'three'
 import { createAvatar } from '../../02-player'
 import { frameScene } from './camera'
-import { COLOURS, RING, type Fighter, type Round } from './rules'
+import { COLOURS, RING, radiusAt, type Fighter, type Point, type Round } from './rules'
 
 export const PALETTE = {
   sand: '#d0bd90',
@@ -33,6 +33,8 @@ export const PALETTE = {
 const SHOULDER = 0.85
 /** How long somebody takes to leave, once they are out. */
 const GONE_AFTER = 1.2
+/** How long the flash where a punch lands lasts. */
+const BURST_FOR = 0.35
 
 function FixedCamera() {
   useFrame(({ camera, size }) => {
@@ -64,26 +66,37 @@ function Daylight() {
   )
 }
 
-/** The platform: a sand top, a darker rim so the edge reads, a rock underneath, the sea far below. */
-const Platform = memo(function Platform() {
+/**
+ * The platform: a sand top, a darker rim so the edge reads, a rock underneath,
+ * the sea far below. After ten seconds it closes in - drawn at `radiusAt` the
+ * round's clock, which is the edge the rules drop people off.
+ */
+const Platform = memo(function Platform({ live }: { live: RefObject<Round> }) {
+  const land = useRef<Group>(null)
+  useFrame(() => {
+    const k = radiusAt(live.current.elapsed) / RING.radius
+    land.current?.scale.set(k, 1, k)
+  })
   return (
     <group>
       <mesh position={[0, -14, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[240, 240]} />
         <meshStandardMaterial color={PALETTE.sea} roughness={0.4} />
       </mesh>
-      <mesh position={[0, -0.4, 0]} receiveShadow>
-        <cylinderGeometry args={[RING.radius, RING.radius, 0.8, 64]} />
-        <meshStandardMaterial color={PALETTE.sand} roughness={0.95} />
-      </mesh>
-      <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[RING.radius - 0.35, RING.radius, 64]} />
-        <meshStandardMaterial color={PALETTE.rim} roughness={0.9} />
-      </mesh>
-      <mesh position={[0, -4, 0]} rotation={[Math.PI, 0, 0]}>
-        <coneGeometry args={[RING.radius * 0.97, 6.4, 40]} />
-        <meshStandardMaterial color={PALETTE.rock} roughness={1} />
-      </mesh>
+      <group ref={land}>
+        <mesh position={[0, -0.4, 0]} receiveShadow>
+          <cylinderGeometry args={[RING.radius, RING.radius, 0.8, 64]} />
+          <meshStandardMaterial color={PALETTE.sand} roughness={0.95} />
+        </mesh>
+        <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[RING.radius - 0.35, RING.radius, 64]} />
+          <meshStandardMaterial color={PALETTE.rim} roughness={0.9} />
+        </mesh>
+        <mesh position={[0, -4, 0]} rotation={[Math.PI, 0, 0]}>
+          <coneGeometry args={[RING.radius * 0.97, 6.4, 40]} />
+          <meshStandardMaterial color={PALETTE.rock} roughness={1} />
+        </mesh>
+      </group>
     </group>
   )
 })
@@ -103,6 +116,7 @@ function FighterBody({ fighter, index, round }: { fighter: Fighter; index: numbe
   const holder = useRef<Group>(null)
   const arm = useRef<Mesh>(null)
   const fist = useRef<Mesh>(null)
+  const burst = useRef<Mesh>(null)
   const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
 
@@ -113,6 +127,17 @@ function FighterBody({ fighter, index, round }: { fighter: Fighter; index: numbe
     let y = 0
     let z = fighter.y
     let spin = 0
+    const hit = burst.current
+    if (hit) {
+      // A flash where the punch landed, swelling and fading.
+      const t = fighter.alive || fighter.how !== 'punched' ? Infinity : round.elapsed - (fighter.outAt ?? round.elapsed)
+      hit.visible = t < BURST_FOR
+      if (hit.visible) {
+        hit.position.set(fighter.x, SHOULDER, fighter.y)
+        hit.scale.setScalar(0.6 + (t / BURST_FOR) * 2.2)
+        ;(hit.material as MeshBasicMaterial).opacity = 0.85 * (1 - t / BURST_FOR)
+      }
+    }
     if (!fighter.alive) {
       const t = round.elapsed - (fighter.outAt ?? round.elapsed)
       group.visible = t < GONE_AFTER
@@ -142,19 +167,42 @@ function FighterBody({ fighter, index, round }: { fighter: Fighter; index: numbe
   })
 
   return (
-    <group ref={holder}>
-      <primitive object={avatar} />
-      {/* A unit-long arm along the body's facing, stretched to the reach. */}
-      <mesh ref={arm} rotation={[Math.PI / 2, 0, 0]} castShadow>
-        <cylinderGeometry args={[RING.arm * 0.7, RING.arm * 0.7, 1, 10]} />
-        <meshStandardMaterial color={colour} roughness={0.6} />
+    <>
+      <mesh ref={burst} visible={false}>
+        <sphereGeometry args={[0.7, 16, 12]} />
+        <meshBasicMaterial color={PALETTE.fist} transparent depthWrite={false} />
       </mesh>
-      <mesh ref={fist} castShadow>
-        <sphereGeometry args={[RING.fist, 16, 12]} />
-        <meshStandardMaterial color={PALETTE.fist} roughness={0.4} emissive={colour} emissiveIntensity={0.15} />
-      </mesh>
-    </group>
+      <group ref={holder}>
+        <primitive object={avatar} />
+        {/* A unit-long arm along the body's facing, stretched to the reach. */}
+        <mesh ref={arm} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <cylinderGeometry args={[RING.arm * 0.7, RING.arm * 0.7, 1, 10]} />
+          <meshStandardMaterial color={colour} roughness={0.6} />
+        </mesh>
+        <mesh ref={fist} castShadow>
+          <sphereGeometry args={[RING.fist, 16, 12]} />
+          <meshStandardMaterial color={PALETTE.fist} roughness={0.4} emissive={colour} emissiveIntensity={0.15} />
+        </mesh>
+      </group>
+    </>
   )
+}
+
+/**
+ * Where the pointer is on the platform, written into `aim` every frame for the
+ * screen to turn into a heading. Measured at shoulder height, where the fists
+ * fly, so pointing at somebody's body aims at them.
+ */
+function PointerAim({ aim }: { aim: RefObject<Point | null> }) {
+  const ray = useMemo(() => new Raycaster(), [])
+  const plane = useMemo(() => new Plane(new Vector3(0, 1, 0), -SHOULDER), [])
+  const hit = useMemo(() => new Vector3(), [])
+  useFrame(({ camera, pointer }) => {
+    ray.setFromCamera(pointer, camera)
+    const target = aim as { current: Point | null }
+    target.current = ray.ray.intersectPlane(plane, hit) ? { x: hit.x, y: hit.z } : null
+  })
+  return null
 }
 
 /** A ring under your own fighter, so you can find yourself among eight. */
@@ -175,7 +223,7 @@ function YouMarker({ fighter, index }: { fighter: Fighter; index: number }) {
   )
 }
 
-export function PunchBuggyScene({ live }: { live: RefObject<Round> }) {
+export function PunchBuggyScene({ live, aim }: { live: RefObject<Round>; aim: RefObject<Point | null> }) {
   const [, redraw] = useReducer((n: number) => n + 1, 0)
   useFrame(() => redraw())
   const round = live.current
@@ -187,7 +235,8 @@ export function PunchBuggyScene({ live }: { live: RefObject<Round> }) {
       <fog attach="fog" args={[PALETTE.background, 60, 180]} />
       <FixedCamera />
       <Daylight />
-      <Platform />
+      <PointerAim aim={aim} />
+      <Platform live={live} />
       {mineIndex >= 0 ? <YouMarker fighter={round.fighters[mineIndex]} index={mineIndex} /> : null}
       {round.fighters.map((fighter, index) => (
         <FighterBody key={`${round.id}:${fighter.id}`} fighter={fighter} index={index} round={round} />

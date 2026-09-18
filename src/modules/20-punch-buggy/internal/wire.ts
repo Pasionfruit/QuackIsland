@@ -79,16 +79,21 @@ export function decodeSnapshot(message: Record<string, unknown>): Snapshot | nul
  * starts, must not throw five clicks' worth into it.
  */
 export function encodeIntent(intent: Intent, round: number): Record<string, unknown> {
-  return { t: INTENT_TAG, r: round, x: r2(intent.x), y: r2(intent.y), n: intent.clicks }
+  const message: Record<string, unknown> = { t: INTENT_TAG, r: round, x: r2(intent.x), y: r2(intent.y), n: intent.clicks }
+  if (intent.aim !== undefined) message.a = r2(intent.aim)
+  return message
 }
 
 /** A guest's intent and its round, with the direction clamped: a client can send whatever it likes. */
 export function decodeIntent(message: Record<string, unknown>): { round: number; intent: Intent } | null {
   if (message.t !== INTENT_TAG) return null
   if (!isCount(message.r) || !isNumber(message.x) || !isNumber(message.y) || !isCount(message.n)) return null
+  if (message.a !== undefined && !isNumber(message.a)) return null
   const length = Math.hypot(message.x, message.y)
   const scale = length > 1 ? 1 / length : 1
-  return { round: message.r as number, intent: { x: message.x * scale, y: message.y * scale, clicks: message.n as number } }
+  const intent: Intent = { x: message.x * scale, y: message.y * scale, clicks: message.n as number }
+  if (message.a !== undefined) intent.aim = Math.atan2(Math.sin(message.a as number), Math.cos(message.a as number))
+  return { round: message.r as number, intent }
 }
 
 /**
@@ -107,7 +112,7 @@ export function applySnapshot(round: Round, snap: Snapshot, me: string): Round {
     if (!f) {
       f = {
         id, x, y, facing, alive: true, outAt: null, how: 'in', by: null, punch: 'in', reach: 0,
-        punchSince: 0, clicks: 0, shovedBy: null, shovedAt: -Infinity, mine: false, bot: false,
+        punchSince: 0, thrownAt: -Infinity, clicks: 0, shovedBy: null, shovedAt: -Infinity, mine: false, bot: false,
       }
       round.fighters.push(f)
     }
