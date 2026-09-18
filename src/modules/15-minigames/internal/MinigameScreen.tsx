@@ -1,15 +1,21 @@
 /**
  * The one thing the app mounts, and the only place that decides what is drawn.
  *
- * Three states and nothing else: shut, the dashboard, or one game. A game
- * being briefed or counted down is this module's own screen; a game actually
- * playing is the game's, if it has registered one, and a placeholder saying so
- * if it has not.
+ * Three states and nothing else: shut, the dashboard, or one game. A game being
+ * briefed is this module's own screen; a game that has started is the game's,
+ * if it has registered one, and a placeholder saying so if it has not.
  *
- * The countdown's clock lives here, and only here. The store has none of its
- * own - it is advanced by whoever is showing it - which is what lets the whole
- * of "three, two, one, go" be tested by calling `tickRun` with a few numbers
- * instead of waiting three real seconds for it.
+ * **The three-two-one happens over the game.** Press play and the screen goes
+ * black over the briefing; the game is mounted behind the black, so its first
+ * frame - the expensive one, for anything with a canvas - happens unwatched;
+ * then the black lifts off a game that is drawn, standing still, with a number
+ * over it. It is held still by being told it is paused, which every game
+ * already knows how to obey, so the countdown costs no game a single line.
+ *
+ * The clock for all of that lives here, and only here. The store has none of
+ * its own - it is advanced by whoever is showing it - which is what lets the
+ * whole of "black, three, two, one, go" be tested by calling `tickRun` with a
+ * few numbers instead of waiting for it.
  *
  * **Escape means two different things, and which one depends on whether
  * anything is running.** On the dashboard or a briefing there is nothing to
@@ -26,7 +32,9 @@ import { Dashboard } from './Dashboard'
 import { Paused } from './Paused'
 import { minigameById } from './catalogue'
 import { FONT, ISLAND, bar, body, button, screen, wordmark } from './look'
-import { buildFor, isPausable, type MinigameRun } from './registry'
+import { Countdown, Curtain, Finish } from './Transitions'
+import { buildFor, isHeld, isPausable, isShowingGame, isTimed, type MinigameRun } from './registry'
+import { stopScreenSounds } from './sound'
 import {
   backOut,
   pauseMinigame,
@@ -45,7 +53,7 @@ export function MinigameScreen() {
   const mayControl = useMayControl()
   const showing = open.at !== 'closed'
   const run = open.at === 'game' ? open.run : null
-  const counting = run?.phase === 'counting' && !run.paused
+  const ticking = run !== null && isTimed(run) && !run.paused
   // Read through the render rather than closed over, so the key handler never
   // acts on a phase that has moved on since it was installed.
   const pausable = run !== null && isPausable(run)
@@ -68,30 +76,51 @@ export function MinigameScreen() {
   }, [showing, pausable, paused, mayControl])
 
   useEffect(() => {
-    if (!counting) return
+    if (!ticking) return
     const timer = window.setInterval(() => tickMinigame(TICK_MS / 1000), TICK_MS)
     return () => window.clearInterval(timer)
-  }, [counting])
+  }, [ticking])
+
+  // Walking out mid-countdown must not leave the three-two-one playing to
+  // nobody over the dashboard.
+  useEffect(() => {
+    if (!showing) stopScreenSounds()
+  }, [showing])
 
   if (open.at === 'closed') return null
   if (open.at === 'dashboard') return <Dashboard />
 
-  // Reading about it, or counting into it. Both are this module's screen.
-  if (open.run.phase === 'briefing' || open.run.phase === 'counting') {
+  const current = open.run
+  const build = buildFor(current.id)
+  // The countdown is the game mounted and standing still. Every game stops dead
+  // when it is told it is paused, so that is the lever - and it is why no game
+  // has a line of code about counting down.
+  const shown = isHeld(current) ? { ...current, paused: true } : current
+
+  const over = (
+    <>
+      <Curtain run={current} />
+      <Countdown run={current} />
+      <Finish run={current} />
+      {current.paused ? <PauseCard run={current} isHost={net.host} mayControl={mayControl} /> : null}
+    </>
+  )
+
+  // Reading about it, or watching the black come down over that.
+  if (!isShowingGame(current)) {
     return (
       <>
-        <Briefing run={open.run} />
-        {open.run.paused ? <PauseCard run={open.run} isHost={net.host} mayControl={mayControl} /> : null}
+        <Briefing run={current} />
+        {over}
       </>
     )
   }
 
-  const build = buildFor(open.run.id)
   if (!build) {
     return (
       <>
-        <NotBuilt run={open.run} />
-        {open.run.paused ? <PauseCard run={open.run} isHost={net.host} mayControl={mayControl} /> : null}
+        <NotBuilt run={current} />
+        {over}
       </>
     )
   }
@@ -103,8 +132,8 @@ export function MinigameScreen() {
   const Panel = build.Panel
   return (
     <>
-      <Panel key={open.run.id} run={open.run} />
-      {open.run.paused ? <PauseCard run={open.run} isHost={net.host} mayControl={mayControl} /> : null}
+      <Panel key={`${current.id}:${current.started}`} run={shown} />
+      {over}
     </>
   )
 }

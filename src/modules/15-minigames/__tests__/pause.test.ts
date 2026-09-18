@@ -4,7 +4,10 @@
  */
 import { afterEach, describe, expect, it } from 'vitest'
 import { NAME_MAX, decodePause, encodePause, mayControl, nameOfPauser, type Pauser } from '../internal/pause'
-import { beginRun, countShown, forgetBuilds, freshRun, pauseRun, registerMinigame, restartRun, resumeRun, tickRun } from '../internal/registry'
+import { FADE, beginRun, countShown, forgetBuilds, freshRun, pauseRun, registerMinigame, restartRun, resumeRun, tickRun } from '../internal/registry'
+
+/** A run at the first frame of the three-two-one: play pressed, black lifted. */
+const counting = (id: Parameters<typeof freshRun>[0] = 'zombie-tag') => tickRun(beginRun(freshRun(id)), FADE.in)
 
 const BEA: Pauser = { id: 'p2', name: 'bea' }
 const CAL: Pauser = { id: 'p3', name: 'cal' }
@@ -83,7 +86,7 @@ describe('stopping and starting a round', () => {
   afterEach(forgetBuilds)
 
   it('remembers who stopped it, and forgets when it starts again', () => {
-    const run = beginRun(freshRun('zombie-tag'))
+    const run = counting()
     const stopped = pauseRun(run, BEA)
     expect(stopped).toMatchObject({ paused: true, pausedBy: BEA })
     expect(resumeRun(stopped)).toMatchObject({ paused: false, pausedBy: null })
@@ -94,11 +97,11 @@ describe('stopping and starting a round', () => {
     // a run where they disagreed would show a card nobody could dismiss.
     const runs = [
       freshRun('zombie-tag'),
-      beginRun(freshRun('zombie-tag')),
-      pauseRun(beginRun(freshRun('zombie-tag')), BEA),
-      resumeRun(pauseRun(beginRun(freshRun('zombie-tag')), BEA)),
-      restartRun(pauseRun(beginRun(freshRun('zombie-tag')), BEA)),
-      tickRun(pauseRun(beginRun(freshRun('zombie-tag')), BEA), 9),
+      counting(),
+      pauseRun(counting(), BEA),
+      resumeRun(pauseRun(counting(), BEA)),
+      restartRun(pauseRun(counting(), BEA)),
+      tickRun(pauseRun(counting(), BEA), 9),
     ]
     for (const [i, run] of runs.entries()) expect(run.paused, `${i}`).toBe(run.pausedBy !== null)
   })
@@ -107,7 +110,7 @@ describe('stopping and starting a round', () => {
     // The rule that stops it is `mayControl`; this is the arithmetic under it -
     // pausing an already paused run changes nothing, so a second press cannot
     // quietly move the card's owner.
-    const stopped = pauseRun(beginRun(freshRun('zombie-tag')), BEA)
+    const stopped = pauseRun(counting(), BEA)
     expect(pauseRun(stopped, CAL)).toBe(stopped)
     expect(stopped.pausedBy).toEqual(BEA)
   })
@@ -117,33 +120,36 @@ describe('restart', () => {
   afterEach(forgetBuilds)
 
   it('takes a stopped round back to the three-two-one, running', () => {
-    let run = tickRun(beginRun(freshRun('zombie-tag')), 1)
+    let run = tickRun(counting(), 1)
     expect(countShown(run)).toBe(2)
     run = pauseRun(run, BEA)
 
+    // Back to the top: black first, and then three again.
     const again = restartRun(run)
-    expect(again.phase).toBe('counting')
-    expect(countShown(again)).toBe(3)
+    expect(again.phase).toBe('fading')
+    expect(countShown(tickRun(again, FADE.in))).toBe(3)
     expect(again).toMatchObject({ paused: false, pausedBy: null })
+    // And a new identity, so the screen takes the old game's panel down.
+    expect(again.started).toBeGreaterThan(run.started)
   })
 
   it('throws the old game away and asks for a new one', () => {
     let dealt = 0
     registerMinigame('zombie-tag', { newGame: () => ({ n: ++dealt }), Panel: () => null })
-    const run = pauseRun(beginRun(freshRun('zombie-tag')), BEA)
+    const run = pauseRun(counting(), BEA)
     const again = restartRun(run)
     expect(again.game).not.toBe(run.game)
     expect(again.game).toEqual({ n: dealt })
   })
 
   it('restarts the game that was open, not some other one', () => {
-    const run = pauseRun(beginRun(freshRun('duck-hunt')), BEA)
+    const run = pauseRun(counting('duck-hunt'), BEA)
     expect(restartRun(run).id).toBe('duck-hunt')
   })
 
   it('works from a round that was playing, not only from a countdown', () => {
-    const playing = pauseRun(tickRun(beginRun(freshRun('zombie-tag')), 9), BEA)
+    const playing = pauseRun(tickRun(counting(), 9), BEA)
     expect(playing.phase).toBe('playing')
-    expect(restartRun(playing).phase).toBe('counting')
+    expect(restartRun(playing).phase).toBe('fading')
   })
 })

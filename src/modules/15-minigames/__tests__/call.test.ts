@@ -17,6 +17,7 @@ import {
   type MinigameCall,
 } from '../internal/call'
 import {
+  FADE,
   beginRun,
   countShown,
   forgetBuilds,
@@ -120,6 +121,9 @@ describe('pausing a round', () => {
   /** Whoever pressed it. A pause now carries a person; see `pause.ts`. */
   const BEA = { id: 'p2', name: 'bea' }
 
+  /** A run at the first frame of the three-two-one: play pressed, black lifted. */
+  const counting = () => tickRun(beginRun(freshRun('zombie-tag')), FADE.in)
+
   it('has nothing to pause on a briefing', () => {
     const run = freshRun('zombie-tag')
     expect(isPausable(run)).toBe(false)
@@ -127,17 +131,17 @@ describe('pausing a round', () => {
   })
 
   it('pauses a countdown and a round alike', () => {
-    const counting = beginRun(freshRun('zombie-tag'))
-    expect(isPausable(counting)).toBe(true)
-    expect(pauseRun(counting, BEA).paused).toBe(true)
+    const run = counting()
+    expect(isPausable(run)).toBe(true)
+    expect(pauseRun(run, BEA).paused).toBe(true)
 
-    const playing = tickRun(counting, 9)
+    const playing = tickRun(run, 9)
     expect(isPausable(playing)).toBe(true)
     expect(pauseRun(playing, BEA).paused).toBe(true)
   })
 
   it('stops the countdown where it stands', () => {
-    let run = tickRun(beginRun(freshRun('zombie-tag')), 1)
+    let run = tickRun(counting(), 1)
     expect(countShown(run)).toBe(2)
 
     run = pauseRun(run, BEA)
@@ -153,14 +157,14 @@ describe('pausing a round', () => {
   })
 
   it('starts a round unpaused, however the last one ended', () => {
-    const paused = pauseRun(beginRun(freshRun('zombie-tag')), BEA)
+    const paused = pauseRun(counting(), BEA)
     expect(paused.paused).toBe(true)
     expect(freshRun('zombie-tag').paused).toBe(false)
     expect(beginRun(freshRun('zombie-tag')).paused).toBe(false)
   })
 
   it('does nothing when asked for a state it is already in', () => {
-    const run = beginRun(freshRun('zombie-tag'))
+    const run = counting()
     expect(resumeRun(run)).toBe(run)
     const stopped = pauseRun(run, BEA)
     expect(pauseRun(stopped, BEA)).toBe(stopped)
@@ -168,7 +172,7 @@ describe('pausing a round', () => {
 
   it('leaves the game its own state untouched either way', () => {
     registerMinigame('zombie-tag', { newGame: () => ({ zombies: 6 }), Panel: () => null })
-    const run = beginRun(freshRun('zombie-tag'))
+    const run = counting()
     expect(pauseRun(run, BEA).game).toBe(run.game)
     expect(resumeRun(pauseRun(run, BEA)).game).toBe(run.game)
   })

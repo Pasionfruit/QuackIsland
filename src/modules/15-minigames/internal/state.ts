@@ -33,6 +33,7 @@ import {
 } from './call'
 import {
   beginRun,
+  finishRun,
   freshRun,
   isPausable,
   pauseRun,
@@ -144,9 +145,38 @@ export function playMinigame(): void {
 }
 
 /**
- * Advances the countdown by a slice of a second.
+ * The round is over: hands the screen its two seconds of **Finish**.
  *
- * Driven by the screen while it is counting and by nothing else - the store
+ * Called by the game, from `useFinish`, because the game is the only thing that
+ * knows when it has ended. Local: every browser's round ends on its own frame
+ * and there is nothing to agree about, so this is the one part of a run that
+ * does not go near the wire.
+ */
+export function finishMinigame(): void {
+  const now = screen.get()
+  if (now.at !== 'game') return
+  const next = finishRun(now.run)
+  if (next !== now.run) screen.set({ at: 'game', run: next })
+}
+
+/**
+ * What a game calls to say it has ended.
+ *
+ * Handed the same flag the game already uses to decide whether to draw its own
+ * results - so there is nothing new for a game to work out, and no way for the
+ * two to disagree. Fires on the edge, and `finishRun` ignores everything but a
+ * round that is actually playing, so saying it twice costs nothing.
+ */
+export function useFinish(over: boolean): void {
+  useEffect(() => {
+    if (over) finishMinigame()
+  }, [over])
+}
+
+/**
+ * Advances whichever clock is running by a slice of a second.
+ *
+ * Driven by the screen while there is one and by nothing else - the store
  * has no clock of its own, which is what keeps it testable.
  */
 export function tickMinigame(dt: number): void {

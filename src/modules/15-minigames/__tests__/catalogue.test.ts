@@ -24,18 +24,24 @@ import {
 } from '../internal/catalogue'
 import {
   COUNT_FROM,
+  FADE,
   beginRun,
   buildFor,
   builtMinigames,
   countShown,
+  curtain,
   forgetBuilds,
   freshRun,
   isBuilt,
   registerMinigame,
   tickRun,
+  type MinigameRun,
 } from '../internal/registry'
 
 const KINDS: readonly MinigameKind[] = ['free-for-all', 'one-vs-all']
+
+/** A run at the first frame of the three-two-one: play pressed, black lifted. */
+const toCountdown = (id: Parameters<typeof freshRun>[0]): MinigameRun => tickRun(beginRun(freshRun(id)), FADE.in)
 
 describe('the catalogue', () => {
   it('holds every slot the plan calls for, of each kind', () => {
@@ -320,8 +326,18 @@ describe('the countdown', () => {
     expect(tickRun(run, 1)).toBe(run)
   })
 
+  it('goes black before it counts, and mounts the game behind the black', () => {
+    // Press play and the briefing does not cut to a countdown: it goes black,
+    // and the game is already there when the black lifts.
+    const started = beginRun(freshRun('zombie-tag'))
+    expect(started.phase).toBe('fading')
+    expect(countShown(started)).toBeNull()
+    expect(curtain(started)).toBe(0)
+    expect(curtain(tickRun(started, FADE.in / 2))).toBeCloseTo(0.5, 5)
+  })
+
   it('starts at three and counts down to go', () => {
-    let run = beginRun(freshRun('zombie-tag'))
+    let run = toCountdown('zombie-tag')
     expect(run.phase).toBe('counting')
     expect(countShown(run)).toBe(3)
 
@@ -338,7 +354,7 @@ describe('the countdown', () => {
 
   it('holds each number for a whole second, not an instant', () => {
     // Rounded up: a three that is only up for one frame is a three nobody saw.
-    let run = beginRun(freshRun('zombie-tag'))
+    let run = toCountdown('zombie-tag')
     expect(countShown(run)).toBe(3)
     run = tickRun(run, 0.9)
     expect(countShown(run)).toBe(3)
@@ -350,6 +366,14 @@ describe('the countdown', () => {
     let run = beginRun(freshRun('zombie-tag'))
     for (let i = 0; i < 40; i++) run = tickRun(run, 0.1)
     expect(run.phase).toBe('playing')
+  })
+
+  it('carries what is left of a long step into the phase after it', () => {
+    // A frame the browser never gave us must not make the three-two-one take
+    // four seconds, and one step long enough to cross two phases crosses both.
+    const run = tickRun(beginRun(freshRun('zombie-tag')), FADE.in + 1)
+    expect(run.phase).toBe('counting')
+    expect(run.countdown).toBeCloseTo(COUNT_FROM - 1, 5)
   })
 
   it('never overshoots into a negative count', () => {
@@ -364,7 +388,7 @@ describe('the countdown', () => {
   })
 
   it('cannot be started twice, and is not a restart', () => {
-    const counting = tickRun(beginRun(freshRun('zombie-tag')), 1.5)
+    const counting = tickRun(toCountdown('zombie-tag'), 1.5)
     expect(beginRun(counting)).toBe(counting)
 
     const playing = tickRun(counting, 9)
@@ -386,7 +410,7 @@ describe('the countdown', () => {
 
   it('runs for every game in the catalogue, the same way', () => {
     for (const game of MINIGAMES) {
-      const run = tickRun(beginRun(freshRun(game.id)), COUNT_FROM)
+      const run = tickRun(beginRun(freshRun(game.id)), FADE.in + COUNT_FROM)
       expect(run.phase).toBe('playing')
     }
   })

@@ -26,20 +26,49 @@ import type { MinigameId } from './catalogue'
 import type { Pauser } from './pause'
 
 /**
- * Where a game is in its own life. The four every minigame has.
+ * Where a game is in its own life. The six every minigame has.
  *
- * `briefing` is reading about it, `counting` is the three-two-one, `playing`
- * is the game itself, `over` is afterwards. Every game gets the same four, so
- * a countdown is something the screen does rather than something forty-one
- * games each have to remember to do.
+ * `briefing` is reading about it. `fading` is the screen going black over the
+ * top of that. `counting` is the three-two-one - **over the game**, which is
+ * mounted and drawn by then and simply not running yet. `playing` is the game
+ * itself. `finishing` is two seconds of **Finish** with the game dimming behind
+ * it, and `over` is the results.
+ *
+ * Every game gets the same six, so none of them has to remember to count down,
+ * fade, or say Finish.
  */
-export type RunPhase = 'briefing' | 'counting' | 'playing' | 'over'
+export type RunPhase = 'briefing' | 'fading' | 'counting' | 'playing' | 'finishing' | 'over'
+
+/**
+ * How long each of the timed phases lasts, in seconds.
+ *
+ * `fade` is the black wiping in over the briefing. The game is mounted at the
+ * far end of it, under a screen that is already fully black, so the first frame
+ * of a three.js canvas - the expensive one - happens where nobody can see it.
+ *
+ * `dim` is the two seconds after a round ends: **Finish** over the top, the game
+ * going dark behind it, and then the results.
+ */
+export const FADE = { in: 0.55, dim: 2 } as const
 
 export interface MinigameRun {
   id: MinigameId
   phase: RunPhase
-  /** Seconds left of the three-two-one. Only meaningful while `counting`. */
+  /**
+   * Seconds left of whichever timed phase this is: the fade in, the
+   * three-two-one, or the two seconds of Finish. Zero the rest of the time.
+   */
   countdown: number
+  /**
+   * How many times this run has been started, counting restarts.
+   *
+   * It is the game's identity as far as React is concerned: the screen keys the
+   * game's panel on it, so a restart takes the panel down and puts a new one
+   * up. Without it a restart would hand the same panel a new `run` and the
+   * panel would carry on with the state it already had in its own `useState`,
+   * which is every game's, and the round would not restart at all.
+   */
+  started: number
   /**
    * Stopped where it stands, with a card over it.
    *
@@ -133,7 +162,7 @@ export function forgetBuilds(): void {
  */
 export function freshRun(id: MinigameId): MinigameRun {
   const build = buildFor(id)
-  return { id, phase: 'briefing', countdown: 0, paused: false, pausedBy: null, game: build ? build.newGame() : null }
+  return { id, phase: 'briefing', countdown: 0, started: 0, paused: false, pausedBy: null, game: build ? build.newGame() : null }
 }
 
 /**
@@ -149,12 +178,25 @@ export function beginRun(run: MinigameRun): MinigameRun {
   const build = buildFor(run.id)
   return {
     ...run,
-    phase: 'counting',
-    countdown: COUNT_FROM,
+    phase: 'fading',
+    countdown: FADE.in,
+    started: run.started + 1,
     paused: false,
     pausedBy: null,
     game: build ? build.newGame() : null,
   }
+}
+
+/**
+ * The round is over: two seconds of **Finish** before the results.
+ *
+ * Called by the game, because the game is the only thing that knows. It is the
+ * one thing a build has to say out loud, and saying it twice is nothing - which
+ * matters, because it is said from a React effect watching a flag.
+ */
+export function finishRun(run: MinigameRun): MinigameRun {
+  if (run.phase !== 'playing') return run
+  return { ...run, phase: 'finishing', countdown: FADE.dim, paused: false, pausedBy: null }
 }
 
 /**
@@ -166,23 +208,71 @@ export function beginRun(run: MinigameRun): MinigameRun {
  * `beginRun` are between them, and is why this is two calls and no new rules.
  */
 export function restartRun(run: MinigameRun): MinigameRun {
-  return beginRun(freshRun(run.id))
+  // Carries the count on rather than starting it over, so the panel that is up
+  // is never handed the key it already has.
+  return { ...beginRun(freshRun(run.id)), started: run.started + 1 }
+}
+
+/** What each timed phase gives way to, and with how long on the clock. */
+const NEXT: Partial<Record<RunPhase, { phase: RunPhase; countdown: number }>> = {
+  fading: { phase: 'counting', countdown: COUNT_FROM },
+  counting: { phase: 'playing', countdown: 0 },
+  finishing: { phase: 'over', countdown: 0 },
 }
 
 /**
- * Advances the countdown, and starts the game when it runs out.
+ * Advances whichever clock is running, and moves the phase on when it runs out.
  *
- * Pure, and the only thing that moves a run from `counting` to `playing` - so
- * the whole of "three, two, one, go" can be tested by calling this with a few
- * numbers instead of waiting three real seconds for it.
+ * Pure, and the only thing that moves a run between the timed phases - so the
+ * whole of "black, three, two, one, go" and "Finish, dim, results" can be
+ * tested by calling this with a few numbers instead of waiting for it.
  */
 export function tickRun(run: MinigameRun, dt: number): MinigameRun {
   // A paused countdown does not count. Pressing escape on "two" and coming
   // back to "two" is the only behaviour anybody would expect.
-  if (run.phase !== 'counting' || run.paused) return run
+  const next = NEXT[run.phase]
+  if (!next || run.paused) return run
   const left = run.countdown - Math.max(0, dt)
-  if (left <= 0) return { ...run, phase: 'playing', countdown: 0 }
-  return { ...run, countdown: left }
+  if (left > 0) return { ...run, countdown: left }
+  // What is left over runs on into the phase after. A frame the browser did not
+  // give us must not make the three-two-one take four seconds, and a step long
+  // enough to cross two phases has to cross both.
+  return tickRun({ ...run, ...next }, -left)
+}
+
+/** Whether the screen has a clock to run down just now. */
+export function isTimed(run: MinigameRun): boolean {
+  return NEXT[run.phase] !== undefined
+}
+
+/**
+ * How black the screen is over the game, 0 to 1.
+ *
+ * One number for three different moments, because they are the same curtain:
+ * down over the briefing, up off the game once it has loaded, and down again
+ * over a round that has ended.
+ */
+export function curtain(run: MinigameRun): number {
+  if (run.phase === 'fading') return 1 - run.countdown / FADE.in
+  if (run.phase === 'counting') return Math.max(0, (run.countdown - (COUNT_FROM - FADE.in)) / FADE.in)
+  if (run.phase === 'finishing') return 1 - run.countdown / FADE.dim
+  return 0
+}
+
+/** Whether the game is mounted and drawn, whether or not it is running yet. */
+export function isShowingGame(run: MinigameRun): boolean {
+  return run.phase === 'counting' || run.phase === 'playing' || run.phase === 'finishing' || run.phase === 'over'
+}
+
+/**
+ * Whether the game must be standing still, however it is being drawn.
+ *
+ * The three-two-one is the game mounted and frozen rather than a screen of its
+ * own, and every game already stops dead when it is told it is paused - so this
+ * is the same lever, pulled for a different reason. See `MinigameScreen`.
+ */
+export function isHeld(run: MinigameRun): boolean {
+  return run.phase === 'counting'
 }
 
 /**
