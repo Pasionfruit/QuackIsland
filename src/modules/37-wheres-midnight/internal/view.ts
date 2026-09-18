@@ -45,6 +45,8 @@ export const VIEW = {
   wheelRate: 0.0016,
   /** How far, in pixels, a press has to move before it is a drag rather than a click. */
   dragPixels: 5,
+  /** How zoomed in, as a magnification, before the flashlight can be switched on. */
+  torchZoom: 2,
 } as const
 
 export function startView(): View {

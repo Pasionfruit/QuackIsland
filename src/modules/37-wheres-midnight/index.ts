@@ -3,9 +3,9 @@
  *
  * Minigame 15. A junkyard at night, everybody standing in the same spot with
  * the same view of it, and an all-black cat called Midnight hidden somewhere
- * among the wrecks. Drag to look round, zoom in, and click her. A click on
+ * among the wrecks. Drag to look round, zoom in, and click him. A click on
  * anything else costs a second and a half, so clicking everything is slower
- * than looking. You place in the order everybody finds her.
+ * than looking. You place in the order everybody finds him.
  *
  * It plugs into `15-minigames` and nothing else in the build knows it exists.
  * Importing this module registers it - one line in the composition root.
@@ -39,8 +39,10 @@ export {
 
 export {
   CLICK_PAD,
+  EYE_OFFSET,
   YARD,
   catShape,
+  eyeAt,
   fanPoint,
   inSight,
   layYard,
@@ -49,8 +51,8 @@ export {
   toward,
   yardFor,
   type Box,
+  type Decoy,
   type Kind,
-  type Lamp,
   type Midnight,
   type Part,
   type Piece,

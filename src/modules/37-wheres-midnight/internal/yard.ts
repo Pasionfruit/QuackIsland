@@ -12,9 +12,9 @@
  * the junk is boxes, and a little inside them where it is round, so a click
  * never lands on something that looks like it missed.
  *
- * **Midnight is always partly in sight and never all of it.** She is placed
- * beside or on top of a piece of junk, somewhere her head can be seen from the
- * camera and between a third and four fifths of her can. Tested for hundreds of
+ * **Midnight is always partly in sight and never all of it.** He is placed
+ * beside or on top of a piece of junk, somewhere his head can be seen from the
+ * camera and between a third and four fifths of him can. Tested for hundreds of
  * seeds.
  *
  * Pure: no three.js, no clock.
@@ -24,7 +24,7 @@ import { EYE, type Vec3 } from './view'
 
 export const YARD = {
   /** How many pieces of junk the scatter aims for. */
-  pieces: 100,
+  pieces: 150,
   /** The fan the junk is scattered in: distance from the camera's feet, and angle either side of north. */
   near: 7,
   far: 34,
@@ -33,13 +33,16 @@ export const YARD = {
   spread: (60 * Math.PI) / 180,
   /** Where the fence runs round the back. */
   fence: 38,
-  /** How far away Midnight may be: far enough that finding her wants the zoom. */
+  /** How far away Midnight may be: far enough that finding him wants the zoom. */
   catNear: 11,
   catFar: 30,
-  /** How much of her must be in sight, least and most, as a share of her sample points. */
+  /** How much of him must be in sight, least and most, as a share of his sample points. */
   seenLeast: 0.3,
   seenMost: 0.8,
-  lamps: 3,
+  /** Bits of litter on the ground between the junk: drawn, never in the way. */
+  litter: 320,
+  /** Pairs of glowing eyes that are not his, looking out from the junk. */
+  decoys: 18,
 } as const
 
 export type Shape = 'box' | 'cylinder' | 'tyre' | 'blob'
@@ -83,10 +86,16 @@ export interface Piece {
   boxes: Box[]
 }
 
-export interface Lamp {
+/**
+ * A pair of eyes in the dark that are not Midnight's: the middle of a head that
+ * is not there, and which way it faces. Drawn exactly as his eyes are, and not
+ * in the way of anything - a click on one lands on whatever is behind it.
+ */
+export interface Decoy {
   x: number
+  y: number
   z: number
-  height: number
+  heading: number
 }
 
 export interface Sphere {
@@ -102,16 +111,16 @@ export interface Midnight {
   x: number
   y: number
   z: number
-  /** Which way she faces, radians about +Y: zero faces +Z. */
+  /** Which way he faces, radians about +Y: zero faces +Z. */
   heading: number
   pose: Pose
-  /** Her body, head first: the shapes a click has to land in, before padding. */
+  /** His body, head first: the shapes a click has to land in, before padding. */
   spheres: Sphere[]
-  /** Points on her the camera's sight is tested against. The head's middle is first. */
+  /** Points on him the camera's sight is tested against. The head's middle is first. */
   points: Vec3[]
   /** How many of `points` the camera can see. */
   seen: number
-  /** What she is beside or sitting on. */
+  /** What he is beside or sitting on. */
   by: Kind
   on: boolean
 }
@@ -120,11 +129,16 @@ export interface Yard {
   seed: number
   pieces: Piece[]
   boxes: Box[]
-  lamps: Lamp[]
+  /** Small things lying about on the ground. Drawn only: nothing a click or sight stops at. */
+  litter: Part[]
+  decoys: Decoy[]
   midnight: Midnight
 }
 
-/** How much bigger than her body a click may land and still be on her. A cat is a small thing to click. */
+/** Where an eye sits in the head's own frame, either side of the middle: the same for his eyes and every decoy's. */
+export const EYE_OFFSET = { x: 0.036, y: 0.015, z: 0.078 } as const
+
+/** How much bigger than his body a click may land and still be on him. A cat is a small thing to click. */
 export const CLICK_PAD = { body: 1.3, head: 1.45 } as const
 
 const CARS = ['#6b3b24', '#34506b', '#3d5a3a', '#7a6a4a', '#5a2a2a', '#4a4a52'] as const
@@ -402,7 +416,7 @@ export function inSight(boxes: readonly Box[], point: Vec3): boolean {
   return true
 }
 
-/** Her body, head first, and the points her sight is tested on - for a pose, a place and a heading. */
+/** His body, head first, and the points his sight is tested on - for a pose, a place and a heading. */
 export function catShape(pose: Pose, x: number, y: number, z: number, heading: number): { spheres: Sphere[]; points: Vec3[] } {
   const c = Math.cos(heading)
   const s = Math.sin(heading)
@@ -502,6 +516,82 @@ function hideMidnight(pieces: readonly Piece[], boxes: readonly Box[], seed: num
   return { x: open.x, y: 0, z: open.z, heading: 0, pose: 'loaf', ...shape, seen: shape.points.filter((p) => inSight(boxes, p)).length, by: 'bags', on: false }
 }
 
+/** Where one of a head's two eyes is, in the world: `side` is -1 or 1. */
+export function eyeAt(head: Vec3, heading: number, side: number): Vec3 {
+  const c = Math.cos(heading)
+  const s = Math.sin(heading)
+  const lx = side * EYE_OFFSET.x
+  return v(head.x + c * lx + s * EYE_OFFSET.z, head.y + EYE_OFFSET.y, head.z - s * lx + c * EYE_OFFSET.z)
+}
+
+const LITTER_WOOD = WOOD
+const LITTER_TIN = ['#6a6e72', '#7a2e22', '#2e4a6e', '#8a7026'] as const
+
+/**
+ * The mess between the junk: planks, cans, bricks, sheets of tin and small
+ * black bags, strewn evenly over the fan. None of it stops a click or sight -
+ * it is all lower than his paws are wide - and none of it lands on him.
+ * From its own stream of the seed, so it never moves where he hides.
+ */
+function strewLitter(boxes: readonly Box[], midnight: Midnight, seed: number): Part[] {
+  const random = createRng(hashSeed(seed, 'wheres-midnight:litter'))
+  const pick = <T>(list: readonly T[]) => list[Math.floor(random() * list.length)]
+  const out: Part[] = []
+  for (let attempt = 0; attempt < YARD.litter * 3 && out.length < YARD.litter; attempt++) {
+    const distance = Math.sqrt(YARD.near * YARD.near + random() * (YARD.far * YARD.far - YARD.near * YARD.near))
+    const { x, z } = fanPoint(distance, (random() * 2 - 1) * YARD.spread * 1.05)
+    const yaw = random() * Math.PI * 2
+    if (Math.hypot(x - midnight.x, z - midnight.z) < 1.2) continue
+    if (boxes.some((b) => b.y - b.hy < 0.2 && inside(v(x, 0.05, z), b, 0.05))) continue
+    const roll = random()
+    if (roll < 0.25) {
+      out.push({ shape: 'box', p: v(x, 0.02, z), s: v(0.7 + random() * 0.8, 0.04, 0.1 + random() * 0.06), r: v(0, yaw, (random() - 0.5) * 0.1), colour: pick(LITTER_WOOD) })
+    } else if (roll < 0.45) {
+      const lying = random() < 0.6
+      out.push({ shape: 'cylinder', p: v(x, lying ? 0.035 : 0.06, z), s: v(0.07, 0.12, 0.07), r: v(lying ? Math.PI / 2 : 0, yaw, 0), colour: pick(LITTER_TIN) })
+    } else if (roll < 0.6) {
+      out.push({ shape: 'box', p: v(x, 0.035, z), s: v(0.22, 0.07, 0.1), r: v(0, yaw, 0), colour: pick(RUST) })
+    } else if (roll < 0.8) {
+      out.push({ shape: 'box', p: v(x, 0.015, z), s: v(0.5 + random() * 0.6, 0.02, 0.4 + random() * 0.5), r: v((random() - 0.5) * 0.15, yaw, (random() - 0.5) * 0.15), colour: pick(SCRAP) })
+    } else {
+      // A small black bag: about the size of a cat, curled up, from far enough away.
+      const s = v(0.28 + random() * 0.14, 0.2 + random() * 0.1, 0.28 + random() * 0.14)
+      out.push({ shape: 'blob', p: v(x, s.y * 0.4, z), s, r: v(0, yaw, 0), colour: BAG })
+    }
+  }
+  return out
+}
+
+/**
+ * Eyes in the dark that are not his. Each looks out from beside or on top of
+ * a piece of junk, the way he does - both eyes in sight of the camera, facing
+ * roughly it, a head's height off whatever it is on - and none of them within
+ * a couple of metres of him or of each other.
+ */
+function placeDecoys(pieces: readonly Piece[], boxes: readonly Box[], midnight: Midnight, seed: number): Decoy[] {
+  const random = createRng(hashSeed(seed, 'wheres-midnight:decoys'))
+  const head = midnight.spheres[0]
+  const all = spots(pieces, boxes, random).flat()
+  for (let i = all.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1))
+    ;[all[i], all[j]] = [all[j], all[i]]
+  }
+  const out: Decoy[] = []
+  for (const spot of all) {
+    if (out.length >= YARD.decoys) break
+    const fromFeet = Math.hypot(spot.x - EYE.x, spot.z - EYE.z)
+    if (fromFeet < YARD.catNear - 3 || fromFeet > YARD.far) continue
+    const at = v(spot.x, spot.y + (random() < 0.55 ? 0.46 : 0.24), spot.z)
+    if (Math.hypot(at.x - head.x, at.z - head.z) < 2.5) continue
+    if (out.some((d) => Math.hypot(d.x - at.x, d.z - at.z) < 1.8)) continue
+    if (boxes.some((b) => inside(at, b, 0.1))) continue
+    const heading = Math.atan2(EYE.x - at.x, EYE.z - at.z) + (random() * 2 - 1) * 0.7
+    if (![-1, 1].every((side) => inSight(boxes, eyeAt(at, heading, side)))) continue
+    out.push({ ...at, heading })
+  }
+  return out
+}
+
 export function layYard(seed: number): Yard {
   const random = createRng(hashSeed(seed, 'wheres-midnight:yard'))
   const pieces: Piece[] = []
@@ -517,22 +607,9 @@ export function layYard(seed: number): Yard {
     pieces.push({ kind, x, z, radius: local.radius, ...place(local, x, z, random() * Math.PI * 2) })
   }
 
-  const lamps: Lamp[] = []
-  for (let i = 0; i < YARD.lamps; i++) {
-    for (let attempt = 0; attempt < 200; attempt++) {
-      const angle = (((i + 0.2 + random() * 0.6) / YARD.lamps) * 2 - 1) * YARD.spread
-      const { x, z } = fanPoint(12 + random() * 16, angle)
-      if (pieces.some((p) => Math.hypot(p.x - x, p.z - z) < p.radius + 0.4)) continue
-      lamps.push({ x, z, height: 4.2 + random() * 0.8 })
-      break
-    }
-  }
-
-  const boxes = [
-    ...pieces.flatMap((p) => p.boxes),
-    ...lamps.map((l): Box => ({ x: l.x, y: l.height / 2, z: l.z, hx: 0.07, hy: l.height / 2, hz: 0.07, yaw: 0 })),
-  ]
-  return { seed, pieces, boxes, lamps, midnight: hideMidnight(pieces, boxes, seed) }
+  const boxes = pieces.flatMap((p) => p.boxes)
+  const midnight = hideMidnight(pieces, boxes, seed)
+  return { seed, pieces, boxes, litter: strewLitter(boxes, midnight, seed), decoys: placeDecoys(pieces, boxes, midnight, seed), midnight }
 }
 
 const yards = new Map<number, Yard>()
@@ -552,8 +629,8 @@ export type Seen = 'midnight' | 'junk' | 'nothing'
 /**
  * What a click along `dir` from the camera lands on.
  *
- * Midnight if the ray passes through her - padded, since she is small - and
- * nothing solid is in front of her; junk if it meets junk first; nothing if it
+ * Midnight if the ray passes through him - padded, since he is small - and
+ * nothing solid is in front of him; junk if it meets junk first; nothing if it
  * meets neither.
  */
 export function look(yard: Yard, dir: Vec3): Seen {

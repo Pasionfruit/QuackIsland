@@ -2,11 +2,11 @@
  * The rules of Where's Midnight?, as arithmetic.
  *
  * Everybody searches the same junkyard, each with their own camera, for the same
- * cat. Click her and you have found her, at that moment; you place in the order
+ * cat. Click him and you have found him, at that moment; you place in the order
  * everybody does. A click on anything else - junk, ground, sky - costs a second
  * and a half before you can click again, so clicking everything is slower than
- * looking. The round ends when everybody has found her or after ninety seconds;
- * whoever has not found her by then shares last place.
+ * looking. The round ends when everybody has found him or after ninety seconds;
+ * whoever has not found him by then shares last place.
  *
  * Pure. What a click lands on is `look`, in `yard.ts`.
  */
@@ -25,7 +25,7 @@ export const SEARCH = {
    */
   cooldownGrace: 0.15,
   /**
-   * How far back a guest may say it found her, in seconds, when its click
+   * How far back a guest may say it found him, in seconds, when its click
    * reaches the host. A find is timed on the finder's own screen - otherwise the
    * host always wins a close one - but no earlier than this.
    */
@@ -36,21 +36,21 @@ export interface Seeker {
   id: string
   mine: boolean
   bot: boolean
-  /** When they found her, in round seconds, or null. */
+  /** When they found him, in round seconds, or null. */
   foundAt: number | null
   misses: number
   /** Seconds before this seeker can click again. */
   cooldown: number
   /** The last click taken from this seeker, so a click said twice counts once. */
   seq: number
-  /** When their last click that was not her landed, for drawing it. */
+  /** When their last click that was not him landed, for drawing it. */
   missAt: number | null
   /** How far through its plan a stand-in is. Host only. */
   botStep: number
 }
 
 export interface Game {
-  /** The junkyard, and so where she is. Everybody's. */
+  /** The junkyard, and so where he is. Everybody's. */
   seed: number
   id: number
   elapsed: number
@@ -99,7 +99,7 @@ export interface Select {
  * Midnight is a find, timed at `at` - held to no earlier than `SEARCH.lag` ago
  * and no later than now. Anything else is a miss and starts the cooldown.
  * Nothing counts during the cooldown, after the round, after they have found
- * her, or for a `seq` already dealt with.
+ * him, or for a `seq` already dealt with.
  */
 export function select(game: Game, player: number, dir: Vec3, { at, seq }: Select = {}): Outcome {
   const seeker = game.players[player]
@@ -140,9 +140,9 @@ export function timeLeft(game: Game): number {
 const hundredths = (seconds: number) => Math.round(seconds * 100)
 
 /**
- * Everybody, first to find her first, with their place.
+ * Everybody, first to find him first, with their place.
  *
- * Finds on the same hundredth share a place. Everybody who never found her
+ * Finds on the same hundredth share a place. Everybody who never found him
  * shares the place after the last who did.
  */
 export function placings(game: Game): { seeker: Seeker; index: number; place: number }[] {

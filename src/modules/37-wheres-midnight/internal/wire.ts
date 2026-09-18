@@ -3,7 +3,7 @@
  *
  * The host sends the junkyard's seed, the clock, and each seeker's find time,
  * misses, cooldown, last click taken and last miss. Where Midnight is follows
- * from the seed, and that is no secret: every browser has to draw her.
+ * from the seed, and that is no secret: every browser has to draw him.
  *
  * A guest sends a click: which round, a number that goes up with every click,
  * the direction it went from the camera, and when by the guest's own clock.

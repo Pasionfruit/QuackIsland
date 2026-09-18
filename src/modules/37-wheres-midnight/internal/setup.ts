@@ -32,7 +32,7 @@ export function gameRoster(): { id: string; bot: boolean }[] {
 
 let dealt = 0
 
-/** A new junkyard, and an id to tell rounds apart. Not a secret: every browser draws where she is. */
+/** A new junkyard, and an id to tell rounds apart. Not a secret: every browser draws where he is. */
 export function nextSeed(): number {
   dealt += 1
   return hashSeed(CONVENTIONS.worldSeed, `wheres-midnight:${getNet().room ?? 'solo'}:${dealt}:${Date.now()}`)

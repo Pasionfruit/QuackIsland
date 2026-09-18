@@ -3,8 +3,8 @@
  *
  * A search alone wants somebody to race. Each stand-in has a plan from the
  * seed: a couple of wrong clicks on junk, then a find at some moment between a
- * quarter of a minute and the end - and one in five never finds her at all.
- * Every click goes through `select` like anybody's, aimed at junk or at her
+ * quarter of a minute and the end - and one in five never finds him at all.
+ * Every click goes through `select` like anybody's, aimed at junk or at him
  * head, so a stand-in's find is a real find.
  */
 import { createRng, hashSeed } from '../../00-core'
@@ -12,9 +12,9 @@ import { SEARCH, select, type Game } from './rules'
 import type { Vec3 } from './view'
 import { look, toward, yardFor } from './yard'
 
-/** The earliest and latest a stand-in finds her, in round seconds. */
+/** The earliest and latest a stand-in finds him, in round seconds. */
 export const BOT_FIND = [18, 85] as const
-/** How many stand-ins, in a hundred, never find her. */
+/** How many stand-ins, in a hundred, never find him. */
 export const BOT_NEVER = 0.2
 
 export interface BotClick {
@@ -34,7 +34,7 @@ export function botPlan(seed: number, id: string): BotClick[] {
 
 const SKY: Vec3 = { x: 0, y: 1, z: 0 }
 
-/** Where a stand-in's wrong click goes: at a piece of junk, or at the sky if that piece happens to have her in front of it. */
+/** Where a stand-in's wrong click goes: at a piece of junk, or at the sky if that piece happens to have him in front of it. */
 function missAim(seed: number, step: number, id: string): Vec3 {
   const yard = yardFor(seed)
   const random = createRng(hashSeed(seed, `wheres-midnight:bot:${id}:miss:${step}`))

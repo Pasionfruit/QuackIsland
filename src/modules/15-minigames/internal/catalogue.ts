@@ -359,12 +359,12 @@ const ENTRIES = [
     kind: 'free-for-all',
     description: [
       'A junkyard at night, and an all-black cat called Midnight somewhere in it.',
-      'Drag and zoom around the scene until you find her. You place in the order everybody does.',
+      'Drag and zoom around the scene until you find him. You place in the order everybody does.',
     ],
     controls: [
       { input: 'Left drag', does: 'Turn - the scene follows the pointer' },
       { input: 'Wheel', does: 'Zoom towards the pointer' },
-      { input: 'Left click', does: 'Say that is her - a wrong one costs you a second and a half' },
+      { input: 'Left click', does: 'Say that is him - a wrong one costs you a second and a half' },
     ],
     reserved: false,
     // Built: see `37-wheres-midnight`. The assets stage is still to do - the

@@ -34,7 +34,7 @@ const SNAP_SECONDS = 0.5
 export interface SearchNet {
   /** Moves the search on a frame. `clicked` is the direction of a click this frame, if there was one. */
   advance(game: Game, dt: number, clicked: Vec3 | undefined, paused: boolean): boolean
-  /** Whether this browser has clicked her and is waiting for the host to say so. */
+  /** Whether this browser has clicked him and is waiting for the host to say so. */
   checking(): boolean
 }
 
@@ -135,7 +135,7 @@ export function useSearchNet(): SearchNet {
         said.saidAt = now
         sendToRoom(encodeIntent(said.click))
       }
-      // A click that cannot be her has started our cooldown already.
+      // A click that cannot be him has started our cooldown already.
       if (!said.find) mine.cooldown = Math.max(mine.cooldown, SEARCH.cooldown - (now - said.firstAt) / 1000)
     }
     return true

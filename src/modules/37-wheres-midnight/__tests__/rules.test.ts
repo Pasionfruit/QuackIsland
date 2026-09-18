@@ -17,16 +17,16 @@ function game(n = 3): Game {
   )
 }
 
-/** Straight at her head, which is what a good click is. */
+/** Straight at his head, which is what a good click is. */
 const atHer = (seed = SEED) => toward(yardFor(seed).midnight.points[0])
-/** Straight up: sky, and never her. */
+/** Straight up: sky, and never him. */
 const atSky = { x: 0, y: 1, z: 0 }
 
 function wait(g: Game, seconds: number, dt = 0.1) {
   for (let t = 0; t < seconds - 1e-9 && !g.over; t += dt) stepGame(g, Math.min(dt, seconds - t))
 }
 
-describe('finding her', () => {
+describe('finding him', () => {
   it('is a find, timed when it happened, and only once', () => {
     const g = game()
     wait(g, 4)
@@ -38,7 +38,7 @@ describe('finding her', () => {
     expect(g.players[0].misses).toBe(0)
   })
 
-  it('ends the round the moment the last searcher has her', () => {
+  it('ends the round the moment the last searcher has him', () => {
     const g = game(2)
     expect(select(g, 0, atHer())).toBe('found')
     expect(g.over).toBe(false)
@@ -48,7 +48,7 @@ describe('finding her', () => {
 })
 
 describe('clicking the wrong thing', () => {
-  it('costs a second and a half, during which nothing counts - not even her', () => {
+  it('costs a second and a half, during which nothing counts - not even him', () => {
     const g = game()
     expect(select(g, 0, atSky)).toBe('miss')
     expect(g.players[0].misses).toBe(1)
@@ -133,7 +133,7 @@ describe('the clock', () => {
 })
 
 describe('the places', () => {
-  it('are the order she was found in, with whoever never found her sharing last', () => {
+  it('are the order he was found in, with whoever never found him sharing last', () => {
     const g = game(4)
     wait(g, 2)
     select(g, 2, atHer())
@@ -144,7 +144,7 @@ describe('the places', () => {
     expect(order.map((e) => e.place)).toEqual([1, 2, 3, 3])
   })
 
-  it('are shared by two who found her on the same hundredth', () => {
+  it('are shared by two who found him on the same hundredth', () => {
     const g = game(3)
     wait(g, 6)
     select(g, 0, atHer())
@@ -170,7 +170,7 @@ describe('the stand-ins', () => {
     }
   })
 
-  it('click their way through a round, finding her when they said they would', () => {
+  it('click their way through a round, finding him when they said they would', () => {
     const g = createGame(SEED, [{ id: 'me', mine: true }, { id: 'seeker 2', bot: true }, { id: 'seeker 3', bot: true }], 9)
     for (let i = 0; i < 1200 && !g.over; i++) {
       botClicks(g)

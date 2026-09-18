@@ -7,7 +7,7 @@
  * layout to a band rather than to an example.
  */
 import { describe, expect, it } from 'vitest'
-import { CLICK_PAD, YARD, catShape, fanPoint, inSight, layYard, look, rayBox, toward, type Box, type Yard } from '../internal/yard'
+import { CLICK_PAD, YARD, catShape, eyeAt, fanPoint, inSight, layYard, look, rayBox, toward, type Box, type Yard } from '../internal/yard'
 import { EYE, direction, rayThrough, startView } from '../internal/view'
 
 /** A spread of seeds, the same every run: this is the claim about all yards, not about one. */
@@ -28,7 +28,6 @@ describe('a yard', () => {
   it('fills up with junk, none of it overlapping and none of it behind you', () => {
     for (const yard of yards) {
       expect(yard.pieces.length, `${yard.seed} pieces`).toBeGreaterThan(YARD.pieces * 0.6)
-      expect(yard.lamps.length, `${yard.seed} lamps`).toBe(YARD.lamps)
       for (const piece of yard.pieces) {
         const distance = Math.hypot(piece.x - EYE.x, piece.z - EYE.z)
         expect(distance, `${yard.seed} near`).toBeGreaterThan(YARD.near - 1)
@@ -53,13 +52,49 @@ describe('a yard', () => {
   })
 })
 
+describe('the mess', () => {
+  it('strews litter everywhere but on him, and none of it is in the way', () => {
+    for (const yard of yards) {
+      expect(yard.litter.length, `${yard.seed} litter`).toBeGreaterThan(YARD.litter * 0.6)
+      for (const bit of yard.litter) {
+        expect(Math.hypot(bit.p.x - yard.midnight.x, bit.p.z - yard.midnight.z), `${yard.seed} on him`).toBeGreaterThanOrEqual(1.2)
+        expect(bit.p.y + bit.s.y, `${yard.seed} tall`).toBeLessThan(0.5)
+        expect(bit.p.z, `${yard.seed} behind`).toBeLessThan(EYE.z)
+      }
+    }
+  })
+
+  it('puts eyes in the dark that are not his, every one of them in sight and none of them next to him', () => {
+    for (const yard of yards) {
+      expect(yard.decoys.length, `${yard.seed} decoys`).toBeGreaterThanOrEqual(YARD.decoys / 2)
+      const head = yard.midnight.spheres[0]
+      for (const decoy of yard.decoys) {
+        expect(Math.hypot(decoy.x - head.x, decoy.z - head.z), `${yard.seed} next to him`).toBeGreaterThanOrEqual(2.5)
+        for (const side of [-1, 1]) {
+          const eye = eyeAt(decoy, decoy.heading, side)
+          expect(inSight(yard.boxes, eye), `${yard.seed} hidden decoy`).toBe(true)
+          // A decoy is a trap, not a find: clicking one is a wrong guess.
+          expect(look(yard, toward(eye)), `${yard.seed} decoy found`).not.toBe('midnight')
+        }
+      }
+    }
+  })
+
+  it('lays the same mess from the same seed', () => {
+    const a = layYard(99_001)
+    const b = layYard(99_001)
+    expect(a.litter).toEqual(b.litter)
+    expect(a.decoys).toEqual(b.decoys)
+  })
+})
+
 describe('Midnight', () => {
-  it('is always somewhere her head can be seen, between a third and four fifths of her showing', () => {
+  it('is always somewhere his head can be seen, between a third and four fifths of him showing', () => {
     let inBand = 0
     for (const yard of yards) {
       const cat = yard.midnight
       const share = cat.seen / cat.points.length
-      // Her head is first in the list, and it is the one that must be visible.
+      // His head is first in the list, and it is the one that must be visible.
       expect(inSight(yard.boxes, cat.points[0]), `${yard.seed} head`).toBe(true)
       expect(share, `${yard.seed} hidden`).toBeGreaterThan(0)
       expect(share, `${yard.seed} in the open`).toBeLessThan(1)
@@ -82,14 +117,14 @@ describe('Midnight', () => {
     }
   })
 
-  it('is what a click at her head lands on, from every seed', () => {
+  it('is what a click at his head lands on, from every seed', () => {
     for (const yard of yards) {
       expect(look(yard, toward(yard.midnight.points[0])), `${yard.seed}`).toBe('midnight')
     }
   })
 
-  it('is not what a click a whisker wide of her lands on', () => {
-    // Her padding is generous - she is a small thing to click - but it is not a barn door.
+  it('is not what a click a whisker wide of him lands on', () => {
+    // His padding is generous - he is a small thing to click - but it is not a barn door.
     let wide = 0
     for (const yard of yards) {
       const head = yard.midnight.spheres[0]
@@ -117,7 +152,7 @@ describe('Midnight', () => {
     const { spheres, points } = catShape('sit', 1, 0, -12, 0.4)
     expect(spheres).toHaveLength(3)
     expect(points).toHaveLength(7)
-    // Her head's middle is the first point, and it is the first sphere.
+    // His head's middle is the first point, and it is the first sphere.
     expect(points[0]).toEqual({ x: spheres[0].x, y: spheres[0].y, z: spheres[0].z })
     for (const sphere of spheres) expect(sphere.r).toBeGreaterThan(0.05)
   })
@@ -133,7 +168,7 @@ describe('a click', () => {
     expect(look(yard, toward({ x: piece.boxes[0].x, y: piece.boxes[0].y, z: piece.boxes[0].z }))).toBe('junk')
   })
 
-  it('does not find her through a box that stands in the way', () => {
+  it('does not find him through a box that stands in the way', () => {
     const yard = yards[0]
     const cat = yard.midnight
     const between = toward(cat.points[0])

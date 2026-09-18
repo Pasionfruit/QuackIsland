@@ -3227,7 +3227,7 @@
         },
         {
           "id": "37.5",
-          "title": "A camera that never walks, and a yard dark enough to hide her: three lamps, a low moon, and the junk instanced",
+          "title": "A camera that never walks, and a yard dark enough to hide him: no lamps, a low moon, a flashlight once zoomed in, litter and decoy eyes, and the junk instanced",
           "status": "done"
         },
         {
@@ -3249,7 +3249,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-17T21:09:16.174Z"
+          "at": "2026-09-18T22:17:11.108Z"
         },
         "human": {
           "status": "pending"

@@ -4,14 +4,18 @@
  * The junkyard is drawn in its own canvas by `WheresMidnightScene`; this is the
  * shell: the pointer turned into a view for the scene and into clicks for
  * `useSearchNet`, and the words - the clock, whether you can click yet, who has
- * found her, and the results.
+ * found him, and the results.
  *
- * **Drag to turn, wheel to zoom, click her to say you have found her.** A drag
+ * **Drag to turn, wheel to zoom, click him to say you have found him.** A drag
  * grabs the scene: whatever was under the pointer when you pressed stays under
  * it while you move, at any zoom. The wheel zooms towards the pointer rather
  * than towards the middle, so you can chase a suspicious dark patch into the
  * corner of the screen without losing it. Both are `view.ts`; nothing about
  * either is decided here.
+ *
+ * **Zoomed in, there is a flashlight.** Past `VIEW.torchZoom` a button - or
+ * F - lights the middle of the view; zoom back out and it goes off. It is
+ * yours alone: nobody else's yard gets any lighter.
  *
  * **A press that does not move is a click**, which is why a click is settled on
  * release rather than on press - a drag that starts on a bin bag must not also
@@ -78,6 +82,10 @@ export function WheresMidnightScreen({ run }: { run: MinigameRun }) {
   const drag = useRef<{ id: number; x: number; y: number; grab: Vec3; moved: boolean } | null>(null)
   const [splat, setSplat] = useState<Splat | null>(null)
   const [zoom, setZoom] = useState(1)
+  const [torchOn, setTorchOn] = useState(false)
+  const torch = useRef(false)
+  const canTorch = zoom >= VIEW.torchZoom
+  torch.current = torchOn && canTorch
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
 
@@ -127,6 +135,20 @@ export function WheresMidnightScreen({ run }: { run: MinigameRun }) {
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
+  }, [])
+
+  // Zooming back out puts the flashlight away, so zooming in again starts dark.
+  useEffect(() => {
+    if (!canTorch) setTorchOn(false)
+  }, [canTorch])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== 'KeyF' || e.repeat || paused.current) return
+      if (magnification(view.current) >= VIEW.torchZoom) setTorchOn((on) => !on)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
   }, [])
 
   const onDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -188,9 +210,9 @@ export function WheresMidnightScreen({ run }: { run: MinigameRun }) {
     : checking
       ? 'checking…'
       : found !== null
-        ? `found her in ${seconds(found)} - ${ordinal(place)}`
+        ? `found him in ${seconds(found)} - ${ordinal(place)}`
         : mine && mine.cooldown > SEARCH.cooldownGrace
-          ? `not her - ${seconds(mine.cooldown)}`
+          ? `not him - ${seconds(mine.cooldown)}`
           : 'find Midnight'
 
   return (
@@ -238,8 +260,21 @@ export function WheresMidnightScreen({ run }: { run: MinigameRun }) {
           drag.current = null
         }}
       >
-        {ready ? <Stage live={live} view={view} /> : <div style={{ ...vignette, background: '#0b1018' }} />}
+        {ready ? <Stage live={live} view={view} torch={torch} /> : <div style={{ ...vignette, background: '#0b1018' }} />}
         <div style={vignette} />
+        {ready && canTorch && !game.over ? (
+          <button
+            type="button"
+            style={{ ...torchButton, ...(torchOn ? torchButtonOn : null) }}
+            data-torch={torchOn ? 'on' : 'off'}
+            // Its own press, not the board's: a tap on the button is not a guess at the yard.
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
+            onClick={() => setTorchOn((on) => !on)}
+          >
+            🔦 {torchOn ? 'flashlight on' : 'flashlight'}
+          </button>
+        ) : null}
         {splat ? (
           <div style={{ ...miss, left: splat.left, top: splat.top }} data-miss>
             ✕
@@ -254,7 +289,7 @@ export function WheresMidnightScreen({ run }: { run: MinigameRun }) {
   )
 }
 
-/** Who has found her, in the order they did. */
+/** Who has found him, in the order they did. */
 function Standings({ game, me, nameOf }: { game: Game; me: string; nameOf: (id: string) => string }) {
   return (
     <div style={standings} data-standings>
@@ -273,7 +308,7 @@ function Standings({ game, me, nameOf }: { game: Game; me: string; nameOf: (id: 
   )
 }
 
-/** The controls: three of them, and none of them obvious from looking at a junkyard. */
+/** The controls: four of them, and none of them obvious from looking at a junkyard. */
 function Hints() {
   return (
     <div style={hints}>
@@ -284,14 +319,17 @@ function Hints() {
         <b>wheel</b> zoom
       </span>
       <span>
-        <b>click</b> that&rsquo;s her
+        <b>click</b> that&rsquo;s him
+      </span>
+      <span>
+        <b>F</b> flashlight, zoomed in
       </span>
     </div>
   )
 }
 
 /** The canvas, rendered once - see `WheresMidnightScene`. */
-const Stage = memo(function Stage({ live, view }: { live: RefObject<Game>; view: RefObject<View> }) {
+const Stage = memo(function Stage({ live, view, torch }: { live: RefObject<Game>; view: RefObject<View>; torch: RefObject<boolean> }) {
   return (
     <Canvas
       dpr={DPR}
@@ -302,7 +340,7 @@ const Stage = memo(function Stage({ live, view }: { live: RefObject<Game>; view:
         gl.toneMappingExposure = 1.15
       }}
     >
-      <WheresMidnightScene live={live} view={view} />
+      <WheresMidnightScene live={live} view={view} torch={torch} />
     </Canvas>
   )
 })
@@ -311,17 +349,17 @@ const DPR: [number, number] = [1, 2]
 const CAMERA = { fov: VIEW.start.fov, near: 0.05, far: 300, position: [0, 5.5, 3] as [number, number, number] }
 const GL = { antialias: true, powerPreference: 'high-performance' as const }
 
-/** The results: first to find her first, and whoever never did sharing last. */
+/** The results: first to find him first, and whoever never did sharing last. */
 function Over({ game, me, nameOf, onAgain }: { game: Game; me: string; nameOf: (id: string) => string; onAgain: (() => void) | null }) {
   const order = placings(game)
   const mine = order.find((entry) => entry.seeker.id === me)
   const winners = order.filter((entry) => entry.place === 1 && entry.seeker.foundAt !== null)
   const headline =
-    !mine || mine.seeker.foundAt === null ? 'She was there all along' : mine.place === 1 ? 'Found her first!' : `${ordinal(mine.place)} to find her`
+    !mine || mine.seeker.foundAt === null ? 'He was there all along' : mine.place === 1 ? 'Found him first!' : `${ordinal(mine.place)} to find him`
   const sub =
     winners.length === 0
-      ? 'Nobody found her. She is very good at this.'
-      : `${winners.map((w) => nameOf(w.seeker.id)).join(' and ')} spotted her in ${seconds(winners[0].seeker.foundAt!)}.`
+      ? 'Nobody found him. He is very good at this.'
+      : `${winners.map((w) => nameOf(w.seeker.id)).join(' and ')} spotted him in ${seconds(winners[0].seeker.foundAt!)}.`
   return (
     <div style={overBackdrop}>
       <div style={overCard}>
@@ -433,6 +471,26 @@ const hints: React.CSSProperties = {
   background: LOOK.panel,
   font: `12px/1.4 ${FONT}`,
   pointerEvents: 'none',
+}
+
+const torchButton: React.CSSProperties = {
+  position: 'absolute',
+  left: '50%',
+  bottom: 12,
+  transform: 'translateX(-50%)',
+  padding: '8px 16px',
+  borderRadius: 999,
+  border: '1px solid #3a4452',
+  background: LOOK.panel,
+  color: LOOK.ink,
+  font: `600 13px/1.2 ${FONT}`,
+  cursor: 'pointer',
+}
+
+const torchButtonOn: React.CSSProperties = {
+  background: LOOK.sun,
+  border: '1px solid #b07f16',
+  color: '#241a06',
 }
 
 const overBackdrop: React.CSSProperties = {

@@ -5,18 +5,20 @@
  * same way from the same seed - so what you are looking at is what everybody
  * else is looking at, from the same spot, and a find is a find.
  *
- * **The junk is instanced, five draw calls for the lot.** A hundred pieces of
- * junk is a couple of hundred parts, and a couple of hundred meshes would cost
+ * **The junk is instanced, five draw calls for the lot.** A hundred and fifty
+ * pieces of junk and a few hundred bits of litter is several hundred parts,
+ * and several hundred meshes would cost
  * more to submit than to draw. Every part is a box, a cylinder, a tyre or a
  * blob, so each of those is one `InstancedMesh` with a colour per instance,
  * built once per seed and never touched again. The handful of glowing parts -
  * reflectors, a dead television's standby light - are a second, unlit instance
  * of whichever shape they are.
  *
- * **It is dark on purpose.** Three sodium lamps, a low moon and very little
- * else: an all-black cat is only hard to find because most of the yard is dark
- * enough to hide her, and lighting it evenly would make the game trivial. Her
- * eyes catch the light, faintly, which is the reward for zooming in.
+ * **It is dark on purpose.** No lamps: a low moon and very little else. An
+ * all-black cat is only hard to find because the yard is dark enough to hide
+ * him. Zoomed in, a flashlight follows the middle of the view - the one real
+ * light there is. His eyes glow faintly, and so do a dozen and a half pairs
+ * that are not his, looking out from the junk.
  *
  * **The camera never moves.** It sits at `EYE` and only ever turns and zooms -
  * that is the whole of the brief's "holding a camera". It is driven from a ref
@@ -36,7 +38,10 @@ import {
   Matrix4,
   MeshBasicMaterial,
   MeshStandardMaterial,
+  Object3D,
   Quaternion,
+  SphereGeometry,
+  type SpotLight,
   TorusGeometry,
   Vector3,
   type BufferGeometry,
@@ -47,16 +52,15 @@ import {
   type PerspectiveCamera,
 } from 'three'
 import type { Game } from './rules'
-import { EYE, type View } from './view'
-import { YARD, type Part, type Shape, type Yard, yardFor } from './yard'
+import { EYE, direction, type View } from './view'
+import { EYE_OFFSET, YARD, eyeAt, type Part, type Shape, type Yard, yardFor } from './yard'
 
 export const PALETTE = {
   night: '#0b1018',
   ground: '#26221d',
   fence: '#1b1f24',
   rail: '#2a3038',
-  lamp: '#ffd9a0',
-  lampPost: '#2b2f33',
+  torch: '#fff1d6',
   moon: '#dbe6ff',
   cat: '#08080a',
   catSheen: '#15151a',
@@ -83,7 +87,7 @@ const SHAPES: readonly Shape[] = ['box', 'cylinder', 'tyre', 'blob']
 
 /** Every part of every piece, as one instanced mesh per shape and per lit-or-not. */
 function instanceJunk(yard: Yard): InstancedMesh[] {
-  const parts: Part[] = yard.pieces.flatMap((piece) => piece.parts)
+  const parts: Part[] = [...yard.pieces.flatMap((piece) => piece.parts), ...yard.litter]
   const out: InstancedMesh[] = []
   const matrix = new Matrix4()
   const position = new Vector3()
@@ -193,39 +197,76 @@ const Setting = memo(function Setting() {
   )
 })
 
-/** The yard lamps: the only real light there is, and the reason some corners are findable. */
-const Lamps = memo(function Lamps({ seed }: { seed: number }) {
-  const lamps = yardFor(seed).lamps
-  return (
-    <>
-      {lamps.map((lamp, i) => (
-        <group key={i} position={[lamp.x, 0, lamp.z]}>
-          <mesh position={[0, lamp.height / 2, 0]}>
-            <cylinderGeometry args={[0.07, 0.1, lamp.height, 6]} />
-            <meshStandardMaterial color={PALETTE.lampPost} roughness={1} />
-          </mesh>
-          <mesh position={[0, lamp.height, 0]}>
-            <sphereGeometry args={[0.26, 12, 8]} />
-            <meshBasicMaterial color={PALETTE.lamp} toneMapped={false} />
-          </mesh>
-          <pointLight position={[0, lamp.height - 0.1, 0]} intensity={48} distance={22} decay={1.5} color={PALETTE.lamp} />
-        </group>
-      ))}
-    </>
+/**
+ * The flashlight: a cone from the eye down the middle of the view, a little
+ * narrower than the screen, so what you are looking at is lit and the rest of
+ * the yard stays dark. Always in the scene and turned down to nothing when off,
+ * so switching it does not make three.js rebuild every material's shader.
+ */
+function Torch({ view, torch }: { view: RefObject<View>; torch: RefObject<boolean> }) {
+  const light = useRef<SpotLight>(null)
+  useFrame(() => {
+    const l = light.current
+    const v = view.current
+    if (!l || !v) return
+    const d = direction(v.yaw, v.pitch)
+    l.position.set(EYE.x, EYE.y, EYE.z)
+    l.target.position.set(EYE.x + d.x * 10, EYE.y + d.y * 10, EYE.z + d.z * 10)
+    l.target.updateMatrixWorld()
+    l.angle = ((v.fov / 2) * Math.PI) / 180 * 0.8
+    l.intensity = torch.current ? 3.2 : 0
+  })
+  return <spotLight ref={light} color={PALETTE.torch} intensity={0} distance={0} decay={0} penumbra={0.55} />
+}
+
+/** One eye, the same sphere and the same glow for his and for every decoy's. */
+const EYE_GEOMETRY = new SphereGeometry(0.013, 8, 6)
+function eyeMaterial(): MeshStandardMaterial {
+  return new MeshStandardMaterial({ color: PALETTE.eye, emissive: PALETTE.eye, emissiveIntensity: 0.55, toneMapped: false })
+}
+
+/** The eyes that are not his, one instanced mesh for the lot. */
+const Decoys = memo(function Decoys({ seed }: { seed: number }) {
+  const mesh = useMemo(() => {
+    const decoys = yardFor(seed).decoys
+    const out = new InstancedMesh(EYE_GEOMETRY, eyeMaterial(), Math.max(1, decoys.length * 2))
+    out.count = decoys.length * 2
+    const dummy = new Object3D()
+    decoys.forEach((decoy, i) => {
+      for (const [k, side] of [-1, 1].entries()) {
+        const at = eyeAt(decoy, decoy.heading, side)
+        dummy.position.set(at.x, at.y, at.z)
+        dummy.updateMatrix()
+        out.setMatrixAt(i * 2 + k, dummy.matrix)
+      }
+    })
+    out.instanceMatrix.needsUpdate = true
+    out.frustumCulled = false
+    return out
+  }, [seed])
+  useEffect(
+    () => () => {
+      ;(mesh.material as Material).dispose()
+      mesh.dispose()
+    },
+    [mesh],
   )
+  return <primitive object={mesh} />
 })
 
 /**
  * Midnight.
  *
- * Her three spheres are the ones a click is tested against, so she is drawn
+ * His three spheres are the ones a click is tested against, so he is drawn
  * from exactly those and nothing is added that a click would miss: the ears,
- * the tail and the paws hang off the same local frame, well inside her padding.
- * Her eyes are the one part of her that is not black, and they are two
+ * the tail and the paws hang off the same local frame, well inside his padding.
+ * His eyes are the one part of him that is not black, and they are two
  * centimetres across - at the widest zoom they are a pixel, which is the point.
  */
 function Cat({ seed }: { seed: number }) {
   const cat = yardFor(seed).midnight
+  const eyes = useMemo(eyeMaterial, [])
+  useEffect(() => () => eyes.dispose(), [eyes])
   const sit = cat.pose === 'sit'
   const head: [number, number, number] = sit ? [0, 0.46, 0.1] : [0, 0.24, 0.27]
   const mid: [number, number, number] = sit ? [0, 0.3, 0.06] : [0, 0.14, 0.12]
@@ -274,10 +315,7 @@ function Cat({ seed }: { seed: number }) {
           </mesh>
         ))}
         {[-1, 1].map((side) => (
-          <mesh key={side} position={[side * 0.036, 0.015, 0.078]}>
-            <sphereGeometry args={[0.013, 8, 6]} />
-            <meshStandardMaterial color={PALETTE.eye} emissive={PALETTE.eye} emissiveIntensity={0.55} toneMapped={false} />
-          </mesh>
+          <mesh key={side} position={[side * EYE_OFFSET.x, EYE_OFFSET.y, EYE_OFFSET.z]} geometry={EYE_GEOMETRY} material={eyes} />
         ))}
       </group>
       {tail.map((at, i) => (
@@ -297,8 +335,8 @@ function Cat({ seed }: { seed: number }) {
 }
 
 /**
- * A ring that lights up over her once you have found her - and once the round
- * is over, for everybody, so whoever never found her gets to see where she was.
+ * A ring that lights up over him once you have found him - and once the round
+ * is over, for everybody, so whoever never found him gets to see where he was.
  */
 function FoundMark({ seed, live }: { seed: number; live: RefObject<Game> }) {
   const rig = useRef<Group>(null)
@@ -327,7 +365,7 @@ function FoundMark({ seed, live }: { seed: number; live: RefObject<Game> }) {
   )
 }
 
-export function WheresMidnightScene({ live, view }: { live: RefObject<Game>; view: RefObject<View> }) {
+export function WheresMidnightScene({ live, view, torch }: { live: RefObject<Game>; view: RefObject<View>; torch: RefObject<boolean> }) {
   // Redrawn every frame from inside the canvas, the same as the other games:
   // the round lives in a ref, and this is how a new seed - a guest hearing the
   // host for the first time, or "again" - reaches the yard that gets built.
@@ -341,8 +379,9 @@ export function WheresMidnightScene({ live, view }: { live: RefObject<Game>; vie
       <fog attach="fog" args={[PALETTE.night, 26, 78]} />
       <Eye view={view} />
       <Setting />
-      <Lamps key={`lamps:${seed}`} seed={seed} />
+      <Torch view={view} torch={torch} />
       <Junk key={`junk:${seed}`} seed={seed} />
+      <Decoys key={`decoys:${seed}`} seed={seed} />
       <Cat key={`cat:${seed}`} seed={seed} />
       <FoundMark key={`found:${seed}`} seed={seed} live={live} />
     </>
