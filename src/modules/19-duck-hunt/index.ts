@@ -21,10 +21,12 @@ registerMinigame('duck-hunt', {
 })
 
 export {
+  AIM_PLANE_Z,
   ARENA,
   BOUNDS,
   COLOURS,
   EMBLEMS,
+  aimAt,
   balloonAt,
   lifetime,
   pickBalloon,
@@ -50,16 +52,19 @@ export {
   type Shot,
 } from './internal/game'
 
-export { BOT_ACCURACY, BOT_AIM, botShot, botShots } from './internal/ai'
+export { BOT_ACCURACY, BOT_AIM, botAim, botShot, botShots } from './internal/ai'
 
 export { MAX_PLAYERS, ME, SOLO_PLAYERS, gameRoster, myId, newGame, nextSeed, waitingGame, type GameSetup } from './internal/setup'
 
 export {
+  AIM_TAG,
   SHOT_TAG,
   SNAPSHOT_TAG,
   applySnapshot,
+  decodeAim,
   decodeShot,
   decodeSnapshot,
+  encodeAim,
   encodeShot,
   encodeSnapshot,
   type ShotMessage,

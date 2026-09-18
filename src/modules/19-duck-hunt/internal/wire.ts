@@ -10,7 +10,7 @@
  * says each one again until the host's snapshot shows that number dealt with;
  * the host deals with each number once. See `fire`.
  */
-import { lifetime } from './arena'
+import { AIM_PLANE_Z, lifetime, type Point } from './arena'
 import { createGame, type Game, type Shot } from './game'
 
 export const SNAPSHOT_TAG = 'dh'
@@ -119,6 +119,30 @@ export function decodeShot(message: Record<string, unknown>): ShotMessage | null
     y: message.y as number,
     z: message.z as number,
   }
+}
+
+/**
+ * Where a player is aiming, sent by everybody - host and guests alike - straight
+ * to everybody else. Not the host's business: a crosshair scores nothing, so it
+ * need not wait on the host, and a round trip through it would only make every
+ * other crosshair lag. `null` is a pointer that has left the field.
+ *
+ * Only `x` and `y`: every aim is on the wall at `AIM_PLANE_Z`.
+ */
+export const AIM_TAG = 'dh-aim'
+
+export function encodeAim(aim: Point | null): Record<string, unknown> {
+  return aim ? { t: AIM_TAG, x: r2(aim.x), y: r2(aim.y) } : { t: AIM_TAG, h: 1 }
+}
+
+/** `undefined` for anything that is not an aim, `null` for a hidden one. */
+export function decodeAim(message: Record<string, unknown>): Point | null | undefined {
+  if (message.t !== AIM_TAG) return undefined
+  if (message.h === 1) return null
+  const { x, y } = message
+  // Anywhere near the field; nothing a peer sends is trusted.
+  if (!isNumber(x) || !isNumber(y) || Math.abs(x) > 200 || Math.abs(y) > 200) return undefined
+  return { x, y, z: AIM_PLANE_Z }
 }
 
 /**

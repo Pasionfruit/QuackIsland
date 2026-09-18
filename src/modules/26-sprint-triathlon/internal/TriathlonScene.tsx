@@ -13,7 +13,7 @@
  */
 import { useFrame } from '@react-three/fiber'
 import { memo, useLayoutEffect, useMemo, useReducer, useRef, type RefObject } from 'react'
-import { Color, Group, type DirectionalLight } from 'three'
+import { Color, Group, Quaternion, Vector3, type DirectionalLight } from 'three'
 import { createAvatar } from '../../02-player'
 import { FINISH_X, START_X, TRACK, courseX, frameScene, laneZ } from './camera'
 import { COLOURS, legOf, progressOf, raceClock, sentenceFor, type Race, type Racer } from './rules'
@@ -145,25 +145,88 @@ const Course = memo(function Course({ lanes }: { lanes: number }) {
   )
 })
 
-/** A bicycle: two wheels and a frame, the wheels turning with the pedals. */
-function Bike({ wheels }: { wheels: RefObject<Group | null> }) {
+/**
+ * The bicycle's shape, in the rider's own frame: +Z is the way they face and
+ * ride, so the wheels are one behind the other along Z, each in the YZ plane.
+ */
+const BIKE = {
+  wheelRadius: 0.38,
+  /** Rear and front hubs. Far enough apart that neither wheel runs through the rider. */
+  rearZ: -0.66,
+  frontZ: 0.66,
+  hubY: 0.42,
+  saddle: [0, 0.6, -0.12] as const,
+  crank: [0, 0.4, 0.02] as const,
+  head: [0, 0.82, 0.48] as const,
+  bars: [0, 1.02, 0.52] as const,
+}
+
+type V3 = readonly [number, number, number]
+const UP = new Vector3(0, 1, 0)
+
+/** A thin tube from one point to another - a piece of frame. */
+function Tube({ from, to, radius = 0.035, colour = PALETTE.frame }: { from: V3; to: V3; radius?: number; colour?: string }) {
+  const { position, quaternion, length } = useMemo(() => {
+    const a = new Vector3(...from)
+    const b = new Vector3(...to)
+    const along = b.clone().sub(a)
+    return {
+      position: a.add(b).multiplyScalar(0.5),
+      quaternion: new Quaternion().setFromUnitVectors(UP, along.clone().normalize()),
+      length: along.length(),
+    }
+  }, [from, to])
+  return (
+    <mesh position={position} quaternion={quaternion} castShadow>
+      <cylinderGeometry args={[radius, radius, length, 8]} />
+      <meshStandardMaterial color={colour} roughness={0.4} metalness={0.5} />
+    </mesh>
+  )
+}
+
+/**
+ * A bicycle ridden along +Z: two wheels one behind the other, a frame, a
+ * saddle and bars. The wheels turn with the pedals - `wheels`' children are
+ * spun about their axles (local X), and the spokes make the turning visible.
+ */
+const Bike = memo(function Bike({ wheels }: { wheels: RefObject<Group | null> }) {
+  const { wheelRadius: r, rearZ, frontZ, hubY, saddle, crank, head, bars } = BIKE
+  const rear: V3 = [0, hubY, rearZ]
+  const front: V3 = [0, hubY, frontZ]
   return (
     <group>
       <group ref={wheels}>
-        {[-0.55, 0.55].map((x) => (
-          <mesh key={x} position={[x, 0.42, 0]} castShadow>
-            <torusGeometry args={[0.38, 0.06, 8, 20]} />
-            <meshStandardMaterial color={PALETTE.wheel} roughness={0.7} />
-          </mesh>
+        {[rearZ, frontZ].map((z) => (
+          <group key={z} position={[0, hubY, z]}>
+            {/* Turned so the tyre stands in the YZ plane, rolling along Z. */}
+            <mesh rotation={[0, Math.PI / 2, 0]} castShadow>
+              <torusGeometry args={[r, 0.05, 8, 24]} />
+              <meshStandardMaterial color={PALETTE.wheel} roughness={0.7} />
+            </mesh>
+            {[0, Math.PI / 3, (Math.PI * 2) / 3].map((a) => (
+              <mesh key={a} rotation={[a, 0, 0]}>
+                <boxGeometry args={[0.015, r * 2 - 0.04, 0.015]} />
+                <meshStandardMaterial color={PALETTE.frame} roughness={0.4} metalness={0.5} />
+              </mesh>
+            ))}
+          </group>
         ))}
       </group>
-      <mesh position={[0, 0.62, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
-        <cylinderGeometry args={[0.05, 0.05, 1.1, 8]} />
-        <meshStandardMaterial color={PALETTE.frame} roughness={0.4} metalness={0.5} />
+      <Tube from={saddle} to={crank} />
+      <Tube from={crank} to={head} />
+      <Tube from={saddle} to={head} />
+      <Tube from={crank} to={rear} />
+      <Tube from={saddle} to={rear} radius={0.025} />
+      <Tube from={head} to={front} />
+      <Tube from={head} to={bars} />
+      <Tube from={[-0.26, bars[1], bars[2]]} to={[0.26, bars[1], bars[2]]} radius={0.03} colour={PALETTE.wheel} />
+      <mesh position={[saddle[0], saddle[1] + 0.03, saddle[2]]} castShadow>
+        <boxGeometry args={[0.14, 0.05, 0.28]} />
+        <meshStandardMaterial color={PALETTE.wheel} roughness={0.8} />
       </mesh>
     </group>
   )
-}
+})
 
 /** One racer, in their lane, swimming, biking or running. */
 function RacerBody({ racer, index, count, live }: { racer: Racer; index: number; count: number; live: RefObject<Race> }) {
@@ -195,7 +258,7 @@ function RacerBody({ racer, index, count, live }: { racer: Racer; index: number;
     hop.current = Math.max(0, hop.current - dt * 6)
 
     if (bike.current) bike.current.visible = leg === 'bike'
-    if (wheels.current) wheels.current.children.forEach((w) => (w.rotation.z = -racer.pedals * 0.6))
+    if (wheels.current) wheels.current.children.forEach((w) => (w.rotation.x = racer.pedals * 0.6))
     const t = clock.elapsedTime
     if (leg === 'swim') {
       inner.position.set(0, -0.55 + Math.sin(t * 6 + index) * 0.06, 0)

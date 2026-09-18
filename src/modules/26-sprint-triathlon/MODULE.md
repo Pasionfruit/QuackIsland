@@ -100,6 +100,12 @@ quick, not a walkover.
 - **The racers:** low in the water and bobbing, up on a bicycle with its wheels
   turning, then running with a hop to every right key. A finisher jumps past the
   line.
+- **The bicycle points the way the racer rides.** Built in the racer's own
+  frame, where +Z is forward: rear wheel behind, front wheel ahead, both
+  standing in the plane of travel, with a frame, saddle and bars between them,
+  and spokes so the turning shows. It used to be laid out across the rider, so
+  the two wheels sat side by side at right angles to the road, like a unicycle
+  ridden sideways.
 - **The task panel** at the bottom is the leg you are on:
   - **Swim and bike:** a meter and a count ("hammer Space!").
   - **Run:** the sentence, what you have typed in green, the next character

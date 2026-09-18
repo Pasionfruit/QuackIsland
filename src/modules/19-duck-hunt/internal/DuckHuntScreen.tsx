@@ -16,12 +16,12 @@ import { memo, useCallback, useEffect, useRef, useState, type RefObject } from '
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
 import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
-import { ARENA, COLOURS, EMBLEMS, type Emblem } from './arena'
+import { ARENA, COLOURS, EMBLEMS, type Emblem, type Point } from './arena'
 import { FOV } from './camera'
 import { DuckHuntScene } from './DuckHuntScene'
 import { balloonsFor, placings, timeLeft, type Game } from './game'
 import { myId, newGame, waitingGame } from './setup'
-import { useGameNet, type Trigger } from './useGameNet'
+import { useGameNet, type Aims, type Trigger } from './useGameNet'
 
 const LOOK = {
   ink: '#4a3524',
@@ -51,6 +51,8 @@ export function DuckHuntScreen({ run }: { run: MinigameRun }) {
   const live = useRef(game)
   live.current = game
   const trigger = useRef<Trigger | null>(null)
+  /** Where your pointer is aiming on the field, kept up to date by the scene. */
+  const aim = useRef<Point | null>(null)
   const crosshair = useRef<HTMLDivElement>(null)
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
@@ -69,6 +71,7 @@ export function DuckHuntScreen({ run }: { run: MinigameRun }) {
       const shot = trigger.current
       trigger.current = null
       if (wire.advance(current, dt, shot, paused.current)) setGame({ ...current })
+      wire.sendAim(current.over || current.players.length === 0 ? null : aim.current)
       frame = requestAnimationFrame(tick)
     }
     frame = requestAnimationFrame(tick)
@@ -131,7 +134,7 @@ export function DuckHuntScreen({ run }: { run: MinigameRun }) {
         onPointerMove={moveCrosshair}
         onPointerLeave={() => crosshair.current && (crosshair.current.style.opacity = '0')}
       >
-        <Stage live={live} onShoot={onShoot} />
+        <Stage live={live} onShoot={onShoot} aim={aim} aims={wire.aims} />
 
         {ready && !game.over ? (
           <div ref={crosshair} style={crosshairBox} data-cooldown={mine ? mine.cooldown.toFixed(2) : '0'}>
@@ -161,9 +164,13 @@ export function DuckHuntScreen({ run }: { run: MinigameRun }) {
 const Stage = memo(function Stage({
   live,
   onShoot,
+  aim,
+  aims,
 }: {
   live: RefObject<Game>
   onShoot: (trigger: Trigger) => void
+  aim: RefObject<Point | null>
+  aims: Aims
 }) {
   return (
     <Canvas
@@ -176,7 +183,7 @@ const Stage = memo(function Stage({
         gl.toneMappingExposure = 1.05
       }}
     >
-      <DuckHuntScene live={live} onShoot={onShoot} />
+      <DuckHuntScene live={live} onShoot={onShoot} aim={aim} aims={aims} />
     </Canvas>
   )
 })

@@ -8,7 +8,7 @@
  * the same game plays out the same way.
  */
 import { createRng, hashSeed } from '../../00-core'
-import { ARENA, balloonAt } from './arena'
+import { ARENA, balloonAt, type Point } from './arena'
 import type { Fire, Game } from './game'
 
 /** How often a stand-in's shot lands. */
@@ -16,15 +16,17 @@ export const BOT_ACCURACY = 0.65
 /** How long, least and most, a stand-in takes to line up after it could shoot. */
 export const BOT_AIM: readonly [number, number] = [0.35, 1.4]
 
-/** The shot a stand-in takes this frame, or `null` if it is not shooting yet. */
-export function botShot(game: Game, index: number): Fire | null {
+/**
+ * What a stand-in is lining up: how long it takes to, and which balloon.
+ *
+ * Seeded by its shot count, so between one shot and the next it has one plan,
+ * and `botAim` can show its crosshair drifting onto the balloon `botShot` will
+ * then fire at.
+ */
+function plan(game: Game, index: number) {
   const bot = game.players[index]
-  if (!bot || !bot.bot || game.over || bot.cooldown > 0) return null
-
   const random = createRng(hashSeed(game.seed, `duck-hunt:bot:${bot.id}:${bot.shots}`))
   const aim = BOT_AIM[0] + random() * (BOT_AIM[1] - BOT_AIM[0])
-  const since = bot.lastShot ? game.elapsed - bot.lastShot.at - ARENA.cooldown : game.elapsed
-  if (since < aim) return null
 
   // Its own balloons that are up and not popped, highest first: the ones about
   // to float away are the ones to go for.
@@ -33,13 +35,36 @@ export function botShot(game: Game, index: number): Fire | null {
     .map((b) => ({ balloon: b, at: balloonAt(b, game.elapsed) }))
     .filter((x): x is { balloon: typeof x.balloon; at: NonNullable<typeof x.at> } => x.at !== null)
     .sort((a, b) => b.at.y - a.at.y)
-  if (mine.length === 0) return null
+  const target = mine.length === 0 ? null : mine[Math.floor(random() * Math.min(mine.length, 3))]
+  return { aim, target, random }
+}
 
-  const target = mine[Math.floor(random() * Math.min(mine.length, 3))]
+/** The shot a stand-in takes this frame, or `null` if it is not shooting yet. */
+export function botShot(game: Game, index: number): Fire | null {
+  const bot = game.players[index]
+  if (!bot || !bot.bot || game.over || bot.cooldown > 0) return null
+
+  const { aim, target, random } = plan(game, index)
+  const since = bot.lastShot ? game.elapsed - bot.lastShot.at - ARENA.cooldown : game.elapsed
+  if (since < aim || !target) return null
+
   if (random() < BOT_ACCURACY) return { shooter: index, balloon: target.balloon.id, point: target.at }
   // A miss: just wide of it.
   const off = (random() < 0.5 ? -1 : 1) * (ARENA.radius + 0.4 + random())
   return { shooter: index, balloon: null, point: { ...target.at, x: target.at.x + off } }
+}
+
+/**
+ * Where a stand-in's crosshair is heading: the balloon it is lining up, or
+ * where it last fired while it has nothing to line up. Somebody drawing it
+ * eases towards this, which is what makes it look like aiming.
+ */
+export function botAim(game: Game, index: number): Point | null {
+  const bot = game.players[index]
+  if (!bot || !bot.bot) return null
+  // Held on the shot for a moment after firing, as a person's would be.
+  if (bot.lastShot && game.elapsed - bot.lastShot.at < 0.2) return bot.lastShot
+  return plan(game, index).target?.at ?? bot.lastShot
 }
 
 /** Every stand-in's shot this frame. */

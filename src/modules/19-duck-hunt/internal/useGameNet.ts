@@ -22,8 +22,10 @@ import { fire, stepGame, type Game, type Shot } from './game'
 import { myId } from './setup'
 import {
   applySnapshot,
+  decodeAim,
   decodeShot,
   decodeSnapshot,
+  encodeAim,
   encodeShot,
   encodeSnapshot,
   type ShotMessage,
@@ -38,6 +40,15 @@ const RESEND_MS = 150
 const GIVE_UP_MS = 2000
 /** Past this far apart, a guest's clock jumps to the host's rather than easing. */
 const SNAP_SECONDS = 0.5
+/** How often your crosshair is sent while it moves. */
+const AIM_MS = 50
+/** How often it is said again while it keeps still, so a newcomer sees it. */
+const AIM_KEEPALIVE_MS = 1000
+/** A crosshair not heard of for this long has gone - its owner left, or their tab is asleep. */
+export const AIM_STALE_MS = 2500
+
+/** Everybody else's crosshair, by player id, as last heard. */
+export type Aims = Map<string, { point: Point | null; at: number }>
 
 export interface Trigger {
   balloon: number | null
@@ -50,6 +61,10 @@ export interface GameNet {
    * one. Returns whether anything changed.
    */
   advance(game: Game, dt: number, trigger: Trigger | null, paused: boolean): boolean
+  /** Tells everybody where your crosshair is, as often as is worth it. Call every frame. */
+  sendAim(aim: Point | null): void
+  /** Everybody else's crosshairs. The same map for the life of the game; read it, never replace it. */
+  aims: Aims
 }
 
 export function useGameNet(): GameNet {
@@ -59,9 +74,17 @@ export function useGameNet(): GameNet {
   const sentAt = useRef(0)
   const seq = useRef(0)
   const pending = useRef<{ shot: ShotMessage; firstAt: number; saidAt: number; landed: Shot } | null>(null)
+  const aims = useRef<Aims>(new Map())
+  const aimSent = useRef<{ aim: Point | null; at: number }>({ aim: null, at: 0 })
 
   useEffect(() => {
     return subscribeRoom((from, raw) => {
+      // Crosshairs come from everybody, to everybody, host or not.
+      const aim = decodeAim(raw)
+      if (aim !== undefined) {
+        aims.current.set(from, { point: aim, at: performance.now() })
+        return
+      }
       if (getNet().host) {
         const shot = decodeShot(raw)
         if (shot) heard.current.push({ from, shot })
@@ -163,5 +186,15 @@ export function useGameNet(): GameNet {
     return true
   }
 
-  return { advance }
+  const sendAim = (aim: Point | null) => {
+    if (getNet().status !== 'joined') return
+    const now = performance.now()
+    const last = aimSent.current
+    const moved = aim === null || last.aim === null ? aim !== last.aim : Math.hypot(aim.x - last.aim.x, aim.y - last.aim.y) > 0.02
+    if (now - last.at < (moved ? AIM_MS : AIM_KEEPALIVE_MS)) return
+    aimSent.current = { aim, at: now }
+    sendToRoom(encodeAim(aim))
+  }
+
+  return { advance, sendAim, aims: aims.current }
 }

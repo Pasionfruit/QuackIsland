@@ -2,7 +2,7 @@
 
 ## What this is
 
-**Minigame 4.** A minute of balloons rising round a sandy arena. Every player
+**Minigame 4.** A minute of balloons rising over an open grass hunting ground. Every player
 has a colour and a shape, and every balloon wears somebody's. Shoot yours.
 Leave everybody else's - popping one scores you nothing, only takes it away
 from them. Half a second between shots, hit or miss. Most of your own
@@ -32,7 +32,8 @@ the island's capsule.
 Eight colours that do not look alike, and eight shapes - dot, triangle, square,
 ring, diamond, star, hexagon, cross. Roster order is colour order: the host is
 red with a dot, the next player blue with a triangle, and so on. The shape is on
-every balloon, on the HUD beside your name, and on the sand in front of you.
+every balloon, on the HUD beside your name, in the middle of your crosshair on
+everybody else's screen, and on the grass in front of you.
 
 **The shape is there so nobody has to tell colours apart to play.** Red and
 green, blue and purple, never share a shape. All players share the island's one
@@ -113,8 +114,35 @@ third of the time.
   when you shoot and fills back up over the half-second cooldown, solid in your colour when
   you can fire. It is moved directly, not through React, so it never lags your
   hand.
+- **Everybody else's crosshair** moves over the field where they are aiming: a
+  ring in their colour with their shape in the middle, dim while they cool
+  down. See below.
 - **The HUD** has the clock (red for the last ten seconds), your colour and shape
   ("shoot ● only"), and everybody's score in theirs.
+
+## Everybody else's crosshair
+
+A crosshair is a direction from one window's camera, and every window's camera
+is a little different, so it is sent as a **place**: where your pointer's ray
+meets an upright wall across the middle of the field (`AIM_PLANE_Z`, `aimAt`).
+Every camera stands in nearly the same spot, so that place lands over nearly
+the same balloons on everybody's screen.
+
+**Sent by everybody, to everybody, not through the host** (`AIM_TAG`). A
+crosshair scores nothing, so there is nothing for the host to check, and a
+round trip through it would only make every crosshair lag. Twenty times a
+second while it moves, once a second while it keeps still - so a player who
+joins late sees it - and "gone" when the pointer leaves the field. One not heard
+of for 2.5 s (`AIM_STALE_MS`) is not drawn: its owner left or their tab is
+asleep.
+
+Each is eased towards where it was last heard, so twenty updates a second still
+glide. **A stand-in's** is worked out, not sent: `botAim` is the balloon it is
+lining up - the same one `botShot` then fires at - and it drifts on slowly the
+way a hand would, stays on the shot for a moment after firing, and moves on.
+
+Drawn over everything, the same size on screen at any distance. Your own is the
+one in the DOM, as before; it is never drawn twice.
 
 ## The canvas renders once
 
@@ -141,10 +169,11 @@ Exported because it is worth testing, not because anything else needs it.
 | --- | --- |
 | `ARENA`, `BOUNDS`, `COLOURS`, `EMBLEMS` | The rules and the look, as numbers. |
 | `schedule`, `balloonAt`, `lifetime`, `shootable`, `pickBalloon` | The balloons and what a ray hits. Pure. |
+| `AIM_PLANE_Z`, `aimAt` | Where a crosshair is pinned for others to see. Pure. |
 | `createGame`, `fire`, `stepGame`, `ready`, `timeLeft`, `balloonsFor`, `placings` | The game. Pure. |
-| `botShot`, `botShots`, `BOT_ACCURACY`, `BOT_AIM` | The stand-ins. |
+| `botShot`, `botShots`, `botAim`, `BOT_ACCURACY`, `BOT_AIM` | The stand-ins, and where their crosshairs are heading. |
 | `newGame`, `gameRoster`, `nextSeed`, `waitingGame`, `myId`, `ME`, `SOLO_PLAYERS`, `MAX_PLAYERS` | Dealing a game. |
-| `encodeSnapshot`, `decodeSnapshot`, `applySnapshot`, `encodeShot`, `decodeShot`, `SNAPSHOT_TAG`, `SHOT_TAG` | A shared game on the wire. Pure. |
+| `encodeSnapshot`, `decodeSnapshot`, `applySnapshot`, `encodeShot`, `decodeShot`, `encodeAim`, `decodeAim`, `SNAPSHOT_TAG`, `SHOT_TAG`, `AIM_TAG` | A shared game on the wire. Pure. |
 | `frameScene`, `TILT`, `FOV`, `FILL` | Where the camera stands. Pure. |
 | `DuckHuntScreen`, `EmblemIcon` | The panel, and a player's shape in the DOM. |
 
@@ -166,6 +195,9 @@ Exported because it is worth testing, not because anything else needs it.
 - **Ties share a place.** Tested.
 - **Eight players and a lossy network agree on every score.** Tested.
 - **The whole arena is in frame and fills it, at any window shape.** Tested.
+- **An aim lands on the aiming wall, and travels the wire intact; nonsense is
+  refused.** Tested.
+- **A stand-in's crosshair heads for the balloon it then shoots.** Tested.
 
 ## Deliberate non-goals
 
@@ -190,9 +222,14 @@ Exported because it is worth testing, not because anything else needs it.
 Open a lobby, leave the game on Volcano Island, press **minigames**, open
 **4 · Duck Hunt**, and press **play**.
 
-- **Look at the arena.** Sand, a fence on three sides, four capsules along the
-  front in four colours with a shape on the sand before each. Nothing moves but
-  the balloons.
+- **Look at the field.** Open grass with tufts, wild flowers and patches of
+  darker green, bushes and taller grass round the sides, a treeline at the back
+  and hills in the haze. Nothing tall between you and the balloons. Four
+  capsules along the front in four colours with a shape on the grass before
+  each.
+- **Watch the stand-ins' crosshairs.** A ring in each one's colour with its
+  shape in the middle, drifting onto one of its own balloons, dim after each
+  shot.
 - **Look at the HUD.** A minute on the clock, "shoot ● only" in your colour and
   shape, and four scores.
 - **Move the mouse over the arena.** The pointer is a crosshair, and it follows
@@ -215,6 +252,8 @@ Open a lobby, leave the game on Volcano Island, press **minigames**, open
 
 - **Both shoot.** Each sees the other's shots flash and balloons burst, and the
   scores agree.
+- **Move the mouse.** The other window's crosshair for you follows, smoothly,
+  in your colour and shape. Move off the field and it goes.
 - **Shoot the same balloon at once.** One gets it; for the other it comes back.
 - **Host: again.** Both are dealt the new game.
 
@@ -226,8 +265,10 @@ Not yet gated.
 
 Not measured against the world's budget, because it does not draw into the
 world's canvas. Around thirty balloons are up at once with eight players, each
-three or four draw calls, plus the arena and the players - under 150 in all -
-with one shadow-casting light. Each balloon's position is a sine and a
+three or four draw calls, plus the players, seven crosshairs of about eight
+draw calls each, and the field - one instanced draw per kind of grass, flower,
+bush, trunk, crown and hill, and forty ground patches - about 250 in all, with
+one shadow-casting light. Each balloon's position is a sine and a
 multiplication per frame.
 
 Like the other minigames, a **second WebGL context** while a game is up.

@@ -200,6 +200,23 @@ export function pickBalloon(
   return best ? { balloon: best.balloon, point: best.point } : null
 }
 
+/**
+ * Where everybody's crosshair is drawn: a wall across the middle of the
+ * field, facing the camera. A crosshair is a direction, not a place, so to show
+ * it in somebody else's window it is pinned to where that direction meets this
+ * wall - every window's camera stands in nearly the same spot, so it lands on
+ * nearly the same balloons there too.
+ */
+export const AIM_PLANE_Z = (ARENA.floor.minZ + ARENA.floor.maxZ) / 2
+
+/** Where a ray from the camera meets the aiming wall, or `null` if it points away from it. */
+export function aimAt(origin: Point, direction: Point): Point | null {
+  if (direction.z >= -1e-6) return null
+  const along = (AIM_PLANE_Z - origin.z) / direction.z
+  if (along <= 0) return null
+  return { x: origin.x + direction.x * along, y: origin.y + direction.y * along, z: AIM_PLANE_Z }
+}
+
 /** The arena's footprint and height, for the camera to fit. */
 export const BOUNDS = {
   minX: ARENA.floor.minX - 2.5,
