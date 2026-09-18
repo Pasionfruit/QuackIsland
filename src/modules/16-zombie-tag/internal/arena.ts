@@ -72,6 +72,20 @@ export const ARENA = {
    */
   turnDelay: 0.1,
 
+  /**
+   * How long the spin that follows the delay lasts, in seconds.
+   *
+   * Caught, a beat stood still, then a spin - runner's colour going in,
+   * zombie's colour coming out. The body is still frozen and harmless for the
+   * spin: it is the same transformation, just one you can see.
+   */
+  turnSpin: 0.6,
+
+  /** The whole of turning: the beat, then the spin. What `Body.turning` counts down from. */
+  get turnTime(): number {
+    return this.turnDelay + this.turnSpin
+  },
+
   /** How far from the middle the players start, in a ring. */
   spawnRing: 2.4,
 } as const

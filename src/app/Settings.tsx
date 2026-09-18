@@ -638,7 +638,9 @@ const backdrop: React.CSSProperties = {
 
 const sheet: React.CSSProperties = {
   width: 'min(460px, 100%)',
-  maxHeight: 'calc(100vh - 32px)',
+  // A fixed height, sized to the tallest tab, so switching tabs never makes
+  // the page jump. A short window gets less, and the tab's content scrolls.
+  height: 'min(620px, calc(100vh - 32px))',
   display: 'flex',
   flexDirection: 'column',
   padding: '14px 16px',

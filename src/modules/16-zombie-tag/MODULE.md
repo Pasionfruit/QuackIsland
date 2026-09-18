@@ -2,7 +2,7 @@
 
 ## What this is
 
-**Minigame 1.** Six zombies, an enclosed arena full of crates, and everybody
+**Minigame 1.** Six zombies, an enclosed arena full of graves, and everybody
 spawning in the middle. Outrun them. Get caught and you become one and join the
 chase. The last player still running wins.
 
@@ -14,7 +14,7 @@ moment the dashboard's Zombie Tag tile leads somewhere real.
 
 This is the **environment** and **controls** stages done. The assets stage is
 not: the bodies are the island's capsule avatar painted a colour each, and the
-crates are boxes.
+graves are boxes and cylinders.
 
 ## The rules, and where each one lives
 
@@ -25,6 +25,8 @@ crates are boxes.
 | Six zombies | `ARENA.zombies` |
 | Enclosed arena, obstacles | `ARENA`, `OBSTACLES` |
 | Caught players join the chase | `catchPlayers`, and a test that a turned player immediately hunts |
+| Turning: a 0.1s beat, then a spin | `ARENA.turnDelay`, `ARENA.turnSpin`, `turnPose` in the scene |
+| The last catch plays out before the end | `finish`, and a test that everything else freezes meanwhile |
 | Players twice as fast | `ARENA.zombieSpeed` is *derived* from `playerSpeed`, not written beside it |
 | Push, 3s cooldown, 1s stun | `shove`, `ARENA.pushCooldown`, `ARENA.pushStun` |
 | Last survivor wins | `finish`, `placings` |
@@ -65,13 +67,22 @@ caught out of sight.
 Widening the window comes closer until the height is what limits it, and from
 there more width gives you more sky at the sides rather than a bigger room.
 
-## It is lit and dressed like the island
+## It is a graveyard, at night
 
-Not a second palette. The sun, the ambient and the hemisphere light are the
-daylight preset `00-core` uses for the world, the floor is the terrain's sand
-colour, and the background and fog are the island's sky. Making a minigame look
-like the rest of the build turns out to be mostly a matter of not inventing new
-colours for it.
+The arena is a walled cemetery after dark. Cool moonlight comes from over the
+camera's shoulder and is the only light that casts shadows, so the shadow
+budget matches the old daylight. Six lamp posts stand on the wall, one at each
+corner and one halfway along each long side, and pool warm light on the grass
+with no shadows of their own. The barriers are **grave plots**: a low stone
+kerb over exactly the footprint the rules collide with, with a row of
+headstones along its back edge, or an obelisk on the two square ones. The kerb
+keeps the drawing honest: the gaps between headstones look walkable, and they
+are not. The stones lean a little, each its own way, and the lean is worked out
+from their position rather than from a random number, so every browser draws
+the same graveyard.
+
+The body colours are the daytime ones, unchanged. They are how you tell who
+is chasing whom, so the rest of the scene stays dark and cool around them.
 
 **The bodies are the island's own avatar** — `createAvatar` from `02-player`,
 the same capsule with the same face and the same arms you walk the beach in.
@@ -90,6 +101,22 @@ them separate means this game owns its camera and its lights outright, with no
 arbitration against a player controller that is not running. The cost is a
 second WebGL context while a round is up, which is the honest price of the
 isolation.
+
+## Being caught is a turn you can see
+
+A caught body stands still for `turnDelay` (0.1s), then spins twice with a hop
+over `turnSpin` (0.6s). It keeps the colour it was caught in until halfway
+through the spin and comes out purple. For all of that time it cannot move
+and cannot catch. The spin is timed by each browser's own frame clock from
+when the turn starts, not by `turning` off the wire: a guest hears that twenty
+times a second, which is too coarse to animate from.
+
+**The round does not end on the last catch.** When one player is left, the
+winner is decided on that frame. Then everything freezes except the turn,
+including the clock, so the winner's time is the moment they were left alone.
+The second-to-last player turns in full, and only then is the round `over` and
+Finish comes up. A winner with `over` still false means that moment, and it
+goes over the wire like any other snapshot.
 
 ## Speed is a ratio, not two numbers
 
@@ -209,7 +236,8 @@ else needs it. Nothing outside this module should be reaching for it.
 - **A push costs three seconds whether or not it connects**, and cannot be
   thrown by a zombie or by somebody on the floor.
 - **The round ends at one survivor**, not zero — a last player with nobody left
-  to outlast has already won.
+  to outlast has already won. It is won on the catch and over when that
+  catch has finished turning, and nothing can move or be caught in between.
 - **The six the round started with never appear on the scoreboard.** They were
   never running, and an uncaught body sorts as having lasted forever.
 - **A huge frame delta is clamped**, so a backgrounded tab cannot make a zombie
@@ -245,7 +273,7 @@ there.
 
 ## Deliberate non-goals
 
-- No models. Capsules and boxes, lit properly.
+- No models. Capsules, and graves built from boxes and cylinders, lit properly.
 - No authority. The host is trusted with the round, the same way the island
   trusts the host with the clock.
 - No moving camera, ever. The still tilted view is the game.
@@ -277,10 +305,10 @@ party panel, and open **1 · Zombie Tag**. Read it, then press **play**.
 - **Watch the countdown finish.** Three, two, one, and then an arena rather
   than a page saying nothing is built.
 - **Look at the angle.** You should be looking *across* the room from high up
-  and in front, not straight down at it — the crates should have visible sides
-  and cast shadows across the sand, and the far wall should be behind the
+  and in front, not straight down at it — the headstones should have visible sides
+  and cast shadows across the grass, and the far wall should be behind the
   arena rather than around it.
-- **Look at the whole board.** Every wall and every crate at once, filling the
+- **Look at the whole board.** Every wall and every grave at once, filling the
   window edge to edge on one side with only a sliver of sky, and it should not
   move, ever — not when you run to the edge, not when you resize the
   window. Drag the window narrow and tall: the camera should back off so it all
@@ -288,15 +316,22 @@ party panel, and open **1 · Zombie Tag**. Read it, then press **play**.
 - **Find yourself.** The blue capsule with the ring under it. It should be the
   same pill you walk the island in, with the same face and arms, and it should
   turn to face the way it is running.
-- **Look at the light.** Same sun, same sand, same sky blue as the beach you
-  came from. If it looks like a different game's art, the palette drifted.
-- **Walk into a crate, and into a wall.** You should stop, not pass through and
+- **Look at the light.** Night: dark grass, moonlit headstones, warm pools
+  under the six lamps on the wall. The bodies should still be easy to pick out
+  from each other.
+- **Look at the graves.** Each row of headstones stands on a kerb. Walking
+  into the kerb should stop you in the same place as it looks like it should.
+- **Walk into a grave, and into a wall.** You should stop, not pass through and
   not stick.
 - **Walk into a zombie.** It should be solid.
 - **Run from one.** You should pull away easily — you are twice its pace. One
   zombie alone should never catch a runner who is paying attention.
-- **Let one catch you.** You turn purple, join the chase, and the round carries
-  on without you until one runner is left.
+- **Let one catch you.** You stand still for a beat, spin, come out purple,
+  join the chase, and the round carries on without you until one runner is
+  left.
+- **Watch the last catch.** Everything should freeze, the timer too, while the
+  second-to-last runner spins into a zombie. Finish comes up after that, not
+  on the catch.
 - **Press space next to a green runner.** They should tip over onto their back
   for a second with a yellow ring under them, and your push pill should count
   back up from three.

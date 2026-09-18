@@ -32,7 +32,7 @@ export interface Body {
    * Seconds left of becoming a zombie, or 0 for anybody who is not mid-turn.
    *
    * A turning body cannot catch and cannot move - see `ARENA.turnDelay` for
-   * why the beat exists at all.
+   * why the beat exists at all, and `ARENA.turnSpin` for the spin after it.
    */
   turning: number
   /**
@@ -48,11 +48,18 @@ export interface Round {
   bodies: Body[]
   /** Seconds since the round began. */
   elapsed: number
-  /** Nobody left to catch. The round is done. */
+  /**
+   * Nobody left to catch, and the last catch has finished turning. The round
+   * is done.
+   */
   over: boolean
   /**
-   * Who won, once it is over: the last player still running, or the last one
-   * taken if the zombies got everybody at once.
+   * Who won: the last player still running, or the last one taken if the
+   * zombies got everybody at once.
+   *
+   * **Decided before the round is over.** The moment one player is left the
+   * winner is settled and everything stops but the last catch's turn, which
+   * plays out in full - see `finish`. A winner and not over is that moment.
    */
   winner: string | null
 }
@@ -123,7 +130,14 @@ function turn(body: Body, at: number): void {
   body.caughtAt = at
   body.cooldown = 0
   body.stun = 0
-  body.turning = ARENA.turnDelay
+  body.turning = ARENA.turnTime
+}
+
+/** Counts a timer down by a step, snapping the sliver sixtieths leave behind. */
+function countDown(value: number, step: number): number {
+  if (value <= 0) return 0
+  const left = Math.max(0, value - step)
+  return left < 1e-6 ? 0 : left
 }
 
 /**
@@ -140,23 +154,25 @@ function turn(body: Body, at: number): void {
 export function stepRound(round: Round, intents: Map<string, Intent>, dt: number): Round {
   if (round.over) return round
   const step = Math.min(Math.max(dt, 0), 0.05)
+
+  // The winner is settled and the last catch is still turning. Everybody
+  // holds still and the clock holds with them - the winner's time is the
+  // moment they were left alone - while the turn plays out, and then it is
+  // over.
+  if (round.winner !== null) {
+    for (const body of round.bodies) body.turning = countDown(body.turning, step)
+    finish(round)
+    return round
+  }
+
   round.elapsed += step
 
   for (const body of round.bodies) {
-    if (body.stun > 0) {
-      body.stun = Math.max(0, body.stun - step)
-      // Snapped rather than clamped: counting a second down in sixtieths
-      // leaves a sliver on the clock, and a sliver is still "stunned".
-      if (body.stun < 1e-6) body.stun = 0
-    }
-    if (body.cooldown > 0) {
-      body.cooldown = Math.max(0, body.cooldown - step)
-      if (body.cooldown < 1e-6) body.cooldown = 0
-    }
-    if (body.turning > 0) {
-      body.turning = Math.max(0, body.turning - step)
-      if (body.turning < 1e-6) body.turning = 0
-    }
+    // Snapped rather than clamped: counting a second down in sixtieths leaves
+    // a sliver on the clock, and a sliver is still "stunned".
+    body.stun = countDown(body.stun, step)
+    body.cooldown = countDown(body.cooldown, step)
+    body.turning = countDown(body.turning, step)
   }
 
   // Pushes first, so a push and the shove that follows it land on the same
@@ -289,25 +305,34 @@ function catchPlayers(round: Round): void {
  * thirteen zombies with nobody left to outlast is not a game, it is a lap of
  * honour. They have already won.
  *
+ * **Won is not yet over.** The catch that left one player standing is still
+ * turning, and the end of the round is that turn, so the winner is crowned
+ * straight away and `over` waits until nobody is turning. `stepRound` freezes
+ * everything else in the meantime, so the winner cannot be caught in the gap.
+ *
  * If the last two are taken on the same frame there is no survivor to crown,
  * so the winner is whoever lasted longest - which, since they were caught
  * together, is a tie broken by the order they are stood in. That is a real
  * edge and it is better than no winner at all.
  */
 function finish(round: Round): void {
-  const left = survivors(round)
-  if (left.length > 1) return
-  round.over = true
-  if (left.length === 1) {
-    round.winner = left[0].id
-    return
+  if (round.winner === null) {
+    const left = survivors(round)
+    if (left.length > 1) return
+    round.winner = left.length === 1 ? left[0].id : lastTaken(round)
   }
+  if (round.bodies.some((b) => b.turning > 0)) return
+  round.over = true
+}
+
+/** Whoever lasted longest among the caught. Only asked when nobody is still running. */
+function lastTaken(round: Round): string | null {
   let best: Body | null = null
   for (const body of round.bodies) {
     if (body.caughtAt === null) continue
     if (!best || body.caughtAt > (best.caughtAt ?? -1)) best = body
   }
-  round.winner = best?.id ?? null
+  return best?.id ?? null
 }
 
 /**

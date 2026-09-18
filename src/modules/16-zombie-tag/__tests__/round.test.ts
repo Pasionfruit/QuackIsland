@@ -340,15 +340,40 @@ describe('the end of a round', () => {
     expect(survivors(round).length).toBeGreaterThan(1)
   })
 
-  it('ends the moment one player is left, and crowns them', () => {
+  it('crowns the last one left the moment they are alone, and ends once the turn is done', () => {
     const round = laid([
       { id: 'winner', at: { x: -18, y: -12 }, side: 'player' },
       { id: 'doomed', at: { x: 0, y: 0 }, side: 'player' },
       { id: 'z', at: { x: 0.5, y: 0 }, side: 'zombie' },
     ])
     stepRound(round, still, 1 / 60)
+    expect(round.winner).toBe('winner')
+    // The second player's turn plays out before the round is called.
+    expect(round.over).toBe(false)
+    expect(round.bodies[1].turning).toBeGreaterThan(0)
+
+    run(round, ARENA.turnTime + 0.05)
     expect(round.over).toBe(true)
     expect(round.winner).toBe('winner')
+  })
+
+  it('freezes everybody but the turning body while the last catch turns', () => {
+    const round = laid([
+      { id: 'winner', at: { x: -8, y: -12 }, side: 'player' },
+      { id: 'doomed', at: { x: 0, y: 0 }, side: 'player' },
+      { id: 'z', at: { x: 0.5, y: 0 }, side: 'zombie' },
+      { id: 'z2', at: { x: -8, y: -12 + ARENA.catchRange + 0.5 }, side: 'zombie' },
+    ])
+    stepRound(round, still, 1 / 60)
+    const clock = round.elapsed
+    const at = { x: round.bodies[3].x, y: round.bodies[3].y }
+    // A zombie walking straight at the winner cannot take them in the gap.
+    run(round, ARENA.turnTime + 0.05, new Map([['z2', go(0, -1)], ['winner', go(1, 0)]]))
+    expect(round.bodies[3].x).toBe(at.x)
+    expect(round.bodies[3].y).toBe(at.y)
+    expect(round.bodies[0].side).toBe('player')
+    expect(round.elapsed).toBe(clock)
+    expect(round.over).toBe(true)
   })
 
   it('still finds a winner when the last two are taken together', () => {
@@ -362,6 +387,7 @@ describe('the end of a round', () => {
       catcher('z2', { x: 5, y: -4.5 }),
     ])
     stepRound(round, still, 1 / 60)
+    run(round, ARENA.turnTime + 0.05)
 
     expect(survivors(round)).toHaveLength(0)
     expect(round.over).toBe(true)
@@ -387,6 +413,8 @@ describe('the end of a round', () => {
     round.bodies[4].x = round.bodies[2].x
     round.bodies[4].y = round.bodies[2].y + reach
     stepRound(round, still, 1 / 60)
+    expect(round.winner).toBe('late')
+    run(round, ARENA.turnTime + 0.05)
     expect(round.over).toBe(true)
     expect(round.winner).toBe('late')
   })
@@ -396,7 +424,7 @@ describe('the end of a round', () => {
       { id: 'a', at: { x: 0, y: 0 }, side: 'player' },
       { id: 'z', at: { x: 0.5, y: 0 }, side: 'zombie' },
     ])
-    stepRound(round, still, 1 / 60)
+    run(round, ARENA.turnTime + 0.05)
     expect(round.over).toBe(true)
     const frozen = round.elapsed
     run(round, 2, new Map([['z', go(1, 0)]]))

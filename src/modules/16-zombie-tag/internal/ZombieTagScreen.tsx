@@ -292,7 +292,7 @@ const page: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   overflow: 'hidden',
-  background: 'linear-gradient(180deg, #8ed3e8 0%, #6fc2dd 40%, #3f9fc4 100%)',
+  background: 'linear-gradient(180deg, #141b36 0%, #0b1224 50%, #070b1a 100%)',
   color: LOOK.ink,
   font: `14px/1.5 ${FONT}`,
   userSelect: 'none',

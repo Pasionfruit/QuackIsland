@@ -67,7 +67,7 @@ describe('a snapshot', () => {
       { id: 'p1', at: { x: 0, y: 0 }, side: 'player', mine: true },
       { id: 'p2', at: { x: 3, y: 0 }, side: 'zombie' },
     ])
-    stepRound(host, new Map(), 1 / 60)
+    for (let i = 0; i < 60; i++) stepRound(host, new Map(), 1 / 60)
     expect(host.over).toBe(true)
 
     const guest = applySnapshot(emptyRound(), decodeSnapshot(overTheWire(encodeSnapshot(host)))!, 'p2')
@@ -90,7 +90,7 @@ describe('a snapshot', () => {
       { id: 'p1', at: { x: 0, y: 0 }, side: 'player', mine: true },
       { id: 'p2', at: { x: 3, y: 0 }, side: 'zombie' },
     ])
-    stepRound(over, new Map(), 1 / 60)
+    for (let i = 0; i < 60; i++) stepRound(over, new Map(), 1 / 60)
     const guest = applySnapshot(emptyRound(), decodeSnapshot(encodeSnapshot(over))!, 'p2')
     expect(guest.over).toBe(true)
 
