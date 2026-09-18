@@ -6,8 +6,8 @@ Minigame 28. **Turn by turn, everybody gets forty-five seconds at the easel whil
 everybody else watches.** An outline of an ingredient or a dish is on the board.
 
 - **Tracing it:** hold left click and trace it without letting go. The moment
-  your ink covers **three quarters** of the outline, the hungry duck eats the
-  drawing, it is a point, and the next outline goes up.
+  your ink has gone **all the way round and enclosed the shape**, the hungry duck
+  eats the drawing, it is a point, and the next outline goes up.
 - **Letting go early** wipes the attempt, and you start that outline again.
 - **No erasing and no undo.**
 
@@ -29,8 +29,7 @@ slice, cheese, ice cream, cupcake, burger, bread and drumstick. Each is one clos
 path, built from arcs, profiles and corners.
 
 - **Resampled to a point every 2 cm of board**, so coverage is simply the share of
-  those points your ink passed near. A long outline and a short one are equally
-  hard to cover.
+  those points your ink passed near, and a gap in it is a run of points it did not.
 - **Scaled to the same size**, each reaching 0.78 of the way to the board's edge.
 - **In an order from the seed**: all sixteen shuffled, then all sixteen again.
   **Everybody's turn gets the same sequence**, so nobody draws easier shapes than
@@ -41,8 +40,13 @@ path, built from arcs, profiles and corners.
 The board runs -1 to 1 each way.
 
 - **Covered:** a point of the outline that ink passed within **0.07** of.
-- **Accepted:** the moment an attempt has covered **75%** of the outline and at
-  least **60% of its ink lies within 0.13 of the outline**.
+- **Enclosed:** no stretch of the outline longer than **0.06** (three points) is
+  left uncovered. So the ink has to close the loop: tracing nine tenths of the way
+  round and stopping is not a drawing, and neither is cutting a corner. A wobble
+  off the line leaves a gap you can see (grey where the rest is green); go back
+  over it without letting go and the loop closes.
+- **Accepted:** the moment an attempt is enclosed and at least **60% of its ink
+  lies within 0.13 of the outline**.
 
 **The second rule is not in the brief, and it matters.** Without it, colouring in
 the whole board covers any outline, and the game is a scribbling contest. An
@@ -100,11 +104,12 @@ On the screen:
 
 - **Along the top:** whose turn of how many, the time left, and a pill per player
   with their dishes (✏️ on the drawer's).
-- **A coverage meter** with a mark at 75%, green once it is there and red when
-  the attempt is too messy.
+- **A coverage meter**, green once the loop is closed and red when the attempt is
+  too messy.
 - **A banner:**
   - *Next up* before a turn;
-  - *Hold left click on the outline and trace it*;
+  - *Hold left click and trace all the way round*;
+  - *Close the loop*, when most of the outline is covered but a gap is left;
   - *Yum! +1*;
   - *Let go for the next one*;
   - *You let go - wiped*;
@@ -159,7 +164,7 @@ ends; somebody who leaves the lobby is out; a pause stops the round for everybod
 - **Slips:** one attempt in seven or so, its hand slips somewhere in the first
   two thirds, it lets go, and it starts that outline again.
 
-That comes to roughly eight to twelve dishes a turn. All of it comes from the
+That comes to roughly five to eight dishes a turn: going all the way round takes them longer than three quarters did. All of it comes from the
 seed, so the same game plays out the same way. Tested.
 
 ## Public contract
@@ -171,9 +176,9 @@ testing, not because anybody else needs them.
 | --- | --- |
 | `OUTLINE_NAMES`, `outlineNamed`, `outlineFor`, `Outline`, `Pt`, `SIZE`, `SPACING` | The outlines, and the `k`th of a game from its seed. |
 | `pointAlong`, `toOutline`, `toSegment` | Walking an outline, and distances to it. All pure. |
-| `TURN`, `TRACE`, `COLOURS` | Turn timings; how near, how much and how tidy; eight colours. |
+| `TURN`, `TRACE`, `COLOURS` | Turn timings; how near, how small a gap and how tidy; eight colours. |
 | `createGame`, `Game`, `Player`, `Stroke`, `Entrant`, `Phase`, `turnOrder` | A game at its start. |
-| `penDown`, `penMove`, `penUp`, `coverage`, `tidiness` | The pen. All pure. |
+| `penDown`, `penMove`, `penUp`, `coverage`, `longestGap`, `enclosed`, `tidiness` | The pen. All pure. |
 | `tick`, `stepGame`, `phase`, `drawer`, `timeLeft`, `currentOutline`, `leave`, `placings` | The clock, the turns, leaving, and who placed where. |
 | `botDraw`, `botPlan`, `BOT` | The stand-ins. |
 | `newGame`, `waitingGame`, `gameRoster`, `nextSeed`, `myId`, `ME`, `SOLO_PLAYERS`, `MAX_PLAYERS`, `GameSetup` | Putting a game together from the lobby. |
@@ -189,7 +194,9 @@ testing, not because anybody else needs them.
 - **The same seed, the same outlines, in the same order for everybody**, all
   sixteen before any comes again. Tested.
 - **A careful tracing of any outline, from anywhere round it, is accepted the
-  moment it covers three quarters.** Tested for all sixteen.
+  moment it encloses it.** Tested for all sixteen.
+- **A tracing that stops short of closing the loop is not accepted, however much
+  it covers, and carrying on over the gap is.** Tested for all sixteen.
 - **Ink kept off the outline, or a scribble over the whole board, is never
   accepted.** Tested in Node, and in the browser (a scribble covering 100% at 31%
   tidy).
@@ -224,7 +231,7 @@ testing, not because anybody else needs them.
   joins mid-attempt sees nothing of it until the next.
 - **The scripted player in `run-localrot` traces perfectly**, and fed the duck 24
   dishes in a turn. A person with a mouse will manage far fewer; how many feels
-  fair - and so whether 0.07 of reach and 75% are the right numbers - wants
+  fair - and so whether 0.07 of reach and a 0.06 gap are the right numbers - wants
   somebody to play it.
 - **Eight players is six and a half minutes**, most of it watching. That is what
   the brief asks for; a shorter turn is a one-number change (`TURN.length`).
@@ -241,8 +248,10 @@ Caricature** and press play.
   beak, the duck gulping, and a slip now and then (a red flash, and it starts
   again).
 - **On your turn, trace an outline.** Hold left click on the line and follow it.
-  The meter should rise, and the duck should take it the moment it passes the
-  mark, with *Yum! +1*.
+  The meter should rise, and the duck should take it the moment the loop closes,
+  with *Yum! +1*.
+- **Stop just short of where you started.** Nothing should happen, and the banner
+  should say *Close the loop*; carry on over the gap and the duck takes it.
 - **Keep holding after a dish.** Nothing should draw until you let go and press
   again.
 - **Let go half way.** A red flash, *You let go - wiped*, and the meter back to

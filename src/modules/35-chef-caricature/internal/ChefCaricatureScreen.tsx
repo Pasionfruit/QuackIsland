@@ -20,7 +20,7 @@ import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-
 import { FOV, boardPoint } from './camera'
 import { ChefCaricatureScene } from './ChefCaricatureScene'
 import { outlineFor } from './outlines'
-import { COLOURS, TRACE, coverage, drawer, phase, placings, tidiness, timeLeft, type Game } from './rules'
+import { COLOURS, TRACE, coverage, drawer, enclosed, phase, placings, tidiness, timeLeft, type Game } from './rules'
 import { myId, newGame, waitingGame } from './setup'
 import { useInkNet } from './useInkNet'
 
@@ -131,6 +131,7 @@ export function ChefCaricatureScreen({ run }: { run: MinigameRun }) {
   const covered = coverage(stroke)
   const tidy = tidiness(stroke)
   const messy = !!stroke && stroke.ink > 0.4 && tidy < TRACE.tidy
+  const gappy = !!stroke && covered >= 0.85 && !enclosed(stroke)
   const wiped = game.erasedAt !== null && game.elapsed - game.erasedAt < 1
   const fed = game.dish !== null && game.elapsed - game.dish.at < 1.2
 
@@ -139,14 +140,15 @@ export function ChefCaricatureScreen({ run }: { run: MinigameRun }) {
     const who = nameOf(drawerPlayer.id)
     if (now === 'intro') {
       banner = mineTurn
-        ? { text: `Your turn in ${Math.ceil(game.startsAt - game.elapsed)}`, sub: 'Hold left click and trace the outline without letting go', tone: 'intro' }
+        ? { text: `Your turn in ${Math.ceil(game.startsAt - game.elapsed)}`, sub: 'Hold left click and trace all the way round without letting go', tone: 'intro' }
         : { text: `Next up: ${who}`, sub: `drawing in ${Math.ceil(game.startsAt - game.elapsed)}`, tone: 'intro' }
     } else if (now === 'drawing') {
       if (fed) banner = { text: mineTurn ? 'Yum! +1' : `The duck ate ${who === 'you' ? 'your' : `${who}'s`} ${outlineFor(game.seed, game.dish!.outline).name}`, tone: 'good' }
       else if (mineTurn && game.lift) banner = { text: 'Let go for the next one', tone: 'hint' }
       else if (wiped) banner = { text: mineTurn ? 'You let go - wiped' : `${who} let go - wiped`, tone: 'bad' }
       else if (mineTurn && messy) banner = { text: 'Too messy - stay on the line', sub: 'let go to start again', tone: 'bad' }
-      else if (mineTurn && !stroke) banner = { text: 'Hold left click on the outline and trace it', tone: 'hint' }
+      else if (mineTurn && gappy) banner = { text: 'Close the loop', sub: 'go over the grey gaps without letting go', tone: 'hint' }
+      else if (mineTurn && !stroke) banner = { text: 'Hold left click and trace all the way round', tone: 'hint' }
       else if (!mineTurn) banner = { text: `${who} is drawing`, tone: 'watch' }
     } else if (now === 'result') {
       banner = { text: `${who === 'you' ? 'You' : who} fed the duck ${dishes(drawerPlayer.score)}`, tone: 'done' }
@@ -209,8 +211,7 @@ export function ChefCaricatureScreen({ run }: { run: MinigameRun }) {
         {ready && now === 'drawing' ? (
           <div style={meterWrap}>
             <div style={meter}>
-              <div style={{ ...meterFill, width: `${Math.min(100, covered * 100)}%`, background: messy ? LOOK.red : covered >= TRACE.accept ? LOOK.green : COLOURS[drawing % COLOURS.length] }} />
-              <div style={{ ...meterMark, left: `${TRACE.accept * 100}%` }} />
+              <div style={{ ...meterFill, width: `${Math.min(100, covered * 100)}%`, background: messy ? LOOK.red : enclosed(stroke) ? LOOK.green : COLOURS[drawing % COLOURS.length] }} />
             </div>
             <span style={meterText}>{Math.round(covered * 100)}%</span>
           </div>
@@ -337,7 +338,6 @@ const meterWrap: React.CSSProperties = {
 
 const meter: React.CSSProperties = { position: 'relative', width: 180, height: 10, borderRadius: 999, background: '#ddd3e8', overflow: 'hidden' }
 const meterFill: React.CSSProperties = { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 999 }
-const meterMark: React.CSSProperties = { position: 'absolute', top: -2, bottom: -2, width: 2, background: LOOK.ink }
 const meterText: React.CSSProperties = { font: `700 13px/1 ${FONT}`, minWidth: 36, textAlign: 'right' }
 
 const bannerWrap: React.CSSProperties = {

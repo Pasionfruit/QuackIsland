@@ -10,7 +10,9 @@ import {
   createGame,
   currentOutline,
   drawer,
+  enclosed,
   leave,
+  longestGap,
   penDown,
   penMove,
   penUp,
@@ -110,7 +112,7 @@ describe('the pen', () => {
     expect(penDown(g, d, 0.1, 0)).toBe(false)
   })
 
-  it('accepts a careful tracing of every outline the moment it covers three quarters, from anywhere round it', () => {
+  it('accepts a careful tracing of every outline the moment it encloses it, from anywhere round it', () => {
     for (const [k, name] of OUTLINE_NAMES.entries()) {
       const g = game()
       toDrawing(g)
@@ -123,6 +125,31 @@ describe('the pen', () => {
       expect(penDown(g, d, 0, 0), name).toBe(false)
       penUp(g, d)
       expect(penDown(g, d, 0, 0), name).toBe(true)
+    }
+  })
+
+  it('does not accept a tracing that stops short of closing the loop, however much it covers', () => {
+    for (const name of OUTLINE_NAMES) {
+      const g = game()
+      toDrawing(g)
+      g.outline = OUTLINE_NAMES.map((_, i) => outlineFor(SEED, i).name).indexOf(name)
+      const d = drawer(g)
+      const length = currentOutline(g).length
+      // All the way round but for a gap of three times the allowance.
+      const share = (length - TRACE.gap * 3 - TRACE.reach * 2) / length
+      expect(trace(g, d, { share, lift: false }), name).toBe('drawn')
+      expect(coverage(g.stroke), name).toBeGreaterThan(0.9)
+      expect(enclosed(g.stroke), name).toBe(false)
+      expect(longestGap(g.stroke), name).toBeGreaterThan(TRACE.gap)
+      expect(g.players[d].score, name).toBe(0)
+      // Carrying on over the gap closes it, and the duck takes it.
+      let said = null
+      for (let s = share * length; s <= length + 0.3 && said !== 'accepted'; s += 0.03) {
+        const p = pointAlong(currentOutline(g), s)
+        said = penMove(g, d, p.x, p.y)
+      }
+      expect(said, name).toBe('accepted')
+      expect(g.players[d].score, name).toBe(1)
     }
   })
 
@@ -145,7 +172,7 @@ describe('the pen', () => {
       said = penMove(g, d, row % 2 ? -1 : 1, y) ?? said
       said = penMove(g, d, row % 2 ? -1 : 1, y + 0.05) ?? said
     }
-    expect(coverage(g.stroke)).toBeGreaterThan(TRACE.accept)
+    expect(enclosed(g.stroke)).toBe(true)
     expect(tidiness(g.stroke)).toBeLessThan(TRACE.tidy)
     expect(said).toBe('drawn')
     expect(g.players[d].score).toBe(0)

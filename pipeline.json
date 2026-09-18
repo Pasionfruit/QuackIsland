@@ -3032,7 +3032,7 @@
     {
       "id": "35-chef-caricature",
       "phase": "P6",
-      "title": "Minigame 28, Chef Caricature: turn by turn, forty-five seconds to trace as many outlines as you can, three quarters covered without letting go feeds the duck a point, everybody else watches",
+      "title": "Minigame 28, Chef Caricature: turn by turn, forty-five seconds to trace as many outlines as you can, the outline enclosed without letting go feeds the duck a point, everybody else watches",
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
@@ -3055,7 +3055,7 @@
         },
         {
           "id": "35.2",
-          "title": "The pen: hold to draw, three quarters of the outline covered - with the ink mostly on it - is accepted, letting go wipes it, no undo",
+          "title": "The pen: hold to draw, the outline enclosed all the way round - with the ink mostly on it - is accepted, letting go wipes it, no undo",
           "status": "done"
         },
         {
@@ -3092,7 +3092,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-17T16:44:59.663Z"
+          "at": "2026-09-18T23:09:37.914Z"
         },
         "human": {
           "status": "pending"

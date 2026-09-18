@@ -4,13 +4,15 @@
  * **Turn by turn**, in an order from the seed, each player gets forty-five
  * seconds at the easel while everybody else watches. An outline of an ingredient
  * or a dish is on the board. **Hold the pen down and trace it without letting
- * go.** The moment your ink covers three quarters of the outline, the drawing is
- * accepted - the hungry duck eats it, it is a point, and the next outline is up.
+ * go.** The moment your ink has gone all the way round and enclosed the shape -
+ * no gap left in the outline - the drawing is accepted: the hungry duck eats it,
+ * it is a point, and the next outline is up.
  * Let go before then and the attempt is wiped: start again on the same outline.
  * Nothing can be rubbed out or undone. Most dishes after everybody's turn wins.
  *
  * **Covered** means a point of the outline that ink passed within `TRACE.reach`
- * of. **Tidy** means ink that stayed within `TRACE.stray` of the outline: an
+ * of. **Enclosed** means no stretch of the outline longer than `TRACE.gap` is
+ * left uncovered, so the ink has closed the loop. **Tidy** means ink that stayed within `TRACE.stray` of the outline: an
  * attempt whose ink is mostly off the outline is a scribble, and is not accepted
  * however much it covers - so colouring in the whole board does not work.
  *
@@ -20,7 +22,7 @@
  * watching run the same pen through it and get the same drawings.
  */
 import { createRng, hashSeed } from '../../00-core'
-import { outlineFor, toOutline, toSegment, type Outline, type Pt } from './outlines'
+import { SPACING, outlineFor, toOutline, toSegment, type Outline, type Pt } from './outlines'
 
 export const TURN = {
   /** "Next up", seconds. */
@@ -36,8 +38,8 @@ export const TRACE = {
   reach: 0.07,
   /** Ink further than this from the outline is off it. */
   stray: 0.13,
-  /** The share of the outline to cover. */
-  accept: 0.75,
+  /** The longest stretch of the outline that may be left uncovered and still count as enclosed, board units. */
+  gap: 0.06,
   /** The share of the ink that must be on the outline. */
   tidy: 0.6,
   /** Ink closer than this to the last point is not recorded. */
@@ -163,6 +165,28 @@ export function coverage(stroke: Stroke | null): number {
   return stroke && stroke.covered.length > 0 ? stroke.count / stroke.covered.length : 0
 }
 
+/** The longest stretch of the outline an attempt has left uncovered, board units; 0 once it is all covered. */
+export function longestGap(stroke: Stroke | null): number {
+  if (!stroke || stroke.covered.length === 0) return Infinity
+  const n = stroke.covered.length
+  if (stroke.count === n) return 0
+  if (stroke.count === 0) return n * SPACING
+  // Start just after a covered point, so a gap that wraps round is counted whole.
+  const from = stroke.covered.indexOf(true) + 1
+  let longest = 0
+  let run = 0
+  for (let i = 0; i < n; i++) {
+    if (stroke.covered[(from + i) % n]) run = 0
+    else longest = Math.max(longest, ++run)
+  }
+  return longest * SPACING
+}
+
+/** Whether an attempt has gone all the way round the outline, leaving no gap longer than `TRACE.gap`. */
+export function enclosed(stroke: Stroke | null): boolean {
+  return longestGap(stroke) <= TRACE.gap + 1e-9
+}
+
 /** How much of an attempt's ink is on the outline, 0 to 1; 1 with no ink yet. */
 export function tidiness(stroke: Stroke | null): number {
   return stroke && stroke.ink > 1e-9 ? stroke.tidy / stroke.ink : 1
@@ -208,7 +232,7 @@ export function penDown(game: Game, player: number, x: number, y: number, id = g
 
 /**
  * The pen, still down, moves to (`x`, `y`). Returns 'accepted' the moment the
- * attempt covers enough of the outline tidily enough - it is a point, and the
+ * attempt has enclosed the outline, tidily enough - it is a point, and the
  * next outline goes up - 'drawn' otherwise, or null if the pen was not drawing.
  */
 export function penMove(game: Game, player: number, x: number, y: number): 'accepted' | 'drawn' | null {
@@ -220,7 +244,7 @@ export function penMove(game: Game, player: number, x: number, y: number): 'acce
   if (Math.hypot(p.x - last.x, p.y - last.y) < TRACE.step) return 'drawn'
   lay(stroke, currentOutline(game), last, p)
   stroke.points.push(p.x, p.y)
-  if (coverage(stroke) >= TRACE.accept && tidiness(stroke) >= TRACE.tidy) {
+  if (enclosed(stroke) && tidiness(stroke) >= TRACE.tidy) {
     game.players[player].score += 1
     game.dish = { outline: game.outline, points: stroke.points, at: game.elapsed }
     game.outline += 1
