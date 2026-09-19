@@ -1,5 +1,5 @@
 /**
- * This Place Needs A Walmart, on the screen.
+ * OG Black Friday, on the screen.
  *
  * The store is drawn in its own canvas by `StoreScene`; this is the shell: the
  * keys and the clicks turned into hands for `useStoreNet`, and the words - the
@@ -151,7 +151,7 @@ export function StoreScreen({ run }: { run: MinigameRun }) {
     const near = shopping ? reachable(game, mineIndex) : -1
     if (mine.doneAt !== null) banner = { text: `Through the checkout - ${ordinal(through.indexOf(mine) + 1)}!`, sub: 'watching the rest', tone: 'good' }
     else if (mine.left) banner = null
-    else if (stunned(game, mine)) banner = { text: 'Rammed!', sub: 'something may have fallen out', tone: 'bad' }
+    else if (stunned(game, mine)) banner = { text: 'Rammed!', sub: 'anything that flew out landed somewhere in the store', tone: 'bad' }
     else if (needs.length === 0) banner = { text: 'Got everything - to a checkout!', sub: 'down a green lane by the door', tone: 'good' }
     else if (mine.cart.length >= CART.size) {
       const spare = ITEMS[game.items[mine.cart[toPutBack(game, mine)]].kind]
@@ -165,7 +165,7 @@ export function StoreScreen({ run }: { run: MinigameRun }) {
   return (
     <div style={page}>
       <div style={hud}>
-        <span style={{ fontWeight: 800, fontSize: 16, color: LOOK.blue }}>This Place Needs A Walmart</span>
+        <span style={{ fontWeight: 800, fontSize: 16, color: LOOK.blue }}>OG Black Friday</span>
         {ready ? (
           <>
             <TopTimer left={game.over ? null : left}>

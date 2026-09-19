@@ -96,7 +96,7 @@ export interface Minigame {
  * test should catch. There is one that does.
  */
 export const MINIGAME_TARGET: Readonly<Record<MinigameKind, number>> = Object.freeze({
-  'free-for-all': 34,
+  'free-for-all': 35,
   'one-vs-all': 11,
 })
 
@@ -844,11 +844,11 @@ const ENTRIES = [
   {
     id: 'needs-a-walmart',
     number: 45,
-    title: 'This Place Needs A Walmart',
+    title: 'OG Black Friday',
     kind: 'free-for-all',
     description: [
       'Sprint around a chaotic supermarket pushing your trolley and collect the 3 items on your grocery list. There are 10 different items scattered through the store, and every player has their own list - a beam of light shows you where yours are.',
-      'Click to grab whatever is in reach, or to put something you do not need back. Ram other trolleys with Space to knock their shopping out and grab it yourself.',
+      'Click to grab whatever is in reach, or to put something you do not need back. Ram other trolleys with Space: the newest thing in theirs flies out and lands somewhere random in the store.',
       'Find all 3 items and get through a checkout before everyone else. The first player to complete their grocery list wins.',
     ],
     controls: [
@@ -860,6 +860,23 @@ const ENTRIES = [
     // Built: see `49-needs-a-walmart`. The assets stage is still to do - the store,
     // the goods and the trolleys are primitives and the players are the island's capsule.
     // Added as a forty-fifth slot, the same way as 42 to 44.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'milf-fishing',
+    number: 46,
+    title: 'M.I.L.F (fishing)',
+    kind: 'free-for-all',
+    description: [
+      'Fish for 25 seconds and decide when to pull based on how much your fishing rod bends. A slight bend means a smaller fish, while a dramatic bend means a much bigger fish.',
+      'Four different fish sizes can bite at unpredictable times for each player, and there is no guarantee the biggest fish will appear. Every pull - fish or not - takes a moment to cast again, and anything that bites meanwhile is missed.',
+      'Pull when you think the fish is ready - but if the rod is not bent, you get nothing. The player with the biggest total catch wins.',
+    ],
+    controls: [{ input: 'Left Click', does: 'Pull the rod / reel in fish' }],
+    reserved: false,
+    // Built: see `50-milf-fishing`. The assets stage is still to do - the lake, the rods
+    // and the fish are primitives and the players are the island's capsule.
+    // Added as a forty-sixth slot, the same way as 42 to 45.
     done: { environment: true, controls: true, assets: false },
   },
 ] as const

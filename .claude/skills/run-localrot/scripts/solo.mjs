@@ -960,6 +960,46 @@ try {
     say('rounds', JSON.stringify(log))
     await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 120000)
     say('results', await page.shot('4-results.png'))
+  } else if (opt.steer && opt.game === 'milf-fishing') {
+    // Watch the rod through the game's own bend; first pull once on a straight rod (it must land nothing),
+    // then pull on anything bass-sized or bigger once it has bent right over, with a real click.
+    const read = `(async () => { const s = ${gameState(opt.game)}; const pond = await import('/src/modules/50-milf-fishing/internal/pond.ts'); const i = s.players.findIndex((p) => p.mine); const me = s.players[i]; const b = pond.bendAt(pond.bitesFor(s.seed, i), me.pulls, s.elapsed); const played = pond.playBack(pond.bitesFor(s.seed, i), me.pulls); return { e: s.elapsed, over: s.over, bend: b.bend, bite: b.bite, casting: b.casting, pulls: me.pulls.length, landed: played.landed.map((x) => x ? pond.FISH[x.size].name + ' ' + x.weight : 'nothing'), banner: document.querySelector('[data-banner]')?.textContent ?? '' } })()`
+    const click = () => page.eval(`(() => { const b = document.querySelector('[data-board]'); const r = b.getBoundingClientRect(); b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 })) })()`)
+    const shots = new Set()
+    let s = await page.eval(read)
+    let bentSince = null
+    while (!s.over) {
+      await sleep(40)
+      s = await page.eval(read)
+      if (s.over) break
+      if (!shots.has('empty') && s.e > 0.5 && s.bend === 0 && !s.casting) {
+        shots.add('empty')
+        await click()
+        await sleep(120)
+        const after = await page.eval(read)
+        say('pulled on nothing', JSON.stringify({ landed: after.landed, banner: after.banner }), await page.shot('3-nothing.png'))
+        if (after.landed[0] !== 'nothing') throw new Error('a pull on a straight rod landed something')
+        continue
+      }
+      if (s.bend > 0.42 && !s.casting) {
+        if (s.bend > 0.9 && !shots.has('big')) { shots.add('big'); say('bent right over', JSON.stringify({ bend: s.bend }), await page.shot('4b-big.png')) }
+        bentSince ??= s.e
+        if (!shots.has('bent')) { shots.add('bent'); say('bent', JSON.stringify({ bend: s.bend }), await page.shot('4-bent.png')) }
+        if (s.e - bentSince > 0.3) {
+          await click()
+          await sleep(300)
+          const after = await page.eval(read)
+          say('pulled', JSON.stringify({ landed: after.landed.at(-1), banner: after.banner }), shots.has('catch') ? '' : await page.shot('5-catch.png'))
+          shots.add('catch')
+          if (after.landed.at(-1) === 'nothing') throw new Error('a pull on a bent rod landed nothing')
+          bentSince = null
+        }
+      } else bentSince = null
+    }
+    say('end', JSON.stringify(s))
+    if (!shots.has('catch')) throw new Error('never landed a fish')
+    await page.waitFor(`!!document.querySelector('[data-podium]')`, 30000)
+    say('results', await page.shot('6-results.png'))
   } else if (opt.steer && opt.game === 'needs-a-walmart') {
     // Shop with the stand-ins' own route-finding, pressed as real WASD keys; a real click on the board to grab, Space to ram.
     const read = `(() => { const s = ${gameState(opt.game)}; const i = s.players.findIndex((p) => p.mine); const me = s.players[i]; return { e: s.elapsed, over: s.over, x: me.x, z: me.z, cart: me.cart.length, list: me.list, done: me.doneAt, ramAt: me.ramAt, got: me.cart.filter((k) => me.list.includes(s.items[k].kind)).length } })()`

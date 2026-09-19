@@ -2,7 +2,7 @@
  * The rules: walking, picking up and putting back, ramming, the checkout, and who placed where.
  */
 import { describe, expect, it } from 'vitest'
-import { LANES, SOLIDS, inRect } from '../internal/store'
+import { LANES, SLOTS, SOLIDS, inRect } from '../internal/store'
 import { BODY, CART, RAM, ROUND, click, createGame, gotten, judgeEnd, leave, move, placings, ram, reachable, steer, stepGame, stillNeeds, tick, toPutBack, type Game } from '../internal/rules'
 
 const SEED = 4321
@@ -105,7 +105,7 @@ describe('a click', () => {
 })
 
 describe('a ram', () => {
-  it('knocks whoever it hits flying, stuns them, and spills their newest thing', () => {
+  it('knocks whoever it hits flying, stuns them, and sends their newest thing to an empty shelf somewhere in the store', () => {
     const g = game(2)
     const [a, b] = wanted(g, 1)
     stand(g, 0, OPEN.x, OPEN.z + 1.6, 0)
@@ -114,7 +114,12 @@ describe('a ram', () => {
     expect(ram(g, 0)).toBe(true)
     for (let i = 0; i < 6; i++) stepGame(g, 1 / 60)
     expect(g.players[1].cart).toEqual([a])
-    expect(g.items[b]).toMatchObject({ holder: null, shelf: false })
+    expect(g.items[b]).toMatchObject({ holder: null, shelf: true })
+    const slot = SLOTS.findIndex((s) => s.x === g.items[b].x && s.z === g.items[b].z)
+    expect(slot).toBeGreaterThanOrEqual(0)
+    // Nothing else is on that shelf place.
+    expect(g.items.filter((it) => it.shelf && it.holder === null && it.x === SLOTS[slot].x && it.z === SLOTS[slot].z)).toHaveLength(1)
+    expect(g.spills).toBe(1)
     expect(g.players[1].stunUntil).toBeGreaterThan(g.elapsed)
     expect(click(g, 1)).toBe(null)
     expect(ram(g, 0)).toBe(false)
@@ -130,6 +135,32 @@ describe('a ram', () => {
     expect(ram(g, 0)).toBe(false)
     g.elapsed = g.players[0].ramAt + RAM.cooldown
     expect(ram(g, 0)).toBe(true)
+  })
+})
+
+describe('a spill', () => {
+  it('lands somewhere different each time, the same way for the same game, never on top of anything', () => {
+    const land = () => {
+      const g = game(2)
+      const [a] = wanted(g, 1)
+      const spots: string[] = []
+      for (let k = 0; k < 6; k++) {
+        load(g, 1, [a])
+        stand(g, 0, OPEN.x, OPEN.z + 1.6, 0)
+        stand(g, 1, OPEN.x, OPEN.z)
+        g.players[1].stunUntil = -Infinity
+        g.players[0].ramAt = -Infinity
+        ram(g, 0)
+        for (let i = 0; i < 6; i++) stepGame(g, 1 / 60)
+        spots.push(`${g.items[a].x}:${g.items[a].z}`)
+        const onShelves = g.items.filter((it) => it.shelf && it.holder === null).map((it) => `${it.x}:${it.z}`)
+        expect(new Set(onShelves).size).toBe(onShelves.length)
+      }
+      return spots
+    }
+    const first = land()
+    expect(new Set(first).size).toBeGreaterThan(3)
+    expect(land()).toEqual(first)
   })
 })
 

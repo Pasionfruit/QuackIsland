@@ -1,5 +1,5 @@
 /**
- * This Place Needs A Walmart in three dimensions, from above and behind.
+ * OG Black Friday in three dimensions, from above and behind.
  *
  * A bright supermarket: a tiled floor, low shelves in rows of colour with the
  * goods on top, fridges along the walls, four checkouts by the door with their
@@ -10,7 +10,9 @@
  * what is in the trolley is in the trolley. **Everything on your list that is
  * still out on a shelf or the floor has a beam of light over it** - on your
  * screen only - and whatever you are close enough to grab has a ring round it.
- * A ram is a lunge; being rammed, a spin. Through the checkout, you are gone.
+ * A ram is a lunge; being rammed, a spin, and whatever flies out of your
+ * trolley arcs high across the store to wherever it lands. Through the
+ * checkout, you are gone.
  *
  * **Drawn from refs, not from props.** The canvas is rendered once by the
  * screen; everything here reads the live game each frame and moves itself.
@@ -242,6 +244,9 @@ function makeItem(kind: number): Group {
 
 const BEAM = new CylinderGeometry(0.28, 0.28, 7, 16, 1, true)
 
+/** A thing knocked across the store flies there: this far counts as knocked, and it takes this long and goes this high. */
+const FLIGHT = { jump: 3, time: 0.8, height: 5 } as const
+
 /**
  * The goods: on their shelves, on the floor, or riding in somebody's trolley.
  * What is on your list and still out there has a beam over it; what you can
@@ -258,7 +263,9 @@ function Goods({ live, carts }: { live: RefObject<Game>; carts: RefObject<Map<nu
         ring.rotation.x = -Math.PI / 2
         beam.visible = false
         ring.visible = false
-        return { body, beam, ring }
+        // Where it was last drawn, and - while it is flying across the store - where from and since when.
+        const flight = { at: null as Vector3 | null, from: new Vector3(), start: -Infinity }
+        return { body, beam, ring, flight }
       }),
     // A new game is a new set of goods.
     [game.id, game.seed, game.items.length],
@@ -290,10 +297,26 @@ function Goods({ live, carts }: { live: RefObject<Game>; carts: RefObject<Map<nu
           y = 0.55 + HALF
         }
       }
+      // Gone somewhere far in one go - knocked out of a trolley onto a shelf across the store - it flies there.
+      const f = m.flight
+      if (f.at && visible && Math.hypot(f.at.x - x, f.at.z - z) > FLIGHT.jump && clock.elapsedTime - f.start > FLIGHT.time) {
+        f.from.copy(f.at)
+        f.start = clock.elapsedTime
+      }
+      const k = (clock.elapsedTime - f.start) / FLIGHT.time
+      if (k >= 0 && k < 1) {
+        const ease = 1 - (1 - k) ** 2
+        x = f.from.x + (x - f.from.x) * ease
+        z = f.from.z + (z - f.from.z) * ease
+        y = f.from.y + (y - f.from.y) * ease + Math.sin(k * Math.PI) * FLIGHT.height
+      }
+      if (visible) (f.at ??= new Vector3()).set(x, y, z)
       m.body.visible = visible
       m.body.scale.setScalar(scale)
       m.body.position.set(x, y, z)
+      if (k >= 0 && k < 1) m.body.rotation.x = k * Math.PI * 4
       m.body.rotation.y = item.holder === null ? i * 1.3 : 0
+      if (!(k >= 0 && k < 1)) m.body.rotation.x = 0
       const wanted = item.holder === null && needs.includes(item.kind)
       m.beam.visible = wanted
       if (wanted) {

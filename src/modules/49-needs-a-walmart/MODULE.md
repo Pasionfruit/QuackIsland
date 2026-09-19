@@ -2,7 +2,7 @@
 
 ## What this is
 
-Minigame 45, free-for-all: **This Place Needs A Walmart.** Everybody sprints round
+Minigame 45, free-for-all: **OG Black Friday.** Everybody sprints round
 a supermarket pushing a trolley, with **a grocery list of three of the ten things
 the store sells**. Grab yours, put back anything you don't need, **ram the others'
 trolleys to knock their shopping out**, and be **first through a checkout with
@@ -14,8 +14,10 @@ It plugs into `15-minigames` with `registerMinigame('needs-a-walmart', ...)` and
 one import line in `src/App.tsx`. Like 42 to 44 it arrived with every free-for-all
 slot taken, so the free-for-all target went from 33 to 34 and it took 45.
 
-The name is the game's title and nothing more: the store itself carries no brand,
-logo or likeness of any real one.
+It was first called *This Place Needs A Walmart*; it is **OG Black Friday** now.
+Its id, `needs-a-walmart`, and this module's name stay as they were - an id is a
+permanent handle, not a title. The store itself carries no brand, logo or
+likeness of any real one.
 
 ## The store
 
@@ -51,8 +53,11 @@ every screen and are never sent.
   don't need, or failing that the newest.
 - **Space** (`ram`) shoves your trolley forward hard. For 0.45 s it knocks into
   anybody it touches: **they are knocked flying, stunned for 0.9 s - no walking,
-  no clicking - and the newest thing in their trolley spills onto the floor**,
-  for anybody to grab. Once a shopper per ram; 1.6 s between rams.
+  no clicking - and the newest thing in their trolley flies out and lands on an
+  empty place on a shelf somewhere in the store, at random** (`landing`), for
+  anybody to find - the owner can follow its beam back to it. Where it lands comes
+  from the seed and how many things have spilt before, so the same game spills
+  the same way. Once a shopper per ram; 1.6 s between rams.
 - **Down a checkout lane with your whole list** in your trolley and you are
   through, at that moment, and gone out of the door.
 - **The end** (`judgeEnd`): when three are through, when all but one are, 25 s
@@ -89,7 +94,8 @@ trolley's contents on the floor where they stood.
 - **The HUD**: the time left (the three minutes, then the 25 s after the first is
   through), how many are through, and a pill per player with how much of their
   list they have, or their place once through.
-- **A ram** is a lunge; **being rammed**, a spin.
+- **A ram** is a lunge; **being rammed**, a spin, and whatever flies out of your
+  trolley arcs high across the store to where it lands.
 - **Sound**: a pop as you pick something up, a step as you put it back, a whoosh
   as you ram, a bonk if you are rammed and a thud for anybody else, a flourish as
   anybody gets through.
@@ -144,7 +150,7 @@ testing, not because anybody else needs them.
 | `GRID`, `blocked`, `cellOf`, `cellMiddle`, `freeCell`, `walkField`, `downhill` | The way round, for the stand-ins. |
 | `BODY`, `CART`, `RAM`, `ROUND`, `COLOURS` | The numbers. |
 | `createGame`, `freshItems`, `Game`, `Player`, `Item`, `Entrant` | A game at its start. |
-| `steer`, `click`, `reachable`, `toPutBack`, `ram`, `ramLeft`, `ramming`, `move` | Walking, picking up, putting back, ramming. |
+| `steer`, `click`, `reachable`, `toPutBack`, `ram`, `ramLeft`, `ramming`, `landing`, `move` | Walking, picking up, putting back, ramming, and where a spill lands. |
 | `stillNeeds`, `gotten`, `isShopping`, `stunned`, `canAct`, `wrapAngle` | Where a shopper is up to. |
 | `tick`, `stepGame`, `judgeEnd`, `firstDone`, `toTill`, `leave`, `placings` | The clock, the end, and who placed where. |
 | `BOT`, `botSteer`, `goalFor`, `fieldTo` | The stand-ins. |
@@ -167,8 +173,10 @@ testing, not because anybody else needs them.
 - **A click takes the nearest thing in reach and nothing further; a full trolley
   puts back the newest spare rather than taking more; anything can be taken, on
   your list or not.** Tested.
-- **A ram knocks, stuns and spills the newest thing; it misses anybody behind; it
-  has a cooldown.** Tested.
+- **A ram knocks, stuns and sends the newest thing to an empty shelf; it misses
+  anybody behind; it has a cooldown.** Tested.
+- **A spill lands somewhere different each time, never on top of anything, and
+  the same way for the same game.** Tested.
 - **Through only down a lane with the whole list; first through first; the rest by
   their lists, then how near a till.** Tested.
 - **The stand-ins get their lists and through in well under the limit, ram now
@@ -194,8 +202,8 @@ testing, not because anybody else needs them.
 
 ## How to review
 
-Open the minigames dashboard (alone, or as host of a lobby), open **This Place
-Needs A Walmart** (45) and press play. `node .claude/skills/run-localrot/scripts/solo.mjs
+Open the minigames dashboard (alone, or as host of a lobby), open **OG Black
+Friday** (45) and press play. `node .claude/skills/run-localrot/scripts/solo.mjs
 --game needs-a-walmart --steer` shops with real keys and clicks, rams once and
 screenshots it.
 
@@ -209,7 +217,8 @@ screenshots it.
   the trolley: *Trolley full - click to put back the …*, and a click should put it
   on the floor in front of you.
 - **Ram a stand-in** that is carrying something: they should spin, and something
-  should fall out onto the floor. Get rammed: *Rammed!*, and you can't move for a
+  should fly out of their trolley in a high arc and land on a shelf somewhere
+  else in the store. Get rammed: *Rammed!*, and you can't move for a
   moment.
 - **With all three**, walk down a green lane: *Through the checkout - 1st!*
 - **The results** should be the podium, first through first.

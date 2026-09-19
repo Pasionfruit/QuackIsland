@@ -1,7 +1,7 @@
 /**
  * 49-needs-a-walmart - the public contract.
  *
- * Minigame 45, This Place Needs A Walmart. Everybody sprints round a
+ * Minigame 45, OG Black Friday. Everybody sprints round a
  * supermarket with a trolley and a grocery list of three of the ten things it
  * sells. Grab yours, put back what you don't need, ram the others to knock
  * theirs out, and get through a checkout first.
@@ -69,6 +69,7 @@ export {
   ram,
   ramLeft,
   ramming,
+  landing,
   reachable,
   steer,
   stepGame,

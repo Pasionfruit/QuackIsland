@@ -138,7 +138,8 @@
         "46-youre-the-bomb",
         "47-shanty-matrix",
         "48-spidy-senses",
-        "49-needs-a-walmart"
+        "49-needs-a-walmart",
+        "50-milf-fishing"
       ]
     }
   ],
@@ -197,7 +198,8 @@
         "46-youre-the-bomb",
         "47-shanty-matrix",
         "48-spidy-senses",
-        "49-needs-a-walmart"
+        "49-needs-a-walmart",
+        "50-milf-fishing"
       ],
       "generation": 1,
       "contract": {
@@ -396,7 +398,8 @@
         "46-youre-the-bomb",
         "47-shanty-matrix",
         "48-spidy-senses",
-        "49-needs-a-walmart"
+        "49-needs-a-walmart",
+        "50-milf-fishing"
       ],
       "generation": 1,
       "contract": {
@@ -924,7 +927,8 @@
         "46-youre-the-bomb",
         "47-shanty-matrix",
         "48-spidy-senses",
-        "49-needs-a-walmart"
+        "49-needs-a-walmart",
+        "50-milf-fishing"
       ],
       "generation": 1,
       "contract": {
@@ -1451,7 +1455,8 @@
         "46-youre-the-bomb",
         "47-shanty-matrix",
         "48-spidy-senses",
-        "49-needs-a-walmart"
+        "49-needs-a-walmart",
+        "50-milf-fishing"
       ],
       "generation": 1,
       "contract": {
@@ -4266,7 +4271,7 @@
     {
       "id": "49-needs-a-walmart",
       "phase": "P6",
-      "title": "Minigame 45, This Place Needs A Walmart: a supermarket, a trolley each and a list of three of the ten things it sells; grab yours, put back what you don't need, ram the others to spill theirs, and be first through a checkout",
+      "title": "Minigame 45, OG Black Friday: a supermarket, a trolley each and a list of three of the ten things it sells; grab yours, put back what you don't need, ram the others to spill theirs, and be first through a checkout",
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
@@ -4331,7 +4336,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-19T16:32:09.360Z"
+          "at": "2026-09-19T16:50:46.597Z"
         },
         "human": {
           "status": "pending"
@@ -4342,6 +4347,89 @@
       "nonGoals": [
         "No models: the store, the goods and the trolleys are primitives, players are the island capsule",
         "No real store: no brand, logo or likeness in the store itself - the name is the game's title",
+        "No music of its own yet; the round is silent under the cues"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "50-milf-fishing",
+      "phase": "P6",
+      "title": "Minigame 46, M.I.L.F (fishing): 25 seconds off one dock; a rod that bends a little for a small fish and right over for a big one; four sizes biting at unpredictable times, each player their own, no promise of the biggest; click to pull, nothing if the rod is straight; biggest total catch wins",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "50.1",
+          "title": "The lake: four fish from perch to catfish, each player their own run of bites from the seed - when, how big, how long on - and no promise of the biggest",
+          "status": "done"
+        },
+        {
+          "id": "50.2",
+          "title": "The rod: bending by as much as the fish on it, tugging, letting go; a pull lands whatever is hooked or nothing, then a moment casting again when nothing can bite",
+          "status": "done"
+        },
+        {
+          "id": "50.3",
+          "title": "The end: 25 seconds, the biggest total catch first, level catches share",
+          "status": "done"
+        },
+        {
+          "id": "50.4",
+          "title": "The controls: left click to pull",
+          "status": "done"
+        },
+        {
+          "id": "50.5",
+          "title": "Over the shoulder: a lake at sunset, the dock, jointed rods bending, lines out to bobbers dipping under, fish flying out of the water into buckets",
+          "status": "done"
+        },
+        {
+          "id": "50.6",
+          "title": "One dock shared across the lobby, only the pulls sent and everything landed worked out from them, a guest judged on its own clock, stand-ins with their own greed and reactions, only when alone",
+          "status": "done"
+        },
+        {
+          "id": "50.7",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "50.8",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-19T16:50:10.083Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: the lake, the rods and the fish are primitives, players are the island capsule",
+        "No reeling mini-game: one click lands the fish",
         "No music of its own yet; the round is silent under the cues"
       ],
       "budgets": {

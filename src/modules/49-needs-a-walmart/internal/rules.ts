@@ -1,5 +1,5 @@
 /**
- * The rules of This Place Needs A Walmart, as arithmetic.
+ * The rules of OG Black Friday, as arithmetic.
  *
  * Everybody against everybody in a supermarket, each pushing a trolley with a
  * grocery list of three things. **Sprint round the aisles, pick your three
@@ -10,8 +10,8 @@
  *   or a full trolley - a click **puts something back**: the newest thing in it
  *   you do not need, or failing that the newest, on the floor in front of you.
  * - **Space rams your trolley forward.** Hit somebody with it and they are
- *   knocked flying and **the newest thing in their trolley spills out** onto the
- *   floor, for anybody to grab.
+ *   knocked flying and **the newest thing in their trolley flies out and lands on
+ *   an empty shelf somewhere else in the store**, at random, for anybody to find.
  * - **Down a checkout lane with all three things on your list** and you are
  *   through, in that order. It ends when three are through, when all but one
  *   are, 25 seconds after the first, or at three minutes; after those through,
@@ -19,6 +19,7 @@
  *
  * Everything here is pure.
  */
+import { createRng, hashSeed } from '../../00-core'
 import { LANES, LIST_SIZE, SLOTS, collide, floorSpot, inLane, listsFor, spawnPoint, stockFor } from './store'
 
 export const BODY = {
@@ -105,6 +106,8 @@ export interface Game {
   over: boolean
   players: Player[]
   items: Item[]
+  /** How many things have been knocked out of trolleys: each one's landing place is dealt from the seed and this. */
+  spills: number
 }
 
 export interface Entrant {
@@ -133,6 +136,7 @@ export function createGame(seed: number, entrants: readonly Entrant[], id = 1): 
     elapsed: 0,
     over: entrants.length === 0,
     items: freshItems(seed, entrants.length),
+    spills: 0,
     players: entrants.map((e, index) => {
       const at = spawnPoint(index, entrants.length)
       return {
@@ -278,7 +282,7 @@ export function ramming(game: Game, p: Player): boolean {
   return game.elapsed - p.ramAt < RAM.window
 }
 
-/** `a` rams into `b`: knocked flying and stunned, and the newest thing in their trolley spills out. */
+/** `a` rams into `b`: knocked flying and stunned, and the newest thing in their trolley flies off to a random empty shelf. */
 function rammed(game: Game, a: number, b: number): void {
   const p = game.players[a]
   const q = game.players[b]
@@ -293,7 +297,30 @@ function rammed(game: Game, a: number, b: number): void {
   p.kx *= 0.3
   p.kz *= 0.3
   const spilt = q.cart.pop()
-  if (spilt !== undefined) drop(game, spilt, q.x + (dx / d) * 1.2, q.z + (dz / d) * 1.2)
+  if (spilt !== undefined) scatter(game, spilt)
+}
+
+/**
+ * Where a spilt thing lands: a place on a shelf nothing else is on, anywhere in
+ * the store, dealt from the seed and how many have spilt before - so the same
+ * game spills the same way. No empty place at all (there always is one - there
+ * are far more places than things), and it lands where it is.
+ */
+export function landing(game: Game, item: number): number {
+  const taken = new Set(game.items.filter((it, i) => i !== item && it.holder === null && it.shelf).map((it) => `${it.x}:${it.z}`))
+  const empty = SLOTS.map((_, k) => k).filter((k) => !taken.has(`${SLOTS[k].x}:${SLOTS[k].z}`))
+  if (empty.length === 0) return -1
+  const random = createRng(hashSeed(game.seed, `needs-a-walmart:spill:${game.spills}`))
+  return empty[Math.floor(random() * empty.length)]
+}
+
+/** A thing knocked out of a trolley, on its way to a random empty shelf. */
+function scatter(game: Game, item: number): void {
+  const slot = landing(game, item)
+  game.spills += 1
+  const it = game.items[item]
+  if (slot < 0) Object.assign(it, { holder: null })
+  else Object.assign(it, { x: SLOTS[slot].x, z: SLOTS[slot].z, shelf: true, holder: null })
 }
 
 /**
