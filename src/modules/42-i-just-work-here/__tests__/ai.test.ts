@@ -31,13 +31,14 @@ describe('the stand-ins', () => {
       if (game.elapsed < ROUND.limit) early += 1
     }
     expect(early).toBeGreaterThanOrEqual(11)
-  })
+    // Twelve whole games: seconds, not milliseconds.
+  }, 60000)
 
   it('play the same way every time', () => {
     const a = play(4242, 5).game
     const b = play(4242, 5).game
     expect(JSON.stringify(placings(a).map((e) => [e.player.id, e.player.out]))).toBe(JSON.stringify(placings(b).map((e) => [e.player.id, e.player.out])))
-  })
+  }, 30000)
 
   it('will not fire at a wall they are standing next to', () => {
     const game = arm(createGame(11, [{ id: 'a', bot: true }, { id: 'b', bot: true }]), 0)

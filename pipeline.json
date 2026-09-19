@@ -131,7 +131,8 @@
         "39-ill-just-wait",
         "40-whats-your-rpm",
         "41-one-piece",
-        "42-i-just-work-here"
+        "42-i-just-work-here",
+        "43-highest-in-the-room"
       ]
     }
   ],
@@ -183,7 +184,8 @@
         "39-ill-just-wait",
         "40-whats-your-rpm",
         "41-one-piece",
-        "42-i-just-work-here"
+        "42-i-just-work-here",
+        "43-highest-in-the-room"
       ],
       "generation": 1,
       "contract": {
@@ -375,7 +377,8 @@
         "36-musical-mayhem",
         "39-ill-just-wait",
         "40-whats-your-rpm",
-        "42-i-just-work-here"
+        "42-i-just-work-here",
+        "43-highest-in-the-room"
       ],
       "generation": 1,
       "contract": {
@@ -896,7 +899,8 @@
         "39-ill-just-wait",
         "40-whats-your-rpm",
         "41-one-piece",
-        "42-i-just-work-here"
+        "42-i-just-work-here",
+        "43-highest-in-the-room"
       ],
       "generation": 1,
       "contract": {
@@ -1416,7 +1420,8 @@
         "39-ill-just-wait",
         "40-whats-your-rpm",
         "41-one-piece",
-        "42-i-just-work-here"
+        "42-i-just-work-here",
+        "43-highest-in-the-room"
       ],
       "generation": 1,
       "contract": {
@@ -3699,7 +3704,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-19T03:47:47.447Z"
+          "at": "2026-09-19T04:01:57.793Z"
         },
         "human": {
           "status": "pending"
@@ -3711,6 +3716,89 @@
         "No models: the office is boxes, the pieces and the bazooka are primitives, players are the island capsule",
         "No health, ammo, splash falloff or knockback: inside the blast is out, outside it is not",
         "No taking or hiding anybody else's pieces",
+        "No music of its own yet; the round is silent under the cues"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "43-highest-in-the-room",
+      "phase": "P6",
+      "title": "Minigame 33, Highest In The Room: press the arrow on the screen - right builds a block under you, wrong knocks you down four; ten behind whoever is highest and you are out; the camera follows the leader; last one left wins",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "43.1",
+          "title": "The arrows: one sequence from the seed, the same for everybody, never three alike running",
+          "status": "done"
+        },
+        {
+          "id": "43.2",
+          "title": "The climb: a block for a right key, four down for a wrong one, the arrow stays until you get it",
+          "status": "done"
+        },
+        {
+          "id": "43.3",
+          "title": "The end: out at ten behind the highest still in, together if together; last one left wins; at 1:30 by height",
+          "status": "done"
+        },
+        {
+          "id": "43.4",
+          "title": "The controls: the four arrow keys, once per press, never scrolling the page",
+          "status": "done"
+        },
+        {
+          "id": "43.5",
+          "title": "Side on: a row of towers, a camera on the leader, a red band ten below them, the arrow and the next three on the screen",
+          "status": "done"
+        },
+        {
+          "id": "43.6",
+          "title": "One room shared across the lobby, a guest judging its own keys and the host pressing the same ones, stand-ins only when alone",
+          "status": "done"
+        },
+        {
+          "id": "43.7",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "43.8",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-19T04:01:25.319Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: the towers are boxes and the players are the island capsule",
+        "No typing anything but the four arrows",
         "No music of its own yet; the round is silent under the cues"
       ],
       "budgets": {

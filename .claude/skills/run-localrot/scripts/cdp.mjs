@@ -166,6 +166,12 @@ export class Page {
 
 /** Each game's screen component, and an element inside it to start the search from. */
 export const GAMES = {
+  'highest-in-the-room': {
+    title: 'Highest In The Room',
+    screen: 'TowerScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
   'i-just-work-here': {
     title: 'I Just Work Here',
     screen: 'OfficeScreen',

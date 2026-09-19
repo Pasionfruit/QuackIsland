@@ -1,0 +1,298 @@
+/**
+ * Highest In The Room, on the screen.
+ *
+ * The towers are drawn in their own canvas by `TowerScene`; this is the shell:
+ * the arrow keys turned into presses for `useTowerNet`, and the words - the
+ * clock, who is still climbing and how far behind, **the arrow to press** -
+ * only that one, never the ones after it - and what just happened.
+ *
+ * **↑ ↓ ← → - press the arrow on the screen.** Holding a key down presses it
+ * once; the arrow keys never scroll the page behind the game.
+ */
+import { Canvas } from '@react-three/fiber'
+import { memo, useEffect, useRef, useState, type RefObject } from 'react'
+import { ACESFilmicToneMapping } from 'three'
+import { getNet, useNet, usePeers } from '../../09-net'
+import { CUES, TopTimer, playCue, useFinish, type MinigameRun } from '../../15-minigames'
+import { TowerScene } from './TowerScene'
+import { CLIMB, COLOURS, ROUND, arrowFor, behind, clock, isIn, placings, type Arrow, type Game } from './rules'
+import { myId, newGame, waitingGame } from './setup'
+import { useTowerNet } from './useTowerNet'
+
+const LOOK = {
+  ink: '#2a2233',
+  faded: '#877d93',
+  paper: '#f4f0f8',
+  sun: '#ffc94d',
+  red: '#d9443a',
+  green: '#2f9e5b',
+} as const
+
+const FONT = "ui-rounded, 'Hiragino Maru Gothic ProN', 'Segoe UI', system-ui, -apple-system, sans-serif"
+
+/** The keys, by `KeyboardEvent.code`. */
+export const KEYS: Record<string, Arrow> = { ArrowUp: 0, ArrowDown: 1, ArrowLeft: 2, ArrowRight: 3 }
+/** How each arrow is drawn: its glyph. */
+export const GLYPHS = ['↑', '↓', '←', '→'] as const
+
+const minutes = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
+
+export function TowerScreen({ run }: { run: MinigameRun }) {
+  // First hook on purpose: the run-localrot skill reads the game from here.
+  const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
+  const net = useNet()
+  const peers = usePeers()
+  const me = net.id ?? myId()
+  const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
+  // The podium does the results; see `useFinish`.
+  useFinish(game.over, () =>
+    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: COLOURS[e.index % COLOURS.length], mine: e.player.id === me })),
+  )
+  const paused = useRef(run.paused)
+  paused.current = run.paused
+
+  const wire = useTowerNet()
+  const live = useRef(game)
+  live.current = game
+  const keys = useRef<Arrow[]>([])
+
+  useEffect(() => {
+    let frame = 0
+    let last = performance.now()
+    const tick = (now: number) => {
+      const dt = (now - last) / 1000
+      last = now
+      const pressed = keys.current.splice(0)
+      const result = wire.advance(live.current, dt, pressed, paused.current)
+      for (const ok of result.pressed) playCue(ok ? CUES.bump : CUES.woodenBridgeCollapse, ok ? 0.25 : 0.55)
+      if (result.changed) setGame({ ...live.current })
+      frame = requestAnimationFrame(tick)
+    }
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+  }, [])
+
+  // The arrow keys: each press once, never a held key's repeats, and never the page scrolling.
+  useEffect(() => {
+    const onDown = (e: KeyboardEvent) => {
+      if (!(e.code in KEYS)) return
+      e.preventDefault()
+      if (e.repeat || paused.current || live.current.over) return
+      keys.current.push(KEYS[e.code])
+    }
+    window.addEventListener('keydown', onDown)
+    return () => window.removeEventListener('keydown', onDown)
+  }, [])
+
+  const ready = game.players.length > 0
+  const mine = game.players.find((p) => p.mine)
+  const t = clock(game)
+  useTowerSounds(game)
+  const climbing = game.players.filter(isIn).length
+  const gap = mine ? behind(game, mine) : 0
+
+  let banner: { text: string; sub?: string; tone: 'out' | 'warn' | 'hint' } | null = null
+  if (ready && !game.over && mine) {
+    if (mine.out !== null) banner = t - mine.out < 3 ? { text: 'Knocked out', sub: `${CLIMB.behind} blocks behind - watching the rest`, tone: 'out' } : { text: 'Out - watching the rest', tone: 'hint' }
+    else if (game.elapsed - mine.wrongAt < 0.9) banner = { text: `Wrong - down ${CLIMB.knock}`, tone: 'out' }
+    else if (gap >= CLIMB.behind - 3) banner = { text: `${CLIMB.behind - gap} from out!`, sub: 'climb!', tone: 'warn' }
+    else if (t < 3 && mine.typed === 0) banner = { text: 'Press the arrow', sub: 'every right one is a block higher', tone: 'hint' }
+  }
+
+  return (
+    <div style={page}>
+      <div style={hud}>
+        <span style={{ fontWeight: 700, fontSize: 16 }}>Highest In The Room</span>
+        {ready ? (
+          <>
+            <TopTimer left={game.over ? null : ROUND.limit - Math.max(0, t)}>
+              <span style={{ ...pill, background: LOOK.sun, color: LOOK.ink }} data-time-left={Math.max(0, Math.ceil(ROUND.limit - Math.max(0, t)))}>
+                {minutes(Math.max(0, Math.ceil(ROUND.limit - Math.max(0, t))))}
+              </span>
+            </TopTimer>
+            <span style={{ ...pill, background: LOOK.ink, color: '#fff' }} data-climbing={climbing}>
+              {climbing} climbing
+            </span>
+          </>
+        ) : (
+          <span style={{ color: LOOK.faded }}>waiting for the host…</span>
+        )}
+        <span style={{ flex: 1 }} />
+        {game.players.map((p, index) => {
+          const colour = COLOURS[index % COLOURS.length]
+          const down = behind(game, p)
+          return (
+            <span
+              key={p.id}
+              style={{
+                ...pill,
+                background: isIn(p) ? colour : 'rgba(255,255,255,0.85)',
+                color: isIn(p) ? '#fff' : LOOK.faded,
+                boxShadow: isIn(p) ? 'none' : `inset 0 0 0 2px ${colour}`,
+                opacity: p.left ? 0.45 : 1,
+                outline: p.mine ? `2px solid ${LOOK.ink}` : 'none',
+                outlineOffset: 1,
+                textDecoration: p.out !== null ? 'line-through' : 'none',
+              }}
+              data-height={p.height}
+              data-out={p.out ?? ''}
+            >
+              {nameOf(p.id)} · {p.height}
+              {isIn(p) && down > 0 ? ` (−${down})` : ''}
+            </span>
+          )
+        })}
+      </div>
+
+      <div style={boardStyle} data-board>
+        <Stage live={live} />
+
+        {mine && game.elapsed - mine.wrongAt < 0.4 && !game.over ? <div style={{ ...flash, opacity: 1 - (game.elapsed - mine.wrongAt) / 0.4 }} /> : null}
+
+        {ready && mine && isIn(mine) && !game.over ? (
+          <div style={prompt} data-arrow={arrowFor(game, mine)}>
+            <div style={{ ...arrowBox, borderColor: game.elapsed - mine.wrongAt < 0.3 ? LOOK.red : '#fff', transform: game.elapsed - mine.pressedAt < 0.08 && mine.wrongAt !== mine.pressedAt ? 'scale(0.92)' : 'none' }}>
+              {GLYPHS[arrowFor(game, mine)]}
+            </div>
+          </div>
+        ) : null}
+
+        {banner ? (
+          <div style={bannerWrap}>
+            <div style={{ ...bannerBox, ...TONES[banner.tone] }} data-banner={banner.tone}>
+              {banner.text}
+            </div>
+            {banner.sub ? <div style={bannerSub}>{banner.sub}</div> : null}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+/** The canvas, rendered once - see `TowerScene`. */
+const Stage = memo(function Stage({ live }: { live: RefObject<Game> }) {
+  return (
+    <Canvas
+      dpr={DPR}
+      camera={CAMERA}
+      gl={GL}
+      onCreated={({ gl }) => {
+        gl.toneMapping = ACESFilmicToneMapping
+        gl.toneMappingExposure = 1
+      }}
+    >
+      <TowerScene live={live} />
+    </Canvas>
+  )
+})
+
+const DPR: [number, number] = [1, 2]
+const CAMERA = { fov: 50, near: 0.1, far: 300, position: [0, 3, 18] as [number, number, number] }
+const GL = { antialias: true, powerPreference: 'high-performance' as const }
+
+/** A fall for anybody knocked out - louder if it is you - and nothing for a new game. */
+function useTowerSounds(game: Game): void {
+  const seen = useRef<{ id: number; out: Set<string> }>({ id: -1, out: new Set() })
+  useEffect(() => {
+    const s = seen.current
+    const fresh = s.id !== game.id
+    if (fresh) seen.current = { id: game.id, out: new Set() }
+    for (const p of game.players) {
+      if (p.out === null || seen.current.out.has(p.id)) continue
+      seen.current.out.add(p.id)
+      if (!fresh) playCue(CUES.fallingOver, p.mine ? 0.7 : 0.35)
+    }
+  }, [game])
+}
+
+const page: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  zIndex: 42,
+  display: 'flex',
+  flexDirection: 'column',
+  overflow: 'hidden',
+  background: '#efe4d2',
+  color: LOOK.ink,
+  font: `14px/1.5 ${FONT}`,
+  userSelect: 'none',
+}
+
+const hud: React.CSSProperties = {
+  flex: '0 0 auto',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  padding: '10px 16px',
+  background: LOOK.paper,
+  borderBottom: '2px solid #ddd3e8',
+  flexWrap: 'wrap',
+}
+
+const pill: React.CSSProperties = {
+  padding: '3px 12px',
+  borderRadius: 999,
+  font: `600 12px/1.5 ${FONT}`,
+  whiteSpace: 'nowrap',
+}
+
+const boardStyle: React.CSSProperties = { flex: 1, minHeight: 0, width: '100%', position: 'relative', overflow: 'hidden' }
+
+const flash: React.CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  pointerEvents: 'none',
+  background: 'radial-gradient(ellipse at center, rgba(255,40,40,0.08) 40%, rgba(255,40,40,0.5) 100%)',
+}
+
+/** Right of the towers - the scene leaves room for it - and level with the middle of the screen. */
+const prompt: React.CSSProperties = {
+  position: 'absolute',
+  right: 'max(24px, 6vw)',
+  top: '50%',
+  transform: 'translateY(-50%)',
+  pointerEvents: 'none',
+}
+
+const arrowBox: React.CSSProperties = {
+  width: 110,
+  height: 110,
+  borderRadius: 26,
+  border: '5px solid #fff',
+  background: 'rgba(42,34,51,0.85)',
+  color: '#fff',
+  font: `900 76px/100px ${FONT}`,
+  textAlign: 'center',
+  boxShadow: '0 6px 0 rgba(0,0,0,0.3)',
+  transition: 'transform 60ms',
+}
+
+const bannerWrap: React.CSSProperties = {
+  position: 'absolute',
+  left: 0,
+  right: 0,
+  top: 18,
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: 4,
+  pointerEvents: 'none',
+  padding: '0 16px',
+}
+
+const bannerBox: React.CSSProperties = {
+  maxWidth: '100%',
+  padding: '6px 18px',
+  borderRadius: 14,
+  font: `800 20px/1.25 ${FONT}`,
+  textAlign: 'center',
+}
+
+const TONES: Record<'out' | 'warn' | 'hint', React.CSSProperties> = {
+  out: { background: LOOK.red, color: '#fff', transform: 'rotate(-2deg)', boxShadow: '0 4px 0 rgba(0,0,0,0.35)' },
+  warn: { background: LOOK.sun, color: LOOK.ink },
+  hint: { background: 'rgba(244,240,248,0.92)', color: LOOK.ink, font: `700 16px/1.3 ${FONT}` },
+}
+
+const bannerSub: React.CSSProperties = { color: LOOK.ink, font: `700 14px/1.3 ${FONT}`, textShadow: '0 1px 2px rgba(255,255,255,0.8)' }

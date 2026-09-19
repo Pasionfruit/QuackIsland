@@ -669,14 +669,19 @@ const ENTRIES = [
     done: { environment: true, controls: true, assets: false },
   },
   {
-    id: 'reserved-33',
+    id: 'highest-in-the-room',
     number: 33,
-    title: 'Free slot',
+    title: 'Highest In The Room',
     kind: 'free-for-all',
-    description: [],
-    controls: [],
-    reserved: true,
-    done: { environment: false, controls: false, assets: false },
+    description: [
+      'Race upward by correctly typing the arrow keys shown on screen. Every correct input builds another block beneath you, while the camera follows the player currently in the lead.',
+      'Make a mistake and you are knocked down 4 blocks. If you fall 10 blocks behind the leader, you are eliminated. The last player remaining wins.',
+    ],
+    controls: [{ input: '↑ ↓ ← →', does: 'Press the displayed arrow key' }],
+    reserved: false,
+    // Built: see `43-highest-in-the-room`. The assets stage is still to do - the
+    // towers are boxes and the players are the island's capsule.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'reserved-34',
