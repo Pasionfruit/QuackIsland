@@ -960,6 +960,52 @@ try {
     say('rounds', JSON.stringify(log))
     await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 120000)
     say('results', await page.shot('4-results.png'))
+  } else if (opt.steer && opt.game === 'shanty-matrix') {
+    // Dodge with the stand-ins' own look ahead, pressed as real WASD keys; shove with Space now and then.
+    const read = `(() => { const s = ${gameState(opt.game)}; const i = s.players.findIndex((p) => p.mine); const me = s.players[i]; return { t: s.elapsed, over: s.over, i, x: me.x, z: me.z, out: me.out, pushedAt: me.pushedAt, aboard: s.players.filter((p) => p.out === null && !p.left).length } })()`
+    await page.eval(`(async () => {
+      const ai = await import('/src/modules/47-shanty-matrix/internal/ai.ts')
+      const codes = { KeyW: [0, -1], KeyS: [0, 1], KeyA: [-1, 0], KeyD: [1, 0] }
+      const held = new Set()
+      const press = (code, down) => {
+        if (down === held.has(code)) return
+        down ? held.add(code) : held.delete(code)
+        window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, key: code.slice(3).toLowerCase() }))
+      }
+      window.__smSteer = setInterval(() => {
+        const s = ${gameState(opt.game)}
+        if (!s || s.over) return
+        const i = s.players.findIndex((p) => p.mine)
+        if (i < 0 || s.players[i].out !== null) { for (const c of Object.keys(codes)) press(c, false); return }
+        const way = ai.bestWay(s, i, s.elapsed - 0.25)
+        const want = { x: way.threat ? way.x : -s.players[i].x * 0.2, z: way.threat ? way.z : -s.players[i].z * 0.2 }
+        for (const [c, [dx, dz]] of Object.entries(codes)) press(c, dx * want.x + dz * want.z > 0.38)
+      }, 80)
+    })()`)
+    let shotLane = false
+    let shoved = false
+    let last = await page.eval(read)
+    for (let n = 0; n < 1500 && !last.over; n++) {
+      await sleep(100)
+      last = await page.eval(read)
+      if (!shotLane && last.t > 6 && (await page.eval(`!!document.querySelector('[data-danger]')`))) {
+        shotLane = true
+        say('in a lane', JSON.stringify(last), await page.shot('3-lane.png'))
+      }
+      if (n % 25 === 10 && last.out === null && !last.over) {
+        const before = last.pushedAt
+        await page.eval(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ' })); window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space', key: ' ' }))`)
+        await sleep(120)
+        const after = await page.eval(read)
+        if (after.pushedAt > before) shoved = true
+      }
+      if (n === 200) say('twenty seconds in', JSON.stringify(last), await page.shot('4-barrage.png'))
+    }
+    await page.eval(`clearInterval(window.__smSteer)`)
+    say('end', JSON.stringify({ ...last, shoved, shotLane }))
+    if (!shoved) throw new Error('Space never shoved')
+    await page.waitFor(`!!document.querySelector('[data-podium]')`, 30000)
+    say('results', await page.shot('5-results.png'))
   } else if (opt.steer) {
     await page.eval(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyD', key: 'd' }))`)
     await sleep(2000)

@@ -135,7 +135,8 @@
         "43-highest-in-the-room",
         "44-color-coded",
         "45-binary-bs",
-        "46-youre-the-bomb"
+        "46-youre-the-bomb",
+        "47-shanty-matrix"
       ]
     }
   ],
@@ -191,7 +192,8 @@
         "43-highest-in-the-room",
         "44-color-coded",
         "45-binary-bs",
-        "46-youre-the-bomb"
+        "46-youre-the-bomb",
+        "47-shanty-matrix"
       ],
       "generation": 1,
       "contract": {
@@ -387,7 +389,8 @@
         "43-highest-in-the-room",
         "44-color-coded",
         "45-binary-bs",
-        "46-youre-the-bomb"
+        "46-youre-the-bomb",
+        "47-shanty-matrix"
       ],
       "generation": 1,
       "contract": {
@@ -912,7 +915,8 @@
         "43-highest-in-the-room",
         "44-color-coded",
         "45-binary-bs",
-        "46-youre-the-bomb"
+        "46-youre-the-bomb",
+        "47-shanty-matrix"
       ],
       "generation": 1,
       "contract": {
@@ -1436,7 +1440,8 @@
         "43-highest-in-the-room",
         "44-color-coded",
         "45-binary-bs",
-        "46-youre-the-bomb"
+        "46-youre-the-bomb",
+        "47-shanty-matrix"
       ],
       "generation": 1,
       "contract": {
@@ -4073,6 +4078,89 @@
       "nonGoals": [
         "No models: the room, the bombs and the pin are primitives, players are the island capsule",
         "Nobody sees a bomb they have not scanned, and a scan is never shared",
+        "No music of its own yet; the round is silent under the cues"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "47-shanty-matrix",
+      "phase": "P6",
+      "title": "Minigame 43, Shanty Matrix: the deck of a pirate ship under a barrage; giant cannonballs fly across from every direction at every speed, each lane lit a second ahead; dodge them and shove the others into them; a ball puts you overboard; last one standing wins",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "47.1",
+          "title": "The deck and the guns: a railed deck, and every ball of the round dealt from the seed - direction, lane, size, speed and when - fiercer and quicker the longer it goes, all arithmetic on the clock",
+          "status": "done"
+        },
+        {
+          "id": "47.2",
+          "title": "The bodies: walking, kept apart and inside the rails, a shove that knocks a couple of metres, a ball that flings whoever it touches overboard, credited to whoever shoved them into it",
+          "status": "done"
+        },
+        {
+          "id": "47.3",
+          "title": "The end: last one standing, the last to go overboard next, at two minutes everybody standing shares",
+          "status": "done"
+        },
+        {
+          "id": "47.4",
+          "title": "The controls: WASD, left click or Space to shove the way you last walked",
+          "status": "done"
+        },
+        {
+          "id": "47.5",
+          "title": "From above and behind: the ship rocking on the sea, each ball's lane lit red with an arrow, the ball out of the smoke, across the deck and into the sea, bodies flung overboard, a red edge while you stand in a lane",
+          "status": "done"
+        },
+        {
+          "id": "47.6",
+          "title": "One deck shared across the lobby, the host running the bodies from everybody's hands, the balls on every screen from the seed, stand-ins that dodge only what they have noticed, only when alone",
+          "status": "done"
+        },
+        {
+          "id": "47.7",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "47.8",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-19T15:32:09.847Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: the ship and the cannonballs are primitives, players are the island capsule",
+        "No falling overboard but by a cannonball: the rails hold everybody on the deck",
         "No music of its own yet; the round is silent under the cues"
       ],
       "budgets": {

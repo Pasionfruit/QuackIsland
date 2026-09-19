@@ -2,7 +2,7 @@
 
 ## What this is
 
-The minigames Volcano Island is made of: **forty-two of them**, thirty-one
+The minigames Volcano Island is made of: **forty-three of them**, thirty-two
 free-for-all and eleven one-vs-all, as a catalogue you can browse and a seam
 each one plugs into when somebody builds it.
 
@@ -28,19 +28,20 @@ position in an array.
 That is also why a slot nobody has named is a **reserved entry with a number**
 rather than a gap. The catalogue is the plan, the dashboard draws the plan, and
 the distance between what is planned and what exists is the single most useful
-thing a dashboard of templates can show you. Thirty-four of the forty-two are
+thing a dashboard of templates can show you. Thirty-five of the forty-three are
 named; eight are free slots waiting for one, all of them one-vs-all.
 
 | | free-for-all | one-vs-all | total |
 | --- | --- | --- | --- |
-| Named | 31 | 3 | 34 |
+| Named | 32 | 3 | 35 |
 | Free slots | 0 | 8 | 8 |
-| **Target** | **31** | **11** | **42** |
+| **Target** | **32** | **11** | **43** |
 
 **Slot 42 was added, not dealt.** When *You're The Bomb* arrived every
 free-for-all slot was taken, so the free-for-all target went from 30 to 31 and
 the new game took the next number, 42, rather than one of the free one-vs-all
-slots - those are kept for one-vs-all games.
+slots - those are kept for one-vs-all games. *Shanty Matrix* arrived the same
+way and took 43, with the free-for-all target going to 32.
 
 Twelve of the twenty-six arrived with their controls already written down;
 the other fourteen did not, and their templates say so.

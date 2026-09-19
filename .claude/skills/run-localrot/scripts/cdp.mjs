@@ -166,6 +166,12 @@ export class Page {
 
 /** Each game's screen component, and an element inside it to start the search from. */
 export const GAMES = {
+  'shanty-matrix': {
+    title: 'Shanty Matrix',
+    screen: 'DeckScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
   'youre-the-bomb': {
     title: "You're The Bomb",
     screen: 'RoomScreen',

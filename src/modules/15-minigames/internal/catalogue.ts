@@ -96,7 +96,7 @@ export interface Minigame {
  * test should catch. There is one that does.
  */
 export const MINIGAME_TARGET: Readonly<Record<MinigameKind, number>> = Object.freeze({
-  'free-for-all': 31,
+  'free-for-all': 32,
   'one-vs-all': 11,
 })
 
@@ -799,6 +799,26 @@ const ENTRIES = [
     // Built: see `46-youre-the-bomb`. The assets stage is still to do - the room,
     // the bombs and the pin are primitives and the players are the island's capsule.
     // Added as a forty-second slot when every free-for-all one was taken.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'shanty-matrix',
+    number: 43,
+    title: 'Shanty Matrix',
+    kind: 'free-for-all',
+    description: [
+      'Survive as long as you can on the deck of a pirate ship while giant cannonballs fly across it from every direction, at every speed.',
+      "A red lane lights up across the deck the moment a ball is fired, a second before it arrives. Dodge out of its way - and push the other players into it. Anybody a cannonball hits goes overboard and is out.",
+      'The barrage gets faster and fiercer the longer it goes. The last player standing wins.',
+    ],
+    controls: [
+      { input: 'WASD', does: 'Move' },
+      { input: 'Left Click / Space', does: 'Push whoever is in front of you' },
+    ],
+    reserved: false,
+    // Built: see `47-shanty-matrix`. The assets stage is still to do - the ship
+    // and the cannonballs are primitives and the players are the island's capsule.
+    // Added as a forty-third slot, the same way as 42.
     done: { environment: true, controls: true, assets: false },
   },
 ] as const
