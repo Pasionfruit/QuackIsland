@@ -111,7 +111,9 @@ export const button: React.CSSProperties = {
 
 export const buttonOn: React.CSSProperties = {
   background: ISLAND.sun,
-  borderColor: '#e8a92f',
+  // The whole shorthand, not just its colour: React warns about a style that
+  // mixes `border` with `borderColor` when a button turns on and off again.
+  border: '2px solid #e8a92f',
   color: ISLAND.ink,
 }
 

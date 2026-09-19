@@ -11,7 +11,8 @@
 import { act, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { BUILD_STEPS, MINIGAMES, minigameById } from '../internal/catalogue'
+import { BUILD_STEPS, MINIGAMES, minigameById, minigamesOfKind } from '../internal/catalogue'
+import { COLUMNS, PER_PAGE, ROWS, pageCount } from '../internal/Dashboard'
 import { MinigameScreen } from '../internal/MinigameScreen'
 import { FADE, forgetBuilds, registerMinigame, type MinigameRun } from '../internal/registry'
 import {
@@ -53,6 +54,26 @@ const click = (el: Element | null) =>
 
 const escape = () => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape' }))
 
+const arrowKey = (code: 'ArrowLeft' | 'ArrowRight') => act(() => window.dispatchEvent(new KeyboardEvent('keydown', { code })))
+
+/** The tiles on the page just now, by id. */
+const tilesOn = (where: HTMLDivElement) => [...where.querySelectorAll('[data-minigame]')].map((t) => t.getAttribute('data-minigame'))
+
+/** Every tile on every page, by id, turning the page with the arrow until it runs out. */
+function everyTile(where: HTMLDivElement): string[] {
+  const seen: string[] = []
+  for (let guard = 0; guard < 50; guard++) {
+    seen.push(...(tilesOn(where) as string[]))
+    const next = where.querySelector('[data-page-next]') as HTMLButtonElement | null
+    if (!next || next.disabled) break
+    click(next)
+  }
+  return seen
+}
+
+/** Turns back to the first page, so the next test's page is not this one's. */
+const toFirstPage = (where: HTMLDivElement) => click(where.querySelector('[data-page-dot="1"]'))
+
 /** Presses play and runs the whole countdown out, without waiting for it. */
 const playThrough = () =>
   act(() => {
@@ -66,31 +87,112 @@ describe('the dashboard', () => {
     expect(where.innerHTML).toBe('')
   })
 
-  it('opens with a tile for every game there is', () => {
+  it('opens on a full page of twenty, five across and four down', () => {
     const where = mount()
     act(() => openDashboard())
-    expect(where.querySelectorAll('[data-minigame]')).toHaveLength(MINIGAMES.length)
+    expect(where.querySelectorAll('[data-minigame]')).toHaveLength(PER_PAGE)
+    const grid = where.querySelector('[data-grid]') as HTMLElement
+    expect(grid.dataset.grid).toBe('5x4')
+    expect(grid.style.gridTemplateColumns).toBe(`repeat(${COLUMNS}, 1fr)`)
+    expect(grid.style.gridTemplateRows).toBe(`repeat(${ROWS}, 1fr)`)
+  })
+
+  it('has a tile for every game there is, across its pages, each on exactly one', () => {
+    const where = mount()
+    act(() => openDashboard())
+    const seen = everyTile(where)
+    expect(seen).toEqual(MINIGAMES.map((game) => game.id))
+    expect(new Set(seen).size).toBe(MINIGAMES.length)
+  })
+
+  it('turns the page with the arrows, the dots and the arrow keys, and stops at both ends', () => {
+    const where = mount()
+    act(() => openDashboard())
+    const pages = pageCount(MINIGAMES.length)
+    expect(pages).toBeGreaterThan(1)
+    const pager = () => (where.querySelector('[data-page]') as HTMLElement).dataset.page
+    const prev = () => where.querySelector('[data-page-prev]') as HTMLButtonElement
+    const next = () => where.querySelector('[data-page-next]') as HTMLButtonElement
+
+    expect(pager()).toBe(`1/${pages}`)
+    expect(prev().disabled).toBe(true)
+    click(next())
+    expect(pager()).toBe(`2/${pages}`)
+    expect(tilesOn(where)).toEqual(MINIGAMES.slice(PER_PAGE, PER_PAGE * 2).map((g) => g.id))
+
+    arrowKey('ArrowRight')
+    expect(pager()).toBe(`${Math.min(3, pages)}/${pages}`)
+    arrowKey('ArrowLeft')
+    expect(pager()).toBe(`2/${pages}`)
+
+    click(where.querySelector(`[data-page-dot="${pages}"]`))
+    expect(pager()).toBe(`${pages}/${pages}`)
+    expect(next().disabled).toBe(true)
+    arrowKey('ArrowRight')
+    expect(pager()).toBe(`${pages}/${pages}`)
+
+    click(where.querySelector('[data-page-dot="1"]'))
+    expect(pager()).toBe(`1/${pages}`)
+  })
+
+  it('keeps the grid the same on a page with fewer than twenty on it', () => {
+    const where = mount()
+    act(() => openDashboard())
+    const pages = pageCount(MINIGAMES.length)
+    click(where.querySelector(`[data-page-dot="${pages}"]`))
+    const last = MINIGAMES.length - PER_PAGE * (pages - 1)
+    expect(where.querySelectorAll('[data-minigame]')).toHaveLength(last)
+    // Still four rows of five: the tiles do not grow to fill the page.
+    const grid = where.querySelector('[data-grid]') as HTMLElement
+    expect(grid.style.gridTemplateRows).toBe(`repeat(${ROWS}, 1fr)`)
+    toFirstPage(where)
+  })
+
+  it('goes back to the first page when the filter changes, and stays where it was through a game', () => {
+    const where = mount()
+    act(() => openDashboard())
+    const pager = () => (where.querySelector('[data-page]') as HTMLElement).dataset.page
+    click(where.querySelector('[data-page-dot="2"]'))
+    expect(pager()?.startsWith('2/')).toBe(true)
+
+    // Out to a game on that page and back: the same page.
+    const onPage = tilesOn(where)[0] as string
+    click(where.querySelector(`[data-minigame="${onPage}"]`))
+    act(() => backOut())
+    expect(pager()?.startsWith('2/')).toBe(true)
+
+    const tab = [...where.querySelectorAll('button')].find((b) => b.textContent?.startsWith('free-for-all'))
+    click(tab ?? null)
+    expect(pager()?.startsWith('1/')).toBe(true)
+    click([...where.querySelectorAll('button')].find((b) => b.textContent?.startsWith('all ')) ?? null)
+    expect(pager()?.startsWith('1/')).toBe(true)
   })
 
   it('gives every tile its number and its name', () => {
     const where = mount()
     act(() => openDashboard())
-    for (const game of MINIGAMES) {
-      const tile = where.querySelector(`[data-minigame="${game.id}"]`)
-      expect(tile?.textContent).toContain(String(game.number))
-      if (!game.reserved) expect(tile?.textContent).toContain(game.title)
+    for (let page = 0; page < pageCount(MINIGAMES.length); page++) {
+      click(where.querySelector(`[data-page-dot="${page + 1}"]`))
+      for (const game of MINIGAMES.slice(page * PER_PAGE, (page + 1) * PER_PAGE)) {
+        const tile = where.querySelector(`[data-minigame="${game.id}"]`)
+        expect(tile?.textContent).toContain(String(game.number))
+        if (!game.reserved) expect(tile?.textContent).toContain(game.title)
+      }
     }
   })
 
   it('keeps the descriptions off the tiles', () => {
-    // Forty-one paragraphs at once is a wall of text nobody reads. The grid is
+    // Twenty paragraphs at once is a wall of text nobody reads. The grid is
     // for picking a game; reading about one happens a tab along.
     const where = mount()
     act(() => openDashboard())
-    for (const game of MINIGAMES) {
-      const tile = where.querySelector(`[data-minigame="${game.id}"]`)
-      for (const para of game.description) {
-        expect(tile?.textContent ?? '').not.toContain(para)
+    for (let page = 0; page < pageCount(MINIGAMES.length); page++) {
+      click(where.querySelector(`[data-page-dot="${page + 1}"]`))
+      for (const game of MINIGAMES.slice(page * PER_PAGE, (page + 1) * PER_PAGE)) {
+        const tile = where.querySelector(`[data-minigame="${game.id}"]`)
+        for (const para of game.description) {
+          expect(tile?.textContent ?? '').not.toContain(para)
+        }
       }
     }
   })
@@ -116,11 +218,15 @@ describe('the dashboard', () => {
       b.textContent?.startsWith('one vs all'),
     )
     click(tab ?? null)
-    expect(where.querySelectorAll('[data-minigame]')).toHaveLength(11)
+    // The one-vs-all slots are all still free, and there are few enough for one page.
+    const ofKind = minigamesOfKind('one-vs-all')
+    expect(ofKind.length).toBeLessThanOrEqual(PER_PAGE)
+    expect(tilesOn(where)).toEqual(ofKind.map((game) => game.id))
 
     const all = [...where.querySelectorAll('button')].find((b) => b.textContent?.startsWith('all '))
     click(all ?? null)
-    expect(where.querySelectorAll('[data-minigame]')).toHaveLength(MINIGAMES.length)
+    expect(everyTile(where)).toEqual(MINIGAMES.map((game) => game.id))
+    toFirstPage(where)
   })
 })
 

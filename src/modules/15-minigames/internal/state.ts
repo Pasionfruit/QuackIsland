@@ -326,6 +326,31 @@ export function backOut(): void {
 export function closeMinigames(): void {
   screen.set(CLOSED)
   call.set(NO_CALL)
+  dashboardAt = { ...DASHBOARD_START }
+}
+
+/**
+ * Where the dashboard was left - which filter, and which page of tiles.
+ *
+ * Kept here rather than in the component so that stepping into a game and back
+ * lands on the page the game was picked from: the grid unmounts while a game is
+ * open. Closing the minigames screen forgets it, and the next open starts at the
+ * beginning.
+ */
+export interface DashboardAt {
+  filter: string
+  page: number
+}
+
+const DASHBOARD_START: DashboardAt = { filter: 'all', page: 0 }
+let dashboardAt: DashboardAt = { ...DASHBOARD_START }
+
+export function dashboardWas(): DashboardAt {
+  return dashboardAt
+}
+
+export function rememberDashboard(at: DashboardAt): void {
+  dashboardAt = at
 }
 
 /**

@@ -1,9 +1,9 @@
 /**
  * 15-minigames - the public contract.
  *
- * The minigames Volcano Island is made of: forty-one of them, thirty
- * free-for-all and eleven one-vs-all, as a catalogue you can browse and a seam
- * each one plugs into when it is built.
+ * The minigames Volcano Island is made of: forty-six of them, thirty-eight
+ * free-for-all and eight one-vs-all, as a catalogue you can browse - twenty to a
+ * page - and a seam each one plugs into when it is built.
  *
  * It plays none of them. What it owns is the part that has to be right before
  * forty-one of anything can be built: one list that is the plan, one place a

@@ -1,21 +1,27 @@
 /**
- * Every minigame there is going to be, on one screen.
+ * Every minigame there is going to be, twenty to a page.
  *
- * Forty-one tiles in a seven-wide grid, which is the whole point: the plan is
- * legible at a glance, including the parts of it that do not exist. A slot
- * nobody has named yet is drawn faint rather than left out, so the gap between
- * what is planned and what is built is the thing you actually see.
+ * **Five across and four down, always**, and pages for the rest: the tiles are
+ * big enough to read and to hit, and they stay that size whatever is on the
+ * page. A page with fewer than twenty on it - the last one, or a filter down to
+ * a handful - keeps the grid and leaves the rest of it empty rather than
+ * stretching what is there to fill it. A slot nobody has named yet is drawn
+ * faint rather than left out, so the gap between what is planned and what is
+ * built is still the thing you see.
+ *
+ * **Paging**: the arrows under the grid, the dots between them, or the left and
+ * right arrow keys. Picking a filter goes back to its first page. The page and
+ * the filter are remembered while the screen is open - so stepping back out of a
+ * game lands on the page it was picked from - and forgotten when it closes.
  *
  * **A tile is a number, a name and three pips, and nothing else.** No
- * description: forty-one paragraphs at once is a wall of text nobody reads,
- * and the grid is for picking a game rather than for reading about one. What a
- * game is lives behind its own screen, one tab along.
+ * description: the grid is for picking a game rather than for reading about
+ * one. What a game is lives behind its own screen, one tab along.
  *
- * It never scrolls. The rows share out whatever height is left under the bar,
- * so filtering to eleven games makes the tiles taller rather than making the
- * page shorter.
+ * It never scrolls: the four rows share out whatever height is left under the
+ * bar.
  */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   BUILD_STEPS,
   MINIGAMES,
@@ -40,21 +46,61 @@ import {
   wordmark,
 } from './look'
 import { builtMinigames } from './registry'
-import { backOut, openMinigame } from './state'
+import { backOut, dashboardWas, openMinigame, rememberDashboard } from './state'
 import { SELECT_GAME_SOUND, clicked } from './sound'
 
-/** Seven across, the same as the shelf next door. Forty-one comes to six rows. */
-const COLUMNS = 7
+/** Five across and four down: twenty tiles to a page. */
+export const COLUMNS = 5
+export const ROWS = 4
+export const PER_PAGE = COLUMNS * ROWS
 
 type Filter = 'all' | MinigameKind
 
+/** How many pages `count` tiles come to: always at least one, even with nothing on it. */
+export function pageCount(count: number): number {
+  return Math.max(1, Math.ceil(count / PER_PAGE))
+}
+
+/** What is on page `page` (from 0) of a list, and which page that really is once it is kept in range. */
+export function pageOf<T>(list: readonly T[], page: number): { page: number; items: readonly T[] } {
+  const at = Math.max(0, Math.min(pageCount(list.length) - 1, Math.floor(page)))
+  return { page: at, items: list.slice(at * PER_PAGE, (at + 1) * PER_PAGE) }
+}
+
 export function Dashboard() {
-  const [filter, setFilter] = useState<Filter>('all')
+  // Where it was left, if a game was opened from it and stepped back out of.
+  const was = dashboardWas()
+  const [filter, setFilterNow] = useState<Filter>(was.filter as Filter)
+  const [asked, setAsked] = useState(was.page)
 
   const games = filter === 'all' ? MINIGAMES : minigamesOfKind(filter)
   const far = progress(games)
-  const rows = Math.max(1, Math.ceil(games.length / COLUMNS))
+  const pages = pageCount(games.length)
+  const { page, items } = pageOf(games, asked)
   const built = builtMinigames().length
+
+  const setFilter = (next: Filter) => {
+    rememberDashboard({ filter: next, page: 0 })
+    setFilterNow(next)
+    setAsked(0)
+  }
+
+  const turnTo = (next: number) => {
+    const to = Math.max(0, Math.min(pages - 1, next))
+    rememberDashboard({ filter, page: to })
+    setAsked(to)
+  }
+
+  // The left and right arrow keys turn the page too.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== 'ArrowLeft' && e.code !== 'ArrowRight') return
+      e.preventDefault()
+      turnTo(page + (e.code === 'ArrowRight' ? 1 : -1))
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
 
   return (
     <div style={screen}>
@@ -80,10 +126,53 @@ export function Dashboard() {
       </div>
 
       <div style={body}>
-        <div style={{ ...grid, gridTemplateRows: `repeat(${rows}, 1fr)` }}>
-          {games.map((game) => (
+        <div style={grid} data-grid={`${COLUMNS}x${ROWS}`}>
+          {items.map((game) => (
             <Tile key={game.id} game={game} />
           ))}
+        </div>
+
+        {/* The pages: back, where you are, on. Drawn even when there is only one,
+            so the grid above it never moves. */}
+        <div style={pager} data-page={`${page + 1}/${pages}`}>
+          <button
+            type="button"
+            onClick={clicked(() => turnTo(page - 1))}
+            disabled={page === 0}
+            aria-label="previous page"
+            data-page-prev
+            style={{ ...button, ...arrow, opacity: page === 0 ? 0.35 : 1 }}
+          >
+            &lsaquo;
+          </button>
+
+          <span style={dots}>
+            {Array.from({ length: pages }, (_, k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={clicked(() => turnTo(k))}
+                aria-label={`page ${k + 1}`}
+                data-page-dot={k + 1}
+                style={{ ...dot, background: k === page ? ISLAND.deepSea : 'transparent' }}
+              />
+            ))}
+          </span>
+
+          <span style={pageLabel}>
+            page {page + 1} of {pages}
+          </span>
+
+          <button
+            type="button"
+            onClick={clicked(() => turnTo(page + 1))}
+            disabled={page >= pages - 1}
+            aria-label="next page"
+            data-page-next
+            style={{ ...button, ...arrow, opacity: page >= pages - 1 ? 0.35 : 1 }}
+          >
+            &rsaquo;
+          </button>
         </div>
 
         {/* The progress report, which is what a dashboard of templates is for:
@@ -188,7 +277,38 @@ const grid: React.CSSProperties = {
   minHeight: 0,
   display: 'grid',
   gridTemplateColumns: `repeat(${COLUMNS}, 1fr)`,
-  gap: 9,
+  // Four rows whatever is on the page, so a short page keeps its tiles the size of a full one's.
+  gridTemplateRows: `repeat(${ROWS}, 1fr)`,
+  gap: 12,
+}
+
+const pager: React.CSSProperties = {
+  flex: '0 0 auto',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 14,
+  marginTop: 10,
+}
+
+const arrow: React.CSSProperties = { padding: '2px 16px', font: `700 20px/1.2 ${FONT}` }
+
+const dots: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8 }
+
+const dot: React.CSSProperties = {
+  width: 12,
+  height: 12,
+  padding: 0,
+  borderRadius: '50%',
+  border: `2px solid ${ISLAND.deepSea}`,
+  cursor: 'pointer',
+}
+
+const pageLabel: React.CSSProperties = {
+  font: `600 13px/1.4 ${FONT}`,
+  color: ISLAND.deepSea,
+  minWidth: 92,
+  textAlign: 'center',
 }
 
 const tile: React.CSSProperties = {
@@ -199,7 +319,7 @@ const tile: React.CSSProperties = {
   gap: 4,
   minHeight: 0,
   overflow: 'hidden',
-  padding: '8px 10px 7px',
+  padding: '12px 14px 10px',
   border: 'none',
   borderRadius: 14,
   background: ISLAND.sand,
@@ -219,7 +339,7 @@ const tileTop: React.CSSProperties = {
 }
 
 const tileNumber: React.CSSProperties = {
-  font: `700 15px/1 ${FONT}`,
+  font: `700 18px/1 ${FONT}`,
   color: ISLAND.fadedInk,
 }
 
@@ -229,7 +349,7 @@ const tileTitle: React.CSSProperties = {
   WebkitLineClamp: 3,
   WebkitBoxOrient: 'vertical',
   overflow: 'hidden',
-  fontSize: 13,
+  fontSize: 17,
   lineHeight: 1.2,
 }
 

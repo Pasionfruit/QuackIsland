@@ -110,8 +110,8 @@ try {
   await page.goto(opt.app)
   await page.waitFor(`[...document.querySelectorAll('button')].some((b) => b.textContent.includes('minigames'))`, 90000)
   await page.clickText('minigames')
-  await page.waitFor(`[...document.querySelectorAll('button')].some((b) => b.textContent.includes(${JSON.stringify(game.title)}))`)
-  await page.clickText(game.title)
+  await page.waitFor(`!!document.querySelector('[data-minigame]')`)
+  await page.pickMinigame(opt.game)
   await page.waitFor(`!!document.querySelector('[data-play]')`)
   say('briefing', await page.shot('1-briefing.png'))
 

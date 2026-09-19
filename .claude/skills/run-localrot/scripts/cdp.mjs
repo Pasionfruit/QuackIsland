@@ -149,6 +149,28 @@ export class Page {
     if (!clicked) throw new Error(`${this.name}: no button with "${text}"`)
   }
 
+  /**
+   * Opens a game from the minigames dashboard by its id, turning the page until
+   * its tile is there - the grid is twenty to a page, so most games are not on
+   * the first one.
+   */
+  async pickMinigame(id) {
+    for (let page = 0; page < 20; page++) {
+      const done = await this.eval(`(() => {
+        const tile = document.querySelector('[data-minigame=' + JSON.stringify(${JSON.stringify(id)}) + ']')
+        if (tile) { tile.click(); return 'picked' }
+        const next = document.querySelector('[data-page-next]')
+        if (!next || next.disabled) return 'missing'
+        next.click()
+        return 'turned'
+      })()`)
+      if (done === 'picked') return
+      if (done === 'missing') throw new Error(`${this.name}: no tile for "${id}" on any page`)
+      await sleep(80)
+    }
+    throw new Error(`${this.name}: could not find "${id}" on the dashboard`)
+  }
+
   async shot(file) {
     const res = await this.send('Page.captureScreenshot', { format: 'png' })
     const path = join(this.out, file)

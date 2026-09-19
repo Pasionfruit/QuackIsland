@@ -1,12 +1,13 @@
 /**
  * Every minigame Volcano Island is going to have, as data.
  *
- * Forty-one slots: thirty free-for-all, eleven one-vs-all. The numbers are the
- * ones the games were written down with and they do not move - somebody says
- * "let us do fourteen next" and fourteen has to still be `He's One Shot` a
- * month later. That is why a slot nobody has named yet is a **reserved** entry
- * with a number rather than a gap: the count is the plan, and the dashboard
- * draws the plan rather than only the part of it that exists.
+ * Forty-six slots: thirty-eight free-for-all - every game named so far is one,
+ * the turn-taking ones included - and eight one-vs-all, all of them still free
+ * slots. The numbers are the ones the games were written down with and they do
+ * not move - somebody says "let us do fourteen next" and fourteen has to still
+ * be `He's One Shot` a month later. That is why a slot nobody has named yet is
+ * a **reserved** entry with a number rather than a gap: the count is the plan,
+ * and the dashboard draws the plan rather than only the part of it that exists.
  *
  * Pure, and nothing in here plays anything. A minigame becomes playable by
  * registering a build against its id - see `registry.ts` - and until it does,
@@ -96,8 +97,8 @@ export interface Minigame {
  * test should catch. There is one that does.
  */
 export const MINIGAME_TARGET: Readonly<Record<MinigameKind, number>> = Object.freeze({
-  'free-for-all': 35,
-  'one-vs-all': 11,
+  'free-for-all': 38,
+  'one-vs-all': 8,
 })
 
 const ENTRIES = [
@@ -569,7 +570,7 @@ const ENTRIES = [
     id: 'make-some-noise',
     number: 26,
     title: 'Make Some Noise',
-    kind: 'one-vs-all',
+    kind: 'free-for-all',
     description: [
       'You are a duck on a floating island with one minute to wreck as much of it as you possibly can.',
       'Different parts of the island are worth different amounts. Fall off the edge and your turn ends that instant.',
@@ -582,7 +583,7 @@ const ENTRIES = [
     id: 'perfect-game',
     number: 27,
     title: 'Perfect Game',
-    kind: 'one-vs-all',
+    kind: 'free-for-all',
     description: [
       'A bent column of 30 crabs moves from left to right across the beach. One turn each, while everybody else watches.',
       'You have 10 seconds to choose your position behind the line and the angle of your coconut throw - and when to let it go. When time runs out it rolls anyway.',
@@ -602,7 +603,7 @@ const ENTRIES = [
     id: 'chef-caricature',
     number: 28,
     title: 'Chef Caricature',
-    kind: 'one-vs-all',
+    kind: 'free-for-all',
     description: [
       'One at a time, each player gets thirty seconds at the easel while everybody else watches. The outline of an ingredient or a dish is on the board: hold the button down and trace it without letting go.',
       'Once your ink has gone all the way round and closed the shape, the duck eats the drawing for a point and the next outline is up. Scribbling off the line does not count. There is no rubbing out, and letting go before the shape is closed wipes the attempt.',

@@ -2,12 +2,17 @@
 
 ## What this is
 
-The minigames Volcano Island is made of: **forty-six of them**, thirty-five
-free-for-all and eleven one-vs-all, as a catalogue you can browse and a seam
-each one plugs into when somebody builds it.
+The minigames Volcano Island is made of: **forty-six of them**, thirty-eight
+free-for-all and eight one-vs-all, as a catalogue you can browse - twenty tiles
+to a page - and a seam each one plugs into when somebody builds it.
+
+**Every game named so far is free-for-all**, the turn-taking ones included: the
+kind says who is in the arena, and a game where everybody takes a turn at the
+same thing is still everybody's game. The eight one-vs-all slots are all still
+free.
 
 It plays none of them. What it owns is the part that has to be right *before*
-forty-one of anything can be built:
+forty-six of anything can be built:
 
 - **one list** that is the plan, including the slots nobody has named yet,
 - **one place** a finished game registers itself,
@@ -18,7 +23,7 @@ forty-one of anything can be built:
 Building a minigame is `registerMinigame(id, { newGame, Panel })`. Nothing else
 in this module changes, and nothing in it ever learns which game it was.
 
-## Forty-one slots, and why the empty ones are in the list
+## Forty-six slots, and why the empty ones are in the list
 
 The numbers are the ones the games were written down with, and they do not
 move. Somebody says "let us do fourteen next" and fourteen has to still be
@@ -33,26 +38,30 @@ named; eight are free slots waiting for one, all of them one-vs-all.
 
 | | free-for-all | one-vs-all | total |
 | --- | --- | --- | --- |
-| Named | 35 | 3 | 38 |
+| Named | 38 | 0 | 38 |
 | Free slots | 0 | 8 | 8 |
-| **Target** | **35** | **11** | **46** |
+| **Target** | **38** | **8** | **46** |
 
 **Slot 42 was added, not dealt.** When *You're The Bomb* arrived every
 free-for-all slot was taken, so the free-for-all target went from 30 to 31 and
 the new game took the next number, 42, rather than one of the free one-vs-all
 slots - those are kept for one-vs-all games. *Shanty Matrix* arrived the same
-way and took 43, *Spidy Senses* 44, *OG Black Friday* 45 and *M.I.L.F (fishing)* 46,
-with the free-for-all target going to 35.
+way and took 43, *Spidy Senses* 44, *OG Black Friday* 45 and *M.I.L.F (fishing)* 46.
+
+**The kinds moved once, deliberately.** *Make Some Noise* (26), *Perfect Game*
+(27) and *Chef Caricature* (28) were written down as one-vs-all and are
+free-for-all now, so the targets are 38 and 8 rather than 35 and 11. Nothing
+about the games changed: Perfect Game and Chef Caricature still go turn by turn,
+and their own modules run those turns.
 
 Twelve of the twenty-six arrived with their controls already written down;
 the other fourteen did not, and their templates say so.
 
 **The numbering has a seam in it, and it is deliberate.** Numbers 1–30 are the
-ones the games arrived with: 1–25 free-for-all, 26–30 one-vs-all. The targets
-are 30 and 11, which needs eleven more slots than that list had, so those are
-numbered 31–41 and carry on from where it stopped. The upshot is that neither
-kind has a contiguous run of numbers, which is the price of never renumbering a
-game somebody has already learned the number of.
+ones the games arrived with, 31–41 were added to make the plan's count up, and
+42–46 are the games that arrived after every slot was taken. The free one-vs-all
+slots are scattered through 29–41 rather than in a run, which is the price of
+never renumbering a game somebody has already learned the number of.
 
 ## The three stages every game is built in
 
@@ -98,19 +107,30 @@ arrangement exists to have.
 
 ## The dashboard
 
-Forty-one tiles in a seven-wide grid, filterable to one kind or the other, with
-a count of what is named against what is planned.
+**Five tiles across and four down - twenty to a page** - filterable to one kind
+or the other, with a count of what is named against what is planned. Forty-six
+slots come to three pages.
+
+**The grid never changes shape.** A page with fewer than twenty on it - the last
+one, or a filter down to a handful - keeps its five by four and leaves the rest
+empty, rather than stretching a handful of tiles across the whole window. Tiles
+are the same size on every page, which is what makes them easy to hit and the
+plan easy to read.
+
+**Paging** is the arrows under the grid, the dots between them, or the left and
+right arrow keys. Picking a filter goes back to its first page. The page and the
+filter are remembered while the screen is open - `dashboardWas` in `state.ts` -
+so stepping back out of a game lands on the page it was picked from; closing the
+screen forgets them.
 
 **A tile is a number, a name and three pips, and nothing else.** No
-description: forty-one paragraphs at once is a wall of text nobody reads, and
-the grid is there to pick a game rather than to read about one. What a game
-actually is lives behind its own screen.
+description: twenty paragraphs at once is a wall of text nobody reads, and the
+grid is there to pick a game rather than to read about one. What a game actually
+is lives behind its own screen.
 
 **It never scrolls**, the same as Garden Goofs next door and for the same
-reason: the rows share out whatever height is left under the bar, so filtering
-to eleven games makes the tiles taller rather than making the page shorter. It
-is a page - opaque, every edge of the window - not a panel floating over the
-world.
+reason: the four rows share out whatever height is left under the bar. It is a
+page - opaque, every edge of the window - not a panel floating over the world.
 
 Reserved slots are drawn faint rather than left out, and they open like any
 other tile. The screen behind one is where its name will go.
@@ -330,7 +350,7 @@ the island's 3D bus.
 
 | Export | What it is |
 | --- | --- |
-| `MINIGAMES` | All forty-one entries, in number order. |
+| `MINIGAMES` | All forty-six entries, in number order. |
 | `MINIGAME_TARGET` | How many of each kind there are meant to be. |
 | `minigameById`, `minigamesOfKind`, `isMinigameId` | Reading the catalogue. |
 | `BUILD_STEPS`, `nextStep`, `stepsDone`, `isPlayable`, `progress` | The three stages, and how far each game and the catalogue as a whole has got. |
@@ -359,7 +379,7 @@ the island's 3D bus.
   Tested, and so is a lone player winning.
 
 - **Every id is unique, and so is every number.** Tested.
-- **The numbers run 1..41 with no holes.** Tested.
+- **The numbers run 1..46 with no holes.** Tested.
 - **Every game has a panel**, built or not - the template is the fallback and
   it covers all forty-one. Tested against the whole catalogue, not a sample.
 - **A build takes over from the template the moment it registers**, and takes
@@ -381,12 +401,17 @@ the island's 3D bus.
 - **A paused countdown does not advance**, however long the card is up.
   Tested.
 - **Nothing on the screen scrolls.** Tested.
+- **The dashboard is five across and four down on every page**, every game on
+  exactly one page, and a short page keeps the grid's shape. Tested.
+- **The page survives opening a game and stepping back out**, and a filter goes
+  back to page one. Tested.
 
 ## Deliberate non-goals
 
 - No minigame beyond the first. Zombie Tag plays; the other forty do not.
 - No rules, scoring, rounds or win conditions - each arrives with its build.
-- No turn order for the one-vs-all games. The kind is recorded; the rotation
+- No turn order from this module for the games that take turns. The kind is
+  recorded; the rotation
   that goes with it is not.
 - No host authority over what is open. See above.
 - No 3D, no art, no sound.
@@ -431,15 +456,20 @@ the island's 3D bus.
 Open a lobby, leave the game on Volcano Island, and press **minigames** in the
 party panel, bottom left.
 
-- **Count the tiles.** Forty-one, seven across, six rows, all of them on the
-  screen at once with nothing to scroll.
+- **Count the tiles.** Twenty, five across and four down, with nothing to
+  scroll, and *page 1 of 3* under them.
+- **Turn the page** with the arrow, a dot, and the left and right arrow keys.
+  The last page has six tiles on it and **the grid keeps its shape** - the tiles
+  stay the size they were, with the rest of the grid empty.
 - **Resize the window**, both ways, and drag it small. The tiles should get
   taller and shorter with it; no scrollbar should ever appear.
-- **Read the dim ones.** Fifteen tiles should be visibly fainter and say *free
+- **Read the dim ones.** Eight tiles should be visibly fainter and say *free
   slot*. Those are the numbers nobody has named yet, and they should look
   unfinished on purpose.
-- **Filter to one vs all.** Eleven tiles, and the grid should re-flow to fill
-  the same page rather than leaving the bottom half empty.
+- **Filter to one vs all.** Eight tiles on one page, the grid still five by four
+  with the rest of it empty.
+- **Open a game from page two and press escape.** You should come back to page
+  two, not to page one.
 - **Open a game with controls** - anything from 1 to 12. It should open on
   *how it plays*; the **controls** tab should list them, and flipping back and
   forth should not move the play button.
