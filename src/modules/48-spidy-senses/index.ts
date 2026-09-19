@@ -63,4 +63,4 @@ export { INTENT_TAG, SNAPSHOT_TAG, applySnapshot, decodeIntent, decodeSnapshot, 
 
 export { DRAG, LEAP, NestScene, PALETTE } from './internal/NestScene'
 
-export { JumpScare, NestScreen, SCARE } from './internal/NestScreen'
+export { JumpScare, NestScreen, SCARE, SCARE_GIF } from './internal/NestScreen'

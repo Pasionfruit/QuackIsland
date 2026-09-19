@@ -96,7 +96,7 @@ export interface Minigame {
  * test should catch. There is one that does.
  */
 export const MINIGAME_TARGET: Readonly<Record<MinigameKind, number>> = Object.freeze({
-  'free-for-all': 33,
+  'free-for-all': 34,
   'one-vs-all': 11,
 })
 
@@ -839,6 +839,27 @@ const ENTRIES = [
     // Built: see `48-spidy-senses`. The assets stage is still to do - the cellar,
     // the trapdoor and the spider are primitives and the players are the island's capsule.
     // Added as a forty-fourth slot, the same way as 42 and 43.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'needs-a-walmart',
+    number: 45,
+    title: 'This Place Needs A Walmart',
+    kind: 'free-for-all',
+    description: [
+      'Sprint around a chaotic supermarket pushing your trolley and collect the 3 items on your grocery list. There are 10 different items scattered through the store, and every player has their own list - a beam of light shows you where yours are.',
+      'Click to grab whatever is in reach, or to put something you do not need back. Ram other trolleys with Space to knock their shopping out and grab it yourself.',
+      'Find all 3 items and get through a checkout before everyone else. The first player to complete their grocery list wins.',
+    ],
+    controls: [
+      { input: 'WASD', does: 'Move' },
+      { input: 'Left Click', does: 'Pick up / place item' },
+      { input: 'Space', does: 'Push shopping cart' },
+    ],
+    reserved: false,
+    // Built: see `49-needs-a-walmart`. The assets stage is still to do - the store,
+    // the goods and the trolleys are primitives and the players are the island's capsule.
+    // Added as a forty-fifth slot, the same way as 42 to 44.
     done: { environment: true, controls: true, assets: false },
   },
 ] as const

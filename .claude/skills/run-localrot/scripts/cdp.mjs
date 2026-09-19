@@ -166,6 +166,12 @@ export class Page {
 
 /** Each game's screen component, and an element inside it to start the search from. */
 export const GAMES = {
+  'needs-a-walmart': {
+    title: 'This Place Needs A Walmart',
+    screen: 'StoreScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
   'spidy-senses': {
     title: 'Spidy Senses',
     screen: 'NestScreen',

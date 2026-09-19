@@ -83,16 +83,21 @@ lobby while in. Everybody left taken in the same round: they share first.
 - **You** have a ring at your feet, white while you can creep and amber once you
   have stopped. **Everybody who has stopped has an amber dot over their head**, and
   a ✋ in the HUD.
-- **The jump scare**: too late, and the screen goes dark and a spider lunges out
-  of it at you - eight red eyes, fangs, legs flung wide - shaking, for a second
-  and a half. Then *Too slow!*
+- **The jump scare**: too late, and the screen goes black and **a spider charges
+  down a dark corridor straight at you** (`Spider_Jumpscare_gif.gif`) until it
+  fills the screen, shaking as it lunges, under a shriek
+  (`Spider_Jumpscare_Audio.mp3`). The film runs 1.1 s and is taken off the screen
+  before it can loop; black holds to the end of the shriek, a second and a half,
+  then *Too slow!* The film is fetched once when the screen
+  opens, and every scare plays it from its first frame. If it has not loaded, a
+  drawn spider lunges instead.
 - **The reveal**: the spider leaping out onto its victim, and *The spider got
   …* or *… was the chicken*; for you, *Chicken!*
 - **The HUD**: the round, how many are left, **how far you are from the
   trapdoor**, and a pill per player with ✋ when stopped, 🕷 when eaten and 🐔 when
   taken as the chicken.
 - **Sound**: a thud for a twitch, a louder one for the spring, a crash as the
-  spider comes out, a shriek for your own jump scare, a buzz for being the
+  spider comes out, the jump scare's shriek for your own, a buzz for being the
   chicken, a fall for anybody taken, a step as you stop.
 - **The results** are the podium, from `useFinish`.
 
@@ -152,7 +157,7 @@ testing, not because anybody else needs them.
 | `newGame`, `waitingGame`, `gameRoster`, `nextSeed`, `myId`, `ME`, `SOLO_PLAYERS`, `MAX_PLAYERS`, `GameSetup` | Putting a game together from the lobby. |
 | `encodeSnapshot`, `decodeSnapshot`, `applySnapshot`, `encodeIntent`, `decodeIntent`, tags and wire types | The wire. Decoding refuses a message whole rather than half-reading it. |
 | `NestScene`, `PALETTE`, `LEAP`, `DRAG` | The 3D view, and the spider's timing. |
-| `NestScreen`, `JumpScare`, `SCARE` | The panel `15-minigames` draws, and the jump scare. |
+| `NestScreen`, `JumpScare`, `SCARE`, `SCARE_GIF` | The panel `15-minigames` draws, and the jump scare. |
 
 ## Invariants you may rely on
 
@@ -182,9 +187,6 @@ testing, not because anybody else needs them.
 
 ## Known limitations
 
-- **The shriek is a balloon pop.** No scream is in the sound library; the jump
-  scare borrows `Balloon_Pop_Audio.mp3` at full volume. A real screech belongs to
-  the assets stage.
 - **A guest's clock is trusted.** A doctored client could claim it clicked in time.
   It is a party game among friends; the half-second limit bounds it.
 - **The lantern can hang between your camera and a player across the ring.**

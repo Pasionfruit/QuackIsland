@@ -137,7 +137,8 @@
         "45-binary-bs",
         "46-youre-the-bomb",
         "47-shanty-matrix",
-        "48-spidy-senses"
+        "48-spidy-senses",
+        "49-needs-a-walmart"
       ]
     }
   ],
@@ -195,7 +196,8 @@
         "45-binary-bs",
         "46-youre-the-bomb",
         "47-shanty-matrix",
-        "48-spidy-senses"
+        "48-spidy-senses",
+        "49-needs-a-walmart"
       ],
       "generation": 1,
       "contract": {
@@ -393,7 +395,8 @@
         "45-binary-bs",
         "46-youre-the-bomb",
         "47-shanty-matrix",
-        "48-spidy-senses"
+        "48-spidy-senses",
+        "49-needs-a-walmart"
       ],
       "generation": 1,
       "contract": {
@@ -920,7 +923,8 @@
         "45-binary-bs",
         "46-youre-the-bomb",
         "47-shanty-matrix",
-        "48-spidy-senses"
+        "48-spidy-senses",
+        "49-needs-a-walmart"
       ],
       "generation": 1,
       "contract": {
@@ -1446,7 +1450,8 @@
         "45-binary-bs",
         "46-youre-the-bomb",
         "47-shanty-matrix",
-        "48-spidy-senses"
+        "48-spidy-senses",
+        "49-needs-a-walmart"
       ],
       "generation": 1,
       "contract": {
@@ -4238,7 +4243,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-19T15:51:55.644Z"
+          "at": "2026-09-19T16:31:33.616Z"
         },
         "human": {
           "status": "pending"
@@ -4249,6 +4254,94 @@
       "nonGoals": [
         "No models: the cellar, the trapdoor and the spider are primitives, players are the island capsule",
         "No shoving: nobody can be pushed towards the trapdoor",
+        "No music of its own yet; the round is silent under the cues"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "49-needs-a-walmart",
+      "phase": "P6",
+      "title": "Minigame 45, This Place Needs A Walmart: a supermarket, a trolley each and a list of three of the ten things it sells; grab yours, put back what you don't need, ram the others to spill theirs, and be first through a checkout",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "49.1",
+          "title": "The store: aisles of low shelves, fridges on the walls, four checkouts by the door, ten things, a list of three each and one of everything for everybody who needs it, from the seed",
+          "status": "done"
+        },
+        {
+          "id": "49.2",
+          "title": "The trolleys: sprinting round the shelves, a click to pick up the nearest thing in reach or put back what you do not need, three to a trolley",
+          "status": "done"
+        },
+        {
+          "id": "49.3",
+          "title": "The ram: Space shoves your trolley forward, and whoever it hits is knocked silly and spills their newest thing on the floor",
+          "status": "done"
+        },
+        {
+          "id": "49.4",
+          "title": "The end: down a lane with your whole list and you are through, first through first; three through, 25 seconds after the first or three minutes and the rest by how much of their list they have",
+          "status": "done"
+        },
+        {
+          "id": "49.5",
+          "title": "The controls: WASD, left click to pick up and put back, Space to ram",
+          "status": "done"
+        },
+        {
+          "id": "49.6",
+          "title": "From above and behind: the store, the goods on the shelves and in the trolleys, a beam over everything on your list, a ring round what you can reach, your list and trolley on the screen",
+          "status": "done"
+        },
+        {
+          "id": "49.7",
+          "title": "One store shared across the lobby, the host running the trolleys and the goods, stand-ins that find their way round the shelves and rob whoever has what they need, only when alone",
+          "status": "done"
+        },
+        {
+          "id": "49.8",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "49.9",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-19T16:32:09.360Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: the store, the goods and the trolleys are primitives, players are the island capsule",
+        "No real store: no brand, logo or likeness in the store itself - the name is the game's title",
         "No music of its own yet; the round is silent under the cues"
       ],
       "budgets": {

@@ -14,6 +14,7 @@
 import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
+import { assetUrl } from '../../00-core'
 import { getNet, useNet, usePeers } from '../../09-net'
 import { CUES, playCue, useFinish, type MinigameRun } from '../../15-minigames'
 import { when } from './nest'
@@ -45,8 +46,8 @@ const KEYS: Record<string, [number, number]> = {
   ArrowLeft: [0, -1],
 }
 
-/** How long the jump scare fills the screen, seconds. */
-export const SCARE = 1.4
+/** How long the jump scare fills the screen, seconds: as long as its shriek. */
+export const SCARE = 1.47
 
 const names = (list: string[]) => (list.length <= 1 ? (list[0] ?? '') : `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`)
 
@@ -69,6 +70,7 @@ export function NestScreen({ run }: { run: MinigameRun }) {
   live.current = game
   const held = useRef(new Set<string>())
   const clicked = useRef(false)
+  const film = useScareFilm()
 
   useEffect(() => {
     let frame = 0
@@ -213,60 +215,100 @@ export function NestScreen({ run }: { run: MinigameRun }) {
           </div>
         ) : null}
 
-        {scared && mine?.outAt != null ? <JumpScare since={game.elapsed - mine.outAt} /> : null}
+        {scared && mine?.outAt != null ? <JumpScare key={`${game.id}:${mine.out}`} since={game.elapsed - mine.outAt} film={film.current} /> : null}
       </div>
     </div>
   )
 }
 
+/** The jump scare's film: a spider charging down a dark corridor at you, 16:9, 1.1 s, ending all but black. The file loops. */
+export const SCARE_GIF = 'Spider_Jumpscare_gif.gif'
+/** How long its film runs, seconds. It is taken off the screen then - before it can loop round - and the rest of `SCARE` is black under the shriek. */
+const FILM = 1.1
+
 /**
- * The jump scare: the screen goes dark and a spider lunges out of it at you -
- * eight red eyes, fangs, legs flung wide - shaking, then gone.
+ * The jump scare's film, fetched once when the screen opens and kept, so a
+ * scare never waits on the network. Each scare makes its own object URL of it -
+ * a browser shares one animation between every image of the same URL, so a
+ * second scare from the same URL would open on whatever frame the first one
+ * finished on.
  */
-export function JumpScare({ since }: { since: number }) {
-  const lunge = Math.min(1, since / 0.16)
-  const scale = 0.25 + lunge * 1.55 + Math.max(0, since - 0.16) * 0.15
-  const shake = since < 0.9 ? (1 - since / 0.9) * 22 : 0
+function useScareFilm(): RefObject<Blob | null> {
+  const film = useRef<Blob | null>(null)
+  useEffect(() => {
+    let alive = true
+    fetch(assetUrl(SCARE_GIF))
+      .then((r) => (r.ok ? r.blob() : null))
+      .then((blob) => {
+        if (alive) film.current = blob
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
+  return film
+}
+
+/**
+ * The jump scare: the screen goes black and the spider charges down a corridor
+ * straight at you, filling the screen - shaking as it lunges - then black under
+ * the rest of the shriek, then fades. Mounted once per scare, so the film always
+ * starts from its first frame. Without the film (it has not loaded), a drawn
+ * spider lunges instead.
+ */
+export function JumpScare({ since, film }: { since: number; film: Blob | null }) {
+  const [url] = useState(() => (film ? URL.createObjectURL(film) : null))
+  useEffect(() => () => (url ? URL.revokeObjectURL(url) : undefined), [url])
+  const lunge = Math.min(1, since / FILM)
+  const shake = since > 0.2 && since < FILM ? (1 - since / FILM) * 26 : 0
   const dx = Math.sin(since * 91) * shake
   const dy = Math.cos(since * 77) * shake
-  const fade = since > SCARE - 0.35 ? Math.max(0, (SCARE - since) / 0.35) : 1
+  const fade = since > SCARE - 0.3 ? Math.max(0, (SCARE - since) / 0.3) : 1
   return (
-    <div style={{ ...scareWrap, opacity: fade, background: `rgba(0,0,0,${0.55 + 0.35 * lunge})` }} data-scare>
-      <svg viewBox="-100 -100 200 200" style={{ width: '70vmin', height: '70vmin', transform: `translate(${dx}px, ${dy}px) scale(${scale})` }} aria-hidden>
-        {/* Legs, flung wide. */}
-        {[-1, 1].map((side) =>
-          [0, 1, 2, 3].map((k) => {
-            const a = (-60 + k * 38) * (Math.PI / 180)
-            const kx = side * (40 + Math.cos(a) * 45)
-            const ky = Math.sin(a) * 45 - 10
-            const fx = side * (70 + Math.cos(a) * 60)
-            const fy = Math.sin(a) * 70 + 30
-            return <path key={`${side}${k}`} d={`M${side * 18} ${-5 + k * 8} L${kx} ${ky} L${fx} ${fy}`} stroke="#140e18" strokeWidth={9} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          }),
-        )}
-        <ellipse cx={0} cy={18} rx={42} ry={48} fill="#1c1520" />
-        <ellipse cx={0} cy={-22} rx={34} ry={30} fill="#241b2a" />
-        {/* Eight eyes, two big. */}
-        {[
-          [-11, -28, 8],
-          [11, -28, 8],
-          [-24, -20, 5],
-          [24, -20, 5],
-          [-6, -40, 4],
-          [6, -40, 4],
-          [-18, -36, 3.5],
-          [18, -36, 3.5],
-        ].map(([x, y, r], i) => (
-          <g key={i}>
-            <circle cx={x} cy={y} r={r} fill="#ff1a1a" />
-            <circle cx={x - r * 0.3} cy={y - r * 0.3} r={r * 0.3} fill="#ffd0d0" />
-          </g>
-        ))}
-        {/* Fangs. */}
-        <path d="M-12 -4 Q-14 12 -6 18 Q-8 6 -4 -2 Z" fill="#f4efe6" />
-        <path d="M12 -4 Q14 12 6 18 Q8 6 4 -2 Z" fill="#f4efe6" />
-      </svg>
+    <div style={{ ...scareWrap, opacity: fade, background: '#000' }} data-scare={url ? 'film' : 'drawn'}>
+      {url ? (
+        // Filling the screen, pushing in a little as it charges; gone once its one run is over, before it can loop.
+        since < FILM ? <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `translate(${dx}px, ${dy}px) scale(${1.02 + lunge * 0.13})` }} /> : null
+      ) : (
+        <DrawnSpider since={since} dx={dx} dy={dy} />
+      )}
     </div>
+  )
+}
+
+/** A spider drawn rather than filmed, for a scare before the film has loaded: eight red eyes, fangs, legs flung wide. */
+function DrawnSpider({ since, dx, dy }: { since: number; dx: number; dy: number }) {
+  const scale = 0.25 + Math.min(1, since / 0.16) * 1.55
+  return (
+    <svg viewBox="-100 -100 200 200" style={{ width: '70vmin', height: '70vmin', transform: `translate(${dx}px, ${dy}px) scale(${scale})` }} aria-hidden>
+      {[-1, 1].map((side) =>
+        [0, 1, 2, 3].map((k) => {
+          const a = (-60 + k * 38) * (Math.PI / 180)
+          const kx = side * (40 + Math.cos(a) * 45)
+          const ky = Math.sin(a) * 45 - 10
+          const fx = side * (70 + Math.cos(a) * 60)
+          const fy = Math.sin(a) * 70 + 30
+          return <path key={`${side}${k}`} d={`M${side * 18} ${-5 + k * 8} L${kx} ${ky} L${fx} ${fy}`} stroke="#140e18" strokeWidth={9} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        }),
+      )}
+      <ellipse cx={0} cy={18} rx={42} ry={48} fill="#1c1520" />
+      <ellipse cx={0} cy={-22} rx={34} ry={30} fill="#241b2a" />
+      {[
+        [-11, -28, 8],
+        [11, -28, 8],
+        [-24, -20, 5],
+        [24, -20, 5],
+        [-6, -40, 4],
+        [6, -40, 4],
+        [-18, -36, 3.5],
+        [18, -36, 3.5],
+      ].map(([x, y, r], i) => (
+        <circle key={i} cx={x} cy={y} r={r} fill="#ff1a1a" />
+      ))}
+      <path d="M-12 -4 Q-14 12 -6 18 Q-8 6 -4 -2 Z" fill="#f4efe6" />
+      <path d="M12 -4 Q14 12 6 18 Q8 6 4 -2 Z" fill="#f4efe6" />
+    </svg>
   )
 }
 
@@ -335,7 +377,7 @@ function useNestSounds(game: Game): void {
       if (isStanding(p) || s.out.has(p.id)) continue
       s.out.add(p.id)
       if (p.left) continue
-      if (p.mine && p.how === 'eaten') playCue(CUES.balloonPop, 1)
+      if (p.mine && p.how === 'eaten') playCue(CUES.spiderJumpscare, 1)
       else if (p.mine) playCue(CUES.wrongSelection, 0.8)
       playCue(CUES.fallingOver, p.mine ? 0.7 : 0.35)
     }

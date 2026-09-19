@@ -960,6 +960,74 @@ try {
     say('rounds', JSON.stringify(log))
     await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 120000)
     say('results', await page.shot('4-results.png'))
+  } else if (opt.steer && opt.game === 'needs-a-walmart') {
+    // Shop with the stand-ins' own route-finding, pressed as real WASD keys; a real click on the board to grab, Space to ram.
+    const read = `(() => { const s = ${gameState(opt.game)}; const i = s.players.findIndex((p) => p.mine); const me = s.players[i]; return { e: s.elapsed, over: s.over, x: me.x, z: me.z, cart: me.cart.length, list: me.list, done: me.doneAt, ramAt: me.ramAt, got: me.cart.filter((k) => me.list.includes(s.items[k].kind)).length } })()`
+    await page.eval(`(async () => {
+      const ai = await import('/src/modules/49-needs-a-walmart/internal/ai.ts')
+      const rules = await import('/src/modules/49-needs-a-walmart/internal/rules.ts')
+      const store = await import('/src/modules/49-needs-a-walmart/internal/store.ts')
+      const codes = { KeyW: [0, -1], KeyS: [0, 1], KeyA: [-1, 0], KeyD: [1, 0] }
+      const held = new Set()
+      const press = (code, down) => {
+        if (down === held.has(code)) return
+        down ? held.add(code) : held.delete(code)
+        window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, key: code.slice(3).toLowerCase() }))
+      }
+      const board = document.querySelector('[data-board]')
+      let goal = null
+      let thought = -1
+      window.__nwLog = { grabs: 0, rams: 0 }
+      window.__nwSteer = setInterval(() => {
+        const s = ${gameState(opt.game)}
+        if (!s || s.over) return
+        const i = s.players.findIndex((p) => p.mine)
+        const me = s.players[i]
+        if (me.doneAt !== null) { for (const c of Object.keys(codes)) press(c, false); return }
+        const near = rules.reachable(s, i)
+        const needs = rules.stillNeeds(s, me)
+        if (near >= 0 && needs.includes(s.items[near].kind) && me.cart.length < 3) {
+          for (const c of Object.keys(codes)) press(c, false)
+          const r = board.getBoundingClientRect()
+          board.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }))
+          window.__nwLog.grabs++
+          thought = -1
+          return
+        }
+        if (s.elapsed - thought > 0.4) { thought = s.elapsed; goal = ai.goalFor(s, i) }
+        if (!goal) return
+        const d = Math.hypot(goal.x - me.x, goal.z - me.z)
+        let way = d < 1.2 ? { x: (goal.x - me.x) / d, z: (goal.z - me.z) / d } : store.downhill(ai.fieldTo(store.freeCell(goal.x, goal.z, 0.55)), store.freeCell(me.x, me.z, 0.55))
+        if (!way) way = { x: 0, z: 0 }
+        for (const [c, [dx, dz]] of Object.entries(codes)) press(c, dx * way.x + dz * way.z > 0.38)
+        // Held keys repeat, as a real keyboard's do: one pressed while the three-two-one was up is ignored by the screen.
+        for (const c of held) window.dispatchEvent(new KeyboardEvent('keydown', { code: c, key: c.slice(3).toLowerCase(), repeat: true }))
+      }, 60)
+    })()`)
+    const shots = new Set()
+    let s = await page.eval(read)
+    while (!s.over) {
+      await sleep(200)
+      s = await page.eval(read)
+      if (!shots.has('aisle') && s.e > 4) { shots.add('aisle'); say('shopping', JSON.stringify(s), await page.shot('3-aisle.png')) }
+      if (!shots.has('grab') && s.cart > 0) { shots.add('grab'); say('first grab', JSON.stringify(s), await page.shot('4-grab.png')) }
+      if (!shots.has('ram') && s.e > 8) {
+        shots.add('ram')
+        const before = s.ramAt
+        await page.eval(`window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ' })); window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space', key: ' ' }))`)
+        await sleep(150)
+        const after = await page.eval(read)
+        if (!(after.ramAt > before)) throw new Error('Space did not ram')
+        say('rammed', JSON.stringify({ before, after: after.ramAt }), await page.shot('5-ram.png'))
+      }
+      if (!shots.has('done') && s.done !== null) { shots.add('done'); say('through', JSON.stringify(s), await page.shot('6-through.png')) }
+    }
+    await page.eval(`clearInterval(window.__nwSteer)`)
+    const log = await page.eval(`window.__nwLog`)
+    say('end', JSON.stringify({ ...s, ...log }))
+    if (s.got < 1) throw new Error('never got anything on the list')
+    await page.waitFor(`!!document.querySelector('[data-podium]')`, 40000)
+    say('results', await page.shot('7-results.png'))
   } else if (opt.steer && opt.game === 'spidy-senses') {
     // Round one: hold W, let go at 1.8 metres, click 0.2 s after the spring. Round two: stand still and never click - the jump scare.
     const read = `(async () => { const s = ${gameState(opt.game)}; const n = await import('/src/modules/48-spidy-senses/internal/nest.ts'); const w = n.when(s.seed, s.elapsed); const me = s.players.find((p) => p.mine); return { e: s.elapsed, over: s.over, round: w.round.round, phase: w.phase, springs: w.round.springs, judged: w.round.judged, d: Math.hypot(me.x, me.z), stoppedAt: me.stoppedAt, out: me.out, how: me.how, left: s.players.filter((p) => p.out === null && !p.left).length } })()`
@@ -977,7 +1045,12 @@ try {
         if (!shots.has('out')) {
           shots.add('out')
           log.push({ round: s.out, how: s.how })
-          if (s.how === 'eaten') say('jump scare', JSON.stringify(s), await page.shot('5-scare.png'))
+          if (s.how === 'eaten') {
+            await sleep(450)
+            const scare = await page.eval(`document.querySelector('[data-scare]')?.dataset.scare ?? 'none'`)
+            say('jump scare', scare, await page.shot('5-scare.png'))
+            if (scare !== 'film') throw new Error(`the jump scare showed ${scare}, not the film`)
+          }
         }
         continue
       }
