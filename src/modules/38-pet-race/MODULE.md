@@ -138,6 +138,29 @@ in it is a moment in `game.elapsed`, so a mind carried into a later race with
 the same id and seed would hold timers from the future and sit there escaping a
 hedge that no longer exists. That was a real bug and this is the fix.
 
+## What it costs a frame
+
+Both of the things a round does sixty times a second are kept off React.
+
+- **The canvas is drawn from the live game**, inside `useFrame`, by each piece
+  of the scene moving itself. The scene is handed to React **only when what is
+  on it changes** - somebody joining, somebody picking another pet, a fresh race -
+  rather than every frame. A React pass over the whole scene sixty times a
+  second was the most expensive thing here, and it bought nothing: everything on
+  it had already moved itself.
+- **The words round the canvas are redrawn twenty times a second** (`HUD_MS`),
+  not sixty - as fast as anybody reads a clock - with the end of the round,
+  and a change of phase, going through the moment it happens. The game still steps
+  every frame; this is only how often the HUD is handed a new state.
+- **At most one and a half pixels to the CSS pixel** (`DPR`). Two is four times
+  the pixels of one, which on a laptop's own screen is where a weaker machine's
+  frame goes.
+
+Measured in headless Chrome over six seconds of a round, script time went from
+1721 ms to 922 ms - about 2.6 ms a frame rather than 4.8 ms. On a machine
+three times slower, that is the difference between a frame with
+room to spare and a frame that drops.
+
 ## Public contract
 
 `index.ts` re-exports the pets, the course, the rules, the stand-ins, the

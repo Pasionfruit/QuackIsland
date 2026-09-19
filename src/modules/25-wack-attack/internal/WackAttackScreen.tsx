@@ -58,6 +58,9 @@ export function WackAttackScreen({ run }: { run: MinigameRun }) {
   /** What you last did, or had done to you, and when: for the flash. */
   const [flash, setFlash] = useState<{ text: string; colour: string; at: number; points?: number } | null>(null)
   const seen = useRef({ score: 0, bonks: 0, stunned: false })
+  /** When the words were last redrawn, and whether the round was over then. */
+  const drawnAt = useRef(0)
+  const drawnOver = useRef(false)
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
 
@@ -109,7 +112,17 @@ export function WackAttackScreen({ run }: { run: MinigameRun }) {
       const swung = clicked.current
       clicked.current = false
       const current = live.current
-      if (wire.advance(current, dt, walking, swung, paused.current)) setGame({ ...current })
+      // The field is drawn from the live game inside the canvas, so the words
+      // round it are the only thing this hands to React - and they are worth
+      // redrawing twenty times a second, not sixty. The end of the round goes
+      // through the moment it happens.
+      if (wire.advance(current, dt, walking, swung, paused.current)) {
+        if (now - drawnAt.current >= HUD_MS || current.over !== drawnOver.current) {
+          drawnAt.current = now
+          drawnOver.current = current.over
+          setGame({ ...current })
+        }
+      }
       const mine = current.players.find((p) => p.mine)
       const was = seen.current
       const stunned = !!mine && isStunned(mine, current.elapsed)
@@ -220,8 +233,24 @@ const Stage = memo(function Stage({ live }: { live: RefObject<Game> }) {
   )
 })
 
+/**
+ * How often the words round the canvas are redrawn, milliseconds.
+ *
+ * The game itself runs every frame; this is only how often React is handed a
+ * new state to draw the clock, the scores and the rest from. Twenty a second is
+ * as fast as anybody can read and a third of the work of sixty.
+ */
+const HUD_MS = 50
+
 const SHADOWS = { type: PCFShadowMap }
-const DPR: [number, number] = [1, 2]
+/**
+ * How many pixels to a CSS pixel, at most.
+ *
+ * Two is four times the pixels of one, and on a laptop's own screen that is the
+ * whole of what a weaker machine has to spare. One and a half is most of the
+ * sharpness for a little over half the pixels.
+ */
+const DPR: [number, number] = [1, 1.5]
 const CAMERA = { fov: FOV, near: 0.5, far: 300, position: [0, 24, 16] as [number, number, number] }
 const GL = { antialias: true, powerPreference: 'high-performance' as const }
 

@@ -67,7 +67,9 @@ function Daylight() {
     const light = sun.current
     if (!light) return
     Object.assign(light.shadow.camera, { left: -13, right: 13, top: 13, bottom: -13, near: 1, far: 90 })
-    light.shadow.mapSize.set(2048, 2048)
+    // A field thirteen metres across: a thousand texels over it is about eighty
+    // to the metre, which is more than a mole is drawn with.
+    light.shadow.mapSize.set(1024, 1024)
     light.shadow.bias = -0.0008
     light.shadow.camera.updateProjectionMatrix()
   }, [])
@@ -218,6 +220,27 @@ function MoleBody({ mole, live }: { mole: Mole; live: RefObject<Game> }) {
   )
 }
 
+/**
+ * Which moles are on the field at `now`: the first and the last of them, by
+ * place in the schedule.
+ *
+ * The schedule is in order of when each mole comes up, so what is showing is
+ * always a run of it rather than a scatter - found by walking it, without
+ * building a list, because this is looked at every frame.
+ */
+function showing(moles: readonly Mole[], now: number): { first: number; last: number } {
+  let first = -1
+  let last = -2
+  for (let i = 0; i < moles.length; i++) {
+    const mole = moles[i]
+    if (mole.at > now + 0.1) break
+    if (now > mole.at + mole.up + FIELD.sink + FLATTEN + 0.5) continue
+    if (first < 0) first = i
+    last = i
+  }
+  return { first, last }
+}
+
 /** A heading on the field's x/y, as a turn about the world's up axis. */
 function headingToYaw(heading: number): number {
   return Math.atan2(Math.cos(heading), Math.sin(heading))
@@ -312,12 +335,26 @@ function YourSpot({ live }: { live: RefObject<Game> }) {
 }
 
 export function WackAttackScene({ live }: { live: RefObject<Game> }) {
+  // Redrawn only when what is on the field changes - a mole up, a mole gone,
+  // somebody joining - never every frame: everything below moves itself from
+  // the live game inside its own `useFrame`, and a React pass over the whole
+  // field sixty times a second is the one thing here that costs real time.
   const [, redraw] = useReducer((n: number) => n + 1, 0)
-  useFrame(() => redraw())
+  const cast = useRef('')
+  useFrame(() => {
+    const g = live.current
+    const up = g.players.length > 0 ? showing(molesFor(g.seed), g.elapsed) : { first: -1, last: -2 }
+    let key = `${g.id}:${g.seed}:${up.first}:${up.last}`
+    for (const p of g.players) key += `:${p.id}`
+    if (key === cast.current) return
+    cast.current = key
+    redraw()
+  })
   const game = live.current
   const background = useMemo(() => new Color(PALETTE.background), [])
   const now = game.elapsed
-  const moles = game.players.length > 0 ? molesFor(game.seed).filter((m) => m.at <= now + 0.1 && now <= m.at + m.up + FIELD.sink + FLATTEN + 0.5) : []
+  const up = game.players.length > 0 ? showing(molesFor(game.seed), now) : { first: -1, last: -2 }
+  const moles = molesFor(game.seed).slice(Math.max(0, up.first), up.last + 1)
   return (
     <>
       <color attach="background" args={[background]} />

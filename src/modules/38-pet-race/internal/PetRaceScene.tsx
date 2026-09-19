@@ -396,8 +396,21 @@ function YouMarker({ live }: { live: RefObject<Game> }) {
 }
 
 export function PetRaceScene({ live }: { live: RefObject<Game> }) {
+  // Redrawn only when the field changes - somebody joining, somebody picking
+  // another pet, a fresh race - never every frame: the camera, the pets, the
+  // treats and the marker all move themselves from the live race inside their
+  // own `useFrame`, and a React pass over the whole course sixty times a second
+  // is the one thing here that costs real time.
   const [, redraw] = useReducer((n: number) => n + 1, 0)
-  useFrame(() => redraw())
+  const cast = useRef('')
+  useFrame(() => {
+    const g = live.current
+    let key = `${g.id}:${g.seed}`
+    for (const racer of g.racers) key += `:${racer.id}:${racer.pet ?? ''}`
+    if (key === cast.current) return
+    cast.current = key
+    redraw()
+  })
   const game = live.current
   const background = useMemo(() => new Color(PALETTE.sky), [])
   return (

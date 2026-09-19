@@ -126,6 +126,30 @@ knobs for tuning are `BOT_IGNORES`, `BOT_REACTION` and `FIELD.botPace`.
 High in front of the field (58 degrees), the whole fence in view the whole round.
 Fitted to the fence's corners and tested at eight window shapes.
 
+## What it costs a frame
+
+Both of the things a round does sixty times a second are kept off React.
+
+- **The canvas is drawn from the live game**, inside `useFrame`, by each piece
+  of the scene moving itself. The scene is handed to React **only when what is
+  on it changes** - a mole up, a mole gone, somebody joining -
+  rather than every frame. A React pass over the whole scene sixty times a
+  second was the most expensive thing here, and it bought nothing: everything on
+  it had already moved itself.
+- **The words round the canvas are redrawn twenty times a second** (`HUD_MS`),
+  not sixty - as fast as anybody reads a clock - with the end of the round, and
+  a whack or a bonk worth a word, going through the moment it happens. The game
+  still steps every frame; this is only how often the HUD is handed a new state.
+- **At most one and a half pixels to the CSS pixel** (`DPR`). Two is four times
+  the pixels of one, which on a laptop's own screen is where a weaker machine's
+  frame goes.
+- **A thousand texels of shadow map**, over a field thirteen metres across.
+
+Measured in headless Chrome over six seconds of a round, script time went from
+1593 ms to 665 ms - about 1.8 ms a frame rather than 4.4 ms. On a machine
+three times slower, that is the difference between a frame with
+room to spare and a frame that drops.
+
 ## Public contract
 
 Exported because it is worth testing, not because anything else needs it.

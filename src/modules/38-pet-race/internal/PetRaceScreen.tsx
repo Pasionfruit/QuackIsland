@@ -69,6 +69,9 @@ export function PetRaceScreen({ run }: { run: MinigameRun }) {
   live.current = game
 
   const keys = useRef({ up: false, down: false, left: false, right: false })
+  /** When the words were last redrawn, and what they were showing then. */
+  const drawnAt = useRef(0)
+  const drawn = useRef('')
   const boost = useRef(false)
   const [pick, setPick] = useState<PetId | null>(null)
   const picked = useRef<PetId | null>(null)
@@ -149,7 +152,18 @@ export function PetRaceScreen({ run }: { run: MinigameRun }) {
         z: (k.down ? 1 : 0) - (k.up ? 1 : 0),
         boost: boost.current,
       }
-      if (wire.advance(current, dt, { hands, pet: picked.current }, paused.current)) setGame({ ...current })
+      // The course is drawn from the live race inside the canvas, so the words
+      // round it are the only thing this hands to React - and they are worth
+      // redrawing twenty times a second, not sixty. A change of phase, and the
+      // end of the race, go through the moment they happen.
+      if (wire.advance(current, dt, { hands, pet: picked.current }, paused.current)) {
+        const shown = `${current.phase}:${current.over}`
+        if (now - drawnAt.current >= HUD_MS || shown !== drawn.current) {
+          drawnAt.current = now
+          drawn.current = shown
+          setGame({ ...current })
+        }
+      }
       frame = requestAnimationFrame(tick)
     }
     frame = requestAnimationFrame(tick)
@@ -382,8 +396,24 @@ const Stage = memo(function Stage({ live }: { live: RefObject<Game> }) {
   )
 })
 
+/**
+ * How often the words round the canvas are redrawn, milliseconds.
+ *
+ * The game itself runs every frame; this is only how often React is handed a
+ * new state to draw the clock, the scores and the rest from. Twenty a second is
+ * as fast as anybody can read and a third of the work of sixty.
+ */
+const HUD_MS = 50
+
 const SHADOWS = { type: PCFShadowMap }
-const DPR: [number, number] = [1, 2]
+/**
+ * How many pixels to a CSS pixel, at most.
+ *
+ * Two is four times the pixels of one, and on a laptop's own screen that is the
+ * whole of what a weaker machine has to spare. One and a half is most of the
+ * sharpness for a little over half the pixels.
+ */
+const DPR: [number, number] = [1, 1.5]
 const CAMERA = { fov: FOV, near: 0.3, far: 400, position: [0, 7.4, 15] as [number, number, number] }
 const GL = { antialias: true, powerPreference: 'high-performance' as const }
 
