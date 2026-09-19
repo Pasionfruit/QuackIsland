@@ -134,7 +134,8 @@
         "42-i-just-work-here",
         "43-highest-in-the-room",
         "44-color-coded",
-        "45-binary-bs"
+        "45-binary-bs",
+        "46-youre-the-bomb"
       ]
     }
   ],
@@ -189,7 +190,8 @@
         "42-i-just-work-here",
         "43-highest-in-the-room",
         "44-color-coded",
-        "45-binary-bs"
+        "45-binary-bs",
+        "46-youre-the-bomb"
       ],
       "generation": 1,
       "contract": {
@@ -384,7 +386,8 @@
         "42-i-just-work-here",
         "43-highest-in-the-room",
         "44-color-coded",
-        "45-binary-bs"
+        "45-binary-bs",
+        "46-youre-the-bomb"
       ],
       "generation": 1,
       "contract": {
@@ -908,7 +911,8 @@
         "42-i-just-work-here",
         "43-highest-in-the-room",
         "44-color-coded",
-        "45-binary-bs"
+        "45-binary-bs",
+        "46-youre-the-bomb"
       ],
       "generation": 1,
       "contract": {
@@ -1431,7 +1435,8 @@
         "42-i-just-work-here",
         "43-highest-in-the-room",
         "44-color-coded",
-        "45-binary-bs"
+        "45-binary-bs",
+        "46-youre-the-bomb"
       ],
       "generation": 1,
       "contract": {
@@ -3980,6 +3985,94 @@
       "nonGoals": [
         "No models: the gear is flat wedges and boxes, players are the island capsule",
         "Nobody sees anybody else's vote before the count, on the screen or on the wire",
+        "No music of its own yet; the round is silent under the cues"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "46-youre-the-bomb",
+      "phase": "P6",
+      "title": "Minigame 42, You're The Bomb: a long room with bombs hidden in the floor; scan to see those near you, pick your way through, shove the others, and drop through the hole at the end before the rolling pin rolls the room at 45 seconds; first out wins",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "46.1",
+          "title": "The room: a long hall, a hole at the far end, bombs on a grid from the seed, and always a safe way laid through first",
+          "status": "done"
+        },
+        {
+          "id": "46.2",
+          "title": "The floor: a bomb under you is out and knocks everybody near; the hole is escape; the pin rolls in at 45 seconds and flattens whoever it reaches",
+          "status": "done"
+        },
+        {
+          "id": "46.3",
+          "title": "Scanning: every bomb within four metres shows on your own screen for four seconds, two seconds between scans, never on the wire",
+          "status": "done"
+        },
+        {
+          "id": "46.4",
+          "title": "The end: first out first, then the last to die; a shove onto a bomb credited to the shover",
+          "status": "done"
+        },
+        {
+          "id": "46.5",
+          "title": "The controls: WASD, Space to scan, left click to shove the way you last walked",
+          "status": "done"
+        },
+        {
+          "id": "46.6",
+          "title": "From above and behind: the room, scan rings and the bombs they show, blasts and scorch marks, the hole, the rolling pin",
+          "status": "done"
+        },
+        {
+          "id": "46.7",
+          "title": "One room shared across the lobby, the host running the bodies from everybody's hands, stand-ins that only know what their own scans showed, only when alone",
+          "status": "done"
+        },
+        {
+          "id": "46.8",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "46.9",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-19T04:45:22.495Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: the room, the bombs and the pin are primitives, players are the island capsule",
+        "Nobody sees a bomb they have not scanned, and a scan is never shared",
         "No music of its own yet; the round is silent under the cues"
       ],
       "budgets": {

@@ -96,7 +96,7 @@ export interface Minigame {
  * test should catch. There is one that does.
  */
 export const MINIGAME_TARGET: Readonly<Record<MinigameKind, number>> = Object.freeze({
-  'free-for-all': 30,
+  'free-for-all': 31,
   'one-vs-all': 11,
 })
 
@@ -780,6 +780,26 @@ const ENTRIES = [
     controls: [],
     reserved: true,
     done: { environment: false, controls: false, assets: false },
+  },
+  {
+    id: 'youre-the-bomb',
+    number: 42,
+    title: "You're The Bomb",
+    kind: 'free-for-all',
+    description: [
+      'Escape a dangerous room before a giant rolling pin crushes everyone. Press Space to scan and reveal the bombs surrounding you, then carefully navigate around them while pushing other players out of your way.',
+      'You have 45 seconds before the rolling pin reaches the room. Players who survive can escape through the hole at the end - the first out of it wins.',
+    ],
+    controls: [
+      { input: 'WASD', does: 'Move' },
+      { input: 'Space', does: 'Scan for nearby bombs' },
+      { input: 'Left Click', does: 'Push' },
+    ],
+    reserved: false,
+    // Built: see `46-youre-the-bomb`. The assets stage is still to do - the room,
+    // the bombs and the pin are primitives and the players are the island's capsule.
+    // Added as a forty-second slot when every free-for-all one was taken.
+    done: { environment: true, controls: true, assets: false },
   },
 ] as const
 

@@ -166,6 +166,12 @@ export class Page {
 
 /** Each game's screen component, and an element inside it to start the search from. */
 export const GAMES = {
+  'youre-the-bomb': {
+    title: "You're The Bomb",
+    screen: 'RoomScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
   'binary-bs': {
     title: 'Binary BS',
     screen: 'GearScreen',
