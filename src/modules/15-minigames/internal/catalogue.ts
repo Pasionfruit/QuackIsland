@@ -703,14 +703,23 @@ const ENTRIES = [
     done: { environment: true, controls: true, assets: false },
   },
   {
-    id: 'reserved-35',
+    id: 'binary-bs',
     number: 35,
-    title: 'Free slot',
+    title: 'Binary BS',
     kind: 'free-for-all',
-    description: [],
-    controls: [],
-    reserved: true,
-    done: { environment: false, controls: false, assets: false },
+    description: [
+      'Players spawn on different sides of a giant gear - as many sides as players - with one side marked to be removed. A random number appears in the center, and players have 5 seconds to vote 0 or 1, in secret.',
+      'When the countdown ends the gear turns by the number, one side less for every 0, and removes the side that lands on the mark along with everyone standing on it. If everyone votes 1, the marked side goes. A new number and a new gear come each round until only one player remains.',
+    ],
+    controls: [
+      { input: '0', does: 'Vote 0' },
+      { input: '1', does: 'Vote 1' },
+      { input: 'WASD', does: 'Move around your side of the gear' },
+    ],
+    reserved: false,
+    // Built: see `45-binary-bs`. The assets stage is still to do - the gear is
+    // flat wedges and boxes and the players are the island's capsule.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'reserved-36',

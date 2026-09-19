@@ -133,7 +133,8 @@
         "41-one-piece",
         "42-i-just-work-here",
         "43-highest-in-the-room",
-        "44-color-coded"
+        "44-color-coded",
+        "45-binary-bs"
       ]
     }
   ],
@@ -187,7 +188,8 @@
         "41-one-piece",
         "42-i-just-work-here",
         "43-highest-in-the-room",
-        "44-color-coded"
+        "44-color-coded",
+        "45-binary-bs"
       ],
       "generation": 1,
       "contract": {
@@ -381,7 +383,8 @@
         "40-whats-your-rpm",
         "42-i-just-work-here",
         "43-highest-in-the-room",
-        "44-color-coded"
+        "44-color-coded",
+        "45-binary-bs"
       ],
       "generation": 1,
       "contract": {
@@ -904,7 +907,8 @@
         "41-one-piece",
         "42-i-just-work-here",
         "43-highest-in-the-room",
-        "44-color-coded"
+        "44-color-coded",
+        "45-binary-bs"
       ],
       "generation": 1,
       "contract": {
@@ -1426,7 +1430,8 @@
         "41-one-piece",
         "42-i-just-work-here",
         "43-highest-in-the-room",
-        "44-color-coded"
+        "44-color-coded",
+        "45-binary-bs"
       ],
       "generation": 1,
       "contract": {
@@ -3892,6 +3897,89 @@
       "nonGoals": [
         "No models: panels and the wheel are flat colour, players are the island capsule",
         "No jumping",
+        "No music of its own yet; the round is silent under the cues"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "45-binary-bs",
+      "phase": "P6",
+      "title": "Minigame 35, Binary BS: a giant gear with a side per player and a mark; a number comes up, five seconds to vote 0 or 1 in secret; the gear turns the number less one for every 0, and the side at the mark drops; a new gear a side fewer until one is left",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "45.1",
+          "title": "The gear and its clock: as many sides as players, a round of vote, reveal, turn, drop and reseat, all arithmetic on the clock; a number from the seed",
+          "status": "done"
+        },
+        {
+          "id": "45.2",
+          "title": "The count: turn the number less one for every 0 (not voting is 1); the side it brings to the mark goes; everybody 1 is the marked side",
+          "status": "done"
+        },
+        {
+          "id": "45.3",
+          "title": "The end: one removed a round, a new gear a side fewer, last one left wins",
+          "status": "done"
+        },
+        {
+          "id": "45.4",
+          "title": "The controls: 0 and 1 to vote, changeable until the end; WASD about your own side",
+          "status": "done"
+        },
+        {
+          "id": "45.5",
+          "title": "From above: the gear in everybody's colours, the mark, the marked side striped, the number on the hub, the turn and the drop, a tick then the vote over each head",
+          "status": "done"
+        },
+        {
+          "id": "45.6",
+          "title": "One gear shared across the lobby, votes kept secret on the wire until the count, stand-ins only when alone",
+          "status": "done"
+        },
+        {
+          "id": "45.7",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "45.8",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-19T04:34:34.126Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: the gear is flat wedges and boxes, players are the island capsule",
+        "Nobody sees anybody else's vote before the count, on the screen or on the wire",
         "No music of its own yet; the round is silent under the cues"
       ],
       "budgets": {
