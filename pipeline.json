@@ -136,7 +136,8 @@
         "44-color-coded",
         "45-binary-bs",
         "46-youre-the-bomb",
-        "47-shanty-matrix"
+        "47-shanty-matrix",
+        "48-spidy-senses"
       ]
     }
   ],
@@ -193,7 +194,8 @@
         "44-color-coded",
         "45-binary-bs",
         "46-youre-the-bomb",
-        "47-shanty-matrix"
+        "47-shanty-matrix",
+        "48-spidy-senses"
       ],
       "generation": 1,
       "contract": {
@@ -390,7 +392,8 @@
         "44-color-coded",
         "45-binary-bs",
         "46-youre-the-bomb",
-        "47-shanty-matrix"
+        "47-shanty-matrix",
+        "48-spidy-senses"
       ],
       "generation": 1,
       "contract": {
@@ -916,7 +919,8 @@
         "44-color-coded",
         "45-binary-bs",
         "46-youre-the-bomb",
-        "47-shanty-matrix"
+        "47-shanty-matrix",
+        "48-spidy-senses"
       ],
       "generation": 1,
       "contract": {
@@ -1441,7 +1445,8 @@
         "44-color-coded",
         "45-binary-bs",
         "46-youre-the-bomb",
-        "47-shanty-matrix"
+        "47-shanty-matrix",
+        "48-spidy-senses"
       ],
       "generation": 1,
       "contract": {
@@ -4161,6 +4166,89 @@
       "nonGoals": [
         "No models: the ship and the cannonballs are primitives, players are the island capsule",
         "No falling overboard but by a cannonball: the rails hold everybody on the deck",
+        "No music of its own yet; the round is silent under the cues"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "48-spidy-senses",
+      "phase": "P6",
+      "title": "Minigame 44, Spidy Senses: a game of chicken round a trapdoor over a spider's nest; everybody creeps in and a click stops you; at a random moment it springs and whoever has not clicked in a fraction of a second gets the spider and a jump scare; if nobody is too late the one furthest back is the chicken; last one left wins",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "48.1",
+          "title": "The cellar and its clock: a ring round a trapdoor, rounds of ready, creep, spring and reveal, when it springs, how long to react and the twitches before it, all arithmetic on the seed and the clock",
+          "status": "done"
+        },
+        {
+          "id": "48.2",
+          "title": "The rules: creeping in and back and round, a click that stops you for the round, too late after the spring and the spider takes you, nobody late and it takes the chicken furthest back, level broken by who was furthest from the moment",
+          "status": "done"
+        },
+        {
+          "id": "48.3",
+          "title": "The end: somebody every round, the later you went the better, last one left wins",
+          "status": "done"
+        },
+        {
+          "id": "48.4",
+          "title": "The controls: WASD relative to the camera facing the trapdoor, left click to stop and to react",
+          "status": "done"
+        },
+        {
+          "id": "48.5",
+          "title": "Over the shoulder: the cellar, chalk rings, the lid twitching and rattling with red eyes under it, the spider leaping out, webbing and dragging its victims down, and a jump scare for whoever was too slow",
+          "status": "done"
+        },
+        {
+          "id": "48.6",
+          "title": "One cellar shared across the lobby, the host running the bodies and the judging, a guest judged on its own clock's reading of its click, stand-ins with their own nerve and reactions, only when alone",
+          "status": "done"
+        },
+        {
+          "id": "48.7",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "48.8",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-19T15:51:55.644Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: the cellar, the trapdoor and the spider are primitives, players are the island capsule",
+        "No shoving: nobody can be pushed towards the trapdoor",
         "No music of its own yet; the round is silent under the cues"
       ],
       "budgets": {

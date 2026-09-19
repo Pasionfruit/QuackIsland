@@ -96,7 +96,7 @@ export interface Minigame {
  * test should catch. There is one that does.
  */
 export const MINIGAME_TARGET: Readonly<Record<MinigameKind, number>> = Object.freeze({
-  'free-for-all': 32,
+  'free-for-all': 33,
   'one-vs-all': 11,
 })
 
@@ -819,6 +819,26 @@ const ENTRIES = [
     // Built: see `47-shanty-matrix`. The assets stage is still to do - the ship
     // and the cannonballs are primitives and the players are the island's capsule.
     // Added as a forty-third slot, the same way as 42.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'spidy-senses',
+    number: 44,
+    title: 'Spidy Senses',
+    kind: 'free-for-all',
+    description: [
+      "Play a game of chicken as everyone slowly inches toward a trapdoor hiding a spider's nest. Decide when to stop - a click stops you where you stand.",
+      'At a random point the trapdoor becomes dangerous: it rattles and red eyes glint under the lid. Click too late and a spider jumps out at you, and you are out. If nobody is too late, the spider takes whoever stopped furthest from the trapdoor - the chicken.',
+      'Somebody goes every round. The last player remaining wins.',
+    ],
+    controls: [
+      { input: 'WASD', does: 'Slowly move toward or away from the trapdoor' },
+      { input: 'Left Click', does: 'Stop / react to the trapdoor' },
+    ],
+    reserved: false,
+    // Built: see `48-spidy-senses`. The assets stage is still to do - the cellar,
+    // the trapdoor and the spider are primitives and the players are the island's capsule.
+    // Added as a forty-fourth slot, the same way as 42 and 43.
     done: { environment: true, controls: true, assets: false },
   },
 ] as const

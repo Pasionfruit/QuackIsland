@@ -166,6 +166,12 @@ export class Page {
 
 /** Each game's screen component, and an element inside it to start the search from. */
 export const GAMES = {
+  'spidy-senses': {
+    title: 'Spidy Senses',
+    screen: 'NestScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
   'shanty-matrix': {
     title: 'Shanty Matrix',
     screen: 'DeckScreen',
