@@ -684,14 +684,23 @@ const ENTRIES = [
     done: { environment: true, controls: true, assets: false },
   },
   {
-    id: 'reserved-34',
+    id: 'color-coded',
     number: 34,
-    title: 'Free slot',
+    title: 'Color Coded',
     kind: 'free-for-all',
-    description: [],
-    controls: [],
-    reserved: true,
-    done: { environment: false, controls: false, assets: false },
+    description: [
+      'Spawn on floating color panels as a giant wheel spins to select a color. Once the color is revealed, players have 2 seconds to push each other and get onto a panel matching the spinner’s color.',
+      'When the timer ends, every panel of a different color disappears, and anyone standing on one falls and is eliminated. The surviving platforms slowly rebuild before the next round, but fewer matching platforms remain as the rounds go on. Last player standing wins.',
+    ],
+    controls: [
+      { input: 'WASD', does: 'Move' },
+      { input: 'Mouse', does: 'Camera' },
+      { input: 'Left Click', does: 'Push' },
+    ],
+    reserved: false,
+    // Built: see `44-color-coded`. The assets stage is still to do - the panels
+    // and the wheel are flat colour and the players are the island's capsule.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'reserved-35',

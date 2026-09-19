@@ -132,7 +132,8 @@
         "40-whats-your-rpm",
         "41-one-piece",
         "42-i-just-work-here",
-        "43-highest-in-the-room"
+        "43-highest-in-the-room",
+        "44-color-coded"
       ]
     }
   ],
@@ -185,7 +186,8 @@
         "40-whats-your-rpm",
         "41-one-piece",
         "42-i-just-work-here",
-        "43-highest-in-the-room"
+        "43-highest-in-the-room",
+        "44-color-coded"
       ],
       "generation": 1,
       "contract": {
@@ -378,7 +380,8 @@
         "39-ill-just-wait",
         "40-whats-your-rpm",
         "42-i-just-work-here",
-        "43-highest-in-the-room"
+        "43-highest-in-the-room",
+        "44-color-coded"
       ],
       "generation": 1,
       "contract": {
@@ -900,7 +903,8 @@
         "40-whats-your-rpm",
         "41-one-piece",
         "42-i-just-work-here",
-        "43-highest-in-the-room"
+        "43-highest-in-the-room",
+        "44-color-coded"
       ],
       "generation": 1,
       "contract": {
@@ -1421,7 +1425,8 @@
         "40-whats-your-rpm",
         "41-one-piece",
         "42-i-just-work-here",
-        "43-highest-in-the-room"
+        "43-highest-in-the-room",
+        "44-color-coded"
       ],
       "generation": 1,
       "contract": {
@@ -3799,6 +3804,94 @@
       "nonGoals": [
         "No models: the towers are boxes and the players are the island capsule",
         "No typing anything but the four arrows",
+        "No music of its own yet; the round is silent under the cues"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "44-color-coded",
+      "phase": "P6",
+      "title": "Minigame 34, Color Coded: a grid of colour panels over nothing; a giant wheel picks a colour, two seconds to shove your way onto it, every other panel drops and whoever is on one falls; the panels rebuild with fewer of the colour each round; last one standing wins",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "44.1",
+          "title": "The arena and its clock: a six-by-six grid of touching panels, a round of spin, reveal, drop and rebuild, all arithmetic on the clock",
+          "status": "done"
+        },
+        {
+          "id": "44.2",
+          "title": "The deal: the wheel colour on exactly 8, 6, 5, 4, 3, 3, 2, 2 then 1 panels, the rest any other colour, from the seed",
+          "status": "done"
+        },
+        {
+          "id": "44.3",
+          "title": "The bodies: walking, kept apart, a shove that knocks about a panel, falling off the edge or through a gap, credited to whoever shoved",
+          "status": "done"
+        },
+        {
+          "id": "44.4",
+          "title": "The end: last one standing, those who fell together share, at sixteen rounds everybody standing shares",
+          "status": "done"
+        },
+        {
+          "id": "44.5",
+          "title": "The controls: WASD relative to the camera, the mouse on the camera under pointer lock, left click to shove",
+          "status": "done"
+        },
+        {
+          "id": "44.6",
+          "title": "Over the shoulder: the panels dropping and rebuilding, a giant wheel facing you, a ring at your feet and the reach of a shove",
+          "status": "done"
+        },
+        {
+          "id": "44.7",
+          "title": "One arena shared across the lobby, the host running the bodies from everybody's hands, a guest walking at once on its own screen, stand-ins only when alone",
+          "status": "done"
+        },
+        {
+          "id": "44.8",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "44.9",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-19T04:19:28.814Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: panels and the wheel are flat colour, players are the island capsule",
+        "No jumping",
         "No music of its own yet; the round is silent under the cues"
       ],
       "budgets": {
