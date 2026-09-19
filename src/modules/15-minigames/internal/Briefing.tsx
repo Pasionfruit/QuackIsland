@@ -30,6 +30,7 @@ import {
 } from './look'
 import type { MinigameRun } from './registry'
 import { backOut, playMinigame } from './state'
+import { clicked } from './sound'
 
 const KIND_LABEL = {
   'free-for-all': 'free-for-all · everybody at once',
@@ -63,7 +64,7 @@ export function Briefing({ run }: { run: MinigameRun }) {
       <div style={bar}>
         {/* The host's, like every button on this screen. */}
         {isHost ? (
-          <button type="button" onClick={backOut} style={button}>
+          <button type="button" onClick={clicked(backOut)} style={button}>
             back
           </button>
         ) : null}
@@ -85,7 +86,7 @@ export function Briefing({ run }: { run: MinigameRun }) {
             <button
               type="button"
               data-leaf="how"
-              onClick={() => setLeaf('how')}
+              onClick={clicked(() => setLeaf('how'))}
               style={{ ...button, ...(leaf === 'how' ? buttonOn : null) }}
             >
               how it plays
@@ -93,7 +94,7 @@ export function Briefing({ run }: { run: MinigameRun }) {
             <button
               type="button"
               data-leaf="controls"
-              onClick={() => setLeaf('controls')}
+              onClick={clicked(() => setLeaf('controls'))}
               style={{ ...button, ...(leaf === 'controls' ? buttonOn : null) }}
             >
               controls
@@ -137,7 +138,7 @@ export function Briefing({ run }: { run: MinigameRun }) {
             <button
               type="button"
               data-play
-              onClick={playMinigame}
+              onClick={clicked(playMinigame)}
               disabled={counting}
               style={{ ...playButton, opacity: counting ? 0.6 : 1 }}
             >

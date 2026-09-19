@@ -15,7 +15,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { CUES, TopTimer, playCue, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { HesOneShotScene, type LookRef } from './HesOneShotScene'
 import { COLOURS, GUN, PITCH_LIMIT, ROUND, clock, cooldownLeft, guarded, isStanding, placings, type Game } from './rules'
 import { myId, newGame, waitingGame } from './setup'
@@ -185,6 +185,7 @@ export function HesOneShotScreen({ run }: { run: MinigameRun }) {
   const mineIndex = game.players.findIndex((p) => p.mine)
   const mine = game.players[mineIndex]
   const t = clock(game)
+  useShotSounds(game)
   const standing = game.players.filter(isStanding).length
   const cooling = mine ? cooldownLeft(game, mine) / GUN.cooldown : 0
   const sinceHit = (performance.now() - hitAt) / 1000
@@ -211,7 +212,7 @@ export function HesOneShotScreen({ run }: { run: MinigameRun }) {
         <span style={{ fontWeight: 700, fontSize: 16 }}>He's One Shot</span>
         {ready ? (
           <>
-            <TopTimer><span style={{ ...pill, background: LOOK.sun, color: LOOK.ink }} data-time-left={Math.max(0, Math.ceil(ROUND.limit - Math.max(0, t)))}>
+            <TopTimer left={game.over ? null : ROUND.limit - Math.max(0, t)}><span style={{ ...pill, background: LOOK.sun, color: LOOK.ink }} data-time-left={Math.max(0, Math.ceil(ROUND.limit - Math.max(0, t)))}>
               {minutes(Math.max(0, Math.ceil(ROUND.limit - Math.max(0, t))))}
             </span></TopTimer>
             <span style={{ ...pill, background: LOOK.ink, color: '#fff' }} data-standing={standing}>
@@ -533,4 +534,25 @@ const againButton: React.CSSProperties = {
   color: LOOK.ink,
   font: `700 16px/1.2 ${FONT}`,
   cursor: 'pointer',
+}
+
+/**
+ * A bang for every shot fired and a thud for everybody who goes down - off each
+ * player's `shotAt` and `out`, which every screen is sent. Your own shot is
+ * loud; everybody else's is quieter. A new game is only remembered.
+ */
+function useShotSounds(game: Game): void {
+  const seen = useRef<{ id: number; by: Map<string, { shot: number; out: boolean }> }>({ id: -1, by: new Map() })
+  useEffect(() => {
+    const fresh = seen.current.id !== game.id
+    if (fresh) seen.current = { id: game.id, by: new Map() }
+    const by = seen.current.by
+    for (const p of game.players) {
+      const was = by.get(p.id)
+      by.set(p.id, { shot: p.shotAt, out: p.out !== null })
+      if (fresh || !was) continue
+      if (p.shotAt !== was.shot) playCue(CUES.gunShot, p.mine ? 0.6 : 0.25)
+      if (!was.out && p.out !== null) playCue(CUES.fallingOver, p.mine ? 0.7 : 0.4)
+    }
+  }, [game])
 }

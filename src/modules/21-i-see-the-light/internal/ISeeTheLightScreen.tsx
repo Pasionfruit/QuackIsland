@@ -13,7 +13,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { CUES, TopTimer, muteRoundMusic, replayMinigame, useCueOnChange, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { ISeeTheLightScene } from './ISeeTheLightScene'
 import {
@@ -155,6 +155,14 @@ export function ISeeTheLightScreen({ run }: { run: MinigameRun }) {
   const inRace = !!mine && racing(mine)
   const left = Math.max(0, LIGHT.timeLimit - race.elapsed)
 
+  // The music is part of the rules: it plays on green and stops dead on red.
+  useEffect(() => muteRoundMusic(red), [red])
+  useEffect(() => () => muteRoundMusic(false), [])
+  // Somebody out - pressed on red or slipped the circle - off the race's own
+  // state, so every screen hears it at once.
+  const outs = race.racers.filter((r) => r.out).length
+  useCueOnChange(CUES.fallingOver, outs, outs > 0 && !run.paused)
+
   return (
     <div style={page}>
       <style>{COUNT_KEYFRAMES}</style>
@@ -171,7 +179,7 @@ export function ISeeTheLightScreen({ run }: { run: MinigameRun }) {
             <span style={{ ...pill, background: LOOK.ink, color: '#fff' }}>
               {race.racers.filter(racing).length} racing
             </span>
-            <TopTimer><span style={{ ...pill, background: left <= 10 ? LOOK.red : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
+            <TopTimer left={race.over ? null : left}><span style={{ ...pill, background: left <= 10 ? LOOK.red : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
               {Math.ceil(left)}s
             </span></TopTimer>
           </>

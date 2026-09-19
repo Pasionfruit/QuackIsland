@@ -18,7 +18,7 @@ import { Canvas } from '@react-three/fiber'
 import { useEffect, useRef, useState } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { CUES, replayMinigame, useCueOnChange, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { GAME, placings, roundsSurvived, safeCount, stillIn, type Game, type Intent } from './game'
 import { BEATS, bridgeCondition, revealProgress } from './place'
@@ -127,6 +127,13 @@ export function ProbableStopScreen({ run }: { run: MinigameRun }) {
   const ready = game.players.length > 0
   const left = stillIn(game)
   const lastTwo = safeCount(game.round) === 1
+
+  // Off the phase and the reveal's own clock, which every screen is sent: the
+  // sting as everybody sets off across, and the crack as the bridges that did
+  // not hold give way. Keyed on the round, so each round is heard once.
+  const dropping = game.phase === 'reveal' && revealProgress(game) >= BEATS.drop[0]
+  useCueOnChange(CUES.suspense, `${game.id}:${game.round}:${game.phase}`, game.phase === 'reveal')
+  useCueOnChange(CUES.woodenBridgeCollapse, `${game.id}:${game.round}:${dropping}`, dropping)
 
   return (
     <div style={page}>

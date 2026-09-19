@@ -35,7 +35,14 @@ import {
 } from './round'
 import { emptyRound, myId, newRound } from './setup'
 import { useRoundNet } from './useRoundNet'
-import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import {
+  CUES,
+  TopTimer,
+  replayMinigame,
+  useCueOnChange,
+  useFinish,
+  type MinigameRun,
+} from '../../15-minigames'
 
 /** Text and chrome. The board's own colours live with the board, in the scene. */
 const LOOK = {
@@ -152,6 +159,13 @@ export function ZombieTagScreen({ run }: { run: MinigameRun }) {
   const you = round.bodies.find((b) => b.mine) ?? null
   const left = survivors(round)
   const chase = zombies(round)
+
+  // A push that lands is heard by everybody, from the round they all have:
+  // somebody's stun going up is somebody hitting the floor. A new round only
+  // ever takes stun down, so a restart is silent.
+  const knocked = useKnockdowns(round)
+  useCueOnChange(CUES.bump, knocked)
+  useCueOnChange(CUES.fallingOver, knocked, true, 0.45)
 
   return (
     <div style={page}>
@@ -270,6 +284,22 @@ function Over({
       </div>
     </div>
   )
+}
+
+/**
+ * How many times anybody has been put on the floor, as this screen saw it.
+ *
+ * Read off each body's `stun` rising rather than off a count of who is down,
+ * so a second push on somebody already down is still a push you hear.
+ */
+function useKnockdowns(round: Round): number {
+  const seen = useRef({ stun: new Map<string, number>(), count: 0 })
+  const { stun } = seen.current
+  for (const body of round.bodies) {
+    if (body.stun > (stun.get(body.id) ?? 0)) seen.current.count += 1
+    stun.set(body.id, body.stun)
+  }
+  return seen.current.count
 }
 
 /** What the keyboard is asking for, this frame. */

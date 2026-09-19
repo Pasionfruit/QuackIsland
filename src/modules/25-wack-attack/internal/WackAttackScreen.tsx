@@ -15,7 +15,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { WackAttackScene } from './WackAttackScene'
 import { COLOURS, FIELD, isStunned, placings, timeLeft, type Game } from './rules'
@@ -138,6 +138,15 @@ export function WackAttackScreen({ run }: { run: MinigameRun }) {
 
   const ready = game.players.length > 0
   const left = timeLeft(game)
+
+  // Every whack and every head bonked, off the counts every screen is sent.
+  // Your own are loud; anybody else's across the field are quieter.
+  const whackedByMe = game.players.find((p) => p.mine)?.whacks ?? 0
+  const whackedByAll = game.players.reduce((n, p) => n + p.whacks, 0) - whackedByMe
+  const bonked = game.players.reduce((n, p) => n + p.bonks, 0)
+  useCueOnChange(CUES.bonk, `${game.id}:${whackedByMe}`, whackedByMe > 0, 0.7)
+  useCueOnChange(CUES.bonk, `${game.id}:${whackedByAll}`, whackedByAll > 0, 0.2)
+  useCueOnChange(CUES.bump, `${game.id}:${bonked}`, bonked > 0)
   const showFlash = ready && !game.over && flash && game.elapsed - flash.at < 0.9
 
   return (
@@ -145,7 +154,7 @@ export function WackAttackScreen({ run }: { run: MinigameRun }) {
       <div style={hud}>
         <span style={{ fontWeight: 700, fontSize: 16 }}>Wack-Attack</span>
         {ready ? (
-          <TopTimer><span style={{ ...pill, background: left <= 10 ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
+          <TopTimer left={game.over ? null : left}><span style={{ ...pill, background: left <= 10 ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
             {Math.ceil(left)}s
           </span></TopTimer>
         ) : (

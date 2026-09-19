@@ -15,7 +15,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { CUES, TopTimer, playCue, replayMinigame, useCueOnChange, useFinish, type MinigameRun } from '../../15-minigames'
 import { ARENA, COLOURS, EMBLEMS, type Emblem, type Point } from './arena'
 import { FOV } from './camera'
 import { DuckHuntScene } from './DuckHuntScene'
@@ -92,12 +92,17 @@ export function DuckHuntScreen({ run }: { run: MinigameRun }) {
   const cooling = mine ? mine.cooldown / ARENA.cooldown : 0
   const left = timeLeft(game)
 
+  // Every wave of balloons letting go, off the clock every screen shares.
+  const wave = game.over || game.elapsed < ARENA.firstWave ? -1 : Math.floor((game.elapsed - ARENA.firstWave) / ARENA.wave)
+  useCueOnChange(CUES.balloonInflate, `${game.id}:${wave}`, wave >= 0 && ready, 0.25)
+  useShotSounds(game)
+
   return (
     <div style={page}>
       <div style={hud}>
         <span style={{ fontWeight: 700, fontSize: 16 }}>Duck Hunt</span>
         {ready ? (
-          <TopTimer><span style={{ ...pill, background: left <= 10 ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
+          <TopTimer left={game.over ? null : left}><span style={{ ...pill, background: left <= 10 ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
             {Math.ceil(left)}s
           </span></TopTimer>
         ) : (
@@ -408,4 +413,31 @@ const againButton: React.CSSProperties = {
   color: LOOK.ink,
   font: `700 16px/1.2 ${FONT}`,
   cursor: 'pointer',
+}
+
+/**
+ * A bang for every shot, a pop for every hit, and a buzz when you have popped
+ * somebody else's - off each shooter's last shot, which every screen is sent.
+ * Yours is loud and everybody else's is quieter, so a room of eight is not a
+ * wall of noise. A new game's shots are all new, so the first look at one is
+ * only remembered, never played.
+ */
+function useShotSounds(game: Game): void {
+  const seen = useRef<{ game: number; at: Map<string, number> }>({ game: -1, at: new Map() })
+  useEffect(() => {
+    const was = seen.current
+    const fresh = was.game !== game.id
+    if (fresh) seen.current = { game: game.id, at: new Map() }
+    const at = seen.current.at
+    for (const p of game.players) {
+      const shot = p.lastShot
+      if (!shot) continue
+      const before = at.get(p.id)
+      at.set(p.id, shot.at)
+      if (fresh || before === shot.at) continue
+      playCue(CUES.gunShot, p.mine ? 0.55 : 0.18)
+      if (shot.hit) playCue(CUES.balloonPop, p.mine ? 0.6 : 0.25)
+      if (shot.hit && !shot.own && p.mine) playCue(CUES.wrongSelection)
+    }
+  }, [game])
 }

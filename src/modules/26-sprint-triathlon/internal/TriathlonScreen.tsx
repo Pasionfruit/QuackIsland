@@ -14,7 +14,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { CUES, TopTimer, playCue, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { TriathlonScene } from './TriathlonScene'
 import {
@@ -103,7 +103,12 @@ export function TriathlonScreen({ run }: { run: MinigameRun }) {
         if (!e.repeat) self.current = pedal(self.current, sentence, current.elapsed)
       } else if (leg === 'run' && e.key.length === 1) {
         e.preventDefault()
-        if (!e.repeat) self.current = type(self.current, sentence, e.key, current.elapsed)
+        if (!e.repeat) {
+          const before = self.current.mistakes
+          self.current = type(self.current, sentence, e.key, current.elapsed)
+          // Your own stumble, heard only by you: nobody else's keys are yours to voice.
+          if (self.current.mistakes > before) playCue(CUES.wrongSelection)
+        }
       } else {
         return
       }
@@ -157,7 +162,7 @@ export function TriathlonScreen({ run }: { run: MinigameRun }) {
       <div style={hud}>
         <span style={{ fontWeight: 700, fontSize: 16 }}>Sprint Triathlon</span>
         {ready ? (
-          <TopTimer><span style={{ ...pill, background: LOOK.ink, color: '#fff', fontVariantNumeric: 'tabular-nums' }} data-clock={raceClock(race).toFixed(1)}>
+          <TopTimer left={race.over ? null : COURSE.timeLimit - raceClock(race)}><span style={{ ...pill, background: LOOK.ink, color: '#fff', fontVariantNumeric: 'tabular-nums' }} data-clock={raceClock(race).toFixed(1)}>
             {(mine ? timeOf(race, mine) : raceClock(race)).toFixed(1)}s
           </span></TopTimer>
         ) : (

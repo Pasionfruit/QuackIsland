@@ -20,7 +20,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { CUES, playCue, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { MusicalMayhemScene } from './MusicalMayhemScene'
 import { COLOURS, KEEP, ROUND, idleFor, isIn, isSafe, phase, phaseTime, placings, type Game, type Player } from './rules'
@@ -158,6 +158,7 @@ export function MusicalMayhemScreen({ run }: { run: MinigameRun }) {
 
   const ready = game.players.length > 0
   const mine = game.players.find((p) => p.mine)
+  useShoveSounds(game)
   const standing = game.players.filter(isIn)
   const at = phase(game)
   const justOut = game.players.filter((p) => p.out === game.round && game.round > 0)
@@ -442,4 +443,26 @@ const againButton: React.CSSProperties = {
   color: LOOK.ink,
   font: `700 16px/1.2 ${FONT}`,
   cursor: 'pointer',
+}
+
+/**
+ * A thump when a push lands, and a tumble when it takes somebody off a chair -
+ * off each player's `stunned` and `seat`, which every screen is sent. Yours
+ * loud, everybody else's quieter. A new game is only remembered.
+ */
+function useShoveSounds(game: Game): void {
+  const seen = useRef<{ id: number; by: Map<string, { stunned: number; seat: number | null }> }>({ id: -1, by: new Map() })
+  useEffect(() => {
+    const fresh = seen.current.id !== game.id
+    if (fresh) seen.current = { id: game.id, by: new Map() }
+    const by = seen.current.by
+    for (const p of game.players) {
+      const was = by.get(p.id)
+      by.set(p.id, { stunned: p.stunned, seat: p.seat })
+      if (fresh || !was) continue
+      const loud = p.mine ? 1 : 0.45
+      if (p.stunned > was.stunned) playCue(CUES.bump, 0.6 * loud)
+      if (was.seat !== null && p.seat === null && p.stunned > 0) playCue(CUES.fallingOver, 0.6 * loud)
+    }
+  }, [game])
 }

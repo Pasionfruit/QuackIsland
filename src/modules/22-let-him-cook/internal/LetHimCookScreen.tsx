@@ -15,7 +15,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, useLoopCue, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { LetHimCookScene, myTurn, type SceneHands } from './LetHimCookScene'
 import { COLOURS, INGREDIENTS, KITCHEN, cookTime, fastForwarding, placings, stillIn, turnTime, whoseTurn, type Cook, type Game, type Pick } from './rules'
@@ -87,6 +87,13 @@ export function LetHimCookScreen({ run }: { run: MinigameRun }) {
   const mine = game.players[mineIndex]
   const turn = whoseTurn(game)
   const isMine = turn !== null && turn === mineIndex
+
+  // The chef rummaging through the baskets, for as long as he cooks.
+  useLoopCue(CUES.chefSelecting, ready && game.phase === 'cooking' && !run.paused)
+  // A pick that puts somebody out - not in the recipe, all claimed, or out of
+  // time - off the turn count every screen is sent, so everybody hears it.
+  const wrong = !!game.last && !game.last.ok && game.last.why !== 'left'
+  useCueOnChange(CUES.wrongSelection, game.turn, wrong && !run.paused)
 
   return (
     <div style={page}>

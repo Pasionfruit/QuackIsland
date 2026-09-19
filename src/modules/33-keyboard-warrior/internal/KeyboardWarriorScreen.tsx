@@ -17,7 +17,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { CUES, replayMinigame, useCueOnChange, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { KeyboardWarriorScene } from './KeyboardWarriorScene'
 import { COLOURS, ROUND, asLetter, attemptOf, phase, placings, type Game } from './rules'
@@ -106,6 +106,9 @@ export function KeyboardWarriorScreen({ run }: { run: MinigameRun }) {
   const mine = mineIndex >= 0 ? attemptOf(game, mineIndex) : undefined
   const winner = letter.winner !== null ? game.players[letter.winner] : null
   const won = letter.winner !== null ? letter.attempts.find((a) => a.player === letter.winner) : undefined
+
+  // Your one go at this letter, the moment it is on the record, if it was wrong.
+  useCueOnChange(CUES.wrongSelection, `${game.id}:${letter.index}:${mine?.key ?? ''}`, !!mine && mine.key !== letter.char)
 
   let banner: { text: string; sub?: string; tone: 'count' | 'hint' | 'right' | 'wrong' | 'point' | 'none' } | null = null
   if (ready && mineIndex >= 0) {

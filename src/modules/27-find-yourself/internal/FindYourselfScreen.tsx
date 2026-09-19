@@ -13,7 +13,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { FindYourselfScene, type SceneHands } from './FindYourselfScene'
 import { COLOURS, TABLE, found, phaseLength, placings, type Game } from './rules'
@@ -89,6 +89,14 @@ export function FindYourselfScreen({ run }: { run: MinigameRun }) {
   const worth = TABLE.points[game.stage]
   const left = Math.max(0, phaseLength(game) - game.clock)
   const myPick = mine?.picks[game.stage]
+
+  // Keyed on the phase every screen is sent, so the whole table hears it at once;
+  // a restart lands on `show`, which is silent.
+  const moment = `${game.id}:${game.stage}:${game.phase}`
+  // The sting as the cups start to move: this is the bit to watch.
+  useCueOnChange(CUES.suspense, moment, ready && game.phase === 'shuffle')
+  // Cups up, and yours was not you - or you never picked.
+  useCueOnChange(CUES.wrongSelection, moment, ready && game.phase === 'result' && mineIndex >= 0 && !found(game, mineIndex, game.stage))
 
   let status = ''
   if (game.phase === 'show') status = 'Find your face!'

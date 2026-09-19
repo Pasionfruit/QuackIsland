@@ -14,7 +14,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { SharingIsCaringScene } from './SharingIsCaringScene'
 import { COLOURS, canBoost, placings, points, timeLeft, type Intent, type Round } from './rules'
@@ -127,6 +127,11 @@ export function SharingIsCaringScreen({ run }: { run: MinigameRun }) {
   const mineIndex = round.players.findIndex((p) => p.mine)
   const mine = round.players[mineIndex]
   const left = timeLeft(round)
+
+  // The crown changing heads by a bump - not the first grab from the middle -
+  // off the holder every screen is sent.
+  const takes = round.players.reduce((n, p) => n + p.takes, 0)
+  useCueOnChange(CUES.bump, `${round.id}:${takes}`, takes > 1)
   const holderIndex = round.players.findIndex((p) => p.id === round.holder)
 
   const crownText =
@@ -144,7 +149,7 @@ export function SharingIsCaringScreen({ run }: { run: MinigameRun }) {
         <span style={{ fontWeight: 700, fontSize: 16 }}>Sharing Is Caring</span>
         {ready ? (
           <>
-            <TopTimer><span style={{ ...pill, background: left <= 10 ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
+            <TopTimer left={round.over ? null : left}><span style={{ ...pill, background: left <= 10 ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
               {Math.ceil(left)}s
             </span></TopTimer>
             <span

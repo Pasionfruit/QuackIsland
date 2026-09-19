@@ -16,7 +16,14 @@ import { Canvas } from '@react-three/fiber'
 import { useEffect, useRef, useState } from 'react'
 import { ACESFilmicToneMapping, PCFSoftShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import {
+  CUES,
+  TopTimer,
+  replayMinigame,
+  useCueOnChange,
+  useFinish,
+  type MinigameRun,
+} from '../../15-minigames'
 import { ARROWS, heldLetters } from './bindings'
 import { FOV } from './camera'
 import { MessyMazeScene, PALETTE } from './MessyMazeScene'
@@ -121,6 +128,14 @@ export function MessyMazeScreen({ run }: { run: MinigameRun }) {
     }
     seenSpins.current = you.spins
   }, [you?.spins, race.seed])
+
+  // A spin is heard off the spin counts everybody is sent: loud for your own,
+  // quiet for anybody else's. Keyed on the race's seed as well, so a new race
+  // putting every count back to nought is a change that stays silent.
+  const mySpins = you?.spins ?? 0
+  const theirSpins = race.racers.reduce((sum, r) => (r.mine ? sum : sum + r.spins), 0)
+  useCueOnChange(CUES.spinning, `${race.seed}:${mySpins}`, mySpins > 0)
+  useCueOnChange(CUES.spinning, `${race.seed}:${theirSpins}`, theirSpins > 0, 0.2)
 
   const inCount = race.racers.length - stillRacing(race).length
   const callLeft =

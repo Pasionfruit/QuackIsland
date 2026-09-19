@@ -13,7 +13,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { CUES, TopTimer, playCue, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { PunchBuggyScene } from './PunchBuggyScene'
 import { COLOURS, placings, standing, timeLeft, type Intent, type Point, type Round } from './rules'
@@ -135,6 +135,7 @@ export function PunchBuggyScreen({ run }: { run: MinigameRun }) {
   const mineIndex = round.fighters.findIndex((f) => f.mine)
   const mine = round.fighters[mineIndex]
   const left = timeLeft(round)
+  usePunchSounds(round)
 
   return (
     <div style={page}>
@@ -142,7 +143,7 @@ export function PunchBuggyScreen({ run }: { run: MinigameRun }) {
         <span style={{ fontWeight: 700, fontSize: 16 }}>Punch Buggy</span>
         {ready ? (
           <>
-            <TopTimer><span style={{ ...pill, background: left <= 5 ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
+            <TopTimer left={round.over ? null : left}><span style={{ ...pill, background: left <= 5 ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
               {Math.ceil(left)}s
             </span></TopTimer>
             <span style={{ ...pill, background: LOOK.ink, color: '#fff' }}>{standing(round).length} standing</span>
@@ -331,4 +332,33 @@ const againButton: React.CSSProperties = {
   color: LOOK.ink,
   font: `700 16px/1.2 ${FONT}`,
   cursor: 'pointer',
+}
+
+/**
+ * A fist going out, a shove, and somebody going down - off each fighter's
+ * `thrownAt`, `shovedAt` and `alive`, which every screen is sent. Yours loud,
+ * everybody else's quieter. A new round is only remembered, never played.
+ */
+function usePunchSounds(round: Round): void {
+  const seen = useRef<{ seed: number; by: Map<string, { thrown: number; shoved: number; alive: boolean }> }>({
+    seed: -1,
+    by: new Map(),
+  })
+  useEffect(() => {
+    const fresh = seen.current.seed !== round.seed
+    if (fresh) seen.current = { seed: round.seed, by: new Map() }
+    const by = seen.current.by
+    for (const f of round.fighters) {
+      const was = by.get(f.id)
+      by.set(f.id, { thrown: f.thrownAt, shoved: f.shovedAt, alive: f.alive })
+      if (fresh || !was) continue
+      const loud = f.mine ? 1 : 0.4
+      if (f.thrownAt !== was.thrown) playCue(CUES.launch, 0.35 * loud)
+      if (f.shovedAt !== was.shoved && f.alive) playCue(CUES.bump, 0.5 * loud)
+      if (was.alive && !f.alive) {
+        if (f.how === 'punched') playCue(CUES.bump, 0.7)
+        playCue(CUES.fallingOver, 0.6 * loud)
+      }
+    }
+  }, [round])
 }

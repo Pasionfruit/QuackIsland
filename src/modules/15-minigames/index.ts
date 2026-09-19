@@ -116,6 +116,18 @@ export {
   type MinigameScreenState,
 } from './internal/state'
 
+export {
+  CUES,
+  CUE_VOLUME,
+  ROUND_MUSIC,
+  clicked,
+  loopCue,
+  muteRoundMusic,
+  playCue,
+  useCueOnChange,
+  useLoopCue,
+} from './internal/sound'
+
 export { MinigameScreen } from './internal/MinigameScreen'
 export { CountOver } from './internal/Transitions'
 export { TopTimer } from './internal/TopTimer'

@@ -27,7 +27,7 @@ import { minigameById } from './catalogue'
 import { FONT, ISLAND, bar, button, screen, wordmark } from './look'
 import { rankStandings, type Placed, type Pose } from './podium'
 import type { MinigameRun } from './registry'
-import { PODIUM_MUSIC, playOnce, stopOne } from './sound'
+import { PODIUM_MUSIC, clicked, playOnce, stopOne } from './sound'
 import { backOut, replayMinigame } from './state'
 
 /** For a player the game did not give a colour, in the order they placed. */
@@ -98,12 +98,12 @@ export function Podium({ run }: { run: MinigameRun }) {
 
       <div style={footer}>
         {net.host ? (
-          <button type="button" onClick={backOut} style={{ ...button, ...corner }} data-dashboard>
+          <button type="button" onClick={clicked(backOut)} style={{ ...button, ...corner }} data-dashboard>
             minigame dashboard
           </button>
         ) : null}
         {net.host ? (
-          <button type="button" onClick={replayMinigame} style={{ ...corner, ...replay }} data-replay>
+          <button type="button" onClick={clicked(replayMinigame)} style={{ ...corner, ...replay }} data-replay>
             replay
           </button>
         ) : (

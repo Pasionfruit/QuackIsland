@@ -299,6 +299,26 @@ is sent and no input is queued up to arrive in a burst on resume. A game that
 kept going behind a pause card would be a pause card with a game going on
 behind it.
 
+## Sound
+
+Everything lives in `internal/sound.ts`, flat and in your ears rather than on
+the island's 3D bus.
+
+- **Round music** - `ROUND_MUSIC` maps a game to a looped track. The screen
+  (`RoundMusic`) starts it on **Start!**, holds it on a pause, rewinds it on a
+  restart and stops it on Finish. A game never starts its own music; one whose
+  rules *are* the music calls `muteRoundMusic` (I See The Light, silent on red).
+  Musical Mayhem is not in the table: it synthesises its own tune in `tune.ts`.
+- **Cues** - `CUES` names every sound effect. `useCueOnChange(cue, key)` plays
+  one on a change of a value in the game's synced state, so host and guests
+  hear it from the same line; `playCue` is for your own input only; `useLoopCue`
+  keeps a held sound going (drawing, winding) and stops it when the component
+  goes. Cues overlap, up to six voices a file.
+- **The screen's own** - menu clicks (`clicked`), choosing a game, pause and
+  unpause, the three-two-one, Finish, the podium, and the last six seconds:
+  pass `TopTimer` a `left` and it ticks from six to zero. Only for a round that
+  ends on a deadline - never a count-up clock or a turn timer.
+
 ## Public contract
 
 | Export | What it is |

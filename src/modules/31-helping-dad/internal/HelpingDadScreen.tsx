@@ -13,7 +13,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV, aimAt } from './camera'
 import { HelpingDadScene } from './HelpingDadScene'
 import type { Point } from './maze'
@@ -89,6 +89,16 @@ export function HelpingDadScreen({ run }: { run: MinigameRun }) {
   const finishers = game.players.filter((p) => p.finished !== null).sort((a, b) => a.finished! - b.finished!)
   const myPlace = mine && mine.finished !== null ? finishers.filter((p) => p.finished! < mine.finished!).length + 1 : null
 
+  // Walls touched are in every snapshot, so these fire from the same numbers on
+  // every screen. Your own wall is a bonk and Dad yelling - a different line
+  // each time, by how many you have hit; anybody else's is a quieter bonk.
+  // Counts only go up within a maze, so a count at zero is a new maze: silent.
+  const myHits = mine?.hits ?? 0
+  const otherHits = game.players.reduce((n, p) => (p.mine ? n : n + p.hits), 0)
+  useCueOnChange(CUES.bonk, myHits, myHits > 0 && !run.paused)
+  useCueOnChange(CUES.dadYelling, myHits, myHits > 0 && !run.paused, 0.8, myHits - 1)
+  useCueOnChange(CUES.bonk, otherHits, otherHits > 0 && !run.paused, 0.25)
+
   let banner: { text: string; sub?: string; tone: 'count' | 'yell' | 'hint' | 'done' } | null = null
   if (ready && !game.over && mine) {
     if (mine.finished !== null) banner = { text: `You made it - ${ordinal(myPlace ?? 1)}`, sub: 'waiting for the others', tone: 'done' }
@@ -101,7 +111,7 @@ export function HelpingDadScreen({ run }: { run: MinigameRun }) {
       <div style={hud}>
         <span style={{ fontWeight: 700, fontSize: 16 }}>Helping Dad</span>
         {ready ? (
-          <TopTimer><span style={{ ...pill, background: LOOK.sun, color: LOOK.ink }} data-time-left={Math.max(0, Math.ceil(ROUND.limit - Math.max(0, t)))}>
+          <TopTimer left={game.over ? null : ROUND.limit - Math.max(0, t)}><span style={{ ...pill, background: LOOK.sun, color: LOOK.ink }} data-time-left={Math.max(0, Math.ceil(ROUND.limit - Math.max(0, t)))}>
             {Math.max(0, Math.ceil(ROUND.limit - Math.max(0, t)))}s
           </span></TopTimer>
         ) : (

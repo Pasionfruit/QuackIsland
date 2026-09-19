@@ -20,7 +20,21 @@
 import { useEffect, useRef, useState } from 'react'
 import { countShown, curtain, FADE, screenCounts, type MinigameRun } from './registry'
 import { FONT, ISLAND } from './look'
-import { COUNTDOWN_SOUND, FINISH_SOUND, holdScreenSounds, playOnce, stopScreenSounds } from './sound'
+import {
+  COUNTDOWN_SOUND,
+  FINISH_SOUND,
+  LAST_SECONDS_SOUND,
+  PAUSE_SOUND,
+  ROUND_MUSIC,
+  UNPAUSE_SOUND,
+  driveRoundMusic,
+  holdScreenSounds,
+  playCue,
+  playOnce,
+  stopCues,
+  stopOne,
+  stopScreenSounds,
+} from './sound'
 
 /** How long "Start!" stays up once the round is running, in milliseconds. */
 const START_SHOWN_MS = 800
@@ -58,6 +72,8 @@ export function Countdown({ run }: { run: MinigameRun }) {
     if (run.paused === wasPaused.current) return
     wasPaused.current = run.paused
     holdScreenSounds(run.paused)
+    // After the hold, so the card's own sound is not one of the ones it holds.
+    playCue(run.paused ? PAUSE_SOUND : UNPAUSE_SOUND)
   }, [run.paused])
 
   useEffect(() => {
@@ -141,7 +157,12 @@ export function Finish({ run }: { run: MinigameRun }) {
   const finishing = run.phase === 'finishing'
 
   useEffect(() => {
-    if (finishing) playOnce(FINISH_SOUND)
+    if (!finishing) return
+    // A round that ends early must not tick its last six seconds on over
+    // Finish, and a held pencil or wind must not outlive the round it was in.
+    stopOne(LAST_SECONDS_SOUND)
+    stopCues()
+    playOnce(FINISH_SOUND)
   }, [finishing])
 
   if (!finishing) return null
@@ -161,6 +182,30 @@ export function Finish({ run }: { run: MinigameRun }) {
       </div>
     </div>
   )
+}
+
+/**
+ * The game's own music, under the round and nowhere else.
+ *
+ * Starts on **Start!**, not under the three-two-one, which has a voice of its
+ * own. A pause holds it where it is and a resume carries it on; Finish, the
+ * results, or walking out stop it and rewind it. A restart starts it again from
+ * the top. Nothing is drawn.
+ */
+export function RoundMusic({ run }: { run: MinigameRun }) {
+  const id = ROUND_MUSIC[run.id] ?? null
+  const live = run.phase === 'counting' || run.phase === 'playing'
+  const want = run.phase === 'playing' && !run.paused ? 'play' : live && run.paused ? 'hold' : 'stop'
+  const lastStarted = useRef(run.started)
+
+  useEffect(() => {
+    const restart = lastStarted.current !== run.started
+    lastStarted.current = run.started
+    driveRoundMusic(id, want, restart)
+  }, [id, want, run.started])
+
+  useEffect(() => () => driveRoundMusic(null, 'stop'), [])
+  return null
 }
 
 /** The pop each number makes as it lands. One rule, shared by all of them. */

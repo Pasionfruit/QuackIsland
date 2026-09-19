@@ -33,7 +33,7 @@ import { Paused } from './Paused'
 import { Podium } from './PodiumScreen'
 import { minigameById } from './catalogue'
 import { FONT, ISLAND, bar, body, button, screen, wordmark } from './look'
-import { Countdown, Curtain, Finish } from './Transitions'
+import { Countdown, Curtain, Finish, RoundMusic } from './Transitions'
 import { buildFor, isHeld, isPausable, isShowingGame, isTimed, type MinigameRun } from './registry'
 import { stopScreenSounds } from './sound'
 import {
@@ -104,6 +104,7 @@ export function MinigameScreen() {
   const over = (
     <>
       <Curtain run={current} />
+      <RoundMusic run={current} />
       <Countdown run={current} />
       <Finish run={current} />
       {current.paused ? <PauseCard run={current} isHost={net.host} mayControl={mayControl} /> : null}

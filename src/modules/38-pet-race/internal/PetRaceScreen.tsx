@@ -170,7 +170,7 @@ export function PetRaceScreen({ run }: { run: MinigameRun }) {
         <span style={{ fontWeight: 700, fontSize: 16 }}>Pet Race</span>
         {ready ? (
           <>
-            <TopTimer><span style={{ ...pill, background: left <= 5 && game.phase === 'racing' ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
+            <TopTimer left={game.phase === 'racing' && !game.over ? left : null}><span style={{ ...pill, background: left <= 5 && game.phase === 'racing' ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
               {game.over ? 'done' : `${Math.ceil(left)}s`}
             </span></TopTimer>
             <span style={{ ...pill, background: LOOK.card }} data-phase={game.over ? 'over' : game.phase}>

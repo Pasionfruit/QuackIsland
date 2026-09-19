@@ -16,7 +16,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useReducer, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, useLoopCue, type MinigameRun } from '../../15-minigames'
 import { FOV, boardPoint } from './camera'
 import { ChefCaricatureScene } from './ChefCaricatureScene'
 import { outlineFor } from './outlines'
@@ -134,6 +134,12 @@ export function ChefCaricatureScreen({ run }: { run: MinigameRun }) {
   const gappy = !!stroke && covered >= 0.85 && !enclosed(stroke)
   const wiped = game.erasedAt !== null && game.elapsed - game.erasedAt < 1
   const fed = game.dish !== null && game.elapsed - game.dish.at < 1.2
+
+  // Pencil on paper for as long as ink is going down - the drawer's own and,
+  // off the stroke they are sent, everybody watching - and a buzz when a
+  // drawing let go of too early is wiped.
+  useLoopCue(CUES.drawing, ready && now === 'drawing' && !!stroke && !run.paused, mineTurn ? 0.6 : 0.3)
+  useCueOnChange(CUES.wrongSelection, `${game.id}:${game.erasedAt}`, game.erasedAt !== null, mineTurn ? 0.6 : 0.3)
 
   let banner: { text: string; sub?: string; tone: 'intro' | 'hint' | 'good' | 'bad' | 'watch' | 'done' } | null = null
   if (ready && drawerPlayer) {

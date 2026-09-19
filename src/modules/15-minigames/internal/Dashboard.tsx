@@ -41,6 +41,7 @@ import {
 } from './look'
 import { builtMinigames } from './registry'
 import { backOut, openMinigame } from './state'
+import { SELECT_GAME_SOUND, clicked } from './sound'
 
 /** Seven across, the same as the shelf next door. Forty-one comes to six rows. */
 const COLUMNS = 7
@@ -73,7 +74,7 @@ export function Dashboard() {
           one vs all {MINIGAME_TARGET['one-vs-all']}
         </Tab>
 
-        <button type="button" onClick={backOut} style={{ ...button, marginLeft: 8 }}>
+        <button type="button" onClick={clicked(backOut)} style={{ ...button, marginLeft: 8 }}>
           close
         </button>
       </div>
@@ -122,7 +123,7 @@ function Tab({
   return (
     <button
       type="button"
-      onClick={() => onPick(is)}
+      onClick={clicked(() => onPick(is))}
       style={{ ...button, ...(on ? buttonOn : null) }}
     >
       {children}
@@ -147,7 +148,7 @@ function Tile({ game }: { game: Minigame }) {
   return (
     <button
       type="button"
-      onClick={() => openMinigame(game.id)}
+      onClick={clicked(() => openMinigame(game.id), SELECT_GAME_SOUND)}
       title={`${game.number}. ${game.title} — ${says}`}
       data-minigame={game.id}
       style={{

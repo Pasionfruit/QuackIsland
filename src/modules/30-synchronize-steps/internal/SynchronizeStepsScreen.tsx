@@ -13,7 +13,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { CUES, TopTimer, playCue, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { PALETTE, SynchronizeStepsScene, outcomeColour } from './SynchronizeStepsScene'
 import { COLOURS, TOWER, moveFor, placings, type Game } from './rules'
@@ -90,6 +90,7 @@ export function SynchronizeStepsScreen({ run }: { run: MinigameRun }) {
   const mine = game.players.find((p) => p.mine)
   const canPick = ready && game.phase === 'choose' && !!mine && !mine.out
   const left = game.phase === 'choose' ? Math.max(0, TOWER.choose - game.clock) : 0
+  useStepSounds(game)
 
   return (
     <div style={page}>
@@ -423,4 +424,33 @@ const againButton: React.CSSProperties = {
   color: LOOK.ink,
   font: `700 16px/1.2 ${FONT}`,
   cursor: 'pointer',
+}
+
+/** Between one footstep and the next, when you go down more than one. */
+const STEP_GAP_MS = 110
+
+/**
+ * Your feet on the way down - a step a step - or a tumble when a crowd sends
+ * you eight; and a quieter step when only somebody else moved. Off the steps
+ * every screen is sent. A new game is only remembered, never played.
+ */
+function useStepSounds(game: Game): void {
+  const seen = useRef<{ id: number; steps: Map<string, number> }>({ id: -1, steps: new Map() })
+  useEffect(() => {
+    const fresh = seen.current.id !== game.id
+    if (fresh) seen.current = { id: game.id, steps: new Map() }
+    const steps = seen.current.steps
+    let mine = 0
+    let theirs = 0
+    for (const p of game.players) {
+      const was = steps.get(p.id)
+      steps.set(p.id, p.step)
+      if (fresh || was === undefined || p.step >= was) continue
+      if (p.mine) mine = was - p.step
+      else theirs += was - p.step
+    }
+    if (mine >= TOWER.crowdDrop) playCue(CUES.fallingOver)
+    else for (let i = 0; i < mine; i++) window.setTimeout(() => playCue(CUES.stepDown), i * STEP_GAP_MS)
+    if (theirs > 0 && mine === 0) playCue(CUES.stepDown, 0.25)
+  }, [game])
 }

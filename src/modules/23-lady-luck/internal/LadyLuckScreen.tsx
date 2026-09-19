@@ -17,7 +17,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { LadyLuckScene, type SceneHands } from './LadyLuckScene'
 import { COLOURS, FIELD, placings, timeLeft, type Game } from './rules'
@@ -106,12 +106,17 @@ export function LadyLuckScreen({ run }: { run: MinigameRun }) {
   const cooling = mine ? Math.min(1, mine.cooldown / FIELD.cooldown) : 0
   const left = timeLeft(game)
 
+  // A click that was not a free four-leaf clover, off your own misses and spams
+  // as the host counted them. Only yours: everybody else's mistakes are theirs.
+  const slips = mine ? mine.misses + mine.spams : 0
+  useCueOnChange(CUES.wrongSelection, `${game.id}:${slips}`, slips > 0)
+
   return (
     <div style={page}>
       <div style={hud}>
         <span style={{ fontWeight: 700, fontSize: 16 }}>Lady Luck</span>
         {ready ? (
-          <TopTimer><span style={{ ...pill, background: left <= 10 ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
+          <TopTimer left={game.over ? null : left}><span style={{ ...pill, background: left <= 10 ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
             {Math.ceil(left)}s
           </span></TopTimer>
         ) : (

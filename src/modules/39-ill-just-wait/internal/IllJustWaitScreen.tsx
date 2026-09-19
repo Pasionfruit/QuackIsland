@@ -19,7 +19,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, useLoopCue, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { IllJustWaitScene } from './IllJustWaitScene'
 import { COLOURS, finished, newHand, placings, pointsOf, press, resetHand, stageOf, timeLeft, turnHand, type Game, type Hand, type Verdict } from './rules'
@@ -73,16 +73,20 @@ export function IllJustWaitScreen({ run }: { run: MinigameRun }) {
   const [flash, setFlash] = useState<{ verdict: Verdict; at: number } | null>(null)
   /** Wrong answers on the target you are on - yours, on your screen only. */
   const [misses, setMisses] = useState(0)
+  /** A button is down on the clock: drives the winding sound, which the ref cannot. */
+  const [winding, setWinding] = useState(false)
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
 
   useEffect(() => {
     const forget = () => {
       held.current = { forward: false, back: false }
+      setWinding(false)
     }
     const release = (e: PointerEvent) => {
       if (e.button === 0) held.current.forward = false
       if (e.button === 2) held.current.back = false
+      setWinding(held.current.forward || held.current.back)
     }
     const key = (e: KeyboardEvent) => {
       if (e.code !== 'Space') return
@@ -155,6 +159,7 @@ export function IllJustWaitScreen({ run }: { run: MinigameRun }) {
       held.current.back = true
       presses.current.push(-1)
     }
+    setWinding(held.current.forward || held.current.back)
   }
 
   const ready = game.players.length > 0
@@ -164,6 +169,10 @@ export function IllJustWaitScreen({ run }: { run: MinigameRun }) {
   const target = ready && !done ? targetFor(game.seed, stage) : null
   const playing = ready && !game.over
   const left = timeLeft(game)
+  // The hands going round for as long as a button is held, and a buzz for a
+  // wrong answer - both yours, on your screen only.
+  useLoopCue(CUES.holdMouse, winding && playing && !done && !run.paused, 0.35)
+  useCueOnChange(CUES.wrongSelection, misses, misses > 0)
   const flashing = flash && performance.now() - flash.at < FLASH * 1000 ? flash.verdict : null
 
   let caption = ''
@@ -214,7 +223,7 @@ export function IllJustWaitScreen({ run }: { run: MinigameRun }) {
       </div>
 
       {playing ? (
-        <TopTimer>
+        <TopTimer left={left}>
           <span style={{ ...pill, background: left <= 15 ? LOOK.red : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
             {Math.ceil(left)}s
           </span>

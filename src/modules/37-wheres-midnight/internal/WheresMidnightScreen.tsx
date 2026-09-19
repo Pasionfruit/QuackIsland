@@ -25,7 +25,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, type MinigameRun } from '../../15-minigames'
 import { COLOURS, SEARCH, placings, timeLeft, type Game } from './rules'
 import { myId, newGame, waitingGame } from './setup'
 import { useSearchNet } from './useSearchNet'
@@ -205,6 +205,10 @@ export function WheresMidnightScreen({ run }: { run: MinigameRun }) {
   const checking = wire.checking()
   const left = timeLeft(game)
 
+  // A click that was not Midnight, as the host counted it. Yours only.
+  const misses = mine?.misses ?? 0
+  useCueOnChange(CUES.wrongSelection, `${game.id}:${misses}`, misses > 0)
+
   const state = !ready
     ? 'waiting for the host…'
     : checking
@@ -221,7 +225,7 @@ export function WheresMidnightScreen({ run }: { run: MinigameRun }) {
         <span style={{ fontWeight: 700, fontSize: 16 }}>Where&rsquo;s Midnight?</span>
         {ready ? (
           <>
-            <TopTimer><span style={{ ...pill, background: left <= 10 ? LOOK.danger : '#2a3240' }} data-time-left={Math.ceil(left)}>
+            <TopTimer left={game.over ? null : left}><span style={{ ...pill, background: left <= 10 ? LOOK.danger : '#2a3240' }} data-time-left={Math.ceil(left)}>
               {Math.ceil(left)}s
             </span></TopTimer>
             <span

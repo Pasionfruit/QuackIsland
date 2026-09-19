@@ -15,7 +15,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { MakeTheCutScene, type SceneHands } from './MakeTheCutScene'
 import { COLOURS, TOWER, deadlyLeft, inReach, placings, whoseTurn, type Cutter, type Game, type Intent, type Last } from './rules'
@@ -133,6 +133,14 @@ export function MakeTheCutScreen({ run }: { run: MinigameRun }) {
   const ready = game.players.length > 0
   const mineIndex = game.players.findIndex((p) => p.mine)
   const mine = game.players[mineIndex]
+
+  // Off the phase and the cut count every screen is sent: the snip, the held
+  // breath while nobody knows, and - if it was one of those - the launch.
+  const cuts = game.players.reduce((n, p) => n + p.cuts, 0)
+  const moment = `${game.id}:${cuts}:${game.phase}`
+  useCueOnChange(CUES.cutRope, `${game.id}:${cuts}`, cuts > 0)
+  useCueOnChange(CUES.suspense, moment, game.phase === 'suspense')
+  useCueOnChange(CUES.launch, moment, game.phase === 'result' && !!game.last?.deadly)
   const turn = whoseTurn(game)
   const myTurn = turn !== null && turn === mineIndex
   const whole = game.cut.filter((c) => c === null).length

@@ -21,6 +21,7 @@
 import { FONT, ISLAND, button } from './look'
 import { nameOfPauser, type Pauser } from './pause'
 import { backOut, restartMinigame, resumeMinigame } from './state'
+import { clicked } from './sound'
 
 export function Paused({ isHost, pausedBy, me, mayControl }: { isHost: boolean; pausedBy: Pauser | null; me: string; mayControl: boolean }) {
   const who = nameOfPauser(pausedBy, me)
@@ -51,12 +52,12 @@ export function Paused({ isHost, pausedBy, me, mayControl }: { isHost: boolean; 
             <button
               type="button"
               data-restart
-              onClick={restartMinigame}
+              onClick={clicked(restartMinigame)}
               style={{ ...button, width: '100%', marginTop: 8, padding: '9px 16px', font: `700 14px/1.2 ${FONT}` }}
             >
               restart the round
             </button>
-            <button type="button" data-leave onClick={backOut} style={{ ...button, width: '100%', marginTop: 8 }}>
+            <button type="button" data-leave onClick={clicked(backOut)} style={{ ...button, width: '100%', marginTop: 8 }}>
               {isHost ? 'back to the games' : 'leave this round'}
             </button>
           </>

@@ -188,7 +188,7 @@ export function RpmScreen({ run }: { run: MinigameRun }) {
       </div>
 
       {playing ? (
-        <TopTimer>
+        <TopTimer left={game.over ? null : left}>
           <span style={{ ...pill, background: left <= 15 ? LOOK.red : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
             {Math.ceil(left)}s
           </span>

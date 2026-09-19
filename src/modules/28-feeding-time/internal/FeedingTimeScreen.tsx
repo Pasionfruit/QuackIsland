@@ -15,7 +15,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, useLoopCue, type MinigameRun } from '../../15-minigames'
 import { FOV, groundAt } from './camera'
 import { FeedingTimeScene, type SceneHands } from './FeedingTimeScene'
 import { COLOURS, aimThrow, chargePower, distancePower, placings, spotOf, timeLeft, type Game, type Point, type Throw } from './rules'
@@ -76,6 +76,8 @@ export function FeedingTimeScreen({ run }: { run: MinigameRun }) {
   const meterFill = useRef<HTMLDivElement>(null)
   const meterReach = useRef<HTMLDivElement>(null)
   const [flash, setFlash] = useState<number | null>(null)
+  /** The button is down: drives the wind-up sound, which the meter's per-frame writes cannot. */
+  const [charging, setCharging] = useState(false)
   const lastScore = useRef(0)
   const board = useRef<HTMLDivElement>(null)
 
@@ -131,6 +133,7 @@ export function FeedingTimeScreen({ run }: { run: MinigameRun }) {
       // A pointer the browser does not know to capture: the hold still works inside the board.
     }
     pointer.current = { across: at.x, down: at.y, aspect: at.aspect, heldSince: performance.now() }
+    setCharging(true)
   }
 
   const onPointerUp = (e: React.PointerEvent) => {
@@ -139,6 +142,7 @@ export function FeedingTimeScreen({ run }: { run: MinigameRun }) {
     const at = onBoard(e)
     const letGo = { across: at.x, down: at.y, aspect: at.aspect, heldSince: held.heldSince }
     pointer.current = { ...letGo, heldSince: null }
+    setCharging(false)
     if (paused.current) return
     const aim = aimOf(letGo, live.current, performance.now())
     if (aim && aim.power !== null) flicked.current = aimThrow(aim.from, aim.target, aim.power)
@@ -146,6 +150,7 @@ export function FeedingTimeScreen({ run }: { run: MinigameRun }) {
 
   const onPointerCancel = () => {
     pointer.current = null
+    setCharging(false)
   }
 
   const onPointerLeave = () => {
@@ -155,6 +160,15 @@ export function FeedingTimeScreen({ run }: { run: MinigameRun }) {
 
   const ready = game.players.length > 0
   const left = timeLeft(game)
+
+  // Winding up for as long as the button is down, and a toss for every cracker
+  // thrown - yours loud, the rest of the bank quieter - off the throw counts
+  // every screen is sent.
+  useLoopCue(CUES.holdMouse, charging && !run.paused && !game.over, 0.4)
+  const myThrows = game.players.find((p) => p.mine)?.throws ?? 0
+  const theirThrows = game.players.reduce((n, p) => n + p.throws, 0) - myThrows
+  useCueOnChange(CUES.throwingBread, `${game.id}:${myThrows}`, myThrows > 0)
+  useCueOnChange(CUES.throwingBread, `${game.id}:${theirThrows}`, theirThrows > 0, 0.2)
   const showFlash = ready && !game.over && flash !== null && game.elapsed - flash < 0.8
   const myColour = COLOURS[Math.max(0, game.players.findIndex((p) => p.mine)) % COLOURS.length]
 
@@ -163,7 +177,7 @@ export function FeedingTimeScreen({ run }: { run: MinigameRun }) {
       <div style={hud}>
         <span style={{ fontWeight: 700, fontSize: 16 }}>Feeding Time</span>
         {ready ? (
-          <TopTimer><span style={{ ...pill, background: left <= 10 ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
+          <TopTimer left={game.over ? null : left}><span style={{ ...pill, background: left <= 10 ? LOOK.danger : LOOK.ink, color: '#fff' }} data-time-left={Math.ceil(left)}>
             {Math.ceil(left)}s
           </span></TopTimer>
         ) : (
