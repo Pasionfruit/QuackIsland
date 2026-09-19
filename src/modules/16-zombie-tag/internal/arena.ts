@@ -239,6 +239,29 @@ export function playerSpawns(count: number): Point[] {
  * surrounded - which is the whole shape of the game - and with nobody close
  * enough to catch anybody in the first second.
  */
+/**
+ * Where a zombie climbing in comes over the wall: hard against it, spread round
+ * the room, and never twice in the same place two waves running.
+ *
+ * Right at the wall rather than inside it, because the whole of what makes a
+ * wave worth reacting to is seeing where it came over.
+ */
+export function climbSpot(wave: number, index: number, each: number): Point {
+  const inset = 0.9
+  const w = (HALF_W - inset) * 2
+  const h = (HALF_H - inset) * 2
+  // How far round the wall, as a fraction: spread over the wave, and turned a
+  // little each wave so two waves never come over in the same places.
+  const round = ((index + 0.5) / each + wave * 0.37) % 1
+  let along = round * (w + h) * 2
+  let at: Point
+  if (along < w) at = { x: -w / 2 + along, y: -h / 2 }
+  else if ((along -= w) < h) at = { x: w / 2, y: -h / 2 + along }
+  else if ((along -= h) < w) at = { x: w / 2 - along, y: h / 2 }
+  else at = { x: -w / 2, y: h / 2 - (along - w) }
+  return settle(at, ARENA.radius)
+}
+
 export function zombieSpawns(count: number): Point[] {
   const out: Point[] = []
   const inset = 1.6

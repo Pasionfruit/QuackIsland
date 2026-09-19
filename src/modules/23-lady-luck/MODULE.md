@@ -11,7 +11,7 @@ four-leaf clovers hidden among them. Find one and click it:
 A click on anything else - a three-leaf clover, a claimed one, bare grass - costs
 **a point** and a second before you can click again. Every click during that
 second is spam, and costs **a point** too. Scores can go below zero. Highest
-score when the minute is up wins.
+score when the forty-five seconds are up wins.
 
 Like Duck Hunt: a fixed view, mouse to aim, left click, a cooldown, a
 scoreboard, most points wins.
@@ -31,7 +31,7 @@ not: the clovers are flat heart-shaped leaves.
 | Click a valid four-leaf clover to claim it | `click` → `'claim'` |
 | Your colour forms a circle around it | the scene's claim ring, `COLOURS` |
 | Claimed, it cannot be selected by others | `click` on a claimed clover is a miss, and the claim stands |
-| As many as possible before the round ends | a new one grows per claim (`grow`); `FIELD.duration` 60 s; `placings` |
+| As many as possible before the round ends | a new one grows per claim (`grow`); `FIELD.duration` 45 s; `placings` |
 | Mouse - aim; left click - select a clover | `groundHit`, `cloverAt`, the crosshair |
 
 ## Two things the brief left open
@@ -177,7 +177,7 @@ Open a lobby, leave the game on Volcano Island, press **minigames**, open
 - **Click a clover somebody has claimed.** A miss; their ring stays.
 - **Watch the stand-ins.** Rings in their colours appear now and then, and misses
   flash.
-- **At a minute,** the results, most clovers first. **Again** deals a new field.
+- **At forty-five seconds,** the results, most clovers first. **Again** deals a new field.
 
 ### With two browsers
 

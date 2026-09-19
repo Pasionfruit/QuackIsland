@@ -18,7 +18,7 @@
 import { useEffect, useRef } from 'react'
 import { getNet, getPeers, sendToRoom, subscribeRoom } from '../../09-net'
 import { botSteer } from './ai'
-import { ROUND, claim, clock, fire, judgeEnd, leave, look, report, tick, walk, type Claim, type Game, type Shot } from './rules'
+import { ROUND, claim, clock, fire, judgeEnd, leave, look, remember, report, tick, walk, type Claim, type Game, type Shot } from './rules'
 import { myId } from './setup'
 import { applySnapshot, decodeMove, decodeShot, decodeSnapshot, encodeMove, encodeShot, encodeSnapshot, type Snapshot } from './wire'
 
@@ -91,6 +91,10 @@ export function useShotNet(): ShotNet {
         if (hands.fire) shot = fire(game, me, true)
       }
       botSteer(game, dt)
+      // Where everybody is, before the guests' shots are judged: a guest aims at
+      // a screen that is a moment behind this one, and `claim` looks back over
+      // the trail to find what it was aiming at.
+      remember(game)
       // In the order they arrived, so a guest's last step comes before the shot it took from there.
       for (const said of heard.current.splice(0)) {
         const player = game.players.findIndex((p) => p.id === said.from)

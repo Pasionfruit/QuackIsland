@@ -9,6 +9,7 @@ import {
   BODY,
   CLAIM,
   GUN,
+  REWIND,
   ROUND,
   aimDirection,
   claim,
@@ -19,6 +20,7 @@ import {
   isHunter,
   leave,
   placings,
+  remember,
   report,
   stepGame,
   walk,
@@ -325,6 +327,68 @@ describe("a guest's shot", () => {
     expect(g.players.map((p) => p.out)).toEqual([clock(g), clock(g)])
     expect(placings(g).map((e) => e.place)).toEqual([1, 1])
     expect(stepGame(g, 0.01).over).toBe(true)
+  })
+
+  it('counts a hit on where the victim was while the shooter\'s screen was behind', () => {
+    const g = started(game(3))
+    put(g, 0, -6, OPEN)
+    put(g, 1, 6, OPEN)
+    // Where the guest's screen had them, a third of a second ago.
+    const seen = { x: 6, z: OPEN }
+    remember(g)
+    // They run on while the shot is on its way to the host.
+    for (let i = 0; i < 10; i++) {
+      put(g, 1, 6, OPEN + (i + 1) * 0.25)
+      wait(g, 0.03)
+      remember(g)
+    }
+    expect(Math.hypot(g.players[1].x - seen.x, g.players[1].z - seen.z)).toBeGreaterThan(BODY.radius + CLAIM.slack)
+    expect(claim(g, 0, { ...facing(g, 0, seen), victim: 'p2' })!.hit).toBe(1)
+    expect(g.players[1].out).not.toBeNull()
+  })
+
+  it('does not count where they were longer ago than the rewind', () => {
+    const g = started(game(3))
+    put(g, 0, -6, OPEN)
+    put(g, 1, 6, OPEN)
+    const seen = { x: 6, z: OPEN }
+    remember(g)
+    // Long enough that the trail has forgotten it.
+    for (let i = 0; i < 12; i++) {
+      put(g, 1, 6, OPEN + (i + 1) * 0.3)
+      wait(g, REWIND / 6)
+      remember(g)
+    }
+    expect(claim(g, 0, { ...facing(g, 0, seen), victim: 'p2' })!.hit).toBe(-1)
+    expect(g.players[1].out).toBeNull()
+  })
+
+  it('never shoots anybody through cover, however far back the trail goes', () => {
+    const g = started(game(3))
+    const { west, east } = across()
+    put(g, 0, west.x, west.z)
+    put(g, 1, east.x, east.z)
+    // Standing still behind cover the whole time: every step of the trail is behind it too.
+    for (let i = 0; i < 8; i++) {
+      wait(g, 0.04)
+      remember(g)
+    }
+    expect(claim(g, 0, { ...facing(g, 0, east), victim: 'p2' })!.hit).toBe(-1)
+    expect(g.players[1].out).toBeNull()
+  })
+
+  it('keeps a trail no longer than the rewind, and does not fill it with the same step twice', () => {
+    const g = started(game(3))
+    put(g, 1, 6, OPEN)
+    for (let i = 0; i < 40; i++) {
+      wait(g, 0.02)
+      remember(g)
+    }
+    const trail = g.players[1].trail
+    expect(trail.length).toBeGreaterThan(2)
+    // Trimmed as it is written: nothing older than the rewind is kept.
+    expect(g.elapsed - trail[0].at).toBeLessThanOrEqual(REWIND + 1e-9)
+    for (let i = 1; i < trail.length; i++) expect(trail[i].at).toBeGreaterThan(trail[i - 1].at)
   })
 
   it("takes a guest's walk only as far as it could have gone, and never through anything", () => {

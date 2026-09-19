@@ -33,7 +33,7 @@ export const FIELD = {
   botPace: 0.8,
 
   /** Seconds in a round. */
-  duration: 60,
+  duration: 45,
   /** The first mole comes up this long after the start. */
   firstAt: 1.2,
   /** Seconds between moles coming up: at the start of the round, and by the end. */

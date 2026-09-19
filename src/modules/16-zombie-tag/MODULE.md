@@ -4,7 +4,8 @@
 
 **Minigame 1.** Six zombies, an enclosed arena full of graves, and everybody
 spawning in the middle. Outrun them. Get caught and you become one and join the
-chase. The last player still running wins.
+chase. Three more come over the wall every fifteen seconds. The last player
+still running wins.
 
 It plugs into `15-minigames` and nothing else in the build knows it exists.
 In a lobby, everybody who was brought into the game by the host is in **one
@@ -23,6 +24,7 @@ graves are boxes and cylinders.
 | Spawn in the middle | `playerSpawns` — a ring of `ARENA.spawnRing`, and a test that the middle is clear of crates |
 | Collision enabled | `separate` for bodies, `pushOutOfBox` for crates, `clampToArena` for walls |
 | Six zombies | `ARENA.zombies` |
+| More climb in as the round goes on | `CLIMB`, `climbIn`, `climbSpot` — three over the wall at 15 s, 30 s and 45 s |
 | Enclosed arena, obstacles | `ARENA`, `OBSTACLES` |
 | Caught players join the chase | `catchPlayers`, and a test that a turned player immediately hunts |
 | Turning: a 0.1s beat, then a spin | `ARENA.turnDelay`, `ARENA.turnSpin`, `turnPose` in the scene |
@@ -149,6 +151,29 @@ which is what makes it interesting that everybody has one.
 **A stunned player is still catchable.** Being down is a disadvantage, not a
 shield, and that is the entire reason pushing somebody is worth doing.
 
+## More come over the wall
+
+Six zombies spread round a big room are outrun by anybody paying attention, and
+a long round settles into a lap of the arena: no decisions, just jogging. So
+**three more climb in every fifteen seconds** — at 15 s, 30 s and 45 s, nine in
+all (`CLIMB` in `round.ts`).
+
+They come over the **wall**, spread round its whole length and turned a little
+each wave so two waves never arrive in the same places (`climbSpot`), and they
+drop the last of the way down it over 0.7 s, chasing from the frame they land.
+The point is that you can see where a wave came in: the corner that was your way
+out a moment ago is the corner you now have to give up.
+
+**Which wave is in is worked out from the clock, not counted off** — `climbIn`
+derives it from `round.elapsed` every step, and a climber's name says which wave
+and which of it it was. So a host and a guest stepping the same round put the
+same zombies in the same places, a snapshot that arrives late finds them already
+there rather than adding them twice, and a guest that first hears of a climber
+halfway down draws it halfway down rather than starting its drop again.
+
+They were never running, so — like the six the round opens with — they are left
+off the scoreboard.
+
 ## One round, and it is the host's
 
 **The host runs the game; everybody else sends their keys and watches.** There
@@ -239,7 +264,11 @@ else needs it. Nothing outside this module should be reaching for it.
   to outlast has already won. It is won on the catch and over when that
   catch has finished turning, and nothing can move or be caught in between.
 - **The six the round started with never appear on the scoreboard.** They were
-  never running, and an uncaught body sorts as having lasted forever.
+  never running, and an uncaught body sorts as having lasted forever. Nor do the
+  ones that climb in. Tested.
+- **A wave climbs in once**, at its second and not before, however the round is
+  stepped and however late a screen joins it, and there are never more than the
+  three waves. Tested.
 - **A huge frame delta is clamped**, so a backgrounded tab cannot make a zombie
   step over somebody instead of catching them.
 - **The whole room is in frame at any window shape, and fills it.** Tested
@@ -324,6 +353,9 @@ party panel, and open **1 · Zombie Tag**. Read it, then press **play**.
 - **Walk into a grave, and into a wall.** You should stop, not pass through and
   not stick.
 - **Walk into a zombie.** It should be solid.
+- **Wait for fifteen seconds.** Three more zombies should come over the top of
+  the wall, in three different places, drop down it and start chasing. Again at
+  thirty, and at forty-five, somewhere else each time — and then no more.
 - **Run from one.** You should pull away easily — you are twice its pace. One
   zombie alone should never catch a runner who is paying attention.
 - **Let one catch you.** You stand still for a beat, spin, come out purple,

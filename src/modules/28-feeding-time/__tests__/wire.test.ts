@@ -106,7 +106,7 @@ describe('eight players at one pond', () => {
     for (const guest of guests) {
       expect(guest.copy.players.map((p) => [p.id, p.score, p.throws])).toEqual(game.players.map((p) => [p.id, p.score, p.throws]))
     }
-    expect(POND.duration).toBe(60)
+    expect(POND.duration).toBe(45)
   })
 })
 

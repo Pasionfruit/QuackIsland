@@ -10,7 +10,7 @@ whacked.
 - **A regular mole:** one point.
 - **The Golden Mole:** five points. Rarer, and it does not stay up as long.
 
-The first whack on a mole takes it. Most points when the minute is up wins.
+The first whack on a mole takes it. Most points when the forty-five seconds are up wins.
 
 It plugs into `15-minigames` and nothing else in the build knows it exists.
 Importing the module registers it - one line in `src/App.tsx`.
@@ -28,7 +28,7 @@ primitives.
 | Regular moles give standard points | `FIELD.points.mole` (1) |
 | The Golden Mole gives bonus points | `FIELD.points.golden` (5), `FIELD.goldenChance` |
 | Position yourself over emerging moles, swing quickly | `swing`, `strikePoint` |
-| Highest score before time runs out | `FIELD.duration` (60 s), `placings` |
+| Highest score before time runs out | `FIELD.duration` (45 s), `placings` |
 | WASD - move; left click - swing hammer | the screen |
 
 ## The moles
@@ -181,7 +181,7 @@ Exported because it is worth testing, not because anything else needs it.
   walking, no swinging - and that head cannot be stunned again for 1.5 s after.
   A mole under the hammer comes first.** Tested.
 - **Who is stunned, and who bonked them, reach every guest.** Tested.
-- **A running swing count is dealt with once; the round ends at a minute.** Tested.
+- **A running swing count is dealt with once; the round ends at forty-five seconds.** Tested.
 - **Bodies stay inside the fence and out of each other.** Tested.
 - **Ranked by points, level scores sharing a place.** Tested.
 - **Stand-ins whack plenty, golden moles included, and leave plenty.** Tested.
@@ -223,7 +223,7 @@ Open a lobby, leave the game on Volcano Island, press **minigames**, open
   its head, it stops dead for a second and a half, "Bonk! Stunned them".
   Swinging at it again straight after does nothing.
 - **Race a stand-in to a mole.** Whoever swings first gets it.
-- **At a minute,** the results, most points first. **Again** starts a new round.
+- **At forty-five seconds,** the results, most points first. **Again** starts a new round.
 
 ### With two browsers
 

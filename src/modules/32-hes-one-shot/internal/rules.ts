@@ -60,6 +60,31 @@ export const PITCH_LIMIT = 1.35
  */
 export const CLAIM = { reach: 1.5, slack: 0.9, early: 0.3 } as const
 
+/**
+ * How far back the host looks for where a shooter saw somebody, seconds.
+ *
+ * **A guest aims at what its screen shows, and its screen is behind the host**:
+ * by however long the last snapshot took to arrive, plus the wait for the next
+ * one. Somebody running flat out covers half a metre in a tenth of a second, so
+ * checking a guest's shot against where the host has the victim *now* throws
+ * away hits that were dead on when they were taken - the shot that "went
+ * straight through them".
+ *
+ * So the host keeps a short trail of where everybody has been and lets a hit
+ * count against any of it. Long enough to cover a bad connection, short enough
+ * that nobody is shot after properly getting behind a wall: a trail step is
+ * only taken where somebody actually stood, and every step is checked for
+ * something solid in the way just as the live position is.
+ */
+export const REWIND = 0.45
+
+/** Where somebody was, and when: a step of the trail the host keeps of everybody. */
+export interface Step {
+  at: number
+  x: number
+  z: number
+}
+
 /** How long a shot is kept, seconds, for drawing and for the wire. */
 export const SHOT_LIFE = 1
 
@@ -80,6 +105,8 @@ export interface Player {
   kills: number
   /** When they last shot, in `elapsed`. */
   shotAt: number
+  /** Where they have been lately, newest last. The host's own record; never sent. */
+  trail: Step[]
   left: boolean
   /** When they left, seconds since the start, if they left standing. */
   leftAt: number | null
@@ -145,6 +172,7 @@ export function createGame(seed: number, entrants: readonly Entrant[], id = 1): 
         by: null,
         kills: 0,
         shotAt: -GUN.cooldown,
+        trail: [],
         left: false,
         leftAt: null,
       }
@@ -349,19 +377,46 @@ export function claim(game: Game, player: number, c: Claim): Shot | null {
   const victim = c.victim === null ? -1 : game.players.findIndex((q) => q.id === c.victim)
   const q = game.players[victim]
   if (q && victim !== player && isTarget(game, q)) {
-    // The nearest the shot passes to the victim's middle, seen from above.
+    // Where the victim is now, and where they have been since the shooter's
+    // screen was last told - the shot counts against whichever it lines up with
+    // best. Nothing is taken on trust: every one of them is a place the victim
+    // really stood, and the shot still has to reach it with nothing in the way.
+    const wheres: { x: number; z: number }[] = [q, ...q.trail.filter((step) => game.elapsed - step.at <= REWIND)]
     const flat = dir.x * dir.x + dir.z * dir.z
-    const tq = flat < 1e-9 ? 0 : ((q.x - from.x) * dir.x + (q.z - from.z) * dir.z) / flat
-    const passes = along(from, dir, tq)
-    const off = Math.hypot(passes.x - q.x, passes.z - q.z)
-    if (tq > 0 && tq <= t + BODY.radius && off <= BODY.radius + CLAIM.slack && passes.y >= -CLAIM.slack && passes.y <= BODY.height + CLAIM.slack) {
-      t = Math.min(tq, t)
+    let best: { t: number; off: number } | null = null
+    for (const where of wheres) {
+      const tq = flat < 1e-9 ? 0 : ((where.x - from.x) * dir.x + (where.z - from.z) * dir.z) / flat
+      const passes = along(from, dir, tq)
+      const off = Math.hypot(passes.x - where.x, passes.z - where.z)
+      if (tq <= 0 || tq > t + BODY.radius) continue
+      if (off > BODY.radius + CLAIM.slack || passes.y < -CLAIM.slack || passes.y > BODY.height + CLAIM.slack) continue
+      if (!best || off < best.off) best = { t: tq, off }
+    }
+    if (best) {
+      t = Math.min(best.t, t)
       hit = victim
     }
   }
   const shot = record(game, player, from, along(from, dir, t), hit)
   if (hit >= 0) eliminate(game, hit, player)
   return shot
+}
+
+/**
+ * The host notes where everybody is, for `claim` to look back over.
+ *
+ * Called as often as the host sends - about fifteen times a second - which is
+ * a step every third of a metre at a run, close enough together that a shot
+ * lines up with one of them.
+ */
+export function remember(game: Game): void {
+  for (const p of game.players) {
+    const last = p.trail[p.trail.length - 1]
+    // A step only where there is not one already, but the old ones go whether
+    // or not a new one is taken - a trail is never older than the rewind.
+    if (!last || game.elapsed - last.at >= 0.03) p.trail.push({ at: game.elapsed, x: p.x, z: p.z })
+    while (p.trail.length > 0 && game.elapsed - p.trail[0].at > REWIND) p.trail.shift()
+  }
 }
 
 /**

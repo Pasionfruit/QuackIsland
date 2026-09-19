@@ -34,7 +34,8 @@ try {
     pages.push(await launch({ port: Number(opt.port) + i, out: opt.out, name: `p${i}`, width: 480, height: 300, software: !!opt.software }))
   }
   for (const p of pages) await p.goto(opt.app)
-  for (const p of pages) await p.waitFor(`[...document.querySelectorAll('button')].some((b) => b.textContent.includes('LOBBY'))`, 120000)
+  // The lobby button's own text, whatever case the panel is drawing it in.
+  for (const p of pages) await p.waitFor(`[...document.querySelectorAll('button')].some((b) => /lobby/i.test(b.textContent))`, 120000)
   say(`${count} browsers loaded`)
 
   // The same module the app uses, as long as the dev server has not hot-

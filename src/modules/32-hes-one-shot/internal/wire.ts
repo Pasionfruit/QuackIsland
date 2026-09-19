@@ -110,7 +110,7 @@ export function applySnapshot(game: Game, snap: Snapshot, me: string): Game {
   for (const [id, x, z, yaw, out, by, kills, flags] of snap.players) {
     const known = game.players.find((p) => p.id === id)
     const player: Player =
-      known ?? { id, mine: false, bot: false, x: x / 100, z: z / 100, yaw: yaw / 1000, pitch: 0, out: null, by: null, kills: 0, shotAt: -Infinity, left: false, leftAt: null }
+      known ?? { id, mine: false, bot: false, x: x / 100, z: z / 100, yaw: yaw / 1000, pitch: 0, out: null, by: null, kills: 0, shotAt: -Infinity, trail: [], left: false, leftAt: null }
     player.mine = id === me
     const shared = { out: out < 0 ? null : out / 100, by: by < 0 ? null : by, kills, left: flags === 1 }
     if (player.mine && known && !snap.over) Object.assign(player, shared)

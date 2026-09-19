@@ -15,7 +15,7 @@ throw one:
 - **A cracker that lands near a duck feeds it:** a point, and that duck is busy
   eating for a moment.
 
-Most ducks fed at a minute wins.
+Most ducks fed at forty-five seconds wins.
 
 It plugs into `15-minigames` and nothing else in the build knows it exists.
 Importing the module registers it - one line in `src/App.tsx`.
@@ -154,7 +154,7 @@ Exported because it is worth testing, not because anything else needs it.
 - **The reload holds, a throw said again counts once, and a guest's is allowed a
   moment early.** Tested.
 - **A throw asked for past the limits is clamped.** Tested.
-- **The round ends at a minute, landing what is still in the air; ranked by ducks
+- **The round ends at forty-five seconds, landing what is still in the air; ranked by ducks
   fed.** Tested.
 - **Stand-ins throw on their rhythm, feed plenty, and miss some.** Tested.
 - **Eight players with a lossy network agree on every score, and no throw counts
@@ -193,7 +193,7 @@ Open a lobby, leave the game on Volcano Island, press **minigames**, open
 - **Land one by a duck.** The duck dips its head, a ring in your colour, "Fed! +1".
 - **Throw at a duck that is already eating.** Nothing.
 - **Watch the stand-ins** throw and feed, and miss.
-- **At a minute,** the results: ducks fed, throws, and the share that fed. **Again**
+- **At forty-five seconds,** the results: ducks fed, throws, and the share that fed. **Again**
   starts a new round.
 
 ### With two browsers

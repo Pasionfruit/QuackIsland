@@ -41,7 +41,7 @@ export const POND = {
   float: 1.5,
 
   /** Seconds in a round. */
-  duration: 60,
+  duration: 45,
   /** Least time between one player's throws. */
   reload: 0.25,
   /**

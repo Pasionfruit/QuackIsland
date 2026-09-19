@@ -13,7 +13,7 @@
  * them the same rules for one player against six zombies as for eight people
  * in a lobby.
  */
-import { ARENA, settle, type Point } from './arena'
+import { ARENA, climbSpot, settle, type Point } from './arena'
 
 export type Side = 'player' | 'zombie'
 
@@ -62,6 +62,8 @@ export interface Round {
    * plays out in full - see `finish`. A winner and not over is that moment.
    */
   winner: string | null
+  /** How many lots of wall-climbers are in: see `climbIn`. */
+  climbed: number
 }
 
 /** What a body is being told to do this frame. */
@@ -74,6 +76,76 @@ export interface Intent {
 }
 
 export const NO_INTENT: Intent = Object.freeze({ x: 0, y: 0, push: false })
+
+/**
+ * The zombies that climb in over the walls once a round is under way.
+ *
+ * The six a round opens with are spread round the edge and outrun by anybody
+ * paying attention, so a long round settles into a lap of the room. These are
+ * the answer: **a fresh lot comes over the wall every fifteen seconds**, from
+ * wherever they please, so the room keeps filling up and the way out of it that
+ * worked a moment ago stops working.
+ *
+ * They are zombies nobody was ever caught by, so - like the six - they are left
+ * out of the placings; see `placings`.
+ */
+export const CLIMB = {
+  /** When the first lot comes over. */
+  first: 15,
+  /** And another lot this often after that. */
+  every: 15,
+  /** How many come each time. */
+  each: 3,
+  /** How many lots there are, at most. */
+  waves: 3,
+  /** How long one takes to come down off the wall, seconds. It chases all the way down. */
+  drop: 0.7,
+} as const
+
+/** What the `index`th climber of wave `wave` is called. The same on every screen. */
+export function climberId(wave: number, index: number): string {
+  return `climber ${wave + 1}-${index + 1}`
+}
+
+/**
+ * How far up the wall a climber still is at `elapsed`: 1 as it comes over, 0
+ * once it is down, and 0 for everybody who did not climb in.
+ *
+ * Worked out from its name, so a guest that first hears of a climber halfway
+ * down draws it halfway down rather than starting its drop again.
+ */
+export function climbing(id: string, elapsed: number): number {
+  const wave = /^climber (\d+)-/.exec(id)
+  if (!wave) return 0
+  const since = elapsed - climbAt(Number(wave[1]) - 1)
+  if (since < 0) return 0
+  return Math.max(0, 1 - since / CLIMB.drop)
+}
+
+/** When wave `wave` comes over, in seconds since the round began. */
+export function climbAt(wave: number): number {
+  return CLIMB.first + wave * CLIMB.every
+}
+
+/**
+ * Any wave whose moment has come, over the wall and into the round.
+ *
+ * Worked out from the clock rather than counted off, so a host and a guest
+ * stepping the same round put the same zombies in the same places - and a
+ * snapshot that arrives late finds them already there rather than adding them
+ * twice.
+ */
+export function climbIn(round: Round): void {
+  const due = Math.min(CLIMB.waves, Math.floor((round.elapsed - CLIMB.first) / CLIMB.every) + 1)
+  for (let wave = round.climbed; wave < due; wave++) {
+    for (let index = 0; index < CLIMB.each; index++) {
+      const id = climberId(wave, index)
+      if (round.bodies.some((b) => b.id === id)) continue
+      round.bodies.push(createBody({ id, at: climbSpot(wave, index, CLIMB.each), side: 'zombie' }))
+    }
+  }
+  round.climbed = Math.max(round.climbed, due)
+}
 
 export interface Spawn {
   id: string
@@ -99,7 +171,7 @@ export function createBody({ id, at, side, mine = false }: Spawn): Body {
 }
 
 export function createRound(spawns: readonly Spawn[]): Round {
-  return { bodies: spawns.map(createBody), elapsed: 0, over: false, winner: null }
+  return { bodies: spawns.map(createBody), elapsed: 0, over: false, winner: null, climbed: 0 }
 }
 
 /** Everybody still running. The people the zombies are after. */
@@ -166,6 +238,9 @@ export function stepRound(round: Round, intents: Map<string, Intent>, dt: number
   }
 
   round.elapsed += step
+  // Whoever is due over the wall, before anybody moves: a climber chases from
+  // the frame it lands.
+  climbIn(round)
 
   for (const body of round.bodies) {
     // Snapped rather than clamped: counting a second down in sixtieths leaves

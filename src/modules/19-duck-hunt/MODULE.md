@@ -2,7 +2,8 @@
 
 ## What this is
 
-**Minigame 4.** A minute of balloons rising over an open grass hunting ground. Every player
+**Minigame 4.** Forty-five seconds of balloons rising over an open grass hunting ground, and
+they come up thick: a wave roughly every second. Every player
 has a colour and a shape, and every balloon wears somebody's. Shoot yours.
 Leave everybody else's - popping one scores you nothing, only takes it away
 from them. Half a second between shots, hit or miss. Most of your own
@@ -44,7 +45,7 @@ ninth person in the lobby is not dealt in.
 
 ## Everybody gets the same balloons
 
-Balloons come in **waves**, every two seconds, **one balloon per player per
+Balloons come in **waves**, every 1.1 seconds, **one balloon per player per
 wave**. Nobody ever has more to shoot at than anybody else; luck is only in
 where yours appear. Within a wave they let go from different spots on the
 floor, never on top of each other, and whose goes where is shuffled every wave
@@ -191,7 +192,7 @@ Exported because it is worth testing, not because anything else needs it.
   Tested.
 - **Only your own balloons score; anybody's can be popped, once.** Tested.
 - **A shot said more than once fires once.** Tested.
-- **The game is a minute, and nothing is taken after it.** Tested.
+- **The game is forty-five seconds, and nothing is taken after it.** Tested.
 - **Ties share a place.** Tested.
 - **Eight players and a lossy network agree on every score.** Tested.
 - **The whole arena is in frame and fills it, at any window shape.** Tested.
@@ -230,7 +231,7 @@ Open a lobby, leave the game on Volcano Island, press **minigames**, open
 - **Watch the stand-ins' crosshairs.** A ring in each one's colour with its
   shape in the middle, drifting onto one of its own balloons, dim after each
   shot.
-- **Look at the HUD.** A minute on the clock, "shoot ● only" in your colour and
+- **Look at the HUD.** Forty-five seconds on the clock, "shoot ● only" in your colour and
   shape, and four scores.
 - **Move the mouse over the arena.** The pointer is a crosshair, and it follows
   without lag.

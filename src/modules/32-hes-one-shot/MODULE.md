@@ -142,9 +142,10 @@ and who its own screen saw the shot meet.
 
 - The shot is taken from where the guest says it stood, if that is within 1.5 m
   of where the host has it; otherwise from where the host has it.
-- A hit counts if the shot passes within 0.9 m of the victim's body where the
-  host has it (a guest sees everybody a moment late), nothing solid is in between, and the
-  victim is still standing.
+- A hit counts if the shot passes within 0.9 m of the victim's body **where the
+  shooter could have seen it** - where the host has it now, or anywhere it stood
+  in the last 0.45 s - nothing solid is in between, and the victim is still
+  standing.
 - A shot arriving sooner after the last than the gun allows, less 0.3 s for the
   wire, is not a shot.
 - **The host never finds a hit the guest did not see.**
@@ -154,6 +155,32 @@ the host's copy of it is not drawn a second time.
 
 A guest's walk is taken only as far as it could have gone since the host last
 heard (1.5 times the walking speed, plus 0.3 m) and never through anything.
+
+### The host rewinds before it judges a shot
+
+You aim at what your screen shows you, and your screen shows you where everybody
+was when the last snapshot left the host - a snapshot's wait, plus your own ping,
+plus the trip your shot takes back. On a bad connection that is a third of a
+second, and a player crossing the room covers a couple of metres in it. Checking
+the shot against where the host has them **now** meant a shot lined up on
+somebody's chest missing behind them: aim at the man, hit where he was standing.
+
+So the host keeps a **trail** for everybody - where they were, every 0.03 s,
+going back `REWIND` (0.45 s, `remember` in `rules.ts`) - and a claim is checked
+against every step of it as well as against the present, taking the closest. The
+window is a little longer than the worst round trip the game is playable on, and
+nothing older than that is kept, so a shot cannot be paid off against a position
+from another era.
+
+**It cannot be used to shoot through walls.** Each step of the trail is a
+separate ray check with the same cover test: a victim who spent the whole window
+behind a crate has no step that is in the open, and the shot still misses. And
+the host still never finds a hit the guest did not see - the rewind can only
+confirm a claim, never invent one.
+
+The host writes the trail once a frame before it reads any guest's shots, so a
+shot that arrives this frame is judged against the trail as it stood when the
+shot was actually taken.
 
 The same lessons as the other minigames: a guest keeps listening after the game
 ends; somebody who leaves the lobby is out; a pause stops the round for everybody. Alone, it stops the clock.
@@ -240,6 +267,9 @@ testing, not because anybody else needs them.
 - **A guest's claim counts only if it could be true**, and never where the guest
   saw a miss. Tested: a lagged hit counts, and a hit that is too far off, through
   cover, at a hunter, or too soon does not.
+- **A shot counts on where the victim was while the shooter's screen was behind**,
+  up to 0.45 s back, and no further. Tested, including that no amount of rewind
+  shoots anybody through cover and that the trail never grows past the window.
 - **A crossfire eliminates both, sharing a place.** Tested.
 - **Standing at the end shares first; then the last to go.** Tested, both at the
   limit and when nobody is left.

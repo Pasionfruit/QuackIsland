@@ -39,7 +39,7 @@ export const FIELD = {
   apart: 3.5,
 
   /** Seconds in a round. */
-  duration: 60,
+  duration: 45,
   /** Seconds before you can click again after a click that did not claim. */
   cooldown: 1,
   /**

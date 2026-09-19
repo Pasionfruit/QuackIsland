@@ -23,7 +23,7 @@ import { Color, Group, MathUtils, type DirectionalLight } from 'three'
 import { createAvatar } from '../../02-player'
 import { ARENA, HALF_H, HALF_W, OBSTACLES, type Obstacle } from './arena'
 import { FLOOR, frameArena, headingToYaw } from './camera'
-import type { Body, Round } from './round'
+import { climbing, type Body, type Round } from './round'
 
 /**
  * The palette: a graveyard at night.
@@ -357,7 +357,7 @@ function walls(): { x: number; z: number; width: number; depth: number }[] {
  * exception is the middle of a turn, where the paint changes and the avatar
  * is swapped for one in the new colour - hidden by the spin.
  */
-function BodyPill({ body }: { body: Body }) {
+function BodyPill({ body, elapsed }: { body: Body; elapsed: number }) {
   const holder = useRef<Group>(null)
   const colour = colourOf(body)
   const avatar = useMemo(() => createAvatar(colour), [body.id, colour])
@@ -371,7 +371,8 @@ function BodyPill({ body }: { body: Body }) {
     if (!group) return
     turned.current = body.turning > 0 ? turned.current + delta : 0
     const pose = turnPose(turned.current)
-    group.position.set(body.x, pose.hop, body.y)
+    // A zombie that has just come over the wall drops the last of the way in.
+    group.position.set(body.x, pose.hop + climbing(body.id, elapsed) * FLOOR.wallHeight, body.y)
     group.rotation.y = headingToYaw(body.facing) + pose.spin
     // Knocked down: tipped onto its back, the same way the world's body does
     // it, so being stunned reads the same wherever you are.
@@ -425,7 +426,7 @@ export function ZombieTagScene({ round }: { round: Round }) {
       <Room />
       {you ? <YouMarker body={you} /> : null}
       {round.bodies.map((body) => (
-        <BodyPill key={body.id} body={body} />
+        <BodyPill key={body.id} body={body} elapsed={round.elapsed} />
       ))}
     </>
   )

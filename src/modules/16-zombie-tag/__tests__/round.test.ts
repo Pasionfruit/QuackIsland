@@ -19,8 +19,13 @@ import {
   zombieSpawns,
 } from '../internal/arena'
 import {
-  NO_INTENT,
+  CLIMB,
+  climbAt,
+  climberId,
+  climbIn,
+  climbing,
   createRound,
+  NO_INTENT,
   placings,
   shove,
   speedOf,
@@ -551,5 +556,80 @@ describe('stepping', () => {
     stepRound(round, still, 1 / 60)
     expect(round.bodies[0].x).toBeCloseTo(was.x, 6)
     expect(round.bodies[0].y).toBeCloseTo(was.y, 6)
+  })
+})
+
+describe('the zombies that climb in', () => {
+  /** A round of four runners and two zombies, stepped in small steps to `until`. */
+  const running = (until: number) => {
+    const round = createRound([
+      ...playerSpawns(4).map((at, i) => ({ id: `p${i + 1}`, at, side: 'player' as const })),
+      ...zombieSpawns(2).map((at, i) => ({ id: `z${i + 1}`, at, side: 'zombie' as const })),
+    ])
+    while (round.elapsed < until && !round.over) stepRound(round, new Map(), 0.05)
+    return round
+  }
+
+  it('sends nobody over the wall before the first wave is due', () => {
+    const round = running(CLIMB.first - 0.2)
+    expect(round.bodies.filter((b) => b.id.startsWith('climber'))).toHaveLength(0)
+    expect(round.climbed).toBe(0)
+  })
+
+  it('sends a lot over on the first wave, hard against the walls, as zombies', () => {
+    const round = running(CLIMB.first + 0.2)
+    const climbers = round.bodies.filter((b) => b.id.startsWith('climber'))
+    expect(climbers).toHaveLength(CLIMB.each)
+    expect(round.climbed).toBe(1)
+    for (const climber of climbers) {
+      expect(climber.side).toBe('zombie')
+      expect(climber.caughtAt).toBe(null)
+      // Against a wall, not out in the room.
+      const toWall = Math.min(HALF_W - Math.abs(climber.x), HALF_H - Math.abs(climber.y))
+      expect(toWall).toBeLessThan(2)
+    }
+    // No two in the same spot.
+    const spots = new Set(climbers.map((c) => `${c.x.toFixed(2)}:${c.y.toFixed(2)}`))
+    expect(spots.size).toBe(climbers.length)
+  })
+
+  it('sends another lot every fifteen seconds, and stops after the last', () => {
+    const round = running(climbAt(CLIMB.waves) + 5)
+    expect(round.bodies.filter((b) => b.id.startsWith('climber'))).toHaveLength(CLIMB.each * CLIMB.waves)
+    expect(round.climbed).toBe(CLIMB.waves)
+  })
+
+  it('never sends the same climber twice, however the round is stepped', () => {
+    const round = createRound([
+      ...playerSpawns(2).map((at, i) => ({ id: `p${i + 1}`, at, side: 'player' as const })),
+      ...zombieSpawns(1).map((at, i) => ({ id: `z${i + 1}`, at, side: 'zombie' as const })),
+    ])
+    // Big steps, small steps, and a step that lands exactly on a wave.
+    for (const step of [0.05, 0.05, 0.05]) while (round.elapsed < climbAt(1) + 1) stepRound(round, new Map(), step)
+    const ids = round.bodies.map((b) => b.id)
+    expect(new Set(ids).size).toBe(ids.length)
+    // And a round already past a wave puts them in once, not once a frame.
+    const late = createRound([{ id: 'p1', at: playerSpawns(1)[0], side: 'player' }])
+    late.elapsed = climbAt(1) + 2
+    climbIn(late)
+    climbIn(late)
+    expect(late.bodies.filter((b) => b.id.startsWith('climber'))).toHaveLength(CLIMB.each * 2)
+  })
+
+  it('leaves the climbers out of the placings, like the zombies a round opens with', () => {
+    const round = running(CLIMB.first + 0.5)
+    const named = placings(round).map((body) => body.id)
+    expect(named.some((id) => id.startsWith('climber'))).toBe(false)
+  })
+
+  it('drops each one down its wall as it comes over, and only then', () => {
+    const id = climberId(0, 0)
+    expect(climbing(id, climbAt(0) - 0.1)).toBe(0)
+    expect(climbing(id, climbAt(0))).toBeCloseTo(1, 6)
+    expect(climbing(id, climbAt(0) + CLIMB.drop / 2)).toBeCloseTo(0.5, 6)
+    expect(climbing(id, climbAt(0) + CLIMB.drop)).toBeCloseTo(0, 9)
+    expect(climbing(id, climbAt(0) + CLIMB.drop + 1)).toBe(0)
+    // Somebody who walked in on their own two feet never drops out of the sky.
+    expect(climbing('p1', climbAt(0) + 0.1)).toBe(0)
   })
 })

@@ -14,9 +14,9 @@ import { createRng, hashSeed } from '../../00-core'
 
 export const ARENA = {
   /** How long a game lasts, in seconds. */
-  duration: 60,
-  /** Seconds between waves of balloons. */
-  wave: 2,
+  duration: 45,
+  /** Seconds between waves of balloons: a wave is one balloon each, so this is how thick the sky gets. */
+  wave: 1.1,
   /** The first wave lets go this far in, so nobody is shooting at the countdown. */
   firstWave: 0.4,
   /** No wave lets go this close to the end: a balloon nobody can reach is not a balloon. */

@@ -109,7 +109,7 @@ const ENTRIES = [
     kind: 'free-for-all',
     description: [
       'Six zombies chase everybody round a walled arena full of crates. You all start in the middle, and everything is solid - bodies included.',
-      'Get caught and you turn into a zombie and join the chase.',
+      'Get caught and you turn into a zombie and join the chase. Every fifteen seconds three more climb in over the wall, so the room only ever gets busier.',
       'You move twice as fast as a zombie. Space shoves whoever is next to you and knocks them down for a second - handy for leaving somebody behind - and then needs three seconds before it works again.',
       'Last one still running wins. The camera never moves: the whole arena is in front of you all round.',
     ],
@@ -167,8 +167,8 @@ const ENTRIES = [
     title: 'Duck Hunt',
     kind: 'free-for-all',
     description: [
-      'Balloons float up round the arena in waves, each one in somebody\'s colour and shape. Shoot yours and leave everybody else\'s alone.',
-      'One of yours is a point. One of somebody else\'s takes a point off them and gives you nothing. Every shot, hit or miss, costs half a second before you can shoot again. Most points after a minute wins.',
+      'Balloons float up round the arena in waves - one each, a wave about every second - each one in somebody\'s colour and shape. Shoot yours and leave everybody else\'s alone.',
+      'One of yours is a point. One of somebody else\'s takes a point off them and gives you nothing. Every shot, hit or miss, costs half a second before you can shoot again. Most points after forty-five seconds wins.',
     ],
     controls: [
       { input: 'Mouse', does: 'Aim' },
@@ -206,7 +206,7 @@ const ENTRIES = [
     kind: 'free-for-all',
     description: [
       'Ducks swim about a pond and you stand on the bank with a pocket of crackers. Point where you want to throw, hold the left button to charge the power meter and let go to throw - the longer you hold, the further it goes.',
-      'A cracker that lands near a duck feeds it for a point, and that duck is busy eating for a moment. You can throw again a quarter of a second later. Most ducks fed after a minute wins.',
+      'A cracker that lands near a duck feeds it for a point, and that duck is busy eating for a moment. You can throw again a quarter of a second later. Most ducks fed after forty-five seconds wins.',
     ],
     controls: [
       { input: 'Mouse', does: 'Aim at the water' },
@@ -282,7 +282,7 @@ const ENTRIES = [
     description: [
       'Walk about a field with a hammer while moles pop out of sixteen holes. Stand over one and swing - the hammer comes down in front of you, the way you are facing - before it goes back down.',
       'An ordinary mole is a point. The golden mole is five, is rarer, and ducks back down much sooner. First hit on a mole takes it. Bring the hammer down on somebody\'s head instead and they are stunned for a moment.',
-      'Most points after a minute wins.',
+      'Most points after forty-five seconds wins.',
     ],
     controls: [
       { input: 'WASD', does: 'Move' },
@@ -300,7 +300,7 @@ const ENTRIES = [
     kind: 'free-for-all',
     description: [
       'A field of three-leaf clovers with three four-leaf clovers hidden in it at any time. Find one and click it: it is ringed in your colour, nobody else can have it, and a new one grows somewhere else.',
-      'Clicking anything else - a three-leaf clover, a claimed one, bare grass - costs you a point and a second before you can click again, and every click in that second costs another. Scores can go below zero. Most points after a minute wins.',
+      'Clicking anything else - a three-leaf clover, a claimed one, bare grass - costs you a point and a second before you can click again, and every click in that second costs another. Scores can go below zero. Most points after forty-five seconds wins.',
     ],
     controls: [
       { input: 'Mouse', does: 'Aim' },
