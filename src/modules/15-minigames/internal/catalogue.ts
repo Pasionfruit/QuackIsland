@@ -648,14 +648,25 @@ const ENTRIES = [
     done: { environment: true, controls: true, assets: false },
   },
   {
-    id: 'reserved-32',
+    id: 'i-just-work-here',
     number: 32,
-    title: 'Free slot',
+    title: 'I Just Work Here',
     kind: 'free-for-all',
-    description: [],
-    controls: [],
-    reserved: true,
-    done: { environment: false, controls: false, assets: false },
+    description: [
+      'Search the office for the four pieces of your bazooka - they are in your colour - and bring them back to your desk one at a time.',
+      'Once all four are on your desk you are armed and can start eliminating everybody else. Careful: a rocket that bursts too near you takes you with it, so do not fire at a wall you are standing next to. Last one standing wins.',
+    ],
+    controls: [
+      { input: 'WASD', does: 'Move' },
+      { input: 'Mouse', does: 'Aim' },
+      { input: 'Left Click', does: 'Pick up / place piece' },
+      { input: 'Right Click', does: 'Fire bazooka' },
+      { input: 'Space', does: 'Drop piece' },
+    ],
+    reserved: false,
+    // Built: see `42-i-just-work-here`. The assets stage is still to do - the
+    // office is boxes, the pieces are primitives and the players are the island's capsule.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'reserved-33',

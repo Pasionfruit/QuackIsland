@@ -130,7 +130,8 @@
         "38-pet-race",
         "39-ill-just-wait",
         "40-whats-your-rpm",
-        "41-one-piece"
+        "41-one-piece",
+        "42-i-just-work-here"
       ]
     }
   ],
@@ -181,7 +182,8 @@
         "38-pet-race",
         "39-ill-just-wait",
         "40-whats-your-rpm",
-        "41-one-piece"
+        "41-one-piece",
+        "42-i-just-work-here"
       ],
       "generation": 1,
       "contract": {
@@ -372,7 +374,8 @@
         "35-chef-caricature",
         "36-musical-mayhem",
         "39-ill-just-wait",
-        "40-whats-your-rpm"
+        "40-whats-your-rpm",
+        "42-i-just-work-here"
       ],
       "generation": 1,
       "contract": {
@@ -892,7 +895,8 @@
         "38-pet-race",
         "39-ill-just-wait",
         "40-whats-your-rpm",
-        "41-one-piece"
+        "41-one-piece",
+        "42-i-just-work-here"
       ],
       "generation": 1,
       "contract": {
@@ -1411,7 +1415,8 @@
         "38-pet-race",
         "39-ill-just-wait",
         "40-whats-your-rpm",
-        "41-one-piece"
+        "41-one-piece",
+        "42-i-just-work-here"
       ],
       "generation": 1,
       "contract": {
@@ -3618,6 +3623,95 @@
         "No photo or camera: your face is the island pill in your colour, with your name",
         "No sound of its own beyond a click as a piece goes in",
         "Only the pieces-in go on the wire, never where anybody's loose pieces are lying"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "42-i-just-work-here",
+      "phase": "P6",
+      "title": "Minigame 32, I Just Work Here: an office from above, everybody against everybody - find the four pieces of your bazooka, carry them to your desk one at a time, then fire; a blast takes anybody near it, whoever fired it included; last one standing wins",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "42.1",
+          "title": "The office: a walled open-plan floor, eight desks along the north and south walls, seeded furniture in groups that touch or leave room to pass, a way round it all",
+          "status": "done"
+        },
+        {
+          "id": "42.2",
+          "title": "The pieces: four in your colour, tucked in beside the furniture well away from your desk; pick up your own, one at a time, slower while carrying, drop anywhere, place at your desk; four there and you are armed",
+          "status": "done"
+        },
+        {
+          "id": "42.3",
+          "title": "The bazooka: a rocket that flies straight and bursts on whatever it touches; the blast takes everybody near it with nothing in between, the one who fired it included",
+          "status": "done"
+        },
+        {
+          "id": "42.4",
+          "title": "The end: last one standing wins; at 2:30, those standing share by pieces on their desk; then the last to go",
+          "status": "done"
+        },
+        {
+          "id": "42.5",
+          "title": "The controls: WASD to move, the mouse to aim, left click to pick up or place, right click to fire, space to drop",
+          "status": "done"
+        },
+        {
+          "id": "42.6",
+          "title": "From above: the office in boxes, pieces in their owner's colour, a bazooka on the shoulder, rockets and blasts, a guide that turns red when the blast would take you",
+          "status": "done"
+        },
+        {
+          "id": "42.7",
+          "title": "One office shared across the lobby, the host runs pieces, rockets and blasts, a guest's hands on its own screen and checked by the host, stand-ins that search only when alone",
+          "status": "done"
+        },
+        {
+          "id": "42.8",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "42.9",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-19T03:47:47.447Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: the office is boxes, the pieces and the bazooka are primitives, players are the island capsule",
+        "No health, ammo, splash falloff or knockback: inside the blast is out, outside it is not",
+        "No taking or hiding anybody else's pieces",
+        "No music of its own yet; the round is silent under the cues"
       ],
       "budgets": {
         "drawCallsMax": 0,
