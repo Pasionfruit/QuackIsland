@@ -960,6 +960,49 @@ try {
     say('rounds', JSON.stringify(log))
     await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 120000)
     say('results', await page.shot('4-results.png'))
+  } else if (opt.steer && opt.game === 'perfect-game') {
+    // On your turn: D held moves you, the mouse swept across the sand swings the aim both ways
+    // (real pointer events through the scene's own raycast), then a click rolls it; then the others' turns to the podium.
+    const read = `(() => { const s = ${gameState(opt.game)}; const who = s.order[s.turn]; return { e: s.elapsed, over: s.over, turn: s.turn, mine: !!s.players[who]?.mine, startsAt: s.startsAt, rolledAt: s.rolledAt, aim: s.aim, scores: s.players.map((p) => p.score), phase: document.querySelector('[data-board]')?.dataset.phase } })()`
+    const key = (code, down) => page.eval(`window.dispatchEvent(new KeyboardEvent('${down ? 'keydown' : 'keyup'}', { code: '${code}', key: '${code.slice(3).toLowerCase()}' }))`)
+    const pointAt = (fx, fy, type = 'pointermove') => page.eval(`(() => { const c = document.querySelector('[data-board] canvas'); const r = c.getBoundingClientRect(); const init = { bubbles: true, clientX: r.left + r.width * ${fx}, clientY: r.top + r.height * ${fy}, pointerId: 1, pointerType: 'mouse', button: 0 }; c.dispatchEvent(new PointerEvent('${type}', init)) })()`)
+    const click = () => page.eval(`(() => { const b = document.querySelector('[data-board]'); const r = b.getBoundingClientRect(); b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 })) })()`)
+    let s = await page.eval(read)
+    for (let k = 0; k < 800 && !(s.mine && s.phase === 'aim' && s.e - s.startsAt > 0.3); k++) {
+      await sleep(100)
+      s = await page.eval(read)
+      if (s.over) throw new Error('never got a turn')
+      if (s.phase === 'aim' && !s.mine && k % 30 === 0) say('watching', JSON.stringify({ turn: s.turn, aim: s.aim }))
+    }
+    say('my turn', JSON.stringify(s), await page.shot('3-my-turn.png'))
+    const x0 = s.aim.x
+    await key('KeyD', true)
+    await sleep(600)
+    await key('KeyD', false)
+    s = await page.eval(read)
+    if (!(s.aim.x > x0 + 1)) throw new Error(`D did not move me: ${x0} -> ${s.aim.x}`)
+    await pointAt(0.2, 0.35)
+    await sleep(150)
+    const west = (await page.eval(read)).aim.angle
+    await pointAt(0.8, 0.35)
+    await sleep(150)
+    const east = (await page.eval(read)).aim.angle
+    say('mouse aims', JSON.stringify({ west, east }))
+    if (!(west > 0.05 && east < -0.05)) throw new Error('the mouse did not swing the aim both ways')
+    await pointAt(0.55, 0.3)
+    await page.waitFor(`(${read}).e - (${read}).startsAt >= 6`, 15000)
+    say('aiming', JSON.stringify((await page.eval(read)).aim), await page.shot('4-aim.png'))
+    await click()
+    await sleep(150)
+    s = await page.eval(read)
+    if (s.rolledAt === null) throw new Error('the click did not roll it')
+    await sleep(600)
+    say('rolling', JSON.stringify({ rolledAt: s.rolledAt }), await page.shot('5-rolling.png'))
+    await page.waitFor(`(${read}).phase === 'result'`, 15000)
+    s = await page.eval(read)
+    say('result', JSON.stringify(s.scores), await page.shot('6-result.png'))
+    await page.waitFor(`!!document.querySelector('[data-podium]')`, 120000)
+    say('results', JSON.stringify((await page.eval(`(() => { try { return (${read}).scores } catch { return null } })()`))), await page.shot('7-results.png'))
   } else if (opt.steer && opt.game === 'milf-fishing') {
     // Watch the rod through the game's own bend; first pull once on a straight rod (it must land nothing),
     // then pull on anything bass-sized or bigger once it has bent right over, with a real click.

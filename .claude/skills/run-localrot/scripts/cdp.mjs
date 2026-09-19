@@ -166,6 +166,12 @@ export class Page {
 
 /** Each game's screen component, and an element inside it to start the search from. */
 export const GAMES = {
+  'perfect-game': {
+    title: 'Perfect Game',
+    screen: 'BeachScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
   'milf-fishing': {
     title: 'M.I.L.F (fishing)',
     screen: 'PondScreen',

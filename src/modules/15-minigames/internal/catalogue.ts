@@ -584,12 +584,19 @@ const ENTRIES = [
     title: 'Perfect Game',
     kind: 'one-vs-all',
     description: [
-      'A bent column of thirty crabs sways left and right in front of you.',
-      'Fifteen seconds to set where you stand and the angle of your coconut roll, and then you let it go. Every crab it hits is a point.',
+      'A bent column of 30 crabs moves from left to right across the beach. One turn each, while everybody else watches.',
+      'You have 10 seconds to choose your position behind the line and the angle of your coconut throw - and when to let it go. When time runs out it rolls anyway.',
+      'The coconut rolls along the chosen path, hitting as many crabs as possible. 1 point for every crab hit; the player with the most points wins. Hit all 30 for a perfect game.',
     ],
-    controls: [],
+    controls: [
+      { input: 'WASD', does: 'Adjust position' },
+      { input: 'Mouse', does: 'Aim / adjust throw angle' },
+      { input: 'Left Click', does: 'Roll coconut' },
+    ],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `51-perfect-game`. The assets stage is still to do - the beach, the
+    // crabs and the coconut are primitives and the players are the island's capsule.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'chef-caricature',

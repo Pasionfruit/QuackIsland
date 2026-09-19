@@ -139,7 +139,8 @@
         "47-shanty-matrix",
         "48-spidy-senses",
         "49-needs-a-walmart",
-        "50-milf-fishing"
+        "50-milf-fishing",
+        "51-perfect-game"
       ]
     }
   ],
@@ -199,7 +200,8 @@
         "47-shanty-matrix",
         "48-spidy-senses",
         "49-needs-a-walmart",
-        "50-milf-fishing"
+        "50-milf-fishing",
+        "51-perfect-game"
       ],
       "generation": 1,
       "contract": {
@@ -399,7 +401,8 @@
         "47-shanty-matrix",
         "48-spidy-senses",
         "49-needs-a-walmart",
-        "50-milf-fishing"
+        "50-milf-fishing",
+        "51-perfect-game"
       ],
       "generation": 1,
       "contract": {
@@ -928,7 +931,8 @@
         "47-shanty-matrix",
         "48-spidy-senses",
         "49-needs-a-walmart",
-        "50-milf-fishing"
+        "50-milf-fishing",
+        "51-perfect-game"
       ],
       "generation": 1,
       "contract": {
@@ -1456,7 +1460,8 @@
         "47-shanty-matrix",
         "48-spidy-senses",
         "49-needs-a-walmart",
-        "50-milf-fishing"
+        "50-milf-fishing",
+        "51-perfect-game"
       ],
       "generation": 1,
       "contract": {
@@ -4430,6 +4435,89 @@
       "nonGoals": [
         "No models: the lake, the rods and the fish are primitives, players are the island capsule",
         "No reeling mini-game: one click lands the fish",
+        "No music of its own yet; the round is silent under the cues"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "51-perfect-game",
+      "phase": "P6",
+      "title": "Minigame 27, Perfect Game: one turn each while everybody watches; a bent column of thirty crabs marches left to right across the beach; ten seconds to choose a spot, an angle and a moment, then the coconut rolls in a straight line; a point a crab; most points wins",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "51.1",
+          "title": "The beach and the column: thirty crabs bent into an arc, an S or a hook, a new one each turn from the seed, marching left to right at a steady pace",
+          "status": "done"
+        },
+        {
+          "id": "51.2",
+          "title": "The throw: a spot in the box behind the line, an angle and a moment, the coconut rolling straight, every crab it meets hit - worked out exactly, crab by crab",
+          "status": "done"
+        },
+        {
+          "id": "51.3",
+          "title": "The turns: one each in an order from the seed, next up, ten seconds of aiming, the roll, the result; most crabs wins, level scores share",
+          "status": "done"
+        },
+        {
+          "id": "51.4",
+          "title": "The controls: WASD round the box, the mouse on the sand to aim, left click to roll",
+          "status": "done"
+        },
+        {
+          "id": "51.5",
+          "title": "From behind the line: the beach and the sea, the crabs scuttling sideways, the dotted aim, the coconut rolling, crabs knocked flying, a running count",
+          "status": "done"
+        },
+        {
+          "id": "51.6",
+          "title": "One beach shared across the lobby, the thrower's aim and roll the only thing sent, a guest judged on its own clock, stand-ins that plan the best throw and shake, only when alone",
+          "status": "done"
+        },
+        {
+          "id": "51.7",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "51.8",
+          "title": "The assets: models, sprites and sound in place of primitives",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-19T17:04:15.442Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: the beach, the crabs and the coconut are primitives, players are the island capsule",
+        "No curve on the throw: the coconut rolls dead straight",
         "No music of its own yet; the round is silent under the cues"
       ],
       "budgets": {
