@@ -179,7 +179,8 @@ Exported because it is worth testing, not because anything else needs it.
   Tested.
 - **A wish only counts for its own round.** Tested, including a guest still
   repeating last round's confirm.
-- **The game ends after six rounds, or as soon as nobody is left.** Tested.
+- **The game ends after six rounds, or as soon as one or nobody is left** (a
+  game that started with company; alone, you play the six). Tested.
 - **Survivors share first; everybody else ranks by how late they fell, sharing a
   place with whoever fell in the same round.** Tested.
 - **Nobody stands on thin air who has not fallen, nobody stands on anybody, and

@@ -15,8 +15,8 @@ each holding their own camera.
 - **Click anything else** - junk, ground, sky - and you wait **1.5 seconds**
   before you can click again, so clicking everything is slower than looking.
 
-Ninety seconds. **You place in the order everybody finds him**; whoever never
-does shares last place.
+Ninety seconds, or until three have found him. **You place in the order
+everybody finds him**; whoever never does shares last place.
 
 **Left drag, wheel, left click.**
 

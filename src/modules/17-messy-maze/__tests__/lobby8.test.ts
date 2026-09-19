@@ -129,18 +129,19 @@ describe('eight people in one race', () => {
     expect((racer.x - before.x) * plan.toward.x + (racer.y - before.y) * plan.toward.y).toBeGreaterThan(1)
   })
 
-  it('places all eight when they all get in', () => {
+  it('places the first three in and ends the race there', () => {
     const { host, frame } = lobby()
     const { platforms } = mazeFor(LAYOUT)
     for (const racer of host.racers) racer.touched = (1 << platforms[0].id) | (1 << platforms[1].id)
     // Into the middle one a frame, last in the roster first.
     const order = [...host.racers].reverse()
     order.forEach((racer, n) => {
+      expect(host.over).toBe(n >= 3)
       racer.x = 0
       racer.y = 0
       frame(n)
     })
     expect(host.over).toBe(true)
-    expect(order.map((r) => r.place)).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
+    expect(order.map((r) => r.place)).toEqual([1, 2, 3, null, null, null, null, null])
   })
 })

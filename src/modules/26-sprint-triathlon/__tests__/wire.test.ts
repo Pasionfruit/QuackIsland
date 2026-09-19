@@ -86,8 +86,11 @@ describe('eight racers in one race', () => {
     }
     for (const guest of guests) applySnapshot(guest.copy, decodeSnapshot(relay(encodeSnapshot(race)))!, guest.id)
 
-    expect(race.racers.every((r) => r.finishAt !== null)).toBe(true)
-    expect(race.racers.map((r) => r.place).sort()).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
+    // Over once three are home: they are placed, and nobody else is.
+    const home = race.racers.filter((r) => r.finishAt !== null)
+    expect(home.length).toBeGreaterThanOrEqual(COURSE.podium)
+    expect(home.map((r) => r.place).sort()).toEqual(home.map((_, i) => i + 1))
+    expect(race.racers.filter((r) => r.finishAt === null).every((r) => r.place === null)).toBe(true)
     for (const guest of guests) {
       expect(guest.copy.racers.map((r) => [r.id, r.swimAt, r.bikeAt, r.finishAt, r.place, r.mistakes])).toEqual(
         race.racers.map((r) => [r.id, r.swimAt, r.bikeAt, r.finishAt, r.place, r.mistakes].map((v) => (typeof v === 'number' ? Math.round(v * 100) / 100 : v))),

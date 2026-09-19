@@ -49,7 +49,7 @@ or get picked up at all.
 
 ## The end
 
-The game ends when **everybody still in the lobby has finished, or at two
+The game ends when **three have finished, everybody still in the lobby has, or at two
 minutes**, whichever comes first. The host decides.
 
 Placings: finishers by time, to the hundredth, as it goes on the wire, so every

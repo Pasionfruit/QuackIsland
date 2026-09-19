@@ -161,7 +161,7 @@ Exported because it is worth testing, not because anything else needs it.
   out, and somebody holding still in the middle nearly always is.** Tested.
 - **Accounts only go forward, and nobody is believed past what the green so far
   allows.** Tested.
-- **Places are in arrival order; the race ends when nobody is racing, or at two
+- **Places are in arrival order; the race ends when three are over the line, nobody is racing, or at two
   minutes; the line ranks first, then the still-going, then the out.** Tested.
 - **Stand-ins never step on red, and finish in a person's time most races.** Tested.
 - **Eight racers judging themselves against their own clocks, with a lossy

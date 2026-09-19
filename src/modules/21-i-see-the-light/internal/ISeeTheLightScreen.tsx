@@ -310,7 +310,9 @@ function Over({
             : mine.racer.out.why === 'pointer'
               ? 'Slipped out of the circle'
               : 'Left the race'
-          : 'Out of time'
+          : finished.length >= LIGHT.podium
+            ? 'Beaten to the podium'
+            : 'Out of time'
   const how = (racer: Racer) => {
     if (racer.finishedAt !== null) return `over the line · ${racer.finishedAt.toFixed(1)}s`
     const far = `${racer.steps}/${LIGHT.steps}`

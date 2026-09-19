@@ -14,6 +14,8 @@
 import { createRng, hashSeed } from '../../00-core'
 
 export const COURSE = {
+  /** The race is over as soon as this many have finished. */
+  podium: 3,
   /** Strokes to swim the first leg. */
   strokes: 60,
   /** Pedal presses to ride the second. */
@@ -212,12 +214,13 @@ export function leave(race: Race, id: string): void {
   if (racer && racer.finishAt === null) racer.left = true
 }
 
-/** One step: the clock, and the end - when everybody has finished or left, or at the time limit. */
+/** One step: the clock, and the end - when three have finished, everybody has finished or left, or at the time limit. */
 export function stepRace(race: Race, dt: number): Race {
   if (race.over) return race
   race.elapsed = Math.min(COURSE.start + COURSE.timeLimit, race.elapsed + Math.min(Math.max(dt, 0), 0.25))
   for (const racer of race.racers) split(race, racer)
-  if (race.racers.every((r) => r.finishAt !== null || r.left) || raceClock(race) >= COURSE.timeLimit) race.over = true
+  const finished = race.racers.filter((r) => r.finishAt !== null).length
+  if (finished >= COURSE.podium || race.racers.every((r) => r.finishAt !== null || r.left) || raceClock(race) >= COURSE.timeLimit) race.over = true
   return race
 }
 

@@ -33,6 +33,8 @@ export const TORCH = {
 } as const
 
 export const ROUND = {
+  /** The game is over as soon as this many have reached the finish. */
+  podium: 3,
   /**
    * Seconds of count before the round. None: the minigame screen's shared three-two-one runs before the game is
    * let go, so a count of its own would be a second one.
@@ -229,11 +231,12 @@ export function tick(game: Game, dt: number): void {
   for (const torch of game.players) torch.stunned = Math.max(0, torch.stunned - step)
 }
 
-/** Whether the game is over: everybody still here has finished, or time is up. Only the host decides. */
+/** Whether the game is over: three have finished, everybody still here has, or time is up. Only the host decides. */
 export function judgeEnd(game: Game): boolean {
   if (game.over) return true
   const here = game.players.filter((p) => !p.left)
-  if (clock(game) >= ROUND.limit || here.every((p) => p.finished !== null)) game.over = true
+  const finished = game.players.filter((p) => p.finished !== null).length
+  if (clock(game) >= ROUND.limit || finished >= ROUND.podium || here.every((p) => p.finished !== null)) game.over = true
   return game.over
 }
 

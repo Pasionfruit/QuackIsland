@@ -5,7 +5,7 @@ import { Frustum, Matrix4, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 import { FILL, HOLD, POINTS, aimAt, cameraFor } from '../internal/camera'
 import { GRID, HALF, mazeFor, routeTarget, touchesWall } from '../internal/maze'
-import { TORCH, clock, createGame, finishPoint, report, steer, stepGame, type Game } from '../internal/rules'
+import { ROUND, TORCH, clock, createGame, finishPoint, report, steer, stepGame, type Game } from '../internal/rules'
 import { waitingGame } from '../internal/setup'
 import { applySnapshot, decodeIntent, decodeSnapshot, encodeIntent, encodeSnapshot } from '../internal/wire'
 
@@ -95,7 +95,7 @@ describe('an intent', () => {
 })
 
 describe('eight torches in one maze', () => {
-  it('end where each guest had its own, with reports lost, the host placing them all', () => {
+  it('end where each guest had its own, with reports lost, the host placing the first three out', () => {
     const game = started(host(8))
     let seed = 5
     const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647
@@ -128,10 +128,10 @@ describe('eight torches in one maze', () => {
     }
     expect(game.over).toBe(true)
     const end = finishPoint(SEED)
-    for (const torch of game.players) {
-      expect(torch.finished).not.toBeNull()
-      expect(Math.hypot(torch.x - end.x, torch.z - end.z)).toBeLessThanOrEqual(TORCH.finish + 1e-9)
-    }
+    const out = game.players.filter((torch) => torch.finished !== null)
+    expect(out.length).toBeGreaterThanOrEqual(ROUND.podium)
+    expect(clock(game)).toBeLessThan(ROUND.limit)
+    for (const torch of out) expect(Math.hypot(torch.x - end.x, torch.z - end.z)).toBeLessThanOrEqual(TORCH.finish + 1e-9)
     expect(game.players[5].hits).toBe(1)
     for (const guest of guests.slice(1)) {
       applySnapshot(guest.copy, decodeSnapshot(relay(encodeSnapshot(game)))!, guest.id)

@@ -15,6 +15,8 @@
 import { createRng, hashSeed } from '../../00-core'
 
 export const LIGHT = {
+  /** The race is over as soon as this many are over the line. */
+  podium: 3,
   /** Presses of space from the start to the line. */
   steps: 70,
   /** However the race is going, it is over after this long. */
@@ -277,8 +279,8 @@ export function report(race: Race, id: string, self: Self): void {
 
 /**
  * One step of the race: the clock, anybody who has reached the line - placed
- * in the order they get there - and the end, when nobody is left racing or the
- * time is up.
+ * in the order they get there - and the end, when three are over the line,
+ * nobody is left racing, or the time is up.
  */
 export function stepRace(race: Race, dt: number): Race {
   if (race.over) return race
@@ -288,7 +290,8 @@ export function stepRace(race: Race, dt: number): Race {
     racer.finishedAt = race.elapsed
     racer.place = race.racers.filter((r) => r.place !== null).length + 1
   }
-  if (race.racers.every((r) => !racing(r)) || race.elapsed >= LIGHT.timeLimit) race.over = true
+  const over = race.racers.filter((r) => r.finishedAt !== null).length
+  if (over >= LIGHT.podium || race.racers.every((r) => !racing(r)) || race.elapsed >= LIGHT.timeLimit) race.over = true
   return race
 }
 

@@ -5,7 +5,7 @@
  * one, and can move to another as often as you like until time runs out. Then
  * the paths are revealed: some hold, the rest snap and drop into the valley with
  * whoever was on them. In the first four rounds two of the three paths hold. In the
- * last two only one does. Survive all six and you have won.
+ * last two only one does. Survive all six, or be the last one left, and you have won.
  *
  * No three.js, no React, no clock of its own: `stepGame` takes a game and how
  * long since last time, and everything - the countdown, the reveal, who falls -
@@ -177,7 +177,7 @@ export function decideSafe(seed: number, round: number): number[] {
  *   drops to `allInTime`; at zero, the reveal.
  * - **Reveal**: the paths are decided, everybody on one that did not hold is
  *   out, and when the reveal has played the next round begins - or the game is
- *   over, after the sixth round or when nobody is left.
+ *   over, after the sixth round or when one or nobody is left.
  */
 export function stepGame(game: Game, dt: number): Game {
   if (game.phase === 'over') return game
@@ -195,7 +195,9 @@ export function stepGame(game: Game, dt: number): Game {
 
   if (game.clock === 0) {
     const lastRound = game.round >= GAME.rounds - 1
-    if (lastRound || stillIn(game).length === 0) {
+    // A game that started with company ends once only one is left in it.
+    const lastOne = game.players.length > 1 && stillIn(game).length <= 1
+    if (lastRound || lastOne || stillIn(game).length === 0) {
       game.phase = 'over'
       return game
     }

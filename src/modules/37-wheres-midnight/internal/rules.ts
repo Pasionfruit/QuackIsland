@@ -5,8 +5,8 @@
  * cat. Click him and you have found him, at that moment; you place in the order
  * everybody does. A click on anything else - junk, ground, sky - costs a second
  * and a half before you can click again, so clicking everything is slower than
- * looking. The round ends when everybody has found him or after ninety seconds;
- * whoever has not found him by then shares last place.
+ * looking. The round ends when three have found him, everybody has, or after
+ * ninety seconds; whoever has not found him by then shares last place.
  *
  * Pure. What a click lands on is `look`, in `yard.ts`.
  */
@@ -14,6 +14,8 @@ import { look, yardFor } from './yard'
 import type { Vec3 } from './view'
 
 export const SEARCH = {
+  /** The round is over as soon as this many have found him. */
+  podium: 3,
   /** Seconds in a round. */
   duration: 90,
   /** Seconds before you can click again after a click that was not Midnight. */
@@ -114,7 +116,8 @@ export function select(game: Game, player: number, dir: Vec3, { at, seq }: Selec
     const said = at === undefined || !Number.isFinite(at) ? game.elapsed : at
     seeker.foundAt = Math.max(0, game.elapsed - SEARCH.lag, Math.min(game.elapsed, said))
     seeker.cooldown = 0
-    if (game.players.every((p) => p.foundAt !== null)) game.over = true
+    const found = game.players.filter((p) => p.foundAt !== null).length
+    if (found >= SEARCH.podium || found === game.players.length) game.over = true
     return 'found'
   }
   seeker.misses += 1

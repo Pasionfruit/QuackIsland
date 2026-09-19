@@ -268,7 +268,8 @@ describe('the stand-ins', () => {
 
   it('find the way out, now and then touching a wall, the same way every time', () => {
     const runs = [1, 2].map(() => {
-      const g = createGame(SEED, Array.from({ length: 5 }, (_, i) => ({ id: `b${i}`, bot: true })), 1)
+      // Three, so the game - which ends once three are out - waits for every one of them.
+      const g = createGame(SEED, Array.from({ length: ROUND.podium }, (_, i) => ({ id: `b${i}`, bot: true })), 1)
       for (let i = 0; i < 60 * 150 && !g.over; i++) {
         botSteer(g, 1 / 60)
         stepGame(g, 1 / 60)

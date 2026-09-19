@@ -234,7 +234,7 @@ Exported because it is worth testing, not because anything else needs it.
   anybody else; stepping on and off one never opens the middle. Tested.
 - **The middle refuses anybody with fewer than two platforms**, and takes
   anybody with any two. Tested.
-- **Places are the order of arrival**; the last call ends the race; anybody not
+- **Places are the order of arrival**; the third in, or the last call, ends the race; anybody not
   in ranks below everybody who is. Tested.
 - **Stand-ins finish in every maze from every corner**, through two platforms. Tested.
 - **A snapshot comes back as the race that went out**, bindings included, moves
@@ -316,7 +316,7 @@ party panel, and open **2 · Messy Maze**. Read it, then press **play**.
 - **Watch the stand-ins.** They should find their platforms and the middle,
   pausing after each spin, and not get stuck on corners.
 - **Let the race finish.** Once somebody is in, a red *last call* counts down
-  from 30. The card lists everybody in finishing order, times for those who got
+  from 30; the race ends at once when a third racer gets in. The card lists everybody in finishing order, times for those who got
   in and platform counts for those who did not. **Again** deals a new maze.
 - **Press escape mid-race, alone.** Everything stops, with resume on the card.
 - **Resize the window.** The maze should refit, all of it always in view.

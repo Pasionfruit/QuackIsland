@@ -48,6 +48,8 @@ export const RACE = {
    * keyboard, keeps a whole lobby waiting on a finished race.
    */
   lastCall: 30,
+  /** The race is over as soon as this many are in the middle. */
+  podium: 3,
   /** However the race is going, it is over after this long. */
   timeLimit: 240,
   /**
@@ -187,7 +189,8 @@ const tick = (value: number, step: number) => {
  *
  * For each racer, in order: count down the spin, move, land on a platform if
  * there is one underfoot, and finish if this is the middle and it will have
- * you. Then decide whether the race is over.
+ * you. Then decide whether the race is over: everybody in, three in, the last
+ * call run out, or the time limit.
  */
 export function stepRace(race: Race, directions: Map<string, Point>, dt: number): Race {
   if (race.over) return race
@@ -219,8 +222,9 @@ export function stepRace(race: Race, directions: Map<string, Point>, dt: number)
   }
 
   const everybodyIn = race.racers.length > 0 && stillRacing(race).length === 0
+  const podiumFull = race.racers.filter((r) => r.place !== null).length >= RACE.podium
   const lastCallOver = race.firstIn !== null && race.elapsed - race.firstIn >= RACE.lastCall
-  if (everybodyIn || lastCallOver || race.elapsed >= RACE.timeLimit) race.over = true
+  if (everybodyIn || podiumFull || lastCallOver || race.elapsed >= RACE.timeLimit) race.over = true
   return race
 }
 

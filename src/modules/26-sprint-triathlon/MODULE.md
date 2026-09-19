@@ -67,7 +67,7 @@ hands, but not faster than fast hands.
 
 ## The end
 
-When everybody has finished or left, or at the time limit. Finishers rank first,
+When three have finished, everybody has finished or left, or at the time limit. Finishers rank first,
 by time. Then anybody still out on the course, by how far they got. Then anybody
 who left the lobby.
 
@@ -148,8 +148,8 @@ Exported because it is worth testing, not because anything else needs it.
 - **Each leg is timed when it is finished, and a report can finish one leg and
   start the next.** Tested.
 - **Nobody is believed faster than fast hands, and counts only go forward.** Tested.
-- **Finishers are placed in the order they finish; the race ends when everybody
-  has finished or left, or at the time limit.** Tested.
+- **Finishers are placed in the order they finish; the race ends when three
+  have finished, everybody has finished or left, or at the time limit.** Tested.
 - **Ranked by time, then by how far they got, then anybody who left.** Tested.
 - **Stand-ins swim, bike and run in order, and finish in 30 to 60 seconds.** Tested.
 - **Eight racers counting their own races, with a lossy network, agree with the

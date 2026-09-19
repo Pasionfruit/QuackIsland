@@ -13,7 +13,7 @@ Minigame 5. **Ten seconds to choose an animal, then thirty to race it.**
 - **Hold left click to boost.** It multiplies your speed and empties your tank
   at a second a second. Let go and the tank fills again.
 
-The race ends when everybody who can finish has, or after thirty seconds.
+The race ends when three are home, everybody who can finish has, or after thirty seconds.
 Finishers place by their time; everybody else by how far they got.
 
 **WASD to move, hold left click to boost, 1-5 at the table.**

@@ -243,6 +243,33 @@ describe('the end', () => {
     expect(g.round).toBe(0)
   })
 
+  it('comes early once only one is left, who has won', () => {
+    const g = game(['a', 'b', 'c'])
+    const safe = decideSafe(SEED, 0)
+    const unsafe = [0, 1, 2].find((path) => !safe.includes(path))!
+    choose(g, 'a', safe[0])
+    choose(g, 'b', unsafe)
+    choose(g, 'c', unsafe)
+    toReveal(g)
+    throughReveal(g)
+    expect(g.phase).toBe('over')
+    expect(g.round).toBe(0)
+    expect(placings(g)[0]).toEqual({ player: player(g, 'a'), place: 1 })
+  })
+
+  it('goes on while two are left', () => {
+    const g = game(['a', 'b', 'c'])
+    const safe = decideSafe(SEED, 0)
+    const unsafe = [0, 1, 2].find((path) => !safe.includes(path))!
+    choose(g, 'a', safe[0])
+    choose(g, 'b', safe[1])
+    choose(g, 'c', unsafe)
+    toReveal(g)
+    throughReveal(g)
+    expect(g.phase).toBe('choosing')
+    expect(g.round).toBe(1)
+  })
+
   it('ranks survivors first, then by how late people fell, sharing places', () => {
     const g = game(['won', 'r4', 'r4b', 'r1'])
     g.phase = 'over'

@@ -294,7 +294,8 @@ function Over({
   const order = placings(race)
   const mine = order.find((entry) => entry.racer.id === me)
   const sentence = sentenceFor(race.seed)
-  const headline = !mine ? 'Race over' : mine.racer.finishAt === null ? 'Out of time' : mine.place === 1 ? 'Triathlon champion!' : `Finished ${ordinal(mine.place)}`
+  const podiumFull = race.racers.filter((r) => r.finishAt !== null).length >= COURSE.podium
+  const headline = !mine ? 'Race over' : mine.racer.finishAt === null ? (podiumFull ? 'Beaten to the podium' : 'Out of time') : mine.place === 1 ? 'Triathlon champion!' : `Finished ${ordinal(mine.place)}`
   const legTime = (from: number | null, to: number | null) => (from === null || to === null ? '-' : `${(to - from).toFixed(1)}`)
   return (
     <div style={overBackdrop}>

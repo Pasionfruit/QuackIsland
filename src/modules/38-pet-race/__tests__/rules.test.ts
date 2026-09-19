@@ -9,6 +9,7 @@ import { PETS, petById, type PetId } from '../internal/pets'
 import {
   RACE,
   allChosen,
+  allHome,
   canBoost,
   choose,
   createGame,
@@ -370,6 +371,8 @@ describe('the stand-ins, and with them the course itself', () => {
     for (let t = 0; t < 60 && !g.over; t += 1 / 60) {
       botDrive(g)
       stepGame(g, 1 / 60)
+      // A race is over once three are home; this one runs on for the whole field.
+      if (g.over && !allHome(g) && g.elapsed - g.phaseAt < RACE.length) g.over = false
     }
     return g
   }

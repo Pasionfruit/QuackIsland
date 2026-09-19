@@ -15,7 +15,8 @@
  * animal turns towards it at its own grip, so the rabbit is quickest in a line
  * and hopeless at a gate, and the cat is the other way round.
  *
- * The race ends when everybody has finished or the thirty seconds are up.
+ * The race ends when three have finished, everybody has, or the thirty seconds
+ * are up.
  * Finishers place by their time; everybody else by how far they got.
  *
  * Everything here is pure.
@@ -30,6 +31,8 @@ export const RACE = {
   countdown: 3,
   /** Seconds of racing, after which whoever is still out there is placed where they stand. */
   length: 30,
+  /** The race is over as soon as this many are home. */
+  podium: 3,
   /**
    * How much tank you have to have got back before the button works again,
    * once you have run yourself dry.
@@ -315,7 +318,8 @@ export function advance(game: Game): void {
     if (since >= RACE.countdown) Object.assign(game, { phase: 'racing', phaseAt: game.elapsed })
     return
   }
-  if (since >= RACE.length || allHome(game)) game.over = true
+  const home = game.racers.filter((racer) => racer.finishedAt !== null).length
+  if (since >= RACE.length || allHome(game) || home >= RACE.podium) game.over = true
 }
 
 /** One step: the clock and the bodies, then the phases. For the host, or alone. */
