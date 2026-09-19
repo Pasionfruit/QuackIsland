@@ -166,6 +166,12 @@ export class Page {
 
 /** Each game's screen component, and an element inside it to start the search from. */
 export const GAMES = {
+  'one-piece': {
+    title: 'One Piece?!',
+    screen: 'OnePieceScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
   'whats-your-rpm': {
     title: "What's Your RPM?",
     screen: 'RpmScreen',

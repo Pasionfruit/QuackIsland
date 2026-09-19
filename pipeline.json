@@ -129,7 +129,8 @@
         "37-wheres-midnight",
         "38-pet-race",
         "39-ill-just-wait",
-        "40-whats-your-rpm"
+        "40-whats-your-rpm",
+        "41-one-piece"
       ]
     }
   ],
@@ -179,7 +180,8 @@
         "37-wheres-midnight",
         "38-pet-race",
         "39-ill-just-wait",
-        "40-whats-your-rpm"
+        "40-whats-your-rpm",
+        "41-one-piece"
       ],
       "generation": 1,
       "contract": {
@@ -889,7 +891,8 @@
         "37-wheres-midnight",
         "38-pet-race",
         "39-ill-just-wait",
-        "40-whats-your-rpm"
+        "40-whats-your-rpm",
+        "41-one-piece"
       ],
       "generation": 1,
       "contract": {
@@ -1407,7 +1410,8 @@
         "37-wheres-midnight",
         "38-pet-race",
         "39-ill-just-wait",
-        "40-whats-your-rpm"
+        "40-whats-your-rpm",
+        "41-one-piece"
       ],
       "generation": 1,
       "contract": {
@@ -3536,6 +3540,84 @@
         "No models: players are the island capsule, the phones are primitives and the feed is drawn on the page",
         "No moving camera",
         "No sound of its own"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "41-one-piece",
+      "phase": "P6",
+      "title": "Minigame 25, One Piece?!: a six-piece square puzzle of your own face, scattered and turned the wrong way - drag, rotate and place each piece to complete it; players place in the order they solve their puzzle",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "41.1",
+          "title": "The table: six pieces of a two-by-three square, dealt from the seed either side of the frame, every one turned the wrong way",
+          "status": "done"
+        },
+        {
+          "id": "41.2",
+          "title": "The pieces: drag, select, turn a quarter at a time; near its place and the right way up it clicks in and stays",
+          "status": "done"
+        },
+        {
+          "id": "41.3",
+          "title": "The race: pieces in only ever gain, the last one in is a finish; over at three finished, everybody finished, or ninety seconds; placed by finish order then pieces in",
+          "status": "done"
+        },
+        {
+          "id": "41.4",
+          "title": "The screen: your face as the picture, the table scaled to fit, everybody's puzzles filling in down the side",
+          "status": "done"
+        },
+        {
+          "id": "41.5",
+          "title": "One game shared across the lobby, everybody's pieces-in on the wire, your own table local, stand-ins only when alone",
+          "status": "done"
+        },
+        {
+          "id": "41.6",
+          "title": "Contract, tests, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "41.7",
+          "title": "The assets: art and sound in place of the flat pill",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-19T03:18:51.514Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No 3D: the table, the pieces and the faces are DOM and SVG",
+        "No photo or camera: your face is the island pill in your colour, with your name",
+        "No sound of its own beyond a click as a piece goes in",
+        "Only the pieces-in go on the wire, never where anybody's loose pieces are lying"
       ],
       "budgets": {
         "drawCallsMax": 0,

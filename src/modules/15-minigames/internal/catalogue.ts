@@ -547,17 +547,23 @@ const ENTRIES = [
     done: { environment: true, controls: true, assets: false },
   },
   {
-    id: 'short-song-rhythm',
+    id: 'one-piece',
     number: 25,
-    title: 'Short Song Rhythm',
+    title: 'One Piece?!',
     kind: 'free-for-all',
     description: [
-      'A short song, ten rounds of rhythm, and three things you can hit: left click, right click, or both at once.',
-      'How close you are to the beat is your score.',
+      'Each player receives a 6-piece square puzzle featuring their own face. Players must drag, rotate, and place each piece correctly to complete their square.',
+      'Players are ranked by the order in which they successfully solve their puzzle, with the first player to complete it taking first place.',
     ],
-    controls: [],
+    controls: [
+      { input: 'Mouse Drag', does: 'Move puzzle pieces' },
+      { input: 'Left Click', does: 'Select piece' },
+      { input: 'Right Click / Scroll', does: 'Rotate piece' },
+    ],
     reserved: false,
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `41-one-piece`. The assets stage is still to do - the faces
+    // are the island's pill drawn flat, and there is no sound of its own.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'make-some-noise',
