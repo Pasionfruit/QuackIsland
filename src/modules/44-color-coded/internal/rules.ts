@@ -12,13 +12,21 @@
  * spot: a body has a velocity, and what the keys do is pull it towards where you
  * are pointing, at a rate - quick when walking, slow when running, very slow when
  * you have let go and are only sliding. **Hold run and you go nearly twice as fast
- * and turn about half as well.**
+ * and turn about half as well.** It is very slippery: a walk takes a dozen metres
+ * to slide to a stop.
  *
- * **There is no shove. Bodies collide instead**, and a collision keeps its speed:
- * what one body had going towards another, mostly, the other now has. So a runner
- * into somebody standing still sends them off and stops nearly dead, and two
- * running at each other bounce. A hard enough hit is a knock, and if the one
- * knocked falls in the next couple of seconds it is credited to whoever knocked.
+ * **You can push** (`push`): a shove at whoever is in front and close, which sends
+ * them sliding away from you with a jolt of speed - and a little the other way for you.
+ * **Bodies collide as well**, and a collision keeps its speed: what one body had
+ * going towards another, mostly, the other now has. So a runner into somebody
+ * standing still sends them off and stops nearly dead, and two running at each
+ * other bounce. A push or a hard enough hit is a knock, and if the one knocked falls
+ * in the next couple of seconds it is credited to whoever knocked.
+ *
+ * **The last fall is shown**: when the last of the others goes, the game is decided
+ * - the one left is frozen where they stand, and cannot fall - but it is not over for
+ * `ROUND.finish` seconds, while the fall is watched from above, and then the
+ * results come.
  *
  * Everything here is pure.
  */
@@ -38,12 +46,12 @@ export const BODY = {
  * takes to get most of the way there.
  */
 export const SLIDE = {
-  /** Holding a direction, walking: a third of a second to come round to it. */
-  grip: 3.2,
+  /** Holding a direction, walking: nearly half a second to come round to it. */
+  grip: 2.2,
   /** Holding a direction, running: about twice that, and a much wider turn. */
-  runGrip: 1.6,
-  /** Holding nothing: it is a long slide to a stop - from a walk, most of six metres. */
-  drift: 0.7,
+  runGrip: 1.1,
+  /** Holding nothing: a very long slide to a stop - from a walk, over ten metres. */
+  drift: 0.4,
   /** Nothing goes faster than this, whatever hit it: a runner into a runner is quick enough already. */
   cap: 12,
   /** Falling, there is no ice under you: what sideways speed you had wears off at this rate, so you tumble away below rather than sailing off across the sky. */
@@ -59,8 +67,26 @@ export const BUMP = {
   credit: 2.5,
 } as const
 
+/** The push: a shove at whoever is in front of you and close. */
+export const PUSH = {
+  /** How far from the pusher's middle a body can be and be pushed, metres. */
+  reach: 1.9,
+  /** How squarely in front: the cosine of the widest angle off where the pusher faces, 0.5 being sixty degrees. */
+  cone: 0.5,
+  /** The speed it adds to whoever is pushed, away from the pusher, metres a second. */
+  impulse: 6.5,
+  /** The share of it the pusher goes back with. */
+  recoil: 0.2,
+  /** Seconds before it can be done again. */
+  cooldown: 1,
+  /** How long the shove is shown for, seconds. */
+  show: 0.3,
+} as const
+
 export const ROUND = {
   countdown: 0,
+  /** After the last of the others falls, how long the fall is watched before the game is over, seconds. */
+  finish: 2.2,
   /** Sixteen rounds, then whoever is standing shares first. */
   limit: ROUND_LENGTH * 16,
   /** How fast you fall, metres a second a second, and how far before you are gone from sight. */
@@ -95,6 +121,8 @@ export interface Player {
   /** Who last hit them hard, and when, in `elapsed`. */
   knockedBy: number | null
   knockedAt: number
+  /** When they last pushed, in `elapsed`. */
+  pushedAt: number
   left: boolean
   leftAt: number | null
 }
@@ -156,6 +184,7 @@ export function createGame(seed: number, entrants: readonly Entrant[], id = 1): 
         kills: 0,
         knockedBy: null,
         knockedAt: -Infinity,
+        pushedAt: -Infinity,
         left: false,
         leftAt: null,
       }
@@ -222,6 +251,54 @@ function limit(vx: number, vz: number): { vx: number; vz: number } {
 /** How fast a player is going, metres a second. */
 export function speedOf(p: Pick<Player, 'vx' | 'vz'>): number {
   return Math.hypot(p.vx, p.vz)
+}
+
+/** When the last player fell, on the game's clock, or null while nobody has. */
+export function lastFall(game: Game): number | null {
+  let last: number | null = null
+  for (const p of game.players) if (p.out !== null && (last === null || p.out > last)) last = p.out
+  return last
+}
+
+/**
+ * Whether the game is decided but still being watched: somebody has fallen and one
+ * or nobody is left standing. The one left cannot fall now, and stands still.
+ */
+export function decided(game: Game): boolean {
+  return game.players.some((p) => p.out !== null) && game.players.filter(isStanding).length <= 1
+}
+
+/**
+ * A push from a player: everybody standing in front of them and close is sent
+ * sliding away, and credited to them if they fall soon. It goes even if nobody is
+ * there - and then has to wait for its cooldown. False if it could not: out, not
+ * yet started, over, or too soon after the last.
+ */
+export function push(game: Game, player: number): boolean {
+  const p = game.players[player]
+  if (!canAct(game, p) || game.elapsed - p.pushedAt < PUSH.cooldown) return false
+  p.pushedAt = game.elapsed
+  const f = facing(p.yaw)
+  let hit = false
+  game.players.forEach((q, i) => {
+    if (i === player || !isStanding(q)) return
+    const dx = q.x - p.x
+    const dz = q.z - p.z
+    const d = Math.hypot(dx, dz)
+    if (d < 1e-6 || d > PUSH.reach || (dx * f.x + dz * f.z) / d < PUSH.cone) return
+    const v = limit(q.vx + (dx / d) * PUSH.impulse, q.vz + (dz / d) * PUSH.impulse)
+    q.vx = v.vx
+    q.vz = v.vz
+    q.knockedBy = player
+    q.knockedAt = game.elapsed
+    hit = true
+  })
+  if (hit) {
+    const v = limit(p.vx - f.x * PUSH.impulse * PUSH.recoil, p.vz - f.z * PUSH.impulse * PUSH.recoil)
+    p.vx = v.vx
+    p.vz = v.vz
+  }
+  return true
 }
 
 /** A player starts to fall: out, from this moment. Credited to whoever knocked them, if it was just now. */
@@ -296,6 +373,8 @@ export function move(game: Game, dt: number): void {
 
 function advance(game: Game, step: number): void {
   const running = clock(game) >= 0
+  // Decided, and being watched: the one left stands where they are.
+  const frozen = decided(game)
   for (const p of game.players) {
     if (p.left) continue
     if (p.out !== null) {
@@ -310,6 +389,11 @@ function advance(game: Game, step: number): void {
       continue
     }
     if (!running) continue
+    if (frozen) {
+      p.vx = 0
+      p.vz = 0
+      continue
+    }
     const v = slide(p.vx, p.vz, p.mx, p.mz, p.run, step)
     p.vx = v.vx
     p.vz = v.vz
@@ -317,7 +401,7 @@ function advance(game: Game, step: number): void {
     p.z += p.vz * step
   }
   collide(game)
-  if (!running) return
+  if (!running || frozen) return
   game.players.forEach((p, i) => {
     if (isStanding(p) && !supported(game, p.x, p.z)) fall(game, i)
   })
@@ -329,11 +413,17 @@ export function tick(game: Game, dt: number): void {
   game.elapsed += Math.min(Math.max(dt, 0), 0.25)
 }
 
-/** Whether it is over: one standing or nobody, or time is up. Only the host decides. */
+/**
+ * Whether it is over: time is up, or one is standing or nobody and the last fall
+ * has been watched for `ROUND.finish` seconds. Only the host decides.
+ */
 export function judgeEnd(game: Game): boolean {
   if (game.over) return true
-  const standing = game.players.filter(isStanding).length
-  if (standing <= 1 || clock(game) >= ROUND.limit) game.over = true
+  if (clock(game) >= ROUND.limit) game.over = true
+  else if (game.players.filter(isStanding).length <= 1) {
+    const last = lastFall(game)
+    if (last === null || clock(game) >= last + ROUND.finish) game.over = true
+  }
   return game.over
 }
 

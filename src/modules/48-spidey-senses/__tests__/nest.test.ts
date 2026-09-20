@@ -37,7 +37,7 @@ describe('the schedule', () => {
         moments.add(Math.round(into * 10))
       }
     }
-    expect(moments.size).toBeGreaterThan(50)
+    expect(moments.size).toBeGreaterThan(25)
   })
 
   it('gives less time to react round by round, down to a floor', () => {

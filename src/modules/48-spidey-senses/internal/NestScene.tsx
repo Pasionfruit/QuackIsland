@@ -113,34 +113,6 @@ function Rig({ live }: { live: RefObject<Game> }) {
   return null
 }
 
-/**
- * The railing round the trapdoor: iron posts and two ropes at `CELLAR.rail`, so it
- * is plain that nobody gets to the trapdoor - the nearest anybody can stand is
- * against it.
- */
-function Railing() {
-  const posts = 20
-  return (
-    <group>
-      {Array.from({ length: posts }, (_, k) => {
-        const a = (k / posts) * Math.PI * 2
-        return (
-          <mesh key={k} position={[Math.sin(a) * CELLAR.rail, 0.5, Math.cos(a) * CELLAR.rail]} castShadow>
-            <cylinderGeometry args={[0.06, 0.07, 1, 6]} />
-            <meshStandardMaterial color={PALETTE.iron} roughness={0.7} />
-          </mesh>
-        )
-      })}
-      {[0.9, 0.5].map((y) => (
-        <mesh key={y} position={[0, y, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[CELLAR.rail, 0.03, 6, 96]} />
-          <meshStandardMaterial color="#b9a27a" roughness={1} />
-        </mesh>
-      ))}
-    </group>
-  )
-}
-
 /** The cellar: boards, stone walls, chalk rings, cobwebs, and the lantern swinging over the trapdoor. */
 function Cellar() {
   const half = CELLAR.half
@@ -172,7 +144,6 @@ function Cellar() {
           <meshBasicMaterial color={PALETTE.chalk} transparent opacity={r === CELLAR.far ? 0.5 : 0.22} />
         </mesh>
       ))}
-      <Railing />
       {/* Cobwebs across the corners. */}
       {[0, 1, 2, 3].map((k) => (
         <mesh key={`w${k}`} position={[Math.sign(Math.sin((k * Math.PI) / 2 + Math.PI / 4)) * (half - 1.3), 4.6, Math.sign(Math.cos((k * Math.PI) / 2 + Math.PI / 4)) * (half - 1.3)]} rotation={[0, (k * Math.PI) / 2 + Math.PI / 4, 0]}>

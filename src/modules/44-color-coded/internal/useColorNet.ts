@@ -19,7 +19,7 @@
 import { useEffect, useRef } from 'react'
 import { getNet, getPeers, sendToRoom, subscribeRoom } from '../../09-net'
 import { botSteer } from './ai'
-import { clock, isStanding, judgeEnd, leave, move, slide, steer, tick, type Game } from './rules'
+import { clock, decided, isStanding, judgeEnd, leave, move, push, slide, steer, tick, type Game } from './rules'
 import { myId } from './setup'
 import { applySnapshot, decodeIntent, decodeSnapshot, encodeIntent, encodeSnapshot, type Intent, type Snapshot } from './wire'
 
@@ -38,6 +38,8 @@ export interface Hands {
   yaw: number
   /** Whether run is held. */
   run: boolean
+  /** How many pushes have been asked for, ever: the count goes up by one for each. */
+  push: number
 }
 
 export interface Advanced {
@@ -55,6 +57,9 @@ export function useColorNet(): ColorNet {
   const sentAt = useRef(0)
   const toldAt = useRef(0)
   const told = useRef('')
+  /** The host's: how many pushes it has asked for and carried out, and how many each guest has. */
+  const hostPushed = useRef(0)
+  const pushed = useRef(new Map<string, number>())
   /** A guest's own player: where the host last had it, and where it is drawn. */
   const own = useRef<{ host: { x: number; z: number } | null; drawn: { x: number; z: number } | null }>({ host: null, drawn: null })
 
@@ -79,14 +84,28 @@ export function useColorNet(): ColorNet {
       if (game.players.length === 0) return { changed: false }
       tick(game, dt)
       const me = game.players.findIndex((p) => p.mine)
-      if (me >= 0 && hands && clock(game) >= 0) steer(game, me, hands.mx, hands.mz, hands.yaw, hands.run)
+      if (me >= 0 && hands && clock(game) >= 0) {
+        steer(game, me, hands.mx, hands.mz, hands.yaw, hands.run)
+        if (hands.push > hostPushed.current) {
+          hostPushed.current = hands.push
+          push(game, me)
+        }
+      }
       botSteer(game)
       game.players.forEach((p, index) => {
         if (p.bot || p.mine) return
         const intent = intents.current.get(p.id)
         // Not heard from lately: hands off, and it slides to a stop.
         if (!intent || intent.game !== game.id || now - intent.at > QUIET_MS) steer(game, index, 0, 0, p.yaw)
-        else steer(game, index, intent.mx, intent.mz, intent.yaw, intent.run)
+        else {
+          steer(game, index, intent.mx, intent.mz, intent.yaw, intent.run)
+          // A push is a count that went up: the first count heard is only where it starts from.
+          const seen = pushed.current.get(p.id)
+          if (seen === undefined || intent.push > seen) {
+            pushed.current.set(p.id, intent.push)
+            if (seen !== undefined) push(game, index)
+          }
+        }
       })
       move(game, dt)
       if (net.status === 'joined') {
@@ -125,7 +144,7 @@ export function useColorNet(): ColorNet {
     const me = game.players.findIndex((p) => p.mine)
     const mine = game.players[me]
     if (mine && hands) {
-      if (isStanding(mine) && !game.over) {
+      if (isStanding(mine) && !game.over && !decided(game)) {
         mine.yaw = hands.yaw
         mine.mx = hands.mx
         mine.mz = hands.mz
@@ -134,7 +153,7 @@ export function useColorNet(): ColorNet {
       // Slide at once on our own screen, and ease to where the host has us. Its
       // speed for us comes with every snapshot, so a collision it saw is felt here.
       const host = own.current.host
-      if (host && isStanding(mine) && !game.over) {
+      if (host && isStanding(mine) && !game.over && !decided(game)) {
         const step = Math.min(Math.max(dt, 0), 0.1)
         const drawn = own.current.drawn ?? { ...host }
         if (clock(game) >= 0) {
@@ -153,10 +172,10 @@ export function useColorNet(): ColorNet {
         mine.z = drawn.z
       } else own.current.drawn = null
 
-      const intent = { game: game.id, mx: hands.mx, mz: hands.mz, yaw: hands.yaw, run: hands.run }
+      const intent = { game: game.id, mx: hands.mx, mz: hands.mz, yaw: hands.yaw, run: hands.run, push: hands.push }
       // Walking and running go at once. Turning changes every frame the mouse moves, so it waits
       // its turn - the relay drops anybody sending more than sixty a second.
-      const said = `${intent.mx.toFixed(2)}:${intent.mz.toFixed(2)}:${intent.run ? 1 : 0}`
+      const said = `${intent.mx.toFixed(2)}:${intent.mz.toFixed(2)}:${intent.run ? 1 : 0}:${intent.push}`
       const turned = now - toldAt.current >= TURN_MS
       if (!game.over && (said !== told.current || turned)) {
         told.current = said

@@ -14,12 +14,12 @@
  */
 import { HALF } from './arena'
 import { MAX_PLAYERS } from './setup'
-import { ROUND, SLIDE, type Game, type Player } from './rules'
+import { PUSH, ROUND, SLIDE, type Game, type Player } from './rules'
 
 export const SNAPSHOT_TAG = 'cc'
 export const INTENT_TAG = 'cc-in'
 
-/** `[id, x cm, z cm, y cm, yaw mrad, out cs or -1, by or -1, kills, vx dm/s, vz dm/s, flags: 1 left, 2 running]`. */
+/** `[id, x cm, z cm, y cm, yaw mrad, out cs or -1, by or -1, kills, vx dm/s, vz dm/s, flags: 1 left, 2 running, 4 pushing]`. */
 export type WirePlayer = [string, number, number, number, number, number, number, number, number, number, number]
 
 export interface Snapshot {
@@ -59,7 +59,7 @@ export function encodeSnapshot(game: Game): Record<string, unknown> {
         p.kills,
         dms(p.vx),
         dms(p.vz),
-        (p.left ? 1 : 0) | (p.run ? 2 : 0),
+        (p.left ? 1 : 0) | (p.run ? 2 : 0) | (game.elapsed - p.pushedAt < PUSH.show ? 4 : 0),
       ],
     ),
   }
@@ -81,7 +81,7 @@ export function decodeSnapshot(message: Record<string, unknown>): Snapshot | nul
     if (!(out === -1 || (isCount(out) && out <= (ROUND.limit + 1) * 100))) return null
     if (!isInt(by) || by < -1 || by >= count || !isCount(kills) || kills >= count) return null
     if (!isInt(vx) || Math.abs(vx) > FAST || !isInt(vz) || Math.abs(vz) > FAST) return null
-    if (!isInt(flags) || flags < 0 || flags > 3) return null
+    if (!isInt(flags) || flags < 0 || flags > 7) return null
     players.push([id, x, z, y, yaw, out, by, kills, vx, vz, flags])
   }
   return { id: message.g as number, seed: message.s as number, elapsed: message.e, over: message.o === 1, players }
@@ -121,6 +121,7 @@ export function applySnapshot(game: Game, snap: Snapshot, me: string): Game {
       kills: 0,
       knockedBy: null,
       knockedAt: -Infinity,
+      pushedAt: -Infinity,
       left: false,
       leftAt: null,
     }
@@ -137,6 +138,10 @@ export function applySnapshot(game: Game, snap: Snapshot, me: string): Game {
       run: (flags & 2) !== 0,
       left: (flags & 1) !== 0,
     })
+    // Somebody shoving, as the host has it: shown from when it is first heard.
+    if ((flags & 4) !== 0) {
+      if (!(game.elapsed - player.pushedAt < PUSH.show)) player.pushedAt = game.elapsed
+    } else if (game.elapsed - player.pushedAt < PUSH.show) player.pushedAt = -Infinity
     // A guest's own facing is its own mouse's; everybody else's is the host's.
     if (!player.mine || !known) player.yaw = yaw / 1000
     return player
@@ -152,18 +157,21 @@ export interface Intent {
   yaw: number
   /** Whether it is holding run. */
   run: boolean
+  /** How many pushes it has asked for, ever: a count, so a lost message costs nothing and a repeated one does no harm. */
+  push: number
 }
 
 const fixed = (v: number) => Math.round(v * 1000) / 1000
 
 export function encodeIntent(i: Intent): Record<string, unknown> {
-  return { t: INTENT_TAG, g: i.game, x: fixed(i.mx), z: fixed(i.mz), y: fixed(i.yaw), r: i.run ? 1 : 0 }
+  return { t: INTENT_TAG, g: i.game, x: fixed(i.mx), z: fixed(i.mz), y: fixed(i.yaw), r: i.run ? 1 : 0, p: i.push }
 }
 
 export function decodeIntent(message: Record<string, unknown>): Intent | null {
   if (message.t !== INTENT_TAG) return null
   if (!isCount(message.g) || !isNumber(message.x) || !isNumber(message.z) || !isNumber(message.y)) return null
   if (message.r !== 0 && message.r !== 1) return null
+  if (!isCount(message.p)) return null
   if (Math.abs(message.x) > 1.01 || Math.abs(message.z) > 1.01 || Math.abs(message.y) > 4) return null
-  return { game: message.g as number, mx: message.x, mz: message.z, yaw: message.y, run: message.r === 1 }
+  return { game: message.g as number, mx: message.x, mz: message.z, yaw: message.y, run: message.r === 1, push: message.p as number }
 }

@@ -13,15 +13,16 @@
  * sliding through; and if the way ahead, where it would slide to, is nothing, it
  * asks for the opposite of the speed it has and stops.
  *
- * There is no shove, so **it charges**: somebody close by, with a way down behind
- * them, may be run into - more likely once the colour is up, and by a rougher
- * stand-in. A charge is a run at them for a moment, which is all a collision needs.
+ * **It charges**: somebody close by, with a way down behind them, may be run at -
+ * more likely once the colour is up, and by a rougher stand-in. A charge is a run at
+ * them for a moment, which is all a collision needs, and **once it is up against
+ * them it pushes** as well, now and then.
  *
  * Its own randomness comes from the seed. Only ever runs on the host.
  */
 import { createRng, hashSeed } from '../../00-core'
 import { GRID, HALF, dealFor, panelAt, panelCentre, solid, when } from './arena'
-import { BODY, canAct, clock, isStanding, speedOf, steer, wrapAngle, yawTowards, type Game, type Player } from './rules'
+import { BODY, PUSH, canAct, clock, isStanding, push, speedOf, steer, wrapAngle, yawTowards, type Game, type Player } from './rules'
 
 export const BOT = {
   /** Seconds to take in the colour, quickest and slowest. */
@@ -47,6 +48,8 @@ export const BOT = {
   chargeFor: 0.7,
   /** Once the colour is up, how close to its panel a stand-in has to be before it will spare a moment to charge, metres. */
   spare: 2,
+  /** The chance, each step it is up against the one it is charging, that it pushes. */
+  shove: 0.03,
   /** How far ahead, in seconds of the speed it has, it looks for nothing under it. */
   lookahead: 0.5,
 } as const
@@ -205,5 +208,10 @@ export function botSteer(game: Game): void {
       mz = -bot.vz / BODY.walk
     }
     steer(game, index, mx, mz, wrapAngle(yaw), run)
+    // Up against the one it is charging: a push, now and then.
+    if (mind.charging) {
+      const rival = game.players[mind.charging.index]
+      if (Math.hypot(rival.x - bot.x, rival.z - bot.z) < PUSH.reach - 0.3 && mind.random() < BOT.shove) push(game, index)
+    }
   })
 }

@@ -22,10 +22,10 @@
  */
 import { useFrame } from '@react-three/fiber'
 import { useMemo, useReducer, useRef, type RefObject } from 'react'
-import { Color, DoubleSide, Group, InstancedMesh, Matrix4, Mesh, Vector3 } from 'three'
+import { Color, DoubleSide, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, Vector3 } from 'three'
 import { createAvatar } from '../../02-player'
 import { GRID, HALF, PANEL_COLOURS, dealFor, panelCentre, panelColour, panelLift, when, wheelAngle } from './arena'
-import { COLOURS, ROUND, clock, isStanding, type Game } from './rules'
+import { COLOURS, PUSH, ROUND, clock, decided, isStanding, type Game } from './rules'
 
 export const PALETTE = {
   sky: '#8fd0f2',
@@ -59,7 +59,8 @@ function Rig({ live, look }: { live: RefObject<Game>; look: RefObject<LookRef> }
     const g = live.current
     const me = g.players.find((p) => p.mine)
     const { yaw, pitch } = look.current
-    const watching = !me || !isStanding(me)
+    // Out, or the game decided: back to look down on the arena, so the last fall is seen.
+    const watching = !me || !isStanding(me) || decided(g)
     const distance = watching ? HALF * 2.1 : CAMERA_BACK
     if (watching) target.set(0, 0, 0)
     else target.set(me.x, 1.2, me.z)
@@ -165,6 +166,8 @@ function Body({ index, live }: { index: number; live: RefObject<Game> }) {
   const group = useRef<Group>(null)
   const lean = useRef<Group>(null)
   const ring = useRef<Mesh>(null)
+  const wave = useRef<Mesh>(null)
+  const waveLook = useRef<MeshBasicMaterial>(null)
   const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
   const shown = useRef<{ x: number; z: number } | null>(null)
@@ -191,7 +194,16 @@ function Body({ index, live }: { index: number; live: RefObject<Game> }) {
     const k = p.out === null ? 0.05 : 0
     const cap = (v: number) => Math.max(-0.4, Math.min(0.4, v))
     const tumble = p.out !== null ? Math.min(3, (g.elapsed - p.out) * 5) : 0
-    lean.current.rotation.x = cap(forward * k) + tumble
+    // A shove: a lunge forward and a ring flying out ahead.
+    const since = g.elapsed - p.pushedAt
+    const shoving = p.out === null && since >= 0 && since < PUSH.show
+    const swing = shoving ? since / PUSH.show : 0
+    lean.current.rotation.x = cap(forward * k) + tumble + (shoving ? 0.5 * Math.sin(swing * Math.PI) : 0)
+    if (wave.current && waveLook.current) {
+      wave.current.visible = shoving
+      wave.current.scale.setScalar(0.6 + swing * 1.6)
+      waveLook.current.opacity = 0.85 * (1 - swing)
+    }
     lean.current.rotation.z = cap(-sideways * k)
     if (ring.current) ring.current.visible = p.mine && isStanding(p)
   })
@@ -200,6 +212,10 @@ function Body({ index, live }: { index: number; live: RefObject<Game> }) {
       <group ref={lean}>
         <primitive object={avatar} />
       </group>
+      <mesh ref={wave} position={[0, 0.9, 0.9]} visible={false}>
+        <ringGeometry args={[0.6, 0.75, 24]} />
+        <meshBasicMaterial ref={waveLook} color="#ffffff" transparent opacity={0.85} side={DoubleSide} depthWrite={false} />
+      </mesh>
       <mesh ref={ring} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} visible={false}>
         <ringGeometry args={[0.55, 0.7, 32]} />
         <meshBasicMaterial color="#ffffff" transparent opacity={0.85} side={DoubleSide} depthWrite={false} />

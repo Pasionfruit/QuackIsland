@@ -59,9 +59,9 @@ describe('a snapshot', () => {
     expect(broken((m) => ((m.p as unknown[][])[0][3] = 50))).toBe(null)
     expect(broken((m) => ((m.p as unknown[][])[0][6] = 7))).toBe(null)
     expect(broken((m) => ((m.p as unknown[][])[0].pop()))).toBe(null)
-    // Nothing goes faster than the speed limit, and the flags are the two that there are.
+    // Nothing goes faster than the speed limit, and the flags are the three that there are.
     expect(broken((m) => ((m.p as unknown[][])[0][8] = 5000))).toBe(null)
-    expect(broken((m) => ((m.p as unknown[][])[0][10] = 4))).toBe(null)
+    expect(broken((m) => ((m.p as unknown[][])[0][10] = 8))).toBe(null)
     expect(broken((m) => ((m.p as unknown[][])[0][9] = 0.5))).toBe(null)
   })
 
@@ -79,11 +79,14 @@ describe('a snapshot', () => {
 
 describe('what a guest sends', () => {
   it('goes there and back, and nonsense does not', () => {
-    const i = { game: 3, mx: 0.707, mz: -0.707, yaw: 1.25, run: true }
+    const i = { game: 3, mx: 0.707, mz: -0.707, yaw: 1.25, run: true, push: 2 }
     expect(decodeIntent(relay(encodeIntent(i)))).toEqual(i)
     expect(decodeIntent(relay(encodeIntent({ ...i, run: false })))).toEqual({ ...i, run: false })
     expect(decodeIntent({ ...relay(encodeIntent(i)), x: 3 })).toBe(null)
     expect(decodeIntent({ ...relay(encodeIntent(i)), r: 2 })).toBe(null)
     expect(decodeIntent({ ...relay(encodeIntent(i)), r: 'yes' })).toBe(null)
+    expect(decodeIntent({ ...relay(encodeIntent(i)), p: -1 })).toBe(null)
+    expect(decodeIntent({ ...relay(encodeIntent(i)), p: 1.5 })).toBe(null)
+    expect(decodeIntent({ ...relay(encodeIntent(i)), p: undefined })).toBe(null)
   })
 })

@@ -8,9 +8,9 @@
  *
  * **WASD to move, hold Shift to run, the mouse to turn the camera.** Walking is
  * relative to the camera, and you face the way it looks. The floor is ice, so what
- * the keys do is steer a slide. There is no shove: a click on the arena takes the
- * mouse (pointer lock) and does nothing else; escape gives it back. A browser that
- * will not lock gets drag-to-turn instead.
+ * the keys do is steer a slide. **Click, or Space or E, pushes** whoever is in front
+ * of you; the first click on the arena takes the mouse (pointer lock) and escape gives
+ * it back. A browser that will not lock gets drag-to-turn instead, and Space or E to push.
  */
 import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
@@ -51,6 +51,9 @@ const KEYS: Record<string, [number, number]> = {
 /** The keys that hold run, by `KeyboardEvent.code`. */
 const RUN_KEYS = ['ShiftLeft', 'ShiftRight']
 
+/** The keys that push, by `KeyboardEvent.code`. */
+const PUSH_KEYS = ['Space', 'KeyE']
+
 /** A change of speed in one frame, metres a second, that can only have been a collision: the keys cannot do it. */
 const BUMPED = 3
 
@@ -88,6 +91,10 @@ export function ColorScreen({ run }: { run: MinigameRun }) {
   const look = useRef<LookRef>({ yaw: 0, pitch: 0.55 })
   const lookFor = useRef<number | null>(null)
   const held = useRef(new Set<string>())
+  /** How many pushes have been asked for: it only goes up. */
+  const pushes = useRef(0)
+  /** Asks for a push: set once the keys are listened for, and used by the mouse. */
+  const pushKey = useRef<() => void>(() => {})
   const going = useRef<{ id: number; vx: number; vz: number } | null>(null)
   const board = useRef<HTMLDivElement>(null)
   const dragging = useRef(false)
@@ -118,7 +125,7 @@ export function ColorScreen({ run }: { run: MinigameRun }) {
       }
       const walk = walkFor(look.current.yaw, Math.sign(forward), Math.sign(right))
       const run = RUN_KEYS.some((code) => held.current.has(code))
-      const hands = { ...walk, yaw: look.current.yaw, run }
+      const hands = { ...walk, yaw: look.current.yaw, run, push: pushes.current }
       const result = wire.advance(current, dt, hands, paused.current)
       // A bump: your speed changed by more than the keys can change it in a frame.
       const after = current.players.find((p) => p.mine)
@@ -138,7 +145,18 @@ export function ColorScreen({ run }: { run: MinigameRun }) {
   // The keys, and the mouse while it is locked to the arena - or dragged, where it cannot be.
   useEffect(() => {
     const isLocked = () => !!board.current && document.pointerLockElement === board.current
+    /** A push, asked for: counted, and heard on your own screen at once. */
+    const asked = () => {
+      pushes.current += 1
+      playCue(CUES.bump, 0.35)
+    }
+    pushKey.current = asked
     const onKey = (e: KeyboardEvent, down: boolean) => {
+      if (PUSH_KEYS.includes(e.code)) {
+        e.preventDefault()
+        if (down && !e.repeat && !paused.current && !live.current.over) asked()
+        return
+      }
       if (!(e.code in KEYS) && !RUN_KEYS.includes(e.code)) return
       if (e.code.startsWith('Arrow')) e.preventDefault()
       if (down && !paused.current) held.current.add(e.code)
@@ -186,8 +204,11 @@ export function ColorScreen({ run }: { run: MinigameRun }) {
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0 || (paused.current && !counting.current) || live.current.over) return
     const el = e.currentTarget
-    // Nothing to do with the mouse once it is taken: there is no shove.
-    if (document.pointerLockElement === el) return
+    // Once the mouse is taken a click is a push.
+    if (document.pointerLockElement === el) {
+      pushKey.current()
+      return
+    }
     if (refused.current) {
       dragging.current = true
       return
@@ -224,7 +245,7 @@ export function ColorScreen({ run }: { run: MinigameRun }) {
     if (mine.out !== null) {
       const by = mine.by !== null ? game.players[mine.by] : null
       banner = t - mine.out < 3 ? { text: 'You fell!', sub: by ? `${nameOf(by.id)} knocked you off` : 'watching the rest', tone: 'out' } : { text: 'Out - watching the rest', tone: 'hint' }
-    } else if (!locked && !lockRefused) banner = { text: 'Click to take the camera', sub: 'hold Shift to run - it is ice', tone: 'hint' }
+    } else if (!locked && !lockRefused) banner = { text: 'Click to take the camera', sub: 'hold Shift to run · click or Space to push - it is ice', tone: 'hint' }
   }
 
   return (
@@ -299,7 +320,7 @@ export function ColorScreen({ run }: { run: MinigameRun }) {
         {ready && mine && isStanding(mine) && !game.over ? (
           <div style={speedo} data-speed={pace.toFixed(1)} data-running={mine.run ? 1 : 0}>
             <div style={{ ...speedoFill, width: `${Math.min(1, pace / BODY.run) * 100}%`, background: mine.run ? 'rgba(255,201,77,0.85)' : 'rgba(255,255,255,0.45)' }} />
-            <span style={speedoText}>{mine.run ? 'running' : 'hold Shift to run'}</span>
+            <span style={speedoText}>{mine.run ? 'running' : 'Shift to run · click or Space to push'}</span>
           </div>
         ) : null}
 
@@ -462,7 +483,7 @@ const speedo: React.CSSProperties = {
   left: '50%',
   bottom: 20,
   transform: 'translateX(-50%)',
-  width: 150,
+  width: 260,
   height: 18,
   borderRadius: 999,
   background: 'rgba(42,34,51,0.55)',

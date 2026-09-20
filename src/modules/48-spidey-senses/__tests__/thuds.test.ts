@@ -1,6 +1,6 @@
 /**
  * What the spider does and what you can do about it: it comes out on the second,
- * third or fourth thud; nobody can get to the trapdoor; and everybody it takes
+ * third or fourth thud, before anybody can get to the trapdoor; and everybody it takes
  * gets the jump scare, second place included.
  */
 import { describe, expect, it } from 'vitest'
@@ -59,34 +59,30 @@ describe('the thuds', () => {
 })
 
 describe('the trapdoor', () => {
-  it('cannot be reached: there is a railing round it, and a body cannot get through it', () => {
-    expect(CELLAR.rail).toBeGreaterThan(CELLAR.lid * Math.SQRT2)
-    // The nearest anybody can stand has their whole body outside the railing.
-    expect(CELLAR.near - BODY.radius).toBeGreaterThanOrEqual(CELLAR.rail - 1e-9)
-    expect(CELLAR.near).toBeGreaterThan(CELLAR.lid * Math.SQRT2 + BODY.radius)
-    // From every side, and edging round as well: creeping in for far longer than it takes to get there.
-    for (const [toward, around] of [
-      [1, 0],
-      [1, 1],
-      [1, -1],
-      [0, 1],
-    ] as const) {
-      const h = createGame(5, [{ id: 'a', mine: true }, { id: 'b' }], 2)
-      while (when(h.seed, h.elapsed).phase !== 'creep') stepGame(h, 0.25)
-      for (let t = 0; t < 5; t += 1 / 30) {
-        steer(h, 0, toward, around)
-        stepGame(h, 1 / 30)
-        expect(distance(h.players[0])).toBeGreaterThanOrEqual(CELLAR.near - 1e-9)
+  it('has the spider out before anybody can get to it: the quickest creeper is still short of the trapdoor when the latest spring, its window and its grace are over', () => {
+    const quickest = (CELLAR.far - CELLAR.near) / BODY.speed
+    // The longest a round can leave anybody creeping: the latest spring, the longest window (round one) and the grace.
+    const latest = TIMING.spring[1] + TIMING.window[0] + TIMING.grace
+    expect(latest).toBeLessThan(quickest)
+    for (let seed = 1; seed <= 300; seed++) {
+      for (const r of scheduleFor(seed)) {
+        expect(r.springs - r.creep).toBeLessThanOrEqual(TIMING.spring[1] + 1e-9)
+        expect(r.judged - r.creep, `${seed}:${r.round}`).toBeLessThan(quickest)
       }
     }
   })
 
-  it('is out of the stand-ins’ reach too', () => {
-    const g = createGame(9, Array.from({ length: 4 }, (_, i) => ({ id: `s${i}`, bot: true })), 3)
-    for (let i = 0; i < 30 * 60 && !g.over; i++) {
-      botSteer(g)
-      stepGame(g, 1 / 30)
-      for (const p of g.players) expect(distance(p)).toBeGreaterThanOrEqual(CELLAR.near - 1e-9)
+  it('is never reached in play: walking straight at it from the moment the creep starts, the round is judged first', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const g = createGame(seed, [{ id: 'a', mine: true }, { id: 'b' }], 3)
+      const r = scheduleFor(g.seed)[0]
+      while (when(g.seed, g.elapsed).phase !== 'creep') stepGame(g, 0.05)
+      // Straight in, never stopping, until the spider comes out.
+      while (g.elapsed < r.judged) {
+        steer(g, 0, 1, 0)
+        stepGame(g, 1 / 30)
+        expect(distance(g.players[0]), `${seed}`).toBeGreaterThan(CELLAR.near + 1e-6)
+      }
     }
   })
 })

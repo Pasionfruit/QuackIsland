@@ -3,7 +3,7 @@
  *
  * Minigame 34. Everybody on a grid of colour panels floating over nothing. A
  * giant wheel spins and lands on a colour: two seconds to get onto a panel of
- * it, shoving anybody in the way. Then every other panel drops, and whoever is
+ * it, pushing anybody in the way. Then every other panel drops, and whoever is
  * on one falls and is out. The panels rebuild, fewer of the colour each round.
  * Last one standing wins.
  *
@@ -49,6 +49,7 @@ export {
   BODY,
   COLOURS,
   BUMP,
+  PUSH,
   SLIDE,
   ROUND,
   canAct,
@@ -57,12 +58,15 @@ export {
   speedOf,
   createGame,
   edgeRoom,
+  decided,
   facing,
   isStanding,
   judgeEnd,
+  lastFall,
   leave,
   move,
   placings,
+  push,
   roundOf,
   steer,
   stepGame,

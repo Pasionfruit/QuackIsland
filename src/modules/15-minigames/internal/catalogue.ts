@@ -702,11 +702,12 @@ const ENTRIES = [
     title: 'Color Coded',
     kind: 'free-for-all',
     description: [
-      'Spawn on floating color panels as a giant wheel spins to select a color. Once the color is revealed, players have 2 seconds to get onto a panel matching the spinner’s color. The panels are ice: nobody stops when they let go or turns on the spot, and running is fast and hard to steer.',
-      'There is no shoving, but bodies collide, and a collision keeps its speed - run into somebody and they go, and you nearly stop. When the timer ends, every panel of a different color disappears, and anyone standing on one falls and is eliminated. The dropped panels rise back and become solid only once they are all the way up, but fewer matching panels remain as the rounds go on. Last player standing wins.',
+      'Spawn on floating color panels as a giant wheel spins to select a color. Once the color is revealed, players have 2 seconds to get onto a panel matching the spinner’s color. The panels are very slippery ice: nobody stops when they let go or turns on the spot, and running is fast and hard to steer.',
+      'You can push whoever is in front of you, and bodies collide too, and a collision keeps its speed - run into somebody and they go, and you nearly stop. When the timer ends, every panel of a different color disappears, and anyone standing on one falls and is eliminated. The dropped panels rise back and become solid only once they are all the way up, but fewer matching panels remain as the rounds go on. Last player standing wins - and you get to watch the last one fall.',
     ],
     controls: [
       { input: 'WASD', does: 'Move - it is ice, so you slide' },
+      { input: 'Left click / Space / E', does: 'Push whoever is in front of you' },
       { input: 'Shift', does: 'Run: nearly twice as fast, and much harder to turn or stop' },
       { input: 'Mouse', does: 'Camera' },
     ],
@@ -841,7 +842,7 @@ const ENTRIES = [
     kind: 'free-for-all',
     description: [
       "Play a game of chicken as everyone slowly inches toward a trapdoor hiding a spider's nest. Decide when to stop - a click stops you where you stand.",
-      'A railing keeps everybody away from the trapdoor. It thuds once or twice as a false alarm, then on the 2nd, 3rd or 4th thud it becomes dangerous: it rattles and red eyes glint under the lid. Click too late and a spider jumps out at you, and you are out. If nobody is too late, the spider takes whoever stopped furthest from the trapdoor - the chicken - with the same jump scare.',
+      'The trapdoor thuds once or twice as a false alarm, then on the 2nd, 3rd or 4th thud - always before anybody can reach it - it becomes dangerous: it rattles and red eyes glint under the lid. Click too late and a spider jumps out at you, and you are out. If nobody is too late, the spider takes whoever stopped furthest from the trapdoor - the chicken - with the same jump scare.',
       'Somebody goes every round. The last player remaining wins.',
     ],
     controls: [

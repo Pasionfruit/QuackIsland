@@ -270,6 +270,9 @@ describe('the end', () => {
       stand(g, k, w.x, w.z)
     }
     runTo(g, PHASES.spin + PHASES.reveal + 0.2)
+    // Decided, but the last fall is watched before it is over.
+    expect(judgeEnd(g)).toBe(false)
+    runTo(g, g.elapsed + ROUND.finish + 0.1)
     expect(judgeEnd(g)).toBe(true)
     expect(placings(g).map((e) => [e.index, e.place])).toEqual([
       [0, 1],

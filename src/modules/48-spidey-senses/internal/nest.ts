@@ -19,14 +19,8 @@ export const CELLAR = {
   half: 15,
   /** Half the trapdoor's side. */
   lid: 1,
-  /**
-   * The railing round the trapdoor: a rope on posts, this far from its middle.
-   * **Nobody can get to the trapdoor**: they cannot cross it, and `near` is where
-   * a body standing against it ends up.
-   */
-  rail: 2.3,
-  /** As close to the middle of the trapdoor as anybody can stand: a body's width outside the railing, against it. */
-  near: 2.7,
+  /** As close to the middle of the trapdoor as anybody can stand: at its edge. */
+  near: 1.6,
   /** Where everybody starts each round, and as far back as anybody can go. */
   far: 9,
 } as const
@@ -34,8 +28,12 @@ export const CELLAR = {
 export const TIMING = {
   /** Seconds at the start of a round, back on the ring, before anybody can move. */
   ready: 1.5,
-  /** The trapdoor springs this long into the creep, soonest and latest. */
-  spring: [5, 15] as readonly [number, number],
+  /**
+   * The trapdoor springs this long into the creep, soonest and latest. **The spider is out
+   * before anybody can reach the trapdoor**: the quickest creeper needs 9.9 s to get from the ring
+   * to its edge, and the latest spring, its window and the grace after it are over well before.
+   */
+  spring: [5, 8.5] as readonly [number, number],
   /**
    * How many thuds the trapdoor gives before the spider comes out, the one that
    * lets it out included: **the second, the third or the fourth**. Every thud but the

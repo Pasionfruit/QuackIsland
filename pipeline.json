@@ -1519,7 +1519,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T17:03:29.504Z"
+          "at": "2026-09-20T17:41:44.412Z"
         },
         "human": {
           "status": "pending"
@@ -3949,6 +3949,11 @@
           "status": "done"
         },
         {
+          "id": "44.10",
+          "title": "A push (click, Space or E), much slipperier ice, and the last fall watched for 2.2 s before the results",
+          "status": "done"
+        },
+        {
           "id": "44.9",
           "title": "The assets: models, sprites and sound in place of primitives",
           "status": "planned"
@@ -3957,7 +3962,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T04:52:08.224Z"
+          "at": "2026-09-20T17:40:29.404Z"
         },
         "human": {
           "status": "pending"
@@ -3968,7 +3973,7 @@
       "nonGoals": [
         "No models: panels and the wheel are flat colour, players are the island capsule",
         "No jumping",
-        "No shove: the floor is ice, running is the way to hit somebody, and bodies collide",
+        "No shove of the old kind: the push is a short-range shove with a cooldown, and bodies collide as well",
         "No music of its own yet; the round is silent under the cues"
       ],
       "budgets": {
@@ -4288,7 +4293,7 @@
         },
         {
           "id": "48.9",
-          "title": "A railing nobody can cross; the spider comes out on the 2nd, 3rd or 4th thud; every player it takes, second place included, gets the jump scare",
+          "title": "No fence: the spider comes out (5-8.5 s in, on the 2nd, 3rd or 4th thud) before anybody can reach the trapdoor; every player it takes, second place included, gets the jump scare",
           "status": "done"
         },
         {
@@ -4300,7 +4305,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T17:02:53.312Z"
+          "at": "2026-09-20T17:41:06.370Z"
         },
         "human": {
           "status": "pending"
@@ -4310,7 +4315,7 @@
       "freeze": null,
       "nonGoals": [
         "No models: the cellar, the trapdoor and the spider are primitives, players are the island capsule",
-        "No shoving; the railing keeps everybody off the trapdoor anyway",
+        "No shoving: nobody can be pushed towards the trapdoor",
         "No music of its own yet; the round is silent under the cues"
       ],
       "budgets": {

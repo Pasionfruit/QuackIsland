@@ -8,12 +8,17 @@ panel of it.** Then **every other panel drops, and anybody on one falls and is
 out.** The panels rise back, the colours are dealt again with **fewer of the
 wheel's colour every round**, and round it goes. Last one standing wins.
 
-**The panels are ice, and there is no shove.** Nobody stops when they let go or
-turns on the spot; **Shift runs**, which is nearly twice as fast and much harder to
-steer; and bodies collide, and a collision keeps its speed, so a runner into
-somebody standing still sends them off and stops nearly dead.
+**The panels are very slippery ice.** Nobody stops when they let go or turns on the
+spot; **Shift runs**, which is nearly twice as fast and much harder to steer.
+**You can push**: click, or Space or E, shoves whoever is in front of you and close,
+and they go sliding away. Bodies collide as well, and a collision keeps its speed,
+so a runner into somebody standing still sends them off and stops nearly dead.
 
-**WASD to move, Shift to run, the mouse to turn the camera.**
+**When the last of the others falls you see it**: the game is decided at that moment,
+but it is over 2.2 seconds later - the camera looks down on the whole arena while the
+last body tumbles away - and then the results come.
+
+**WASD to move, Shift to run, click or Space to push, the mouse to turn the camera.**
 
 It plugs into `15-minigames` with `registerMinigame('color-coded', ...)` and one
 import line in `src/App.tsx`. It took the free slot 34.
@@ -28,7 +33,7 @@ ring on the panels, facing the middle.
 
 | Phase | Seconds | What happens |
 | --- | --- | --- |
-| spin | 3 | The wheel spins, slowing, and stops on the colour. Walk and shove freely. |
+| spin | 3 | The wheel spins, slowing, and stops on the colour. Walk and push freely. |
 | reveal | 2 | The colour is up. Its panels bob; everything else flickers darker as time runs out. A panel is never drawn any colour but its own. |
 | drop | 1.5 | Every other panel drops away. Anybody not on the colour falls. |
 | rebuild | 2.5 | The dropped panels rise back in a straight line, **flush exactly as the round ends** - which is when they can be stood on again. |
@@ -57,17 +62,28 @@ pull it towards where you are pointing, at a rate (`slide`, `SLIDE`):
 
 | | Speed | Rate, per second | What it feels like |
 | --- | --- | --- | --- |
-| **Walking** | 4.5 m/s | 3.2 | A third of a second to come round to where you point. |
-| **Running** (Shift) | 8.5 m/s | 1.6 | Nearly twice as fast, and about twice as slow to turn or stop. A wide arc. |
-| **Holding nothing** | - | 0.7 | A long slide to a stop: from a walk, most of six metres. |
+| **Walking** | 4.5 m/s | 2.2 | Nearly half a second to come round to where you point. |
+| **Running** (Shift) | 8.5 m/s | 1.1 | Nearly twice as fast, and about twice as slow to turn or stop. A wide arc. |
+| **Holding nothing** | - | 0.4 | A very long slide to a stop: from a walk, over ten metres. |
 
-Steering *against* your speed brakes far quicker than letting go - about a fifth of
-a second to stop from a walk - which is the whole skill: the arena is 18 m across
+Steering *against* your speed brakes far quicker than letting go - about half a
+second to stop from a walk - which is the whole skill: the arena is 18 m across
 and a runner who lets go at the far side of a panel keeps going. Nothing goes
 faster than 12 m/s, however it got there. **Falling, there is no ice under you**:
 what sideways speed you had wears off, so you tumble away below.
 
-**There is no shove. Bodies collide** (`collide`). Two that touch are pushed apart,
+**The push** (`push`, `PUSH`) is Space, E or a click once you have taken the mouse. It
+shoves **every standing body in front of you** - within 1.9 m, and within sixty degrees
+of where you face - away from you, **adding 6.5 m/s** to their velocity (nothing goes
+past the 12 m/s limit), while you go back 20% of that. **It has a second's cooldown**
+(and a push at nobody uses it up), it does nothing before the start or once you are
+out, and it is a knock like a hard hit is: if they fall in the next 2.5 s it is
+credited to you. Everybody sees it - a ring flies out in front of the pusher and they
+lunge - because the host puts it on the wire as a flag; a guest's push is a counter
+that goes up, carried in its intent, so a lost message costs nothing and a repeated
+one does no harm, and the host acts on each rise once.
+
+**Bodies collide** (`collide`). Two that touch are pushed apart,
 half each, and **the speed they were closing at along the line between them is
 traded**: 90% of it (`BUMP.bounce`) comes back, so
 
@@ -83,6 +99,16 @@ one hit falls in the next 2.5 s (`BUMP.credit`) it is a knock-off - *knocked you
 off* in the HUD, and a point for them. A nudge is never credited. Bodies are
 resolved in index order in steps of a sixtieth of a second, so a runner never
 passes through anybody and it comes out the same everywhere.
+
+## The end
+
+**The game is decided when one or none is left standing - and it is over `ROUND.finish`
+(2.2 s) after the last fall** (`judgeEnd`, `decided`, `lastFall`). Until then the fallen keep
+falling and the clock keeps running, **the one left stands still and cannot fall**
+(so the win cannot be lost while the fall is watched, and nobody's placing changes),
+and the camera pulls back over the arena for everybody, including the one still up.
+The results come once it is over. With nobody having fallen - everybody else left - or
+at the time limit, it is over at once.
 
 - **Nothing under you, and you fall**: off the edge at any time, or on a panel
   that has dropped. A fall is out at that moment.
@@ -120,7 +146,8 @@ standing, the last to leave first.
   *Rebuilding…*.
 - **The HUD:** time left, the round, how many are standing, a pill per player
   (with how many they have knocked off), and **a speed bar at the bottom** - how
-  fast you are going, gold and labelled *running* while you hold Shift.
+  fast you are going, gold and labelled *running* while you hold Shift, and otherwise
+  reminding you that Shift runs and click or Space pushes.
 - **Falling:** you tumble away below, *You fell!* (and who knocked you off), and
   the camera pulls back over the whole arena.
 - **Sound:** the wheel whirring through the spin, a two-second sting under the
@@ -173,12 +200,13 @@ ends; somebody who leaves the lobby is out; a pause stops the round for everybod
   nothing, it asks for the opposite of the speed it has and stops.
 - **From the drop on it stays put** if the panel it is on is one of the ones left,
   rather than setting off for another across the gap.
-- **It charges.** There is no shove to give, so a stand-in with a rival close by
+- **It charges, and pushes.** A stand-in with a rival close by
   and a way down behind them may run at them for 0.7 s - more readily once the
   colour is up, **much more readily when there is a way down behind them**, and by
   a rougher stand-in - **but only once it is settled**: within 2 m of its panel,
   because a charge costs the time to make it, and a stand-in that spent the two
-  seconds charging would fall itself.
+  seconds charging would fall itself. **Once it is up against the one it is charging it
+  pushes now and then** (`BOT.shove`, three steps in a hundred, within the push's cooldown).
 
 All of it from the seed, so the same game plays out the same way. Tested.
 
@@ -234,8 +262,15 @@ testing, not because anybody else needs them.
 - **Bodies never overlap, and a collision comes out the same every time.** Tested.
 - **Off the colour at the drop, or off the edge, is a fall; a hard knock in the
   2.5 s before is credited.** Tested.
-- **The stand-ins are nearly all on the colour at the drop and not sliding past it,
-  run, play down to one, and play the same way every time.** Tested.
+- **The push shoves everybody in front and close and nobody behind or out of reach,
+  goes at the speed limit at most, has a cooldown, does nothing when out or before
+  the start, is credited when it knocks somebody off, and is on the wire for a moment.**
+  Tested.
+- **The game is decided when the last of the others falls and over 2.2 s later; the
+  fall goes on meanwhile; the one left cannot move or fall; the time limit and
+  nobody-fell endings are not held up.** Tested.
+- **The stand-ins are mostly on the colour at the drop and not sliding past it (some
+  are pushed off), run, play down to one, and play the same way every time.** Tested.
 - **A velocity on the wire is within the speed limit, and a message that is not is
   refused whole.** Tested.
 
@@ -244,7 +279,7 @@ testing, not because anybody else needs them.
 - No models: the panels and the wheel are flat colour, players are the island's
   capsule.
 - No jumping, and no catching the edge.
-- No shove, and no other action: the mouse buttons do nothing but take the camera.
+- No other action but the push; the mouse buttons take the camera, then push.
 - No stamina on running. Its cost is that it is hard to steer, which on ice is
   cost enough.
 - No music of its own: the round is silent under the cues until an entry goes into
@@ -290,6 +325,14 @@ Open the minigames dashboard (alone, or as host of a lobby), open **Color Coded*
 - **Watch the wheel** spin and stop, and the call at the top turn into the colour
   with two seconds counting down. Get on it: the other panels should flicker, drop
   away, and you should stay up. Stand on a wrong one: you should fall.
+- **Push.** With the camera taken, click; or press Space or E. A ring should fly out
+  in front of you and you should lunge. Whoever is in front and close should shoot
+  away, more if they were walking away from you; nobody behind you should move.
+  Pushing again inside a second should do nothing. Push somebody off the edge: the HUD
+  should say you knocked them off.
+- **The last fall.** When the last of the others falls, the camera should pull back
+  over the whole arena, you (if you are the one left) should stop where you are, the
+  faller should tumble away for two seconds, and then the results should come.
 - **Run into a stand-in** that is standing still: they should shoot away and you
   should nearly stop dead, with a bump. Run into one off the edge of a panel that
   is about to drop: the HUD should say you knocked them off.
