@@ -18,7 +18,7 @@ import { getNet, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, useLoopCue, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { LetHimCookScene, myTurn, type SceneHands } from './LetHimCookScene'
-import { COLOURS, INGREDIENTS, KITCHEN, cookTime, fastForwarding, placings, stillIn, turnTime, whoseTurn, type Cook, type Game, type Pick } from './rules'
+import { COLOURS, INGREDIENTS, KITCHEN, cookTime, dueIndex, fastForwarding, placings, stillIn, turnTime, whoseTurn, type Cook, type Game, type Pick } from './rules'
 import { myId, newGame, waitingGame } from './setup'
 import { useKitchenNet } from './useKitchenNet'
 
@@ -129,7 +129,13 @@ export function LetHimCookScreen({ run }: { run: MinigameRun }) {
         {game.phase === 'cooking' && game.recipe === 0 && game.clock < KITCHEN.intro ? (
           <Banner colour={LOOK.ink} text="Watch what the chef puts in the pot" />
         ) : null}
-        {isMine && game.phase === 'turns' ? <Banner colour={COLOURS[mineIndex % COLOURS.length]} text="Your turn - take something from a basket that was in the recipe" data="your-turn" /> : null}
+        {isMine && game.phase === 'turns' ? (
+          <Banner
+            colour={COLOURS[mineIndex % COLOURS.length]}
+            text={`Your turn - take what the chef put in ${nth(dueIndex(game))}`}
+            data="your-turn"
+          />
+        ) : null}
         {game.phase === 'result' && game.last ? <Result last={game.last} game={game} nameOf={nameOf} /> : null}
         {game.phase === 'order' ? <Order game={game} nameOf={nameOf} /> : null}
       </div>
@@ -155,7 +161,10 @@ function Status({ game, nameOf }: { game: Game; nameOf: (id: string) => string }
       text = 'Turn order'
       break
     case 'turns':
-      text = turn === null ? '' : game.players[turn].mine ? 'Your turn' : `${nameOf(game.players[turn].id)}'s turn`
+      text =
+        turn === null
+          ? ''
+          : `${game.players[turn].mine ? 'Your turn' : `${nameOf(game.players[turn].id)}'s turn`} - the ${nth(dueIndex(game))} item`
       left = Math.max(0, turnTime(game.recipe) - game.clock)
       break
     case 'result':
@@ -214,6 +223,12 @@ function Line({ game, nameOf }: { game: Game; nameOf: (id: string) => string }) 
   )
 }
 
+/** "first", "second"... up to a recipe's length, for saying which place a turn is for. */
+export function nth(at: number): string {
+  const names = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth']
+  return names[at] ?? `${at + 1}th`
+}
+
 function ingredientName(kind: number, many = false): string {
   const ingredient = INGREDIENTS[kind]
   return many ? ingredient.many : ingredient.one
@@ -228,7 +243,9 @@ function Result({ last, game, nameOf }: { last: Pick; game: Game; nameOf: (id: s
   let text = ''
   if (last.ok && kind !== null) text = `${icon}${who} picked the ${ingredientName(kind)} - it was in the recipe!`
   else if (last.why === 'wrong' && kind !== null) text = `${icon}${who} picked the ${ingredientName(kind)} - it was not in the recipe. Out!`
-  else if (last.why === 'gone' && kind !== null) text = `${icon}Every ${ingredientName(kind)} in the recipe was already claimed. ${who} ${cook.mine ? 'are' : 'is'} out!`
+  else if (last.why === 'muddled' && kind !== null)
+    text = `${icon}${who} picked the ${ingredientName(kind)} - not what went in ${nth(dueIndex(game))}. Out!`
+  else if (last.why === 'gone' && kind !== null) text = `${icon}The recipe is already back in the pot. ${who} ${cook.mine ? 'are' : 'is'} out!`
   else if (last.why === 'time') text = `${who} ran out of time. Out!`
   else if (last.why === 'left') text = `${who} left the kitchen.`
   return <Banner colour={last.ok ? LOOK.green : LOOK.red} text={text} data={last.ok ? 'right' : `out-${last.why}`} />
@@ -304,7 +321,7 @@ function Over({
   const how = (cook: Cook) => {
     const claims = `${cook.claims} claimed`
     if (!cook.out) return `last standing · ${claims}`
-    const why = { wrong: 'not in the recipe', gone: 'all claimed', time: 'out of time', left: 'left' }[cook.out.why]
+    const why = { wrong: 'not in the recipe', muddled: 'out of order', gone: 'recipe finished', time: 'out of time', left: 'left' }[cook.out.why]
     return `${why} · ${claims}`
   }
   return (

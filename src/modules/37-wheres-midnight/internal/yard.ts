@@ -45,13 +45,15 @@ export const YARD = {
   decoys: 18,
 } as const
 
-export type Shape = 'box' | 'cylinder' | 'tyre' | 'blob'
+export type Shape = 'box' | 'cylinder' | 'tyre' | 'blob' | 'sphere' | 'cone'
 
 /**
  * One drawn part. A `box` is a unit cube, a `cylinder` a unit-tall one of radius
  * one half standing up, a `tyre` a torus facing +Z, a `blob` an icosahedron of
- * radius one half - each scaled by `s`, turned by `r` in the order Y, X, Z the
- * way three.js does it with `YXZ`, and placed at `p`.
+ * radius one half, a `sphere` a smooth one of radius one half, a `cone` a
+ * unit-tall one of radius one half standing on its base - each scaled by `s`,
+ * turned by `r` in the order Y, X, Z the way three.js does it with `YXZ`, and
+ * placed at `p`.
  */
 export interface Part {
   shape: Shape
@@ -87,16 +89,47 @@ export interface Piece {
 }
 
 /**
- * A pair of eyes in the dark that are not Midnight's: the middle of a head that
- * is not there, and which way it faces. Drawn exactly as his eyes are, and not
- * in the way of anything - a click on one lands on whatever is behind it.
+ * Another cat: where its head is, which way it faces, how it is sitting, and
+ * what colour it is.
+ *
+ * Its eyes are drawn exactly as his are and glow exactly as much, because in
+ * the dark that is all any cat is. The rest of it - his body, in a colour that
+ * is not black - is what tells you it is not him once you have light on it,
+ * which is the whole of the search: the eyes bring you over, the coat sends you
+ * away.
+ *
+ * None of it is in the way of anything: a click on one lands on whatever is
+ * behind it, which is a miss like any other.
  */
 export interface Decoy {
+  /** Its head - the middle between its eyes, as a `Midnight`'s head sphere is. */
   x: number
   y: number
   z: number
   heading: number
+  pose: Pose
+  /** Which of `COATS` it wears. */
+  coat: number
 }
+
+/**
+ * The coats of the cats that are not Midnight: a body colour, and the slightly
+ * lighter one their head and shoulders catch the light in, the way his two are.
+ *
+ * None of them is black, and none is dark enough to be taken for black under
+ * the torch - a decoy you cannot rule out with light on it is not a decoy, it
+ * is a coin toss.
+ */
+export type Coat = { coat: string; sheen: string }
+
+export const COATS: readonly Coat[] = [
+  { coat: '#b4622a', sheen: '#c87a3c' },
+  { coat: '#d6d2c8', sheen: '#eceae2' },
+  { coat: '#6d727a', sheen: '#848a93' },
+  { coat: '#7d5c38', sheen: '#946e45' },
+  { coat: '#c3a06f', sheen: '#d8b98d' },
+  { coat: '#9a5a52', sheen: '#b06f66' },
+] as const
 
 export interface Sphere {
   x: number
@@ -516,6 +549,84 @@ function hideMidnight(pieces: readonly Piece[], boxes: readonly Box[], seed: num
   return { x: open.x, y: 0, z: open.z, heading: 0, pose: 'loaf', ...shape, seen: shape.points.filter((p) => inSight(boxes, p)).length, by: 'bags', on: false }
 }
 
+/**
+ * A cat's drawn body: every part of it, in the world, for a pose, a place, a
+ * heading and a coat.
+ *
+ * **The one list every cat in the yard is drawn from**, his included, so nothing
+ * but the colour tells them apart - a decoy you could pick out by its shape
+ * would be no decoy at all.
+ *
+ * It is not what a click is tested against; that is `catShape`, whose three
+ * spheres a click has to land in. Those three are the first three parts here,
+ * to the millimetre; the ears, the tail and the paws hang off the same frame,
+ * the way a cat's do.
+ */
+export function catParts(pose: Pose, x: number, y: number, z: number, heading: number, coat: Coat): Part[] {
+  const c = Math.cos(heading)
+  const s = Math.sin(heading)
+  const at = (lx: number, ly: number, lz: number): Vec3 => v(x + c * lx + s * lz, y + ly, z - s * lx + c * lz)
+  const straight = v(0, heading, 0)
+  const ball = (p: Vec3, r: number, colour: string, stretch = v(1, 1, 1)): Part => ({
+    shape: 'sphere',
+    p,
+    s: v(r * 2 * stretch.x, r * 2 * stretch.y, r * 2 * stretch.z),
+    r: straight,
+    colour,
+  })
+  const sit = pose === 'sit'
+  const parts: Part[] = [
+    // The three the clicks are tested against: haunches, shoulders, head.
+    ball(at(0, sit ? 0.17 : 0.14, sit ? -0.04 : -0.05), 0.16, coat.coat),
+    ball(at(0, sit ? 0.3 : 0.14, sit ? 0.06 : 0.12), sit ? 0.12 : 0.14, coat.sheen, sit ? v(1, 1, 1) : v(1, 0.9, 1.2)),
+    ball(at(0, sit ? 0.46 : 0.24, sit ? 0.1 : 0.27), 0.095, coat.sheen),
+  ]
+  const head = { x: 0, y: sit ? 0.46 : 0.24, z: sit ? 0.1 : 0.27 }
+  for (const side of [-1, 1]) {
+    parts.push({
+      shape: 'cone',
+      p: at(head.x + side * 0.055, head.y + 0.085, head.z),
+      s: v(0.07, 0.08, 0.07),
+      // Yawed with the cat and tipped outwards, in the order a part is turned.
+      r: v(0, heading, side * -0.25),
+      colour: coat.coat,
+    })
+  }
+  const tail: [number, number, number][] = sit
+    ? [
+        [0.02, 0.06, -0.17],
+        [0.09, 0.05, -0.22],
+        [0.16, 0.08, -0.19],
+        [0.19, 0.14, -0.12],
+      ]
+    : [
+        [0.04, 0.09, -0.19],
+        [0.13, 0.07, -0.21],
+        [0.21, 0.06, -0.15],
+        [0.26, 0.06, -0.05],
+      ]
+  tail.forEach(([lx, ly, lz], i) => parts.push(ball(at(lx, ly, lz), 0.035 - i * 0.004, coat.coat)))
+  const paws: [number, number, number][] = sit
+    ? [
+        [0.08, 0.03, 0.13],
+        [-0.08, 0.03, 0.13],
+      ]
+    : [
+        [0.1, 0.05, 0.13],
+        [-0.1, 0.05, 0.13],
+      ]
+  for (const [lx, ly, lz] of paws) parts.push(ball(at(lx, ly, lz), 0.042, coat.coat))
+  return parts
+}
+
+/** Where a cat's feet are, given where its head is: the other way round from `catParts`. */
+export function catFeet(decoy: Decoy): Vec3 {
+  const c = Math.cos(decoy.heading)
+  const s = Math.sin(decoy.heading)
+  const lz = decoy.pose === 'sit' ? 0.1 : 0.27
+  return v(decoy.x - s * lz, decoy.y - (decoy.pose === 'sit' ? 0.46 : 0.24), decoy.z - c * lz)
+}
+
 /** Where one of a head's two eyes is, in the world: `side` is -1 or 1. */
 export function eyeAt(head: Vec3, heading: number, side: number): Vec3 {
   const c = Math.cos(heading)
@@ -563,10 +674,14 @@ function strewLitter(boxes: readonly Box[], midnight: Midnight, seed: number): P
 }
 
 /**
- * Eyes in the dark that are not his. Each looks out from beside or on top of
- * a piece of junk, the way he does - both eyes in sight of the camera, facing
- * roughly it, a head's height off whatever it is on - and none of them within
- * a couple of metres of him or of each other.
+ * The other cats. Each sits or loafs beside or on top of a piece of junk the
+ * way he does - both eyes in sight of the camera, facing roughly it, its head
+ * exactly a sitting or a loafing cat's height off whatever it is on - and none
+ * within a couple of metres of him or of each other.
+ *
+ * **None of them stands between the camera and him**: a cat you cannot click
+ * through would be a cat that hides him, and the only thing allowed to hide him
+ * is the junk.
  */
 function placeDecoys(pieces: readonly Piece[], boxes: readonly Box[], midnight: Midnight, seed: number): Decoy[] {
   const random = createRng(hashSeed(seed, 'wheres-midnight:decoys'))
@@ -577,17 +692,25 @@ function placeDecoys(pieces: readonly Piece[], boxes: readonly Box[], midnight: 
     ;[all[i], all[j]] = [all[j], all[i]]
   }
   const out: Decoy[] = []
+  const him = Math.hypot(head.x - EYE.x, head.z - EYE.z)
+  const toHim = Math.atan2(head.x - EYE.x, head.z - EYE.z)
   for (const spot of all) {
     if (out.length >= YARD.decoys) break
     const fromFeet = Math.hypot(spot.x - EYE.x, spot.z - EYE.z)
     if (fromFeet < YARD.catNear - 3 || fromFeet > YARD.far) continue
-    const at = v(spot.x, spot.y + (random() < 0.55 ? 0.46 : 0.24), spot.z)
+    const pose: Pose = random() < 0.55 ? 'sit' : 'loaf'
+    const at = v(spot.x, spot.y + (pose === 'sit' ? 0.46 : 0.24), spot.z)
     if (Math.hypot(at.x - head.x, at.z - head.z) < 2.5) continue
     if (out.some((d) => Math.hypot(d.x - at.x, d.z - at.z) < 1.8)) continue
     if (boxes.some((b) => inside(at, b, 0.1))) continue
+    // Not in front of him: a cat between the camera and him would cover him
+    // without being something a click can be tested against.
+    const aside = Math.atan2(at.x - EYE.x, at.z - EYE.z) - toHim
+    const off = Math.abs(Math.atan2(Math.sin(aside), Math.cos(aside)))
+    if (fromFeet < him && off < Math.atan2(0.8, fromFeet)) continue
     const heading = Math.atan2(EYE.x - at.x, EYE.z - at.z) + (random() * 2 - 1) * 0.7
     if (![-1, 1].every((side) => inSight(boxes, eyeAt(at, heading, side)))) continue
-    out.push({ ...at, heading })
+    out.push({ ...at, heading, pose, coat: Math.floor(random() * COATS.length) })
   }
   return out
 }

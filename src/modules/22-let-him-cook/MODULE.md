@@ -8,10 +8,13 @@ while everybody watches. Then the baskets are filled again and **rotate round
 the counter**, and players take turns in a random order walking up, taking an
 item from a basket and tossing it in the pot:
 
-- **An ingredient the chef did not use:** out.
-- **An ingredient the chef used, but every copy of it is already claimed:** out.
-  If two tomatoes went in and two have been picked, the third tomato in the
-  basket is a trap.
+The recipe has to go back in **in the order it came out**. The first cook up
+owes the chef's first item, the next cook the chef's second, and so on down the
+line - so what you have to remember is not only what went in but when.
+
+- **Anything but the ingredient due next:** out. One the chef never used, or one
+  he used later - the tomato that goes in fourth is a trap on the third turn and
+  the right answer one turn after.
 - **Otherwise:** the item stays in the pot, a chip in your colour goes by its
   basket, and you go to the back of the line.
 
@@ -32,7 +35,8 @@ primitives.
 | Memorize which ingredients were used | the cooking phase: each item arcs into the pot (`pickTime`) |
 | Players are placed in a random turn order | `createGame` shuffles `queue`; shown in the `order` phase |
 | Take turns selecting an ingredient | `pick`, `whoseTurn` |
-| Not used, or all copies already claimed, eliminates you | `pick` - `Why` = `wrong` / `gone` |
+| The ingredients have to be named in the order they went in | `recipeOrder`, `dueIndex`, `dueKind`; `pick` takes nothing else |
+| Not used at all, or used but not the one due, eliminates you | `pick` - `Why` = `wrong` / `muddled` |
 | Correct: back of the line, another chance next turn | `pick` moves you to the end of `queue` |
 | The last player remaining wins | `stepGame` ends at one left; `placings` |
 | Mouse - aim; left click - select an ingredient | `pickBasket`, `slotFor`, the scene's pointer handling |
@@ -62,10 +66,15 @@ primitives.
 - A pick only counts on your turn, and only on an item nobody has claimed. A
   click on a basket takes its last unclaimed item (`slotFor`); every copy in a
   basket is the same to the rules. An emptied basket cannot be clicked.
+- **Only the ingredient the recipe is up to counts.** How far down the recipe the
+  kitchen has got is public - it is the number of items in the pot, and the HUD
+  says which one is owed ("the fourth item") - but what belongs there is not. A
+  wrong pick is never told what the right one was, or the turn after it would be
+  a gift.
 - Two and a half seconds after every pick to see it taken, tossed in, and what
   the chef made of it, then the next turn.
 
-## When everything is claimed
+## When the recipe is back in the pot
 
 **The chef cooks again**, for whoever is still in, and the line carries on where
 it was. Each recipe is **quicker**:
@@ -73,9 +82,9 @@ it was. Each recipe is **quicker**:
 - The chef's pace drops from 1.4 s an item by a fifth each recipe, to 0.6 s.
 - The turn loses a second each recipe, down to 5 s.
 
-**Two recipes at most** (`KITCHEN.recipes`). When the second runs dry, the chef
-does not cook again: every item left is either not in the recipe or already
-claimed, so every pick is out. That guarantees a game ends, however good
+**Two recipes at most** (`KITCHEN.recipes`). When the second is finished, the
+chef does not cook again: there is no ingredient due, so every pick is out
+(`Why` = `gone`). That guarantees a game ends, however good
 everybody's memory is. The brief's own rule ends it; without the cap, two
 players who never forget would play forever. Tested with players who never
 pick wrong.
@@ -140,14 +149,16 @@ twentieth worse each recipe as the chef speeds up.
 - **The toss** (`TOSS`, seconds into the result). The cook goes to the basket,
   the item comes up into their hands (0.35 s), and they toss it in, leaning into
   the throw (lands at 1 s).
-- **The chef's answer.** It belongs in the pot: the chef hops. It does not - not
-  in the recipe, or every copy already claimed: **the chef shakes his head** (1-2
+- **The chef's answer.** It is the one due: the chef hops. It is not - never in
+  the recipe, or in it but not yet: **the chef shakes his head** (1-2
   s), the basket gets a red ring, and the item is thrown back into its basket.
 - **Claimed items.** A chip in the claimer's colour by the basket, one per item
   claimed from it this recipe, which appears once the item lands.
 - **Banners.** The first cooking ("watch what the chef puts in the pot"), a new
-  recipe, your turn, and every result in words: "cook 3 picked the fish - it was
-  not in the recipe. Out!" / "Every egg in the recipe was already claimed…".
+  recipe, your turn ("take what the chef put in third"), and every result in
+  words: "cook 3 picked the fish - it was not in the recipe. Out!" / "cook 2
+  picked the egg - not what went in second. Out!" - which says a pick was out of
+  order without saying what was right.
 - **The line** under the HUD: everybody still in, in turn order, whoever is up
   outlined; everybody out after them, struck through.
 - **The HUD.** What is happening, the time left to cook or to pick (red for the
@@ -186,8 +197,11 @@ Exported because it is worth testing, not because anything else needs it.
   wherever it has turned to.** Tested.
 - **The turn order is a random permutation of everybody.** Tested.
 - **Cooking, then the order (first recipe only), then turns.** Tested.
-- **A pick in the recipe with a copy left is claimed and goes to the back; not in
-  the recipe is out; every copy claimed is out; out of time is out.** Tested.
+- **Only the ingredient the recipe is up to is claimed**, and it puts you at the
+  back of the line; anything else is out - never in the recipe (`wrong`) or not
+  yet (`muddled`) - and so is running out of time. Tested, including a whole
+  recipe taken back in order, and the same ingredient being a trap one turn and
+  the answer the next.
 - **A pick off your turn, on a claimed item or outside the turns does
   nothing.** Tested.
 - **Last one in wins; the rest are placed by how long they lasted.** Tested.
@@ -232,11 +246,14 @@ Open a lobby, leave the game on Volcano Island, press **minigames**, open
   counter one to five places.
 - **The baskets fill again**, and the first cook walks in, in their colour.
 - **On your turn, move the pointer over the baskets.** The one under it gets a
-  white ring and your cook walks to it. Click one you saw go in: your cook tosses
-  an item into the pot, the chef hops, green banner, a chip in your colour by the
-  basket, and you go to the back of the line.
+  white ring and your cook walks to it. The HUD and the banner say which place in
+  the order you owe - "the third item". Click the basket the chef took his third
+  from: your cook tosses an item into the pot, the chef hops, green banner, a
+  chip in your colour by the basket, and you go to the back of the line.
 - **Click one you did not see go in.** Tossed in, the chef shakes his head and
   throws it back; red banner, you are out.
+- **Click one that did go in, but later.** The same: out, and the banner says it
+  was not what went in that place - never what was.
 - **Watch the stand-ins.** They think a moment and pick; now and then they get
   one wrong, or pick a copy that is already gone, and the banner says which.
 - **Wait out a turn.** At ten seconds you are out for time.

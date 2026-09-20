@@ -10,36 +10,88 @@ half, then you have to pick it up again where it fell. Reach the green finish
 to place, in the order you get there. At two minutes anybody still inside is
 placed by how far they had left to go.
 
+Three things make it a maze worth being in the dark for:
+
+- **The corridors are narrow.** A torch in the middle of one has less room
+  either side of it than the torch is wide.
+- **The whole maze turns**, slowly, one way, from the whistle. A mouse left
+  where it was is a torch walking into a wall: you have to go round with it.
+- **Dad's junk slides up and down the corridors.** A piece is wider than the
+  room beside it, so a corridor with one in it is shut until it has gone past.
+  Go into one and it is a bump like any other; one sliding onto a torch that is
+  holding still is not.
+
 It plugs into `15-minigames` with `registerMinigame('helping-dad', ...)` and
 one import line in `src/App.tsx`. Nothing else in the build knows it exists.
 
 ## The maze
 
-**11 cells across, 7 down, 1.2 m a cell, walls 0.2 m thick and 0.25 m high.**
+**8 cells across, 8 down, 0.95 m a cell, walls 0.2 m thick and 0.25 m high.**
 A perfect maze - exactly one way between any two cells - carved by a seeded
 depth-first walk, so every browser with the seed has the same maze and the maze
 itself never goes on the wire. The start is the bottom-left cell, the finish
-the top-right.
+the top-right. **Square**, because a maze that turns sweeps a circle, and a long
+thin one would spend most of the frame being somewhere the maze is not.
 
 Walls are boxes on the cell edges, each one a wall's thickness longer than its
 edge so the corners are filled. `mazeFor(seed)` also works out, by a walk back
 from the finish, how many cells every cell is from it: that is what places
 anybody who did not get out, what the stand-ins follow, and what the tests walk.
 
+### The turn
+
+`mazeAngle(seed, t)` is how far round it has gone: a seeded direction, and a
+rate eased in over four seconds and flat out at 0.085 rad/s after - a turn and a
+half in a round. It is the integral of a rate that ramps and then holds, so both
+the angle and the speed are smooth and it never jumps or goes back on itself.
+Nothing about it goes on the wire; every screen works it out from the clock.
+
+**Everything in the rules is in the maze's own frame.** The turn is two lines:
+the scene puts the maze, the pads, the junk and every torch in one group and
+sets its heading, and the screen reads the mouse back the other way with
+`intoMaze` before the rules see it. So a torch's position means the same thing
+on every screen however far round the maze has gone, and the wire did not change
+at all.
+
+### Dad's junk
+
+**Five pieces**, each on its own straight run of corridor, all from the seed.
+Every opening is pushed on as far as its corridor runs straight, up to four
+cells, and **the longest runs are taken first**: a piece on a one-cell run is in
+that corridor the whole time, which is a closed door rather than an obstacle, and
+on a three-cell run it is away from either end for seconds at a stretch, which is
+the window you go through. No run touches the start or the finish, and no two
+runs share a cell.
+
+A piece is a circle of 0.15 m sliding end to end and back for ever at its own
+pace, 0.7 to 1.1 m/s, from its own place in the run - `junkAt(piece, t)`, a pure
+function of the clock. **It cannot be squeezed past**: a corridor leaves a
+torch's middle 0.175 m either side of its line, and a piece on that line keeps a
+torch's middle 0.35 m away.
+
+**It is a wall that moves.** Going into one is a wall touched - the same yell,
+the same drop, the same stun. One sliding *onto* a torch that is standing still
+is not, because the rule is the wall's rule: you touch things, things do not
+touch you. And a piece that has rolled onto a still torch lets that torch out
+again rather than pinning it where it stands, which is the difference between an
+obstacle and a trap.
+
 ## The torch
 
 A torch is a circle of 0.2 m. **It moves, it does not jump.** However fast the
 mouse goes, the torch goes towards it at most 3.5 m/s, checked four centimetres
-at a time, so it can never pass through a wall: a wall in the way is a wall
-touched, and the torch stops just short of it.
+at a time, so it can never pass through a wall or through a piece of junk: a wall
+in the way is a wall touched, and the torch stops just short of it.
 
-Between the wall middles there is 0.5 m either side of a cell's centre, which
-leaves a careful torch 0.3 m of room. Tested: a torch in the middle of any cell
-touches nothing.
+Between the wall middles there is 0.375 m either side of a cell's centre, which
+leaves a careful torch **0.175 m** of room - less than the torch is wide. Tested:
+a torch in the middle of any cell touches nothing, and there is less room beside
+it than there is torch.
 
-**Picking it up means the mouse is on it:** within 0.45 m, with no wall in
-between. The second half is there for the most natural thing a player does
-after touching a wall, which is to leave the mouse where it was - in the wall.
+**Picking it up means the mouse is on it:** within 0.35 m - inside the room a
+narrow corridor leaves, so a mouse within reach is in the corridor and not in the
+wall beside it - and with no wall in between. The second half is there for the
+most natural thing a player does after touching a wall, which is to leave the mouse where it was - in the wall.
 Without it the torch would be picked straight back up the moment the stun wore
 off and walked into the same wall again, stunning you over and over for not
 moving. Tested.
@@ -61,7 +113,10 @@ other share a place.
 
 A still camera at 70° from the ground, fitted like the other minigames': slid
 along its line of sight until the maze and Dad touch the edge of the frame at
-any window shape, and aimed so the space above and below is even.
+any window shape, and aimed so the space above and below is even. **What has to
+be in frame is not the maze's four corners but the circle they sweep** - `SWEEP`
+- so the camera sits a little further back than a still maze of this size would
+need. The camera itself still never moves.
 
 **The torch is carried at the height of the wall tops**, and the mouse is cast
 onto that height rather than the floor, so what you see a ring touch is what it
@@ -107,12 +162,20 @@ Somebody who leaves the lobby is out, and placed last. a pause stops the round f
 and everybody else, up to eight, with no stand-ins.
 
 A stand-in is in the dark too. It follows the way out cell middle to cell middle,
-so it never cuts a corner, at its own pace of 1.3-1.9 m/s. At a turning, a
-quarter of the time, it tries a wrong branch first - up to three cells in, then
-back. Each second there is a 6% chance it is careless and touches a wall, and it
-is stunned like anybody else. All of it is worked out from the seed, so the same
-game plays out the same way. Tested: they always get out inside the limit, some
-touch a wall, and none ever passes through one.
+so it never cuts a corner, at its own pace of 1.6-2.3 m/s. At a turning, a fifth
+of the time, it tries a wrong branch first - up to three cells in, then back.
+Each second there is a 4% chance it is careless and touches a wall, and it is
+stunned like anybody else. **Dad's junk it sees**: rather than walk into a piece
+in front of it, it stands still and waits for it to slide past - which is the
+same rule everybody plays by. Only what is in front counts, or a piece that had
+just gone by would keep it standing there for ever.
+
+It is quicker and steadier than it was because the maze is square now and the way
+out is long, and because waiting for junk costs it time: a stand-in at the old
+pace would still be in the maze at two minutes. All of it is worked out from the
+seed, so the same game plays out the same way. Tested over forty seeds: they
+always get out inside the limit - the slowest in eighty seconds - some touch a
+wall, and none ever passes through one.
 
 ## Public contract
 
@@ -124,17 +187,19 @@ testing, not because anybody else needs them.
 | `GRID`, `HALF` | The maze's size: cells, cell width, wall thickness and height, and the half extents. |
 | `mazeFor`, `Maze`, `Cell`, `Box`, `Point` | The maze for a seed. Cached; the same seed, the same maze. |
 | `cellAt`, `cellCentre`, `isOpen`, `touchesWall` | Reading it. All pure. |
-| `stepsToFinish`, `nextCell`, `routeTarget`, `distanceToFinish` | The way out, and how far there is to go. All pure. |
+| `stepsToFinish`, `nextCell`, `routeTarget`, `ON_LINE`, `distanceToFinish` | The way out, and how far there is to go. All pure. |
+| `ROTATE`, `mazeAngle`, `intoMaze`, `intoWorld`, `angleOf` | The turn, and the two ways between the maze's frame and the world. All pure. |
+| `JUNK`, `Junk`, `junkAt`, `touchesJunk`, `inJunk` | Dad's junk: where each piece is at a moment, and what it is touching. All pure. |
 | `TORCH`, `ROUND`, `COLOURS` | Radius, pick-up reach, speed, stun, finish reach; countdown and time limit; eight torch colours. |
 | `createGame`, `Game`, `Torch`, `Entrant` | A game at its start. |
-| `steer`, `SteerResult` | The mouse at a point for a frame: pick up, move, touch a wall, finish. Pure. |
+| `steer`, `SteerResult` | The mouse at a point **in the maze's frame** for a frame: pick up, move, touch a wall or a piece of junk, finish. Pure. |
 | `report` | A guest's position and wall count, taken as far as it could be true. Pure. |
 | `tick`, `judgeEnd`, `stepGame`, `clock`, `canMove`, `hit`, `arrive`, `leave` | The clock, stuns, the end and leaving. All pure. |
 | `placings`, `remaining`, `startPoint`, `finishPoint` | Who placed where, and the two ends of the maze. |
 | `botSteer`, `botWalk`, `BOT_PACE`, `BOT_REACTION`, `BOT_CARELESS`, `BOT_WANDER` | The stand-ins. |
 | `newGame`, `waitingGame`, `gameRoster`, `nextSeed`, `myId`, `ME`, `SOLO_TORCHES`, `MAX_TORCHES`, `GameSetup` | Putting a game together from the lobby. |
 | `encodeSnapshot`, `decodeSnapshot`, `applySnapshot`, `encodeIntent`, `decodeIntent`, `SNAPSHOT_TAG`, `INTENT_TAG`, `Snapshot`, `WireTorch` | The wire. Decoding refuses a message whole rather than half-reading it. |
-| `cameraFor`, `frameScene`, `aimAt`, `DAD`, `HOLD`, `POINTS`, `TILT`, `FOV`, `FILL`, `Shot` | The fixed camera, and the mouse in the maze. |
+| `cameraFor`, `frameScene`, `aimAt`, `DAD`, `HOLD`, `POINTS`, `SWEEP`, `TILT`, `FOV`, `FILL`, `Shot` | The fixed camera, fitted to the circle the turning maze sweeps, and the mouse on the ground. |
 | `HelpingDadScreen`, `YELLS` | The panel `15-minigames` draws, and what Dad shouts. |
 
 ## Invariants you may rely on
@@ -142,8 +207,20 @@ testing, not because anybody else needs them.
 - **The same seed makes the same maze**, and there is exactly one way to every
   cell. Tested over four seeds.
 - **A torch never passes through a wall**, however fast the mouse goes. Tested.
-- **A torch in the middle of any cell touches nothing**, with at least 25 cm to
-  spare. Tested.
+- **A torch in the middle of any cell touches nothing** - but there is less room
+  beside it than the torch is wide, and the pick-up reach fits inside that room.
+  Tested.
+- **The turn is one way round, eased in from a standstill, more than a whole turn
+  in a round, and the same numbers on every screen.** Tested.
+- **A point on the board reads back to the point in the maze it is over**, at
+  every angle. Tested.
+- **Every piece of junk stays on a straight run of corridor, never in a wall,
+  never in the start or the finish, and never on another piece.** Tested over
+  four seeds, a whole round at a time.
+- **A piece cannot be squeezed past**: its radius plus a torch's is more than the
+  room a corridor leaves a torch's middle. Tested.
+- **Going into a piece is a bump like a wall; one that slid onto a torch holding
+  still is not, and lets it out again.** Tested.
 - **A torch goes no faster than `TORCH.speed`.** Tested.
 - **A wall touched is one hit, a 1.5 s stun and a dropped torch**; a stunned
   torch does not move or get picked up, and afterwards it stays down until the
@@ -153,33 +230,45 @@ testing, not because anybody else needs them.
   could have gone.** Tested.
 - **Finishers place by time, then the rest by distance left, then leavers**,
   with ties sharing a place. Tested, both at the finish and at the time limit.
-- **Stand-ins always get out, never through a wall, the same way every time.**
-  Tested over four seeds.
+- **Stand-ins always get out, never through a wall, the same way every time**,
+  and they wait for junk rather than walking into it. Tested over four seeds, and
+  over forty for the time limit.
 - **Eight torches in one maze end the same on every screen**, with a fifth of
   the snapshots and a quarter of the reports lost. Tested in Node, and with eight
   real browsers.
-- **The maze and Dad are in frame at every window shape**, and the mouse maps to
-  the exact point in the maze it is over. Tested.
+- **The maze and Dad are in frame at every window shape, at every angle the maze
+  turns to**, and the mouse maps to the exact point in the maze it is over.
+  Tested.
 
 ## Deliberate non-goals
 
 - No models: torches are rings and glows, Dad is the island's capsule, walls are
-  boxes.
-- No moving camera.
+  boxes and his junk is a tin.
+- No moving camera - the maze turns, not the camera.
 - No torch lighting the maze but your own.
 - No sound - Dad's yell is a banner. No score kept between games.
 
 ## Known limitations
 
-- **A guest is trusted on its wall count and near-trusted on its position.** The
-  host refuses a way through the middle of a wall and a position further than
-  the torch could have gone, but a guest judges its own touches, so a modified
-  client could report none and shave corners by up to the torch's radius. For a
-  party game among friends that is the right trade for steering that does not
-  lag.
+- **A guest is trusted on its bumps and near-trusted on its position.** The host
+  refuses a way through the middle of a wall and a position further than the
+  torch could have gone, but a guest judges its own walls and its own junk - the
+  host does not check junk at all, since where a piece is depends on a clock the
+  two of them only agree on to a tenth of a second. So a modified client could
+  report no bumps and shave corners by up to the torch's radius. For a party game
+  among friends that is the right trade for steering that does not lag.
 - **Other torches glow.** They light nothing, but the glow round them does show
   where they are in the dark, and so roughly where the corridors are.
-- **Dad jumps only for your own walls**, not for anybody else's.
+- **A piece of junk has a band round it you can see unlit**, from anywhere, the
+  way another torch's ring is visible. It is there so a shut corridor is
+  something you see coming rather than something you find with your face, but it
+  does give away where five corridors are.
+- **You can walk out through a piece that rolled onto you** - and, against its
+  direction, through it. Timing that is a real bit of skill and it gains almost
+  nothing, since a piece that has passed you has already cleared the way ahead.
+- **A stand-in is never bumped by junk**, only held up by it - it stops short and
+  waits - the way it never really brushes a wall either.
+- **Dad jumps only for your own bumps**, not for anybody else's.
 - **A stand-in's careless moment is a roll, not a real touch.** It never actually
   brushes a wall; it is simply stunned where it stands.
 - **The maze is the same size for two players as for eight.**
@@ -193,11 +282,18 @@ and press play.
   in the bottom-left corner, with your ring on top of the stack, Dad at the top
   edge and a green finish glowing top right. Moving the mouse onto the torch
   should not pick it up until the count is done.
-- **Put the mouse on your torch.** The hint banner should go, the cursor should
-  hide, and a small white ring should show where the mouse is.
-- **Lead it slowly** round a corner. The light should go with it, lighting only
-  the walls near you. Everybody else's torch should be a small glow that lights
-  nothing.
+- **Put the mouse on your torch.** The hint banner should say the maze is
+  turning, the cursor should hide, and a small white ring should show where the
+  mouse is.
+- **Hold the mouse still.** The maze should walk out from under it, and within a
+  couple of seconds the torch should be into the wall beside it. That is the game.
+- **Lead it slowly** round a corner, going round with the maze as it turns. The
+  light should go with it, lighting only the walls near you. Everybody else's
+  torch should be a small glow that lights nothing.
+- **Find a piece of Dad's junk** - a tin with a faint band round it, sliding up
+  and down a corridor. Going into it should be a bump like a wall. Waiting in
+  front of it should not: it should slide over your ring and let you out the
+  other side, and there should be no way past it while it is beside you.
 - **Fling the mouse across a wall.** The torch should stop short of the wall,
   not come out the other side. Dad should jump, the banner should shout, the
   screen edges should go red, the ring should flicker, and it should count down
@@ -210,8 +306,9 @@ and press play.
   coming back, some being stunned - and all get out in under two minutes.
 - **The results** should be quickest out first, with walls touched and times,
   anybody who did not get out showing metres to go, and **again** for a new maze.
-- **Resize the window**, tall and wide. The whole maze and Dad should stay in
-  frame, and the mouse should stay exactly over the torch.
+- **Resize the window**, tall and wide, and leave it a minute. The whole maze and
+  Dad should stay in frame at every angle the maze turns to, and the mouse should
+  stay exactly over the torch.
 - **Press escape mid-game.** Alone, the clock should stop.
 
 ### With two or more browsers
@@ -228,7 +325,10 @@ and press play.
   **again** should start everybody on a new maze.
 
 `run-localrot` covers the first three of those with eight real browsers:
-`lobby.mjs --games helping-dad` and `solo.mjs --game helping-dad --steer`.
+`lobby.mjs --games helping-dad` and `solo.mjs --game helping-dad --steer`. Both
+lead their torches with `torchDrive`, which runs on the page's own frames - a
+maze that turns makes a pointer left where it was a target sliding backwards,
+so a driver updating two or three times a second loses ground it cannot get back.
 
 ## Gate record
 
@@ -237,6 +337,7 @@ Not yet gated by a human.
 ## Measured
 
 Not measured. The budgets in `pipeline.json` are unset. Drawn per frame: one
-instanced mesh for the walls, the floor, the start and finish pads, Dad, and
-four or five small meshes a torch; one point light for your torch and one for
-Dad.
+instanced mesh for the walls, the floor, the start and finish pads, Dad, two
+small meshes for each of the five pieces of junk, and four or five small meshes a
+torch; one point light for your torch and one for Dad. The turn costs one group's
+heading a frame.

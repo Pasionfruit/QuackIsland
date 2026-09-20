@@ -13,21 +13,38 @@
  * goes towards it at most `TORCH.speed`, checked a few centimetres at a time, so
  * it can never pass through a wall: a wall in the way is a wall touched.
  *
+ * **The maze turns under you, and Dad's junk slides about inside it.** A torch's
+ * position is in the maze's own frame, so the turn changes nothing here - it is
+ * the mouse that is read back into that frame, by `mazeAngle` off the same clock
+ * on every screen.
+ *
+ * **A piece of junk is a wall that moves.** Going into one is a wall touched -
+ * the same yell, the same drop, the same stun - and one sliding onto a torch
+ * that is standing still is not, because the rule is the wall's rule: you touch
+ * things, things do not touch you. A piece that has rolled onto a still torch
+ * has not been gone into, so it lets that torch out again rather than pinning it
+ * where it stands. So a corridor with a piece in it is shut while it is there,
+ * and the way through is to hold still and let it go by.
+ *
  * Everything here is pure.
  */
-import { GRID, cellCentre, distanceToFinish, mazeFor, touchesWall, type Point } from './maze'
+import { GRID, JUNK, ROTATE, cellCentre, distanceToFinish, mazeAngle, mazeFor, touchesJunk, touchesWall, type Point } from './maze'
 
 export const TORCH = {
   /** The torch's radius: the ring that must not touch a wall. */
   radius: 0.2,
-  /** How close the mouse must come to a dropped torch to pick it up. */
-  grab: 0.45,
+  /**
+   * How close the mouse must come to a dropped torch to pick it up. Inside the
+   * room a narrow corridor leaves, so a mouse within reach is in the corridor
+   * and not in the wall beside it.
+   */
+  grab: 0.35,
   /** The fastest a torch goes, metres a second. */
   speed: 3.5,
   /** Seconds stunned after touching a wall. */
   stun: 1.5,
-  /** Within this of the finish's middle is there. */
-  finish: 0.45,
+  /** Within this of the finish's middle is there: about a third of a cell. */
+  finish: 0.35,
   /** How far a torch moves between checks. */
   check: 0.04,
 } as const
@@ -54,7 +71,7 @@ export interface Torch {
   held: boolean
   /** Seconds of stun left. */
   stunned: number
-  /** Walls touched. */
+  /** Walls touched and junk bumped. */
   hits: number
   /** When they reached the finish, in seconds since the start, or null. */
   finished: number | null
@@ -120,7 +137,7 @@ export function canMove(game: Game, torch: Torch): boolean {
   return !game.over && clock(game) >= 0 && !torch.left && torch.finished === null && torch.stunned <= 0
 }
 
-/** A wall touched: Dad yells, the torch drops, and its holder is stunned. */
+/** A wall touched, or junk bumped: Dad yells, the torch drops, and its holder is stunned. */
 export function hit(torch: Torch): void {
   torch.hits += 1
   torch.stunned = TORCH.stun
@@ -146,10 +163,28 @@ function onTorch(game: Game, torch: Torch, target: Point): boolean {
   return true
 }
 
+/** How far round the maze has turned just now: what the mouse has to be read through. */
+export function angleOf(game: Game): number {
+  return mazeAngle(game.seed, clock(game))
+}
+
 /**
- * A player's mouse is at `target` for `dt` seconds. Picks the torch up if the
- * mouse is on it; moves a held torch towards the mouse, no faster than the torch
- * goes, stopping at - and stunned by - the first wall it touches.
+ * Whether a torch's middle at `p` would be in a piece of Dad's junk just now.
+ * `pad` is how far short of it to stop: nothing for a bump, `JUNK.clear` for a
+ * stand-in that would rather wait.
+ */
+export function inJunk(game: Game, p: Point, pad = 0): boolean {
+  return touchesJunk(mazeFor(game.seed), p, TORCH.radius + pad, clock(game)) !== null
+}
+
+/**
+ * A player's mouse is at `target` - in the maze's own frame - for `dt` seconds.
+ * Picks the torch up if the mouse is on it; moves a held torch towards the mouse,
+ * no faster than the torch goes, stopping at - and stunned by - the first wall it
+ * touches or piece of junk it goes into.
+ *
+ * A torch that is not moving is not bumped, however close a piece slides: see the
+ * note at the top.
  */
 export function steer(game: Game, player: number, target: Point | null, dt: number): SteerResult {
   const torch = game.players[player]
@@ -165,10 +200,12 @@ export function steer(game: Game, player: number, target: Point | null, dt: numb
   const want = Math.hypot(dx, dz)
   const go = Math.min(want, TORCH.speed * Math.min(Math.max(dt, 0), 0.25))
   if (go <= 1e-6) return null
+  // A piece already over the torch was never gone into: it lets it out.
+  const inside = inJunk(game, torch)
   const steps = Math.max(1, Math.ceil(go / TORCH.check))
   for (let i = 1; i <= steps; i++) {
     const at = { x: torch.x + (dx / want) * (go / steps), z: torch.z + (dz / want) * (go / steps) }
-    if (touchesWall(maze, at, TORCH.radius)) {
+    if (touchesWall(maze, at, TORCH.radius) || (!inside && inJunk(game, at))) {
       hit(torch)
       return 'hit'
     }
@@ -289,4 +326,4 @@ export function placings(game: Game): { torch: Torch; index: number; place: numb
 /** Eight colours that do not look alike, one per player, in roster order. Bright, for torches in the dark. */
 export const COLOURS = ['#ff5a64', '#4aa8ff', '#ffc53d', '#5fe06f', '#c77dff', '#ff9a3c', '#3ee0d6', '#ff8fc8'] as const
 
-export { GRID }
+export { GRID, JUNK, ROTATE, mazeAngle }

@@ -453,12 +453,14 @@ try {
           say('your turn', await page.shot('5-your-turn.png'))
         }
         let did = await page.eval(cookPick(choose))
-        if (did?.none === 'wrong') did = await page.eval(cookPick('gone'))
+        // Nothing on the counter was never in the pot: something in it but not
+        // due is just as wrong, and just as out.
+        if (did?.none === 'wrong') did = await page.eval(cookPick('muddled'))
         await sleep(400)
         const after = await state()
         log.push({ choose, did, ok: after.last?.ok, why: after.last?.why })
         say('picked', JSON.stringify(log[log.length - 1]))
-        if (choose === 'safe' && did?.slot !== undefined && after.last?.ok !== true) throw new Error('a copy seen going in was not accepted')
+        if (choose === 'safe' && did?.slot !== undefined && after.last?.ok !== true) throw new Error('the ingredient due next was not accepted')
         if (choose === 'wrong' && did?.slot !== undefined && after.last?.ok !== false) throw new Error('a wrong pick was not out')
       }
       await sleep(80)
@@ -700,11 +702,15 @@ try {
       }
       await sleep(25)
     }
+    // Read once as it ends and again at the card: a quick round goes straight on
+    // to the shared podium, and by then the panel - and its state - is gone.
+    const read = () => page.eval(`(() => { const g = ${gameState('helping-dad')}; return g ? g.players.map((p) => [p.id, p.finished, p.hits]) : null })()`)
+    const atEnd = await read()
     await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 150000)
     await sleep(500)
-    const places = await page.eval(`(() => { const g = ${gameState('helping-dad')}; return g.players.map((p) => [p.id, p.finished, p.hits]) })()`)
+    const places = (await read()) ?? atEnd
     say('results', JSON.stringify(places), await page.shot('6-results.png'))
-    if (places[0][1] === null) throw new Error('never reached the finish')
+    if (!places || places[0][1] === null) throw new Error('never reached the finish')
   } else if (opt.steer && opt.game === 'synchronize-steps') {
     const state = () => page.eval(`(() => { const g = ${gameState('synchronize-steps')}; const me = g.players.find((p) => p.mine); return { round: g.round, phase: g.phase, clock: +g.clock.toFixed(2), step: me.step, pick: me.pick, last: me.last, out: me.out, all: g.players.map((p) => p.step) } })()`)
     const waitPhase = (phase, round) => page.waitFor(`(() => { const g = ${gameState('synchronize-steps')}; return g.phase === 'over' || (g.phase === ${JSON.stringify(phase)} && g.round === ${round}) })()`, 15000)

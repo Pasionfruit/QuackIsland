@@ -1,30 +1,32 @@
 /**
  * The stand-ins.
  *
- * A stand-in watched the chef too, and remembers most of it: each ingredient's
- * count right four times in five, one off otherwise - and a little less each
- * recipe, as the chef speeds up. On its turn it thinks for a
- * moment and picks an item it believes still has a copy left in the recipe - or,
- * believing there is none, any item at all.
+ * A stand-in watched the chef too, and remembers most of the order: the right
+ * ingredient in the right place four times in five, some other ingredient
+ * otherwise - and a little less each recipe, as the chef speeds up. On its turn
+ * it thinks for a moment and takes what it believes the recipe is up to - or,
+ * if there is none of that left on the counter, any item at all.
  *
  * Seeded by the game, the stand-in, the recipe and the turn, so the same game
  * plays out the same way. Only ever runs on the host, which has the recipe.
  */
 import { createRng, hashSeed } from '../../00-core'
-import { KITCHEN, claimedOf, whoseTurn, type Cook, type Game } from './rules'
+import { KINDS, KITCHEN, dueIndex, recipeOrder, whoseTurn, type Cook, type Game } from './rules'
 
-/** The chance a stand-in remembers an ingredient's count right, in the first recipe. */
+/** The chance a stand-in remembers a place in the order right, in the first recipe. */
 export const BOT_MEMORY = 0.8
 /** How much worse it gets each recipe, as the chef speeds up, down to a coin toss. */
 export const BOT_FORGETS = 0.05
 /** How long a stand-in thinks, least and most. */
 export const BOT_THINK: readonly [number, number] = [1.2, 3]
 
-/** How many of each ingredient a stand-in believes went into this recipe. */
+/** The order a stand-in believes the chef cooked in: an ingredient per place. */
 export function remembered(game: Game, bot: Cook): number[] {
   const random = createRng(hashSeed(game.seed, `let-him-cook:memory:${bot.id}:${game.recipe}`))
   const memory = Math.max(0.5, BOT_MEMORY - BOT_FORGETS * game.recipe)
-  return game.used.map((n) => (random() < memory ? n : Math.max(0, n + (random() < 0.5 ? -1 : 1))))
+  // A place it has forgotten is some other ingredient, not a blank: a stand-in
+  // that knows it has forgotten would play more carefully than anybody can.
+  return recipeOrder(game).map((kind) => (random() < memory ? kind : Math.floor(random() * KINDS)))
 }
 
 /** A stand-in's pick, once it has thought long enough on its turn; null otherwise. */
@@ -38,8 +40,10 @@ export function botMove(game: Game): { player: number; slot: number } | null {
   if (game.clock < think) return null
 
   const memory = remembered(game, bot)
+  const at = dueIndex(game)
+  const believed = at < memory.length ? memory[at] : -1
   const open = Array.from({ length: KITCHEN.items }, (_, slot) => slot).filter((slot) => game.claimed[slot] === null)
-  const believed = open.filter((slot) => memory[game.served[slot]] > claimedOf(game, game.served[slot]))
-  const from = believed.length > 0 ? believed : open
+  const wanted = open.filter((slot) => game.served[slot] === believed)
+  const from = wanted.length > 0 ? wanted : open
   return { player, slot: from[Math.floor(random() * from.length)] }
 }

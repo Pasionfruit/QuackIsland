@@ -23,7 +23,8 @@
     "music:scan": "node scripts/scan-music.mjs",
     "relay": "node server/relay.mjs",
     "start": "node server/relay.mjs",
-    "dev:multi": "npm run build && node server/relay.mjs"
+    "dev:multi": "npm run build && node server/relay.mjs",
+    "brief": "node scripts/brief.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "^9.7.0",

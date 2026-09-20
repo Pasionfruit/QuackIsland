@@ -49,12 +49,21 @@ tin and small black bags, from their own stream of the seed so they never move
 where he hides. All of it is under half a metre tall and none of it stops a
 click or sight - it is mess, not cover. None of it lands within **1.2 m** of him.
 
-**And there are eyes that are not his.** Eighteen pairs, placed the way he is -
-beside or on top of a piece of junk, at a sitting or loafing head's height,
-facing roughly the camera, both eyes in sight - and none within **2.5 m** of him
-or **1.8 m** of each other. They are drawn with exactly his eye, and there is
-nothing behind them: a click on one lands on whatever is there, and is a wrong
-guess. The tests check that for every decoy at every seed.
+**And there are other cats.** Eighteen of them, placed the way he is - sitting
+or loafing beside or on top of a piece of junk, facing roughly the camera, both
+eyes in sight - and none within **2.5 m** of him or **1.8 m** of each other.
+
+Each is **his body in another colour** (`COATS`: ginger, white, grey, tabby,
+cream, a red tabby), drawn from the same part list he is (`catParts`), with
+exactly his eyes glowing out of it. In the dark that is all any of them is, so a
+glint is a lead and not an answer - and the coat is the answer, once you have
+light on it. That is the search: the eyes bring you over, the coat sends you
+away.
+
+Nothing about them is in the way: a click on one lands on whatever is behind it
+and is a wrong guess, and **none of them is ever between the camera and him** -
+a cat that hid him would be cover a click cannot be tested against. The tests
+check all of that for every decoy at every seed.
 
 ## Midnight
 
@@ -110,7 +119,9 @@ No lamps: a low moon and very little else. **It is dark on purpose**: an
 all-black cat is only hard to find because the yard is dark enough to hide him.
 His eyes are the one part of him that is not black, and they are two
 centimetres across - a pixel at the widest zoom - but so are eighteen other
-pairs, so a glint is a lead and not an answer.
+cats', so a glint is a lead and not an answer. The other cats give themselves
+away by their coats, and only under light: in the dark a ginger cat and a black
+one are the same two glints.
 
 **The flashlight** is the one real light, and only yours: a spotlight from the
 eye down the middle of the view, its cone 0.8 of the view's height whatever the
@@ -118,11 +129,14 @@ zoom, so it always lights the same share of the screen. It is in the scene all
 the time and turned down to nothing when off, so switching it does not
 recompile every material. It needs **2×** zoom; zooming back out puts it away.
 
-The junk is **instanced**: every part is a box, a cylinder, a tyre or a blob, so
-each is one `InstancedMesh` with a colour per instance, built once per seed. A
-yard is about **650 parts**, litter included, and they cost **five draw calls** - four shapes plus
-one for the handful of glowing parts (reflectors, a television's standby light),
-which are unlit and instanced the same way. The decoys' eyes are one more.
+The junk is **instanced**: every part is a box, a cylinder, a tyre, a blob, a
+sphere or a cone, so each is one `InstancedMesh` with a colour per instance,
+built once per seed. A yard is about **650 parts**, litter included, and they
+cost **five draw calls** - the shapes it uses plus one for the handful of glowing
+parts (reflectors, a television's standby light), which are unlit and instanced
+the same way. The other cats go through the same path - eighteen cats is about
+220 parts and two more draw calls, spheres and cones - and their eyes are one
+more.
 
 ## One yard across the lobby
 
@@ -218,7 +232,9 @@ Midnight?** and press play.
   it, and not a lit-up junkyard either.
 - **Zoom past 2×.** A *flashlight* button appears at the bottom; it and **F**
   light the middle of the view. Zoom back out and it goes away, off.
-- **Click a pair of eyes that is not his.** A wrong guess, like any junk.
+- **Click a pair of eyes that is not his.** A wrong guess, like any junk - and
+  with the flashlight on it is plainly a ginger or a white or a grey cat sitting
+  there, not him.
 - **Drag.** The scene should follow the pointer exactly - pick a drum, drag it
   across the screen, and it should stay under the cursor. Try it zoomed in.
 - **Drag to the limits.** You should not be able to turn past the yard, or past
@@ -230,8 +246,9 @@ Midnight?** and press play.
   counts down from 1.5 s, and the wrong-guess count goes up. Clicking again
   during it should do nothing at all.
 - **Find him.** He is a cat-shaped black patch, usually beside or on top of
-  something, between a third and four fifths visible. Zoomed right in, with
-  the flashlight on, he is a black shape with eyes; the decoys are eyes alone. Clicking him should say *found him in Ns - 1st*, and a
+  something, between a third and four fifths visible. Zoomed right in, with the
+  flashlight on, he is the only cat in the yard still black - every other pair of
+  eyes turns out to have a coloured cat under it. Clicking him should say *found him in Ns - 1st*, and a
   ring should light up over him.
 - **Let the clock run out** without finding him: the ring should light up anyway
   so you can see where he was, and the results should say *never*.
@@ -262,7 +279,8 @@ Not yet gated by a human.
 Not measured; the budgets in `pipeline.json` are unset. Drawn per frame:
 
 - The junk and the litter: five instanced meshes for about 650 parts, whatever the seed.
-- The decoys' eyes: one instanced mesh, 36 spheres.
+- The other cats: two instanced meshes for about 220 parts, and one more for
+  their 36 eyes.
 - The ground, the fence, its rail and the moon: four meshes.
 - The cat: eleven small meshes.
 - One ring over him, once he has been found.

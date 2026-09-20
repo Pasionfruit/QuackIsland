@@ -2,8 +2,10 @@
  * 31-helping-dad - the public contract.
  *
  * Minigame 18. A maze in the dark, and a torch in your own colour on the mouse.
- * Lead it slowly: if it touches a wall, Dad yells, you drop it and you are
- * stunned for a second and a half. Placed in the order you reach the finish.
+ * Narrow corridors, the whole maze turning slowly under you, and Dad's junk
+ * sliding about inside it. Lead it slowly: touch a wall or bump a tin and Dad
+ * yells, you drop it and you are stunned for a second and a half. Placed in the
+ * order you reach the finish.
  *
  * It plugs into `15-minigames` and nothing else in the build knows it exists.
  * Importing this module registers it - one line in the composition root.
@@ -23,17 +25,26 @@ registerMinigame('helping-dad', {
 export {
   GRID,
   HALF,
+  JUNK,
+  ROTATE,
   cellAt,
   cellCentre,
   distanceToFinish,
+  intoMaze,
+  ON_LINE,
+  intoWorld,
   isOpen,
+  junkAt,
+  mazeAngle,
   mazeFor,
   nextCell,
   routeTarget,
   stepsToFinish,
+  touchesJunk,
   touchesWall,
   type Box,
   type Cell,
+  type Junk,
   type Maze,
   type Point,
 } from './internal/maze'
@@ -42,12 +53,14 @@ export {
   COLOURS,
   ROUND,
   TORCH,
+  angleOf,
   arrive,
   canMove,
   clock,
   createGame,
   finishPoint,
   hit,
+  inJunk,
   judgeEnd,
   leave,
   placings,
@@ -79,6 +92,6 @@ export {
   type WireTorch,
 } from './internal/wire'
 
-export { DAD, FILL, FOV, HOLD, POINTS, TILT, aimAt, cameraFor, frameScene, type Shot } from './internal/camera'
+export { DAD, FILL, FOV, HOLD, POINTS, SWEEP, TILT, aimAt, cameraFor, frameScene, type Shot } from './internal/camera'
 
 export { HelpingDadScreen, YELLS } from './internal/HelpingDadScreen'

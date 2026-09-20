@@ -4,19 +4,22 @@
  * Six baskets, a basket per ingredient, three of it in every one. The chef takes
  * some of them, one at a time, into the pot, and everybody watches. Then the
  * baskets are filled again and rotated round the counter, and players take
- * turns, in a random order, picking an item they think was in the recipe.
+ * turns, in a random order, rebuilding the recipe **in the order it went in**.
  *
- * - An ingredient the chef **did not use**: out.
- * - An ingredient the chef used, but **every copy of it has already been
- *   claimed**: out. Two tomatoes went in and two have been picked; the third
- *   tomato in the basket is a trap.
+ * The recipe is a sequence, not a set. The first cook up owes the chef's first
+ * item, the second cook the chef's second, and so on down the line - so what you
+ * have to remember is not only what went in the pot but when.
+ *
+ * - Anything but the ingredient **due next**: out. Not in the recipe at all,
+ *   or in it but later - the tomato that goes in fourth is a trap on the third
+ *   turn and the right answer one turn later.
  * - Otherwise the item is yours - it goes in the pot, and a chip in your colour
  *   goes by its basket - and you go to the back of the line.
  *
- * Last cook standing wins. If every copy in the recipe has been claimed and more
+ * Last cook standing wins. If the whole recipe has been rebuilt and more
  * than one is still in, the chef cooks again - faster, with less time to pick -
- * and the line carries on. **Two recipes at most**: after the second, once every
- * copy is claimed, every pick is out, so a game always ends, however good
+ * and the line carries on. **Two recipes at most**: after the second, once the
+ * recipe is finished, every pick is out, so a game always ends, however good
  * everybody's memory is.
  *
  * Everything here is pure. A game played from a seed plays out the same way.
@@ -82,9 +85,14 @@ export const KITCHEN = {
 export type Phase = 'cooking' | 'order' | 'turns' | 'result' | 'over'
 export const PHASES: readonly Phase[] = ['cooking', 'order', 'turns', 'result', 'over']
 
-/** Why somebody is out: not in the recipe, every copy gone, out of time, or left the lobby. */
-export type Why = 'wrong' | 'gone' | 'time' | 'left'
-export const WHYS: readonly Why[] = ['wrong', 'gone', 'time', 'left']
+/**
+ * Why somebody is out: not in the recipe, the recipe already finished, out of
+ * time, left the lobby, or in the recipe but not the one due next.
+ *
+ * `muddled` is last so the numbers the wire sends do not move.
+ */
+export type Why = 'wrong' | 'gone' | 'time' | 'left' | 'muddled'
+export const WHYS: readonly Why[] = ['wrong', 'gone', 'time', 'left', 'muddled']
 
 export interface Cook {
   id: string
@@ -254,6 +262,37 @@ export function claimedOf(game: Game, kind: number): number {
   return n
 }
 
+/**
+ * The recipe as the cooks have to remember it: the ingredients in the order the
+ * chef put them in.
+ *
+ * On a guest this is only what that browser was shown going in, which is the
+ * same as what the person at it saw. Nobody judges a pick from it but the host.
+ */
+export function recipeOrder(game: Game): number[] {
+  return game.picks.map((slot) => game.counter[slot])
+}
+
+/**
+ * How far down the recipe the kitchen has got: the position the next pick has
+ * to match, counting from 0.
+ *
+ * It is the number of items claimed, which every screen knows - being how far
+ * along you are is not a secret, only what belongs there is.
+ */
+export function dueIndex(game: Game): number {
+  let n = 0
+  for (const by of game.claimed) if (by !== null) n += 1
+  return n
+}
+
+/** The ingredient due next, or null once the whole recipe is back in the pot. */
+export function dueKind(game: Game): number | null {
+  const order = recipeOrder(game)
+  const at = dueIndex(game)
+  return at < order.length ? order[at] : null
+}
+
 /** Copies in the recipe nobody has claimed yet. */
 export function unclaimed(game: Game): number {
   const total = game.used.reduce((sum, n) => sum + n, 0)
@@ -294,13 +333,19 @@ function endTurn(game: Game, last: Pick): void {
 
 /**
  * A cook picks the item in `slot`. Only on their turn, only an item nobody has
- * claimed. Returns whether it counted.
+ * claimed, and only the ingredient the recipe is up to. Returns whether it
+ * counted.
  */
 export function pick(game: Game, player: number, slot: number): boolean {
   if (whoseTurn(game) !== player) return false
   if (!Number.isInteger(slot) || slot < 0 || slot >= KITCHEN.items || game.claimed[slot] !== null) return false
   const kind = game.served[slot]
-  const why: Why | null = game.used[kind] === 0 ? 'wrong' : claimedOf(game, kind) >= game.used[kind] ? 'gone' : null
+  const due = dueKind(game)
+  // Right ingredient, right moment, or out - and which mistake it was, because
+  // picking something that was never in the pot and picking something that goes
+  // in later are different kinds of wrong to the person who did it.
+  const why: Why | null =
+    due === null ? 'gone' : kind === due ? null : game.used[kind] === 0 ? 'wrong' : 'muddled'
   if (why) {
     knockOut(game, player, why)
   } else {

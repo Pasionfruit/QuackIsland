@@ -9,6 +9,11 @@
  * Fitted the same way as the other minigames' cameras: slid along its line of
  * sight until the maze touches the edge of the frame, and aimed so the space
  * above and below comes out even.
+ *
+ * **The maze turns**, so what has to be in frame is not its four corners but the
+ * circle they sweep - `SWEEP` - which is why the camera sits a little further
+ * back than a still maze of this size would need. The camera itself never moves:
+ * see the module's non-goals.
  */
 import { PerspectiveCamera, Plane, Raycaster, Vector2, Vector3 } from 'three'
 import { GRID, HALF, type Point } from './maze'
@@ -25,12 +30,15 @@ const dadTop = { y: DAD.height * Math.cos(DAD.lean), z: DAD.z - DAD.height * Mat
 /** The height a torch is carried at: the top of the walls. */
 export const HOLD = GRID.height
 
-/** The points that have to be in frame: the maze with its outer wall, and Dad. */
+/** How far the turning maze's furthest corner ever reaches from the middle, outer wall and all. */
+export const SWEEP = Math.hypot(HALF.x, HALF.z) + GRID.wall / 2 + 0.1
+
+/** The points that have to be in frame: the circle the turning maze sweeps, and Dad. */
 export const POINTS: readonly [number, number, number][] = [
-  [-HALF.x - 0.2, 0, -HALF.z - 0.2],
-  [HALF.x + 0.2, 0, -HALF.z - 0.2],
-  [-HALF.x - 0.2, 0, HALF.z + 0.2],
-  [HALF.x + 0.2, 0, HALF.z + 0.2],
+  ...Array.from({ length: 16 }, (_, i): [number, number, number] => {
+    const a = (i / 16) * Math.PI * 2
+    return [Math.cos(a) * SWEEP, 0, Math.sin(a) * SWEEP]
+  }),
   // His head and cap, with room for the jump when he yells.
   [-1.2, dadTop.y + 0.7, dadTop.z - 0.7],
   [1.2, dadTop.y + 0.7, dadTop.z - 0.7],
@@ -124,8 +132,12 @@ const hold = new Plane(new Vector3(0, 1, 0), -HOLD)
 const hitPoint = new Vector3()
 
 /**
- * Where the mouse is in the maze, at the height a torch is carried: `ndc` is the
- * pointer in the board, -1 to 1 each way, up positive. Null if it points at the sky.
+ * Where the mouse is on the ground, at the height a torch is carried: `ndc` is
+ * the pointer in the board, -1 to 1 each way, up positive. Null if it points at
+ * the sky.
+ *
+ * **In the world, not in the maze**: the maze turns under it, so the screen reads
+ * this back into the maze's own frame with `intoMaze` before the rules see it.
  */
 export function aimAt(ndc: { x: number; y: number }, aspect: number): Point | null {
   let camera = cameras.get(aspect)

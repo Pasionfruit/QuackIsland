@@ -2,9 +2,10 @@
  * 22-let-him-cook - the public contract.
  *
  * Minigame 16. Watch the chef cook from six baskets of ingredients - three of
- * each - and remember what went in. The baskets rotate round the counter. Then, in a random turn order,
- * take an item from a basket and toss it in the pot: wrong, or one whose every copy is already claimed, and you
- * are out; right, and you go to the back of the line. Last cook standing wins.
+ * each - and remember what went in, and in what order. The baskets rotate round
+ * the counter. Then, in a random turn order, take an item from a basket and toss
+ * it in the pot: anything but the ingredient the recipe is up to and you are
+ * out; the right one, and you go to the back of the line. Last cook standing wins.
  *
  * It plugs into `15-minigames` and nothing else in the build knows it exists.
  * Importing this module registers it - one line in the composition root.
@@ -32,12 +33,15 @@ export {
   cookTime,
   createGame,
   dealRecipe,
+  dueIndex,
+  dueKind,
   fastForwarding,
   leave,
   pick,
   pace,
   pickTime,
   placings,
+  recipeOrder,
   recipeSize,
   rotation,
   stepGame,

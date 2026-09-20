@@ -7,7 +7,7 @@
  * layout to a band rather than to an example.
  */
 import { describe, expect, it } from 'vitest'
-import { CLICK_PAD, YARD, catShape, eyeAt, fanPoint, inSight, layYard, look, rayBox, toward, type Box, type Yard } from '../internal/yard'
+import { CLICK_PAD, COATS, YARD, catFeet, catParts, catShape, eyeAt, fanPoint, inSight, layYard, look, rayBox, toward, type Box, type Yard } from '../internal/yard'
 import { EYE, direction, rayThrough, startView } from '../internal/view'
 
 /** A spread of seeds, the same every run: this is the claim about all yards, not about one. */
@@ -76,6 +76,68 @@ describe('the mess', () => {
           // A decoy is a trap, not a find: clicking one is a wrong guess.
           expect(look(yard, toward(eye)), `${yard.seed} decoy found`).not.toBe('midnight')
         }
+      }
+    }
+  })
+
+  it('makes every pair of eyes a cat of some other colour, on its own feet', () => {
+    for (const yard of yards) {
+      const coats = new Set<number>()
+      for (const decoy of yard.decoys) {
+        expect(['sit', 'loaf'], `${yard.seed} pose`).toContain(decoy.pose)
+        expect(decoy.coat, `${yard.seed} coat`).toBeGreaterThanOrEqual(0)
+        expect(decoy.coat, `${yard.seed} coat`).toBeLessThan(COATS.length)
+        coats.add(decoy.coat)
+        // Its head is where its eyes are: the body hangs off it, feet down.
+        const feet = catFeet(decoy)
+        const coat = COATS[decoy.coat]
+        const parts = catParts(decoy.pose, feet.x, feet.y, feet.z, decoy.heading, coat)
+        const head = parts[2]
+        expect(head.p.x, `${yard.seed} head x`).toBeCloseTo(decoy.x, 9)
+        expect(head.p.y, `${yard.seed} head y`).toBeCloseTo(decoy.y, 9)
+        expect(head.p.z, `${yard.seed} head z`).toBeCloseTo(decoy.z, 9)
+        // Nothing of it is underground, and none of it is black.
+        for (const part of parts) {
+          expect(part.p.y, `${yard.seed} sunk`).toBeGreaterThan(feet.y - 0.05)
+          expect([coat.coat, coat.sheen], `${yard.seed} colour`).toContain(part.colour)
+        }
+      }
+      // Not all one colour: a yard of eighteen ginger cats is one decoy, drawn
+      // eighteen times.
+      expect(coats.size, `${yard.seed} colours`).toBeGreaterThan(2)
+    }
+  })
+
+  it('draws his body and theirs from exactly the same parts, colour aside', () => {
+    const yard = yards[0]
+    const cat = yard.midnight
+    const his = catParts(cat.pose, cat.x, cat.y, cat.z, cat.heading, { coat: '#000', sheen: '#111' })
+    const decoy = yard.decoys.find((d) => d.pose === cat.pose)
+    expect(decoy, 'a decoy in the same pose').toBeDefined()
+    const feet = catFeet(decoy!)
+    const theirs = catParts(decoy!.pose, feet.x, feet.y, feet.z, decoy!.heading, COATS[decoy!.coat])
+    expect(theirs.map((p) => [p.shape, p.s])).toEqual(his.map((p) => [p.shape, p.s]))
+    // And the three a click is tested against are his three spheres, exactly.
+    const spheres = catShape(cat.pose, cat.x, cat.y, cat.z, cat.heading).spheres
+    his.slice(0, 3).forEach((part, i) => {
+      const sphere = spheres[2 - i]
+      expect(part.p.x).toBeCloseTo(sphere.x, 9)
+      expect(part.p.y).toBeCloseTo(sphere.y, 9)
+      expect(part.p.z).toBeCloseTo(sphere.z, 9)
+    })
+  })
+
+  it('never stands one of them between the camera and him', () => {
+    for (const yard of yards) {
+      const head = yard.midnight.spheres[0]
+      const him = Math.hypot(head.x - EYE.x, head.z - EYE.z)
+      const toHim = Math.atan2(head.x - EYE.x, head.z - EYE.z)
+      for (const decoy of yard.decoys) {
+        const away = Math.hypot(decoy.x - EYE.x, decoy.z - EYE.z)
+        if (away >= him) continue
+        const aside = Math.atan2(decoy.x - EYE.x, decoy.z - EYE.z) - toHim
+        const off = Math.abs(Math.atan2(Math.sin(aside), Math.cos(aside)))
+        expect(off, `${yard.seed} in front of him`).toBeGreaterThanOrEqual(Math.atan2(0.8, away))
       }
     }
   })

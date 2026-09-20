@@ -56,6 +56,17 @@ inside the view, never moving more than a hundredth of the view in a sixtieth of
 a second. Each red has its own loop and a slightly smaller circle (11% of the
 view's shorter side, down to 6.5%).
 
+**It breathes while it wanders**, swelling and shrinking by up to 26% of its
+radius on a rhythm of its own (`LIGHT.breath`, `LIGHT.breathPace`) - its own per
+red, like its path. A circle that only moves is followed once and then left
+alone; a circle that is also closing in has to be watched, because the pointer
+that sat comfortably inside it a moment ago is on the edge of a smaller one now.
+The middle is the only place that is always safe, which is the whole point.
+
+The breath rides the same ramp as the wander, so the circle you are given 0.8 s
+to find is exactly the size it looks, and it only starts closing in once it
+starts to move.
+
 The pointer is judged against **the board** - the view under the HUD - in its own
 pixels. A pointer that has left the window, or a window that has lost focus, is
 outside the circle. So is a pointer that has never moved: the page cannot know
@@ -159,6 +170,9 @@ Exported because it is worth testing, not because anything else needs it.
   out.** Tested.
 - **The circle stays on the view and never jumps; somebody following it is never
   out, and somebody holding still in the middle nearly always is.** Tested.
+- **It swells and shrinks as it wanders**, both ways, never past the breath, never
+  in a jump, and never while it is still holding still. Tested, and the rhythm is
+  its own per red.
 - **Accounts only go forward, and nobody is believed past what the green so far
   allows.** Tested.
 - **Places are in arrival order; the race ends when three are over the line, nobody is racing, or at two
@@ -197,6 +211,9 @@ Open a lobby, leave the game on Volcano Island, press **minigames**, open
   Hold space down: one step, not a run.
 - **Watch the end of a green.** A red 3, 2, 1 counts down over the view and in
   the HUD, and the light turns red as it ends.
+- **Watch the circle on a red.** As well as wandering it should be swelling and
+  shrinking, smoothly and by an obvious amount - and sitting near its edge should
+  start to feel like a bad idea.
 - **Wait for red.** The lamp goes red, the edge of the view goes red, a circle
   appears in the middle saying "in here!". Put the pointer in it and follow it.
   Stay in until green: still racing.

@@ -595,21 +595,27 @@ export function torchMove({ ahead = 0.25, at = null } = {}) {
     const me = g.players.find((p) => p.mine)
     const state = { x: +me.x.toFixed(3), z: +me.z.toFixed(3), held: me.held, stunned: +me.stunned.toFixed(2), hits: me.hits, finished: me.finished, over: g.over, clock: +g.elapsed.toFixed(2) }
     if (g.over || me.finished !== null) return state
+    // The maze turns, and a torch's place is in the maze's own frame: the mouse
+    // is worked out there and only then turned into the world for the screen.
+    const angle = mz.mazeAngle(g.seed, g.elapsed)
+    const near = (p) => mz.touchesJunk(mz.mazeFor(g.seed), p, 0.2, g.elapsed) !== null
     let target = ${JSON.stringify(at)}
     if (!target) {
       if (!me.held) target = { x: me.x, z: me.z }
       else {
         const goal = mz.routeTarget(mz.mazeFor(g.seed), me)
         const d = Math.hypot(goal.x - me.x, goal.z - me.z)
-        const go = Math.min(d, ${ahead})
-        target = d < 1e-6 ? goal : { x: me.x + ((goal.x - me.x) / d) * go, z: me.z + ((goal.z - me.z) / d) * go }
+        const to = (m) => ({ x: me.x + ((goal.x - me.x) / d) * m, z: me.z + ((goal.z - me.z) / d) * m })
+        // A piece of Dad's junk in the way: hold still and let it slide past.
+        target = d < 1e-6 ? goal : near(to(0.06)) || near(to(0.22)) ? { x: me.x, z: me.z } : to(Math.min(d, ${ahead}))
       }
     }
     const canvas = document.querySelector('[data-board] canvas')
     const rect = canvas.getBoundingClientRect()
     const aspect = rect.width / rect.height
     const shot = cam.frameScene(aspect)
-    const point = { x: target.x, y: cam.HOLD, z: target.z }
+    const onBoard = mz.intoWorld(target, angle)
+    const point = { x: onBoard.x, y: cam.HOLD, z: onBoard.z }
     const sub = (p, q) => ({ x: p.x - q.x, y: p.y - q.y, z: p.z - q.z })
     const dot = (p, q) => p.x * q.x + p.y * q.y + p.z * q.z
     const norm = (p) => { const l = Math.hypot(p.x, p.y, p.z); return { x: p.x / l, y: p.y / l, z: p.z / l } }
@@ -634,6 +640,68 @@ export function torchMove({ ahead = 0.25, at = null } = {}) {
  * its button. Evaluates to the round and phase it picked in, and the pick the
  * page shows as its own straight after.
  */
+/**
+ * An expression that, in a page showing Helping Dad, leads its own torch along
+ * the way out **from inside the page** for `ms` milliseconds, a frame at a time.
+ *
+ * `torchMove` is one step per round trip, which is fine for one browser but not
+ * for eight: the maze turns, so a pointer left where it was is a target sliding
+ * backwards through the maze, and a driver that only updates two or three times
+ * a second loses more ground than it makes. This one runs on the page's own
+ * frames, which is also what a hand on a mouse does.
+ *
+ * Evaluates to the torch's state at the end.
+ */
+export function torchDrive({ ms = 4000, ahead = 0.25 } = {}) {
+  return `(async () => {
+    const cam = await import('/src/modules/31-helping-dad/internal/camera.ts')
+    const mz = await import('/src/modules/31-helping-dad/internal/maze.ts')
+    const canvas = document.querySelector('[data-board] canvas')
+    const frame = () => new Promise((r) => requestAnimationFrame(r))
+    const until = performance.now() + ${ms}
+    let state = null
+    while (performance.now() < until) {
+      await frame()
+      const g = ${gameState('helping-dad')}
+      if (!g || g.players.length === 0) continue
+      const me = g.players.find((p) => p.mine)
+      state = { x: +me.x.toFixed(3), z: +me.z.toFixed(3), held: me.held, stunned: +me.stunned.toFixed(2), hits: me.hits, finished: me.finished, over: g.over, clock: +g.elapsed.toFixed(2) }
+      if (g.over || me.finished !== null) break
+      const maze = mz.mazeFor(g.seed)
+      const near = (p) => mz.touchesJunk(maze, p, 0.2, g.elapsed) !== null
+      let target = { x: me.x, z: me.z }
+      if (me.held) {
+        const goal = mz.routeTarget(maze, me)
+        const d = Math.hypot(goal.x - me.x, goal.z - me.z)
+        const to = (m) => ({ x: me.x + ((goal.x - me.x) / d) * m, z: me.z + ((goal.z - me.z) / d) * m })
+        // A piece of Dad's junk in the way: hold still and let it slide past.
+        if (d >= 1e-6) target = near(to(0.06)) || near(to(0.22)) ? target : to(Math.min(d, ${ahead}))
+        else target = goal
+      }
+      const on = mz.intoWorld(target, mz.mazeAngle(g.seed, g.elapsed))
+      const rect = canvas.getBoundingClientRect()
+      const aspect = rect.width / rect.height
+      const shot = cam.frameScene(aspect)
+      const point = { x: on.x, y: cam.HOLD, z: on.z }
+      const sub = (p, q) => ({ x: p.x - q.x, y: p.y - q.y, z: p.z - q.z })
+      const dot = (p, q) => p.x * q.x + p.y * q.y + p.z * q.z
+      const norm = (p) => { const l = Math.hypot(p.x, p.y, p.z); return { x: p.x / l, y: p.y / l, z: p.z / l } }
+      const cross = (p, q) => ({ x: p.y * q.z - p.z * q.y, y: p.z * q.x - p.x * q.z, z: p.x * q.y - p.y * q.x })
+      const eye = { x: shot.x, y: shot.y, z: shot.z }
+      const forward = norm(sub(shot.target, eye))
+      const right = norm(cross(forward, { x: 0, y: 1, z: 0 }))
+      const up = cross(right, forward)
+      const rel = sub(point, eye)
+      const depth = dot(rel, forward)
+      const half = Math.tan((cam.FOV * Math.PI) / 360)
+      const clientX = rect.left + ((dot(rel, right) / (depth * half * aspect) + 1) / 2) * rect.width
+      const clientY = rect.top + ((1 - dot(rel, up) / (depth * half)) / 2) * rect.height
+      canvas.dispatchEvent(new PointerEvent('pointermove', { clientX, clientY, bubbles: true }))
+    }
+    return state
+  })()`
+}
+
 export function stepsPick({ pick, mouse = false }) {
   return `(async () => {
     if (${mouse}) {
@@ -985,14 +1053,19 @@ export function cookPick(choose = 'safe', { hoverOnly = false } = {}) {
     const cam = await import('/src/modules/22-let-him-cook/internal/camera.ts')
     const g = ${gameState('let-him-cook')}
     if (!g || g.phase !== 'turns' || !g.players[g.queue[0]]?.mine) return null
+    // The recipe has to go back in the order it came out, so what this browser
+    // saw the chef take, in order, is what it plays from.
     const used = [0, 0, 0, 0, 0, 0]
     for (const s of g.picks) used[g.counter[s]] += 1
-    const taken = (kind) => g.served.filter((k, s) => k === kind && g.claimed[s] !== null).length
+    const order = g.picks.map((s) => g.counter[s])
+    const at = g.claimed.filter((c) => c !== null).length
+    const due = at < order.length ? order[at] : -1
     const open = g.served.map((_, s) => s).filter((s) => g.claimed[s] === null)
     const lists = {
-      safe: open.filter((s) => used[g.served[s]] > taken(g.served[s])),
+      safe: open.filter((s) => g.served[s] === due),
       wrong: open.filter((s) => used[g.served[s]] === 0),
-      gone: open.filter((s) => used[g.served[s]] > 0 && used[g.served[s]] <= taken(g.served[s])),
+      // In the recipe, but not this turn's: the mistake the order is there for.
+      muddled: open.filter((s) => used[g.served[s]] > 0 && g.served[s] !== due),
     }
     const list = lists[${JSON.stringify(choose)}]
     if (list.length === 0) return { none: ${JSON.stringify(choose)}, seen: g.picks.length }
@@ -1020,7 +1093,7 @@ export function cookPick(choose = 'safe', { hoverOnly = false } = {}) {
     const clientY = rect.top + ((1 - dot(rel, up) / (depth * half)) / 2) * rect.height
     canvas.dispatchEvent(new PointerEvent('pointermove', { clientX, clientY, bubbles: true }))
     if (!${hoverOnly}) canvas.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX, clientY, bubbles: true }))
-    return { slot, kind: g.served[slot], choose: ${JSON.stringify(choose)}, turn: g.turn, x: Math.round(clientX), y: Math.round(clientY) }
+    return { slot, kind: g.served[slot], due, at, choose: ${JSON.stringify(choose)}, turn: g.turn, x: Math.round(clientX), y: Math.round(clientY) }
   })()`
 }
 

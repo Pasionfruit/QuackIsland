@@ -6,16 +6,18 @@ import { BOT_THINK, botMove, remembered } from '../internal/ai'
 import {
   KINDS,
   KITCHEN,
-  claimedOf,
   cookTime,
   createGame,
   dealRecipe,
+  dueIndex,
+  dueKind,
   fastForwarding,
   leave,
   pace,
   pick,
   pickTime,
   placings,
+  recipeOrder,
   recipeSize,
   rotation,
   stepGame,
@@ -42,15 +44,15 @@ function toTurns(game: Game): Game {
   return game
 }
 
-/** A slot that is safe to pick right now, or one that is not. */
-function slotWhere(game: Game, safe: boolean, how: 'wrong' | 'gone' = 'wrong'): number {
+/** A slot that is safe to pick right now, or one that is not, and how it is wrong. */
+function slotWhere(game: Game, safe: boolean, how: 'wrong' | 'muddled' = 'wrong'): number {
+  const due = dueKind(game)
   for (let slot = 0; slot < KITCHEN.items; slot++) {
     if (game.claimed[slot] !== null) continue
     const kind = game.served[slot]
-    const left = game.used[kind] - claimedOf(game, kind)
-    if (safe && left > 0) return slot
+    if (safe && kind === due) return slot
     if (!safe && how === 'wrong' && game.used[kind] === 0) return slot
-    if (!safe && how === 'gone' && game.used[kind] > 0 && left <= 0) return slot
+    if (!safe && how === 'muddled' && game.used[kind] > 0 && kind !== due) return slot
   }
   return -1
 }
@@ -164,20 +166,66 @@ describe('a turn', () => {
     expect(game.claimed[slot]).toBeNull()
   })
 
-  it('puts you out for an ingredient whose copies have all been claimed', () => {
+  it('puts you out for an ingredient that is in the recipe but not the one due', () => {
     const game = toTurns(createGame(SEED, cooks(3)))
-    // Claim every copy of one ingredient that is also on the counter spare.
-    const kind = game.used.findIndex((n, k) => n > 0 && game.served.filter((s) => s === k).length > n)
-    expect(kind).toBeGreaterThanOrEqual(0)
-    for (let n = 0; n < game.used[kind]; n++) {
-      const slot = game.served.findIndex((k, s) => k === kind && game.claimed[s] === null)
-      pick(game, game.queue[0], slot)
+    const next = game.queue[0]
+    const early = slotWhere(game, false, 'muddled')
+    expect(early).toBeGreaterThanOrEqual(0)
+    expect(pick(game, next, early)).toBe(true)
+    expect(game.players[next].out?.why).toBe('muddled')
+    // Nothing of theirs is in the pot, and the recipe has not moved on.
+    expect(game.claimed[early]).toBeNull()
+    expect(dueIndex(game)).toBe(0)
+  })
+
+  it('takes the recipe back in the order the chef cooked it, and no other', () => {
+    const game = toTurns(createGame(SEED, cooks(4)))
+    const order = recipeOrder(game)
+    expect(order).toHaveLength(game.picks.length)
+    for (let at = 0; at < order.length; at++) {
+      expect(dueIndex(game)).toBe(at)
+      expect(dueKind(game)).toBe(order[at])
+      const cook = game.queue[0]
+      const slot = slotWhere(game, true)
+      expect(game.served[slot]).toBe(order[at])
+      expect(pick(game, cook, slot)).toBe(true)
+      expect(game.players[cook].out).toBeNull()
+      expect(game.claimed[slot]).toBe(cook)
+      if (at < order.length - 1) run(game, KITCHEN.result + 0.05)
+    }
+    // The whole recipe is back in the pot and nothing else is due.
+    expect(dueKind(game)).toBeNull()
+    expect(unclaimed(game)).toBe(0)
+  })
+
+  it('makes the same ingredient a trap one turn and the answer the next', () => {
+    // A recipe that uses one ingredient twice, with something else in between.
+    let game = toTurns(createGame(SEED, cooks(4)))
+    let order = recipeOrder(game)
+    let twice = -1
+    for (let seed = SEED; twice < 0 && seed < SEED + 40; seed++) {
+      game = toTurns(createGame(seed, cooks(4)))
+      order = recipeOrder(game)
+      twice = order.findIndex((kind, at) => at > 1 && order.indexOf(kind) < at - 1)
+    }
+    expect(twice).toBeGreaterThan(1)
+    const kind = order[twice]
+    // On the first turn it is somebody else's place in the order: out.
+    const early = game.served.findIndex((k, slot) => k === kind && game.claimed[slot] === null)
+    const first = game.queue[0]
+    pick(game, first, early)
+    expect(game.players[first].out?.why).toBe('muddled')
+    run(game, KITCHEN.result + 0.05)
+    // Played in order up to its place, the very same ingredient is right.
+    for (let at = dueIndex(game); at < twice; at++) {
+      pick(game, game.queue[0], slotWhere(game, true))
       run(game, KITCHEN.result + 0.05)
     }
-    const next = game.queue[0]
-    const trap = game.served.findIndex((k, s) => k === kind && game.claimed[s] === null)
-    pick(game, next, trap)
-    expect(game.players[next].out?.why).toBe('gone')
+    const cook = game.queue[0]
+    const now = game.served.findIndex((k, slot) => k === kind && game.claimed[slot] === null)
+    expect(pick(game, cook, now)).toBe(true)
+    expect(game.players[cook].out).toBeNull()
+    expect(game.claimed[now]).toBe(cook)
   })
 
   it('is refused off your turn, on a claimed item, or outside the turns', () => {
@@ -318,15 +366,16 @@ describe('the stand-ins', () => {
     expect(game.claimed[move!.slot]).toBeNull()
   })
 
-  it('remember most of the recipe', () => {
+  it('remember most of the order', () => {
     let right = 0
     let total = 0
     for (let seed = 1; seed <= 60; seed++) {
       const game = createGame(seed, cooks(4, true))
       for (const bot of game.players) {
-        remembered(game, bot).forEach((n, k) => {
+        const order = recipeOrder(game)
+        remembered(game, bot).forEach((kind, at) => {
           total += 1
-          if (n === game.used[k]) right += 1
+          if (kind === order[at]) right += 1
         })
       }
     }

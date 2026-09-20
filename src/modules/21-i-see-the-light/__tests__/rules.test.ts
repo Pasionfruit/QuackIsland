@@ -115,6 +115,40 @@ describe('the circle', () => {
     expect(circleAt(SEED, 40, 0).radius).toBe(LIGHT.circleMin)
   })
 
+  it('swells and shrinks as it wanders, by the same amount either way', () => {
+    const base = circleAt(SEED, 0, 0).radius
+    let biggest = base
+    let smallest = base
+    let before = base
+    for (let since = 0; since < LIGHT.red[1]; since += 1 / 60) {
+      const r = circleAt(SEED, 0, since).radius
+      biggest = Math.max(biggest, r)
+      smallest = Math.min(smallest, r)
+      // Nothing that could be described as a pop: it breathes.
+      expect(Math.abs(r - before)).toBeLessThan(base * 0.02)
+      before = r
+    }
+    // Both ways, and never further than the breath allows.
+    expect(biggest).toBeGreaterThan(base * 1.1)
+    expect(smallest).toBeLessThan(base * 0.9)
+    expect(biggest).toBeLessThanOrEqual(base * (1 + LIGHT.breath) + 1e-9)
+    expect(smallest).toBeGreaterThanOrEqual(base * (1 - LIGHT.breath) - 1e-9)
+  })
+
+  it('is exactly its own size while it holds still, and breathes its own way each red', () => {
+    for (const red of [0, 1, 5]) {
+      const base = Math.max(LIGHT.circleMin, LIGHT.circle - red * LIGHT.circleShrink)
+      expect(circleAt(SEED, red, 0).radius).toBeCloseTo(base, 12)
+      expect(circleAt(SEED, red, LIGHT.pointerGrace).radius).toBeCloseTo(base, 12)
+    }
+    // A moment into two different reds is two different sizes - the breath is
+    // not one rhythm everybody learns.
+    const at = LIGHT.pointerGrace + 2.5
+    expect(circleAt(SEED, 0, at).radius).not.toBeCloseTo(circleAt(SEED, 1, at).radius, 4)
+    // And the same red is the same size on every screen that asks.
+    expect(circleAt(SEED, 0, at).radius).toBe(circleAt(SEED, 0, at).radius)
+  })
+
   it('has a pointer inside it or not, in pixels, on a view of any shape', () => {
     const circle = { x: 0.5, y: 0.5, radius: 0.1 }
     expect(insideCircle({ x: 400, y: 300 }, circle, 800, 600)).toBe(true)

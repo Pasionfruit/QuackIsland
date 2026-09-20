@@ -4,7 +4,7 @@
  * A fenced field with sixteen holes in it, four by four, and everybody walking
  * about it with a hammer. Moles pop out of the holes, stay up a moment, and go
  * back down. Walk over, swing, and the mole in front of you is whacked: a point
- * for an ordinary mole, five for the golden mole - which is rarer and does not
+ * for an ordinary mole, three for the golden mole - which is rarer and does not
  * stay up long. First whack on a mole takes it. Most points at a minute wins.
  * A swing that lands on somebody's head instead stuns them: they cannot walk or
  * swing for a moment.
@@ -48,7 +48,7 @@ export const FIELD = {
   sink: 0.3,
 
   /** Points: an ordinary mole, and the golden one. */
-  points: { mole: 1, golden: 5 },
+  points: { mole: 1, golden: 3 },
 
   /** Seconds between swings. */
   swing: 0.4,

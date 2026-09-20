@@ -15,6 +15,12 @@
  * Dad stands at the top edge, lit by a lamp of his own. When you touch a wall he
  * jumps.
  *
+ * **The maze turns**, and everything in it turns with it: the walls, the two
+ * pads, Dad's junk and every torch all live in one group whose heading is
+ * `angleOf` off the game's own clock. The floor and Dad are outside it, because
+ * they do not move. Nothing in the rules knows about any of this - a torch's
+ * position is in the maze's own frame, and this is the only place it is turned.
+ *
  * **Drawn from a ref, redrawn every frame from inside the canvas.** The canvas
  * itself is rendered once by the screen; see Duck Hunt's notes.
  */
@@ -34,8 +40,8 @@ import {
 } from 'three'
 import { createAvatar } from '../../02-player'
 import { DAD, HOLD, frameScene } from './camera'
-import { GRID, mazeFor, type Point } from './maze'
-import { COLOURS, TORCH, finishPoint, startPoint, type Game } from './rules'
+import { GRID, JUNK, junkAt, mazeFor, type Point } from './maze'
+import { COLOURS, TORCH, angleOf, finishPoint, startPoint, type Game } from './rules'
 
 export const PALETTE = {
   background: '#050409',
@@ -43,6 +49,8 @@ export const PALETTE = {
   wall: '#cfc3e0',
   finish: '#5fe06f',
   start: '#3a3350',
+  junk: '#8a6a3a',
+  rim: '#ffab3d',
   dad: '#8793a8',
   cap: '#3d4a63',
   aim: '#ffffff',
@@ -104,10 +112,6 @@ const Maze = memo(function Maze({ seed }: { seed: number }) {
   const end = finishPoint(seed)
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[80, 60]} />
-        <meshStandardMaterial color={PALETTE.floor} roughness={0.95} />
-      </mesh>
       <instancedMesh ref={walls} args={[undefined, undefined, 400]} castShadow receiveShadow>
         <boxGeometry args={[1, 1, 1]} />
         <meshStandardMaterial color={PALETTE.wall} roughness={0.7} />
@@ -120,6 +124,50 @@ const Maze = memo(function Maze({ seed }: { seed: number }) {
     </group>
   )
 })
+
+/**
+ * Dad's junk sliding up and down the corridors: a paint tin, turning slowly on
+ * the spot as it goes.
+ *
+ * It is a dull thing in the dark like the walls are, lit only by whoever's torch
+ * is near it - but for a faint band round its top, which catches the light from
+ * further off, so a corridor with something in it is a thing you can see coming
+ * rather than a thing you find with your face. It stands just under the wall
+ * tops, and so just under the ring: a torch held still while one goes by is one
+ * the tin slides under, which is the rule.
+ */
+const TIN = { height: GRID.height - 0.02 } as const
+
+function Junk({ live }: { live: RefObject<Game> }) {
+  const group = useRef<Group>(null)
+  const pieces = mazeFor(live.current.seed).junk
+  useFrame(() => {
+    const t = live.current.elapsed
+    group.current?.children.forEach((tin, i) => {
+      const piece = pieces[i]
+      if (!piece) return
+      const at = junkAt(piece, t)
+      tin.position.set(at.x, 0, at.z)
+      tin.rotation.y = t * 0.6
+    })
+  })
+  return (
+    <group ref={group}>
+      {pieces.map((_, i) => (
+        <group key={i}>
+          <mesh position={[0, TIN.height / 2, 0]} castShadow>
+            <cylinderGeometry args={[JUNK.radius, JUNK.radius, TIN.height, 14]} />
+            <meshStandardMaterial color={PALETTE.junk} roughness={0.6} metalness={0.3} />
+          </mesh>
+          <mesh position={[0, TIN.height - 0.02, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[JUNK.radius, 0.014, 6, 20]} />
+            <meshBasicMaterial color={PALETTE.rim} transparent opacity={0.75} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  )
+}
 
 /** The finish: a green square that glows and pulses, seen from anywhere. */
 function FinishPad({ at }: { at: Point }) {
@@ -249,6 +297,15 @@ function TorchView({ index, live, aim }: { index: number; live: RefObject<Game>;
   )
 }
 
+/** The maze and everything standing in it, turned together. */
+function Turning({ live, children }: { live: RefObject<Game>; children: React.ReactNode }) {
+  const group = useRef<Group>(null)
+  useFrame(() => {
+    if (group.current) group.current.rotation.y = angleOf(live.current)
+  })
+  return <group ref={group}>{children}</group>
+}
+
 export function HelpingDadScene({ live, aim }: { live: RefObject<Game>; aim: RefObject<Point | null> }) {
   const [, redraw] = useReducer((n: number) => n + 1, 0)
   useFrame(() => redraw())
@@ -258,11 +315,21 @@ export function HelpingDadScene({ live, aim }: { live: RefObject<Game>; aim: Ref
     <>
       <color attach="background" args={[background]} />
       <FixedCamera />
-      {game.players.length > 0 ? <Maze seed={game.seed} /> : null}
+      {/* The ground the maze stands on, which does not turn with it. */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[80, 60]} />
+        <meshStandardMaterial color={PALETTE.floor} roughness={0.95} />
+      </mesh>
       <Dad live={live} />
-      {game.players.map((torch, index) => (
-        <TorchView key={`${game.id}:${torch.id}`} index={index} live={live} aim={aim} />
-      ))}
+      {game.players.length > 0 ? (
+        <Turning live={live}>
+          <Maze seed={game.seed} />
+          <Junk live={live} />
+          {game.players.map((torch, index) => (
+            <TorchView key={`${game.id}:${torch.id}`} index={index} live={live} aim={aim} />
+          ))}
+        </Turning>
+      ) : null}
     </>
   )
 }

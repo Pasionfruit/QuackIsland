@@ -2007,7 +2007,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-18T23:58:03.892Z"
+          "at": "2026-09-20T04:22:29.246Z"
         },
         "human": {
           "status": "pending"
@@ -2091,7 +2091,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-18T22:36:50.366Z"
+          "at": "2026-09-20T04:23:05.159Z"
         },
         "human": {
           "status": "pending"
@@ -2327,7 +2327,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-19T22:58:37.073Z"
+          "at": "2026-09-20T04:23:40.635Z"
         },
         "human": {
           "status": "pending"
@@ -2750,7 +2750,7 @@
     {
       "id": "31-helping-dad",
       "phase": "P6",
-      "title": "Minigame 18, Helping Dad: a maze in the dark, a torch in your colour on the mouse, a wall touched is Dad yelling and a second and a half stunned",
+      "title": "Minigame 18, Helping Dad: a narrow maze in the dark that turns under you, a torch in your colour on the mouse, and Dad's junk sliding about - a wall touched or a piece bumped is Dad yelling and a second and a half stunned",
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
@@ -2797,6 +2797,11 @@
           "status": "done"
         },
         {
+          "id": "31.8",
+          "title": "Narrow corridors, the whole maze turning under you, and Dad's junk sliding about it",
+          "status": "done"
+        },
+        {
           "id": "31.7",
           "title": "The assets: models, sprites and sound in place of primitives",
           "status": "planned"
@@ -2805,7 +2810,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-18T23:59:03.052Z"
+          "at": "2026-09-20T04:25:45.809Z"
         },
         "human": {
           "status": "pending"
@@ -2814,8 +2819,8 @@
       },
       "freeze": null,
       "nonGoals": [
-        "No models: players are torches and the island capsule, walls are boxes",
-        "No moving camera",
+        "No models: players are torches and the island capsule, walls are boxes and Dad's junk is a tin",
+        "No moving camera - the maze turns, not the camera",
         "No torch lighting the maze but your own",
         "No sound, no score kept between games"
       ],
@@ -3328,7 +3333,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-18T23:59:32.530Z"
+          "at": "2026-09-20T04:24:16.617Z"
         },
         "human": {
           "status": "pending"

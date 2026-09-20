@@ -22,10 +22,17 @@ agents depend on*; a block is something *only you depend on*.
 
 ## Your job, in order
 
-1. Read `pipeline.json`. Find the module whose status is `in_progress`, or
-   the first one that is `planned`. That module is your entire job.
-2. Read your module's `MODULE.md` if it exists, and the `MODULE.md` of every
-   module listed in your `dependsOn`. **Do not open any other module's files.**
+1. Run `npm run brief`. It prints the conventions, the module you are on, its
+   blocks, and the public contract of everything it depends on. That module is
+   your entire job. **Do not read `pipeline.json` to find your work.** It is
+   139KB, and 94KB of that is 52 other modules' blocks and nonGoals that you are
+   forbidden to act on - reading it whole costs ~34k tokens to learn ~2k worth of
+   things. Open it only to *write* your own entry.
+2. Read your own module's `MODULE.md` if it exists. For each module in your
+   `dependsOn`, read its `index.ts` - that file *is* the public contract, and it
+   runs four to twelve times smaller than the same module's `MODULE.md`. Open a
+   dependency's `MODULE.md` only when the contract alone leaves you guessing.
+   **Do not open any other module's files.**
    If you need something that is not in a dependency's public contract, that
    is a finding to report, not a thing to reach in and take.
 3. Work through your blocks, updating their status in `pipeline.json` as you
@@ -80,10 +87,37 @@ From `pipeline.json`, and not up for renegotiation inside a module:
   `PRIORITY` export in `00-core`. Do not invent your own numbers.
 - Assets resolve through `assetUrl()` from `00-core`, never a hardcoded path.
 
-## Asset generation (Meshy)
+## Geometry is built in code
 
-Only the module that owns the asset pipeline may call Meshy, and only through
-the scripted, cached path. Never call the Meshy MCP server or API ad hoc: it
-consumes credits, and an uncached result is money spent with nothing to show
-for it. `npm run assets:plan` prints what would be generated and what it would
-cost, and makes no network calls.
+There is no asset pipeline and there is not going to be one. Every shape in this
+project is procedural - 400-odd three.js primitives across the modules, and no
+model-loading code anywhere. Build what you need out of geometry and keep it
+inside `assetTrianglesDefault` and `assetTextureMaxPx`.
+
+Do not reach for AI asset generation: not Meshy, not a local model, not an MCP
+server that offers one. Those budgets are low-poly, which is exactly where
+generated meshes are worst and procedural code is best - you would pay to make a
+dense mesh and then pay again in effort to throw most of it away.
+
+If a shape is genuinely beyond primitives - a character, say - the answer is a
+CC0 asset pack, not a generator. That is the human's call, so report it as a
+finding rather than adding a dependency.
+
+## Keep the session cheap
+
+Everything you open stays in context and is re-sent on every later turn, so a
+session that starts by reading widely pays for that for the rest of its life.
+Read narrowly, and read once.
+
+- **Never read `pipeline.json` whole.** `npm run brief` is the session opener.
+- **Prefer a dependency's `index.ts` to its `MODULE.md`.** Smaller, and it is
+  the contract that actually binds you.
+- **Do not print a whole large file to find one symbol.** Several modules run
+  25-46KB - `15-minigames/internal/catalogue.ts` alone is 46KB. Grep for the
+  symbol, then read the range around it.
+- **Do not re-read a file you just wrote.** The edit applied or it errored.
+- **Do not spawn a subagent for something one grep answers.** A subagent builds
+  its context from nothing and pays full price for it.
+
+If answering one question looks like it needs more than a couple of files, say
+what you are hunting for and ask before opening them.

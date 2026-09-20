@@ -3,9 +3,9 @@
  */
 import { Frustum, Matrix4, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
-import { FILL, HOLD, POINTS, aimAt, cameraFor } from '../internal/camera'
-import { GRID, HALF, mazeFor, routeTarget, touchesWall } from '../internal/maze'
-import { ROUND, TORCH, clock, createGame, finishPoint, report, steer, stepGame, type Game } from '../internal/rules'
+import { FILL, HOLD, POINTS, SWEEP, aimAt, cameraFor } from '../internal/camera'
+import { GRID, HALF, intoWorld, mazeAngle, mazeFor, routeTarget, touchesWall } from '../internal/maze'
+import { ROUND, TORCH, clock, createGame, finishPoint, inJunk, report, steer, stepGame, type Game } from '../internal/rules'
 import { waitingGame } from '../internal/setup'
 import { applySnapshot, decodeIntent, decodeSnapshot, encodeIntent, encodeSnapshot } from '../internal/wire'
 
@@ -21,13 +21,20 @@ function started(g: Game): Game {
   return g
 }
 
-/** A careful mouse a little ahead of a torch, along the way out. */
-function mouseFor(g: Game, player: number) {
+/**
+ * A careful mouse a little ahead of a torch, along the way out - and the torch's
+ * own place, holding it still, while a piece of Dad's junk is in the way of it.
+ */
+function mouseFor(g: Game, player: number, dt = 1 / 30) {
   const torch = g.players[player]
-  if (!torch.held) return { x: torch.x, z: torch.z }
+  const here = { x: torch.x, z: torch.z }
+  if (!torch.held) return here
   const goal = routeTarget(mazeFor(g.seed), torch)
   const d = Math.hypot(goal.x - torch.x, goal.z - torch.z)
-  return d < 1e-6 ? goal : { x: torch.x + ((goal.x - torch.x) / d) * Math.min(d, 0.25), z: torch.z + ((goal.z - torch.z) / d) * Math.min(d, 0.25) }
+  if (d < 1e-6) return goal
+  const to = (m: number) => ({ x: torch.x + ((goal.x - torch.x) / d) * m, z: torch.z + ((goal.z - torch.z) / d) * m })
+  if (inJunk(g, to(Math.min(d, TORCH.speed * dt))) || inJunk(g, to(0.3))) return here
+  return to(Math.min(d, 0.25))
 }
 
 describe('a snapshot', () => {
@@ -149,6 +156,30 @@ describe('the fixed camera', () => {
       for (const p of points) expect(frustum.containsPoint(p), `${aspect}`).toBe(true)
       const reach = Math.max(...points.map((p) => p.clone().project(camera)).map((p) => Math.max(Math.abs(p.x), Math.abs(p.y))))
       expect(reach, `${aspect}`).toBeGreaterThan(FILL - 0.01)
+    }
+  })
+
+  it('keeps the maze in frame however far round it has turned', () => {
+    const maze = mazeFor(SEED)
+    const corners = [
+      { x: -HALF.x, z: -HALF.z },
+      { x: HALF.x, z: -HALF.z },
+      { x: -HALF.x, z: HALF.z },
+      { x: HALF.x, z: HALF.z },
+    ]
+    // Every corner, at every angle the maze ever reaches, is inside the circle
+    // the camera is fitted to - and so inside the frame at every window shape.
+    for (const aspect of [0.5, 1, 1.78, 2.35]) {
+      const camera = cameraFor(aspect)
+      const frustum = new Frustum().setFromProjectionMatrix(new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse))
+      for (let t = 0; t <= ROUND.limit; t += 1) {
+        const angle = mazeAngle(maze.seed, t)
+        for (const corner of corners) {
+          const at = intoWorld(corner, angle)
+          expect(Math.hypot(at.x, at.z)).toBeLessThanOrEqual(SWEEP)
+          expect(frustum.containsPoint(new Vector3(at.x, GRID.height, at.z)), `${aspect} ${t}`).toBe(true)
+        }
+      }
     }
   })
 

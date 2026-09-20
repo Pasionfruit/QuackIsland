@@ -30,6 +30,7 @@ import { memo, useEffect, useMemo, useReducer, useRef, type RefObject } from 're
 import {
   BoxGeometry,
   Color,
+  ConeGeometry,
   CylinderGeometry,
   DoubleSide,
   Euler,
@@ -53,7 +54,7 @@ import {
 } from 'three'
 import type { Game } from './rules'
 import { EYE, direction, type View } from './view'
-import { EYE_OFFSET, YARD, eyeAt, type Part, type Shape, type Yard, yardFor } from './yard'
+import { COATS, EYE_OFFSET, YARD, catFeet, catParts, eyeAt, type Part, type Shape, type Yard, yardFor } from './yard'
 
 export const PALETTE = {
   night: '#0b1018',
@@ -68,7 +69,7 @@ export const PALETTE = {
   found: '#6fe3a0',
 } as const
 
-/** The four shapes every piece of junk is made of, at unit size. */
+/** The shapes every piece of junk and every cat is made of, at unit size. */
 function geometryFor(shape: Shape): BufferGeometry {
   switch (shape) {
     case 'box':
@@ -80,14 +81,23 @@ function geometryFor(shape: Shape): BufferGeometry {
       return new TorusGeometry(0.3, 0.12, 6, 14)
     case 'blob':
       return new IcosahedronGeometry(0.5, 0)
+    case 'sphere':
+      return new SphereGeometry(0.5, 14, 10)
+    case 'cone':
+      // Standing on its base, like an ear on a head.
+      return new ConeGeometry(0.5, 1, 5)
   }
 }
 
-const SHAPES: readonly Shape[] = ['box', 'cylinder', 'tyre', 'blob']
+const SHAPES: readonly Shape[] = ['box', 'cylinder', 'tyre', 'blob', 'sphere', 'cone']
 
 /** Every part of every piece, as one instanced mesh per shape and per lit-or-not. */
 function instanceJunk(yard: Yard): InstancedMesh[] {
-  const parts: Part[] = [...yard.pieces.flatMap((piece) => piece.parts), ...yard.litter]
+  return instanceParts([...yard.pieces.flatMap((piece) => piece.parts), ...yard.litter])
+}
+
+/** A list of parts as one instanced mesh per shape and per lit-or-not. */
+function instanceParts(parts: readonly Part[]): InstancedMesh[] {
   const out: InstancedMesh[] = []
   const matrix = new Matrix4()
   const position = new Vector3()
@@ -225,33 +235,54 @@ function eyeMaterial(): MeshStandardMaterial {
   return new MeshStandardMaterial({ color: PALETTE.eye, emissive: PALETTE.eye, emissiveIntensity: 0.55, toneMapped: false })
 }
 
-/** The eyes that are not his, one instanced mesh for the lot. */
+/**
+ * The other cats: the same body he has, in a colour that is not black, with the
+ * same eyes glowing out of it.
+ *
+ * Instanced like the junk rather than drawn as eighteen little models - a cat
+ * is a dozen parts, and eighteen of them a frame is the difference between a
+ * scene that costs what the junk costs and one that costs three times it.
+ */
 const Decoys = memo(function Decoys({ seed }: { seed: number }) {
-  const mesh = useMemo(() => {
+  const meshes = useMemo(() => {
     const decoys = yardFor(seed).decoys
-    const out = new InstancedMesh(EYE_GEOMETRY, eyeMaterial(), Math.max(1, decoys.length * 2))
-    out.count = decoys.length * 2
+    const bodies = instanceParts(
+      decoys.flatMap((decoy) => {
+        const feet = catFeet(decoy)
+        return catParts(decoy.pose, feet.x, feet.y, feet.z, decoy.heading, COATS[decoy.coat % COATS.length])
+      }),
+    )
+    const eyes = new InstancedMesh(EYE_GEOMETRY, eyeMaterial(), Math.max(1, decoys.length * 2))
+    eyes.count = decoys.length * 2
     const dummy = new Object3D()
     decoys.forEach((decoy, i) => {
       for (const [k, side] of [-1, 1].entries()) {
         const at = eyeAt(decoy, decoy.heading, side)
         dummy.position.set(at.x, at.y, at.z)
         dummy.updateMatrix()
-        out.setMatrixAt(i * 2 + k, dummy.matrix)
+        eyes.setMatrixAt(i * 2 + k, dummy.matrix)
       }
     })
-    out.instanceMatrix.needsUpdate = true
-    out.frustumCulled = false
-    return out
+    eyes.instanceMatrix.needsUpdate = true
+    eyes.frustumCulled = false
+    return [...bodies, eyes]
   }, [seed])
   useEffect(
     () => () => {
-      ;(mesh.material as Material).dispose()
-      mesh.dispose()
+      for (const mesh of meshes) {
+        ;(mesh.material as Material).dispose()
+        mesh.dispose()
+      }
     },
-    [mesh],
+    [meshes],
   )
-  return <primitive object={mesh} />
+  return (
+    <>
+      {meshes.map((mesh, i) => (
+        <primitive key={i} object={mesh} />
+      ))}
+    </>
+  )
 })
 
 /**

@@ -39,8 +39,11 @@ export {
 
 export {
   CLICK_PAD,
+  COATS,
   EYE_OFFSET,
   YARD,
+  catFeet,
+  catParts,
   catShape,
   eyeAt,
   fanPoint,
@@ -51,6 +54,7 @@ export {
   toward,
   yardFor,
   type Box,
+  type Coat,
   type Decoy,
   type Kind,
   type Midnight,

@@ -8,7 +8,7 @@ a moment, and go back down. Walk over and swing: the mole your hammer lands on i
 whacked.
 
 - **A regular mole:** one point.
-- **The Golden Mole:** five points. Rarer, and it does not stay up as long.
+- **The Golden Mole:** three points. Rarer, and it does not stay up as long.
 
 The first whack on a mole takes it. Most points when the forty-five seconds are up wins.
 
@@ -26,7 +26,7 @@ primitives.
 | Walk around a field with a hammer | `walk`, `FIELD.half` - a fence keeps you in |
 | Moles pop out of 16 different spots | `holeAt`, `HOLES`, `schedule` |
 | Regular moles give standard points | `FIELD.points.mole` (1) |
-| The Golden Mole gives bonus points | `FIELD.points.golden` (5), `FIELD.goldenChance` |
+| The Golden Mole gives bonus points | `FIELD.points.golden` (3), `FIELD.goldenChance` |
 | Position yourself over emerging moles, swing quickly | `swing`, `strikePoint` |
 | Highest score before time runs out | `FIELD.duration` (45 s), `placings` |
 | WASD - move; left click - swing hammer | the screen |
@@ -173,7 +173,7 @@ Exported because it is worth testing, not because anything else needs it.
   one just used; golden moles are about one in eight and stay up less; moles come
   faster as the round goes on.** Tested.
 - **A swing whacks the mole it lands on - in front of you or under you - for a
-  point, or five for the golden mole.** Tested.
+  point, or three for the golden mole.** Tested.
 - **Not a mole that is not up yet, is gone back down, or was whacked already; not
   from a step away.** Tested.
 - **0.4 s between swings, with 0.1 s allowed early on the host.** Tested.

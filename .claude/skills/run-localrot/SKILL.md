@@ -87,10 +87,10 @@ starts the cooldown and a click during it is ignored, then claims a four-leaf
 clover every three seconds for the minute - a real pointer event at the
 clover's spot - screenshotting the field and the results. For Let Him Cook
 (`--game let-him-cook`) it watches the cooking and, on each of your turns, clicks
-an item this browser saw go in that nobody has claimed - a real pointer event at
-the item's spot, projected with the game's camera fit - failing if one is not
-accepted; `--slip` picks one it never saw go in on the second turn and fails
-unless that is out. Screenshots the cooking, the order, a hovered item, results
+the ingredient the recipe is up to - the one this browser saw the chef take at
+that place in the order - a real pointer event at the item's spot, projected with
+the game's camera fit, failing if it is not accepted; `--slip` picks one it never
+saw go in on the second turn and fails unless that is out. Screenshots the cooking, the order, a hovered item, results
 and the end. For I See The Light (`--game i-see-the-light`)
 it presses space once a tick on green and moves the pointer onto the middle of
 the circle (read from the page's `data-circle`) on red, screenshotting a red and

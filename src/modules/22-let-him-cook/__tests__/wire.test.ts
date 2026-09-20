@@ -4,7 +4,7 @@
 import { Frustum, Matrix4, PerspectiveCamera, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 import { FILL, FOV, LAYOUT, POINTS, basketAt, frameScene, itemAt, pickBasket } from '../internal/camera'
-import { KINDS, KITCHEN, claimedOf, cookTime, createGame, pick, pickTime, stepGame, stillIn, type Game } from '../internal/rules'
+import { KINDS, KITCHEN, cookTime, createGame, dueIndex, pick, pickTime, recipeOrder, stepGame, stillIn, type Game } from '../internal/rules'
 import { waitingGame } from '../internal/setup'
 import { LOOKAHEAD, applySnapshot, decodeIntent, decodeSnapshot, encodeIntent, encodeSnapshot, shownPicks } from '../internal/wire'
 
@@ -119,12 +119,13 @@ describe('eight cooks in one kitchen', () => {
         const copy = guest.copy
         if (copy.players.length === 0) continue
         if (copy.phase !== 'turns' || copy.queue[0] !== guest.index) continue
-        // What a guest remembers is what it was shown, counted up itself.
-        const used = new Array(6).fill(0)
-        for (const slot of copy.picks) used[copy.counter[slot]] += 1
-        // A mostly careful cook: a copy it believes is left, or now and then any item.
+        // What a guest remembers is the order it was shown, read off itself -
+        // the host never sends the recipe, only what the chef has taken so far.
+        const order = recipeOrder(copy)
+        const due = dueIndex(copy) < order.length ? order[dueIndex(copy)] : -1
+        // A mostly careful cook: what it believes is due, or now and then any item.
         const open = copy.served.map((_, s) => s).filter((s) => copy.claimed[s] === null)
-        const safe = open.filter((s) => used[copy.served[s]] > claimedOf(copy, copy.served[s]))
+        const safe = open.filter((s) => copy.served[s] === due)
         const from = safe.length > 0 && random() > 0.15 ? safe : open
         const slot = from[Math.floor(random() * from.length)]
         // Said three times, and some of it lost.
@@ -145,7 +146,7 @@ describe('eight cooks in one kitchen', () => {
 
     expect(game.phase).toBe('over')
     expect(stillIn(game)).toHaveLength(1)
-    expect(game.players.filter((p) => p.out?.why === 'wrong' || p.out?.why === 'gone').length).toBeGreaterThan(0)
+    expect(game.players.filter((p) => p.out?.why === 'wrong' || p.out?.why === 'muddled' || p.out?.why === 'gone').length).toBeGreaterThan(0)
     for (const guest of guests) {
       expect(guest.copy.players.map((p) => [p.id, p.out, p.claims])).toEqual(game.players.map((p) => [p.id, p.out, p.claims]))
       expect(guest.copy.phase).toBe('over')

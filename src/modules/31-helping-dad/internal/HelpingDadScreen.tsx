@@ -7,7 +7,10 @@
  * yelling, your finish, and the results.
  *
  * **Move the mouse to move through the maze.** Put it on your torch to pick the
- * torch up, then lead it - slowly.
+ * torch up, then lead it - slowly. The maze turns under the mouse, so where the
+ * pointer lands on the board is read back into the maze's own frame - by
+ * `intoMaze`, off the same angle the scene turns the maze by - before the rules
+ * see it. Stand still and the maze walks out from under you.
  */
 import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
@@ -16,8 +19,8 @@ import { getNet, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV, aimAt } from './camera'
 import { HelpingDadScene } from './HelpingDadScene'
-import type { Point } from './maze'
-import { COLOURS, ROUND, TORCH, clock, placings, remaining, type Game } from './rules'
+import { intoMaze, type Point } from './maze'
+import { COLOURS, ROUND, TORCH, angleOf, clock, placings, remaining, type Game } from './rules'
 import { myId, newGame, waitingGame } from './setup'
 import { useTorchNet } from './useTorchNet'
 
@@ -33,8 +36,11 @@ const LOOK = {
 const FONT =
   "ui-rounded, 'Hiragino Maru Gothic ProN', 'Segoe UI', system-ui, -apple-system, sans-serif"
 
-/** What Dad yells, one after another. */
-export const YELLS = ['WATCH THE WALLS!', 'SLOWLY!', 'What did I just say?!', 'CAREFUL!', 'Are you even looking?!'] as const
+/**
+ * What Dad yells, one after another. None of them names a wall or a tin, because
+ * a bump is a bump: the same yell whichever it was.
+ */
+export const YELLS = ["WATCH WHERE YOU'RE GOING!", 'SLOWLY!', 'What did I just say?!', 'CAREFUL!', 'Are you even looking?!', 'MIND MY PAINT!'] as const
 
 const ordinal = (n: number) => `${n}${n % 10 === 1 && n % 100 !== 11 ? 'st' : n % 10 === 2 && n % 100 !== 12 ? 'nd' : n % 10 === 3 && n % 100 !== 13 ? 'rd' : 'th'}`
 
@@ -69,7 +75,8 @@ export function HelpingDadScreen({ run }: { run: MinigameRun }) {
       last = now
       const current = live.current
       const p = pointer.current
-      aim.current = p ? aimAt({ x: p.x, y: p.y }, p.aspect) : null
+      const on = p ? aimAt({ x: p.x, y: p.y }, p.aspect) : null
+      aim.current = on ? intoMaze(on, angleOf(current)) : null
       if (wire.advance(current, dt, aim.current, paused.current).changed) setGame({ ...current })
       frame = requestAnimationFrame(tick)
     }
@@ -104,6 +111,9 @@ export function HelpingDadScreen({ run }: { run: MinigameRun }) {
     if (mine.finished !== null) banner = { text: `You made it - ${ordinal(myPlace ?? 1)}`, sub: 'waiting for the others', tone: 'done' }
     else if (mine.stunned > 0) banner = { text: `DAD: ${YELLS[(mine.hits - 1 + YELLS.length) % YELLS.length]}`, sub: `stunned ${(Math.ceil(mine.stunned * 10) / 10).toFixed(1)}s`, tone: 'yell' }
     else if (!mine.held) banner = { text: 'Put the mouse on your torch to pick it up', tone: 'hint' }
+    // The maze walks out from under a mouse left where it was, which is the one
+    // thing about this maze nobody expects. Said once, while there is time to.
+    else if (t < 6) banner = { text: 'The maze is turning - go round with it', tone: 'hint' }
   }
 
   return (

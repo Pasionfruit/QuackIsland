@@ -281,7 +281,7 @@ const ENTRIES = [
     kind: 'free-for-all',
     description: [
       'Walk about a field with a hammer while moles pop out of sixteen holes. Stand over one and swing - the hammer comes down in front of you, the way you are facing - before it goes back down.',
-      'An ordinary mole is a point. The golden mole is five, is rarer, and ducks back down much sooner. First hit on a mole takes it. Bring the hammer down on somebody\'s head instead and they are stunned for a moment.',
+      'An ordinary mole is a point. The golden mole is three, is rarer, and ducks back down much sooner. First hit on a mole takes it. Bring the hammer down on somebody\'s head instead and they are stunned for a moment.',
       'Most points after forty-five seconds wins.',
     ],
     controls: [
@@ -374,6 +374,7 @@ const ENTRIES = [
     kind: 'free-for-all',
     description: [
       'A junkyard at night, and an all-black cat called Midnight somewhere in it. Everybody searches the same yard with their own camera.',
+      'Eighteen other cats are hiding in it too, and in the dark every one of them is just a pair of glowing eyes. Get your torch on one and its colour tells you whether you have found him.',
       'Click him and you have found him. A click on anything else costs a second and a half before you can click again. You place in the order you find him; the round ends when three have, everybody has, or at ninety seconds.',
     ],
     controls: [
@@ -393,9 +394,9 @@ const ENTRIES = [
     title: 'Let Him Cook',
     kind: 'free-for-all',
     description: [
-      'Six baskets of ingredients, three of each. Watch the chef take between six and ten of them into the pot, and remember what went in.',
-      'Then take turns, in a random order, picking an item - ten seconds a turn. Pick an ingredient that was not in the recipe, or one whose every copy has already been claimed, or run out of time, and you are out. Pick right and you go to the back of the line.',
-      'If every copy is claimed and more than one cook is left, the chef cooks again, faster. Last cook standing wins.',
+      'Six baskets of ingredients, three of each. Watch the chef take between six and ten of them into the pot, and remember what went in - and in what order.',
+      'Then take turns, in a random order, putting the recipe back together from the start: the first cook owes the chef\'s first ingredient, the next his second, and so on. Ten seconds a turn. Anything but the one due - never in the recipe, or in it but later - or running out of time, and you are out. Get it right and you go to the back of the line.',
+      'If the whole recipe is back in the pot and more than one cook is left, the chef cooks again, faster. Last cook standing wins.',
     ],
     controls: [
       { input: 'Mouse', does: 'Aim' },
@@ -413,7 +414,7 @@ const ENTRIES = [
     kind: 'free-for-all',
     description: [
       'Red light, green light. On green, every press of space is a step towards the finish - seventy of them. A three-two-one warns you the light is about to change.',
-      'On red, hold your cursor inside a circle that wanders about the screen. Let it slip out, or press space on red, and you are out. The race ends when three are over the line, or at two minutes.',
+      'On red, hold your cursor inside a circle that wanders about the screen, swelling and shrinking as it goes. Let it slip out, or press space on red, and you are out. The race ends when three are over the line, or at two minutes.',
     ],
     controls: [
       { input: 'Space', does: 'Step forward on green' },
@@ -430,15 +431,17 @@ const ENTRIES = [
     title: 'Helping Dad',
     kind: 'free-for-all',
     description: [
-      'A maze in the dark, and a torch in your own colour. Put the mouse on your torch to pick it up, and it follows the mouse - no faster than a careful walk.',
+      'A maze of narrow corridors in the dark, and a torch in your own colour. Put the mouse on your torch to pick it up, and it follows the mouse - no faster than a careful walk.',
+      'The whole maze turns slowly under you, so a mouse left where it was is a torch walking into a wall, and Dad\'s junk slides up and down the corridors: go into a piece and it is a bump like any other, though one that slides onto a torch holding still is not. Hold still and let it pass.',
       'Touch a wall and Dad yells: you drop the torch and stand stunned for a second and a half, then have to pick it up again where it fell. You place in the order you reach the finish; at two minutes, anybody still in is placed by how far they had left.',
     ],
     controls: [
-      { input: 'Mouse', does: 'Pick up the torch and guide it through the maze' },
+      { input: 'Mouse', does: 'Pick up the torch and guide it through the turning maze' },
     ],
     reserved: false,
     // Built: see `31-helping-dad`. The assets stage is still to do - the torches
-    // are rings and glows, Dad is the island's capsule and the walls are boxes.
+    // are rings and glows, Dad is the island's capsule, and the walls and his
+    // junk are boxes and cylinders.
     done: { environment: true, controls: true, assets: false },
   },
   {

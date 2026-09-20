@@ -21,7 +21,7 @@
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, chefTrace, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, oneShotPlay, say, sleep, stepsPick, timeItStop, torchMove, triathlonMove, typeLetter, whackMove } from './cdp.mjs'
+import { GAMES, args, chefTrace, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, oneShotPlay, say, sleep, stepsPick, timeItStop, torchDrive, torchMove, triathlonMove, typeLetter, whackMove } from './cdp.mjs'
 
 const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt,feeding-time,sprint-triathlon,punch-buggy,time-it,wack-attack,lady-luck,find-yourself,make-the-cut,let-him-cook,i-see-the-light,helping-dad,synchronize-steps,hes-one-shot,keyboard-warrior,chef-caricature', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
 const count = Number(opt.players)
@@ -328,7 +328,8 @@ try {
             await sleep(900)
             const after = await onHost()
             say(`${game}: ${h.up} picked slot ${did.slot} on turn ${did.turn}; host has it claimed by ${after.claimed[did.slot]}`)
-            if (after.claimed[did.slot] === null) throw new Error(`${game}: a copy ${h.up} saw go in was not claimed on the host`)
+            if (after.claimed[did.slot] === null)
+              throw new Error(`${game}: the ingredient ${h.up} saw go in ${did.at + 1}th was not claimed on the host`)
             if (page !== host) landed = { id: h.up, slot: did.slot }
           }
         }
@@ -356,17 +357,19 @@ try {
       // it, and the wall.
       await host.waitFor(`(() => { const g = ${gameState(game)}; return g && g.elapsed > 0.2 })()`, 30000)
       const start = await host.eval(`(async () => { const r = await import('/src/modules/31-helping-dad/internal/rules.ts'); return r.startPoint(${gameState(game)}.seed) })()`)
-      const until = Date.now() + 10000
+      // Each browser leads its own torch on its own frames - see `torchDrive`;
+      // eight round trips a step is far too slow for a maze that turns.
       const far = pages.map(() => false)
-      while (Date.now() < until && far.some((f) => !f)) {
+      // Eight browsers on one GPU steer slowly - they share the frames - so this
+      // allows half a minute of the two, rather than lowering what counts as going.
+      for (let round = 0; round < 8 && far.some((f) => !f); round++) {
         await Promise.all(
           pages.map(async (p, i) => {
             if (far[i]) return
-            const s = await p.eval(torchMove())
+            const s = await p.eval(torchDrive({ ms: 4000 }))
             if (s && Math.hypot(s.x - start.x, s.z - start.z) >= 4) far[i] = true
           }),
         )
-        await sleep(40)
       }
       await sleep(600)
       const own = await Promise.all(pages.map((p) => p.eval(`(() => { const g = ${gameState(game)}; const me = g.players.find((x) => x.mine); return [me.id, me.x, me.z, me.hits] })()`)))

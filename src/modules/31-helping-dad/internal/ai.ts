@@ -8,21 +8,35 @@
  * never cuts a corner, at its own careful pace; and now and then it is careless:
  * some seconds, by the seed, it touches a wall and is stunned like anybody else.
  *
+ * It is in the turning maze like everybody else, and its walk is in the maze's
+ * own frame, so the turn is nothing to it. **Dad's junk it does see**: rather
+ * than walk into a piece it stands still, `JUNK.clear` short, and waits for it to
+ * slide past - which is the same rule everybody plays by: a piece going past a
+ * torch that is holding still does not bump it.
+ *
  * Its walk is worked out once per game, from the seed, so the same game plays
  * out the same way. Only ever runs on the host.
  */
 import { createRng, hashSeed } from '../../00-core'
-import { GRID, cellCentre, isOpen, mazeFor, nextCell, stepsToFinish, type Cell, type Maze } from './maze'
-import { arrive, canMove, clock, hit, type Game, type Torch } from './rules'
+import { GRID, JUNK, cellCentre, isOpen, mazeFor, nextCell, stepsToFinish, type Cell, type Maze } from './maze'
+import { arrive, canMove, clock, hit, inJunk, type Game, type Torch } from './rules'
 
-/** A stand-in's pace, slowest and fastest, metres a second. */
-export const BOT_PACE: readonly [number, number] = [1.3, 1.9]
+/**
+ * A stand-in's pace, slowest and fastest, metres a second. Quicker than a
+ * careful walk looks, because the maze is a square one now and the way out is
+ * long - a stand-in that dawdled would still be in it at two minutes.
+ */
+export const BOT_PACE: readonly [number, number] = [1.6, 2.3]
 /** How long a stand-in takes to pick its torch up, at the start. */
 export const BOT_REACTION: readonly [number, number] = [0.4, 1.2]
-/** The chance, each second, that a stand-in touches a wall. */
-export const BOT_CARELESS = 0.06
+/**
+ * The chance, each second, that a stand-in touches a wall. Lower than it was:
+ * waiting for Dad's junk to slide past already costs them time, and a stand-in
+ * that was both careless and held up would still be in the maze at two minutes.
+ */
+export const BOT_CARELESS = 0.04
 /** The chance a stand-in tries a wrong branch at a turning, and how far in it goes, at most. */
-export const BOT_WANDER = { chance: 0.25, depth: 3 } as const
+export const BOT_WANDER = { chance: 0.2, depth: 3 } as const
 
 const STEPS: readonly [number, number][] = [
   [1, 0],
@@ -114,14 +128,20 @@ export function botSteer(game: Game, dt: number): void {
       const dx = target.x - bot.x
       const dz = target.z - bot.z
       const d = Math.hypot(dx, dz)
+      const go = Math.min(d, left)
+      const next = { x: bot.x + (dx / d) * go, z: bot.z + (dz / d) * go }
+      // A piece of junk in front of it - and only in front, so one that has just
+      // gone by does not keep it standing there: stand still and let it pass.
+      const look = { x: next.x + (dx / d) * JUNK.clear, z: next.z + (dz / d) * JUNK.clear }
+      if (inJunk(game, look)) break
       if (d <= left) {
         bot.x = target.x
         bot.z = target.z
         left -= d
         plan.next += 1
       } else {
-        bot.x += (dx / d) * left
-        bot.z += (dz / d) * left
+        bot.x = next.x
+        bot.z = next.z
         left = 0
       }
     }

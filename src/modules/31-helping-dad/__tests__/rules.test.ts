@@ -1,10 +1,29 @@
 /**
- * The maze, the torch, the end and the placings, and the stand-ins.
+ * The maze, the turn, Dad's junk, the torch, the end and the placings, and the
+ * stand-ins.
  */
 import { describe, expect, it } from 'vitest'
 import { BOT_PACE, botSteer, botWalk } from '../internal/ai'
-import { GRID, HALF, cellAt, cellCentre, isOpen, mazeFor, nextCell, routeTarget, stepsToFinish, touchesWall, type Point } from '../internal/maze'
-import { ROUND, TORCH, clock, createGame, finishPoint, leave, placings, report, startPoint, steer, stepGame, type Game } from '../internal/rules'
+import {
+  GRID,
+  HALF,
+  JUNK,
+  ROTATE,
+  cellAt,
+  cellCentre,
+  intoMaze,
+  intoWorld,
+  isOpen,
+  junkAt,
+  mazeAngle,
+  mazeFor,
+  nextCell,
+  routeTarget,
+  stepsToFinish,
+  touchesWall,
+  type Point,
+} from '../internal/maze'
+import { ROUND, TORCH, clock, createGame, finishPoint, inJunk, leave, placings, report, startPoint, steer, stepGame, type Game, type SteerResult } from '../internal/rules'
 
 const SEED = 20240917
 
@@ -18,14 +37,30 @@ function started(g: Game): Game {
   return g
 }
 
-/** Leads player `player`'s torch along the way out for `seconds`, a careful mouse a little ahead of it. */
+/**
+ * A careful mouse a little ahead of a torch, along the way out - and the torch's
+ * own place, holding it still, when a piece of Dad's junk is in front of it or
+ * where its next step would land. Standing still is how anybody gets past one;
+ * only what is ahead counts, or a piece that had just gone by would keep it
+ * standing there for ever.
+ */
+function careful(g: Game, player: number, dt: number): Point {
+  const torch = g.players[player]
+  const here = { x: torch.x, z: torch.z }
+  if (!torch.held) return here
+  const goal = routeTarget(mazeFor(g.seed), torch)
+  const d = Math.hypot(goal.x - torch.x, goal.z - torch.z)
+  if (d < 1e-6) return goal
+  const to = (m: number) => ({ x: torch.x + ((goal.x - torch.x) / d) * m, z: torch.z + ((goal.z - torch.z) / d) * m })
+  if (inJunk(g, to(Math.min(d, TORCH.speed * dt))) || inJunk(g, to(0.3))) return here
+  return to(Math.min(d, 0.25))
+}
+
+/** Leads player `player`'s torch along the way out for `seconds`, with a careful mouse. */
 function walk(g: Game, player: number, seconds: number, dt = 1 / 60) {
   const torch = g.players[player]
   for (let t = 0; t < seconds && torch.finished === null && !g.over; t += dt) {
-    const goal = routeTarget(mazeFor(g.seed), torch)
-    const d = Math.hypot(goal.x - torch.x, goal.z - torch.z)
-    const aim = d < 1e-6 ? goal : { x: torch.x + ((goal.x - torch.x) / d) * Math.min(d, 0.25), z: torch.z + ((goal.z - torch.z) / d) * Math.min(d, 0.25) }
-    steer(g, player, torch.held ? aim : torch, dt)
+    steer(g, player, careful(g, player, dt), dt)
     stepGame(g, dt)
   }
 }
@@ -75,7 +110,7 @@ describe('the maze', () => {
     expect(touchesWall(maze, { x: -HALF.x, z: 0 }, 0.01)).toBe(true)
   })
 
-  it('leaves a torch in the middle of any cell clear of every wall, with room to spare', () => {
+  it('leaves a torch in the middle of any cell clear of every wall - but only just', () => {
     const maze = mazeFor(SEED)
     const room = (GRID.cell - GRID.wall) / 2
     for (let row = 0; row < GRID.rows; row++) {
@@ -86,7 +121,118 @@ describe('the maze', () => {
         expect(cellAt(c)).toEqual({ col, row })
       }
     }
-    expect(room - TORCH.radius).toBeGreaterThanOrEqual(0.25)
+    // Narrow: a torch in the middle of a corridor has less room either side of it
+    // than it is wide, so there is no leading it by eye.
+    const spare = room - TORCH.radius
+    expect(spare).toBeGreaterThan(0.1)
+    expect(spare).toBeLessThan(TORCH.radius)
+    // And the mouse cannot be on a dropped torch from inside the wall beside it.
+    expect(TORCH.grab).toBeLessThan(room)
+  })
+})
+
+describe('the turn', () => {
+  it('is the same on every screen: one way round, eased in from a standstill, and never back on itself', () => {
+    const spin = mazeFor(SEED).spin
+    expect(Math.abs(spin)).toBe(1)
+    expect(mazeAngle(SEED, -5)).toBe(0)
+    expect(mazeAngle(SEED, 0)).toBe(0)
+    // Eased: the first second turns far less than a second at full rate...
+    expect(Math.abs(mazeAngle(SEED, 1))).toBeLessThan(ROTATE.rate * 0.5)
+    // ...and past the ramp it is flat out.
+    expect(Math.abs(mazeAngle(SEED, 21) - mazeAngle(SEED, 20))).toBeCloseTo(ROTATE.rate, 9)
+    // Always the same way round, and more than a whole turn in a round.
+    let last = -1
+    for (let t = 0; t <= ROUND.limit; t += 0.5) {
+      const now = mazeAngle(SEED, t) * spin
+      expect(now).toBeGreaterThanOrEqual(last)
+      last = now
+    }
+    expect(Math.abs(mazeAngle(SEED, ROUND.limit))).toBeGreaterThan(Math.PI * 2)
+  })
+
+  it('reads a point on the board back to the point in the maze it is over', () => {
+    for (const t of [0, 3, 17.5, 60]) {
+      const angle = mazeAngle(SEED, t)
+      for (const p of [{ x: 0, z: 0 }, { x: HALF.x - 0.3, z: -HALF.z + 0.4 }, { x: -1.2, z: 2.6 }]) {
+        const back = intoMaze(intoWorld(p, angle), angle)
+        expect(back.x).toBeCloseTo(p.x, 9)
+        expect(back.z).toBeCloseTo(p.z, 9)
+      }
+    }
+    // Which is the whole of the difficulty: a torch standing still in the maze
+    // is somewhere else on the board a moment later, so the mouse has to go with it.
+    const still = { x: 2, z: 1 }
+    const moved = intoWorld(still, mazeAngle(SEED, 30))
+    expect(Math.hypot(moved.x - still.x, moved.z - still.z)).toBeGreaterThan(0.5)
+  })
+})
+
+describe("Dad's junk", () => {
+  it('slides up and down a straight run of corridor, for ever, and never into a wall', () => {
+    for (const seed of [1, 2, 3, SEED]) {
+      const maze = mazeFor(seed)
+      expect(maze.junk.length).toBe(JUNK.count)
+      for (const piece of maze.junk) {
+        const run = Math.hypot(piece.to.x - piece.from.x, piece.to.z - piece.from.z)
+        expect(run).toBeGreaterThanOrEqual(GRID.cell - 1e-9)
+        expect(run).toBeLessThanOrEqual((JUNK.span - 1) * GRID.cell + 1e-9)
+        // Straight: it runs along one axis, not both.
+        expect(Math.min(Math.abs(piece.to.x - piece.from.x), Math.abs(piece.to.z - piece.from.z))).toBeCloseTo(0, 9)
+        for (let t = -2; t < 140; t += 0.05) {
+          const at = junkAt(piece, t)
+          expect(touchesWall(maze, at, JUNK.radius)).toBe(false)
+          const cell = cellAt(at)
+          expect(cell).not.toEqual(maze.start)
+          expect(cell).not.toEqual(maze.finish)
+        }
+      }
+      // And no two pieces ever shut the same corridor at once.
+      for (let t = 0; t < 60; t += 0.1) {
+        const at = maze.junk.map((piece) => junkAt(piece, t))
+        for (let i = 0; i < at.length; i++) {
+          for (let j = i + 1; j < at.length; j++) expect(Math.hypot(at[i].x - at[j].x, at[i].z - at[j].z)).toBeGreaterThan(JUNK.radius * 2)
+        }
+      }
+    }
+  })
+
+  it('cannot be squeezed past: it is wider than the room a corridor leaves beside it', () => {
+    const room = (GRID.cell - GRID.wall) / 2 - TORCH.radius
+    expect(JUNK.radius + TORCH.radius).toBeGreaterThan(room)
+  })
+
+  it('is a bump like a wall when you go into one - and lets you out when it came to you', () => {
+    const g = started(game(1))
+    const torch = g.players[0]
+    const maze = mazeFor(SEED)
+    const piece = maze.junk[0]
+    const at = junkAt(piece, clock(g))
+    // From the far end of its run, so there is somewhere to come at it from.
+    const start = Math.hypot(at.x - piece.from.x, at.z - piece.from.z) > Math.hypot(at.x - piece.to.x, at.z - piece.to.z) ? piece.from : piece.to
+    torch.x = start.x
+    torch.z = start.z
+    torch.held = true
+    expect(inJunk(g, torch)).toBe(false)
+
+    // Straight at it: a bump, and the torch stops short of it.
+    let result: SteerResult = null
+    for (let i = 0; i < 400 && result !== 'hit'; i++) result = steer(g, 0, at, 1 / 60)
+    expect(result).toBe('hit')
+    expect(torch).toMatchObject({ hits: 1, held: false, stunned: TORCH.stun })
+    expect(inJunk(g, torch)).toBe(false)
+
+    // Standing still under one that slid onto it: not a bump, and not pinned either.
+    torch.stunned = 0
+    torch.held = true
+    torch.hits = 0
+    torch.x = at.x
+    torch.z = at.z
+    expect(inJunk(g, torch)).toBe(true)
+    expect(steer(g, 0, { x: torch.x, z: torch.z }, 1 / 60)).toBeNull()
+    expect(torch.hits).toBe(0)
+    expect(steer(g, 0, start, 1 / 60)).toBe('moved')
+    expect(torch.hits).toBe(0)
   })
 })
 

@@ -52,6 +52,17 @@ export const LIGHT = {
   wander: { x: 0.28, y: 0.24 },
   /** How fast it wanders, least and most, radians a second. */
   pace: [0.6, 1.15] as readonly [number, number],
+  /**
+   * How it breathes while it wanders: the share of its radius it swells and
+   * shrinks by, and how fast, radians a second.
+   *
+   * A circle that only moves is followed by putting the pointer on it and
+   * leaving it there. One that is also closing in on you has to be watched:
+   * the pointer that was comfortably inside a moment ago is on the edge of a
+   * smaller circle now, and the middle is the only place that is always safe.
+   */
+  breath: 0.26,
+  breathPace: [0.7, 1.35] as readonly [number, number],
 
   /** The fastest anybody can honestly press, a second, for checking what a browser claims. */
   maxPressRate: 16,
@@ -141,7 +152,8 @@ export interface Circle {
  *
  * In the middle and still for the pointer grace, then easing out into a
  * wandering loop - two sines at different speeds, so it never quite repeats
- * and cannot be learned. Each red has its own loop, and a smaller circle.
+ * and cannot be learned - swelling and shrinking as it goes. Each red has its
+ * own loop, its own breath, and a smaller circle.
  */
 export function circleAt(seed: number, red: number, since: number): Circle {
   const random = createRng(hashSeed(seed, `i-see-the-light:circle:${red}`))
@@ -149,6 +161,9 @@ export function circleAt(seed: number, red: number, since: number): Circle {
   const rateY = between(random, LIGHT.pace) * (random() < 0.5 ? -1 : 1)
   const phaseX = random() * Math.PI * 2
   const phaseY = random() * Math.PI * 2
+  // Drawn after the wander, so a red's path is the path it always was.
+  const rateBreath = between(random, LIGHT.breathPace)
+  const phaseBreath = random() * Math.PI * 2
   const moving = Math.max(0, since - LIGHT.pointerGrace)
   // Eased out of the middle over a second, so it does not jump from still.
   const ramp = Math.min(1, moving)
@@ -156,7 +171,12 @@ export function circleAt(seed: number, red: number, since: number): Circle {
   return {
     x: 0.5 + (Math.sin(rateX * s + phaseX) - Math.sin(phaseX)) * LIGHT.wander.x * ramp * 0.5,
     y: 0.5 + (Math.sin(rateY * s + phaseY) - Math.sin(phaseY)) * LIGHT.wander.y * ramp * 0.5,
-    radius: Math.max(LIGHT.circleMin, LIGHT.circle - red * LIGHT.circleShrink),
+    // Breathing on the same ramp as the wander: the circle you are given a
+    // moment to find is exactly the size it looks, and it starts to close in
+    // only once it starts to move.
+    radius:
+      Math.max(LIGHT.circleMin, LIGHT.circle - red * LIGHT.circleShrink) *
+      (1 + Math.sin(rateBreath * s + phaseBreath) * LIGHT.breath * ramp),
   }
 }
 
