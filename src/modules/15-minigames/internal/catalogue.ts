@@ -115,13 +115,14 @@ const ENTRIES = [
     title: 'Binary BS',
     kind: 'free-for-all',
     description: [
-      'A short sample round plays first to show how it works. Then players spawn on different sides of a giant gear - as many sides as players - with one side marked to be removed. A random number appears in the center, and players have 5 seconds to vote 0 or 1, in secret.',
-      'When the countdown ends the votes are added into the total in the center one at a time, and then the gear turns by it - one side at a time, like a clicking gear, with a counter going down - one side less for every 0, and removes the side that lands on the mark along with everyone standing on it. If everyone votes 1, the marked side goes. A new number and a new gear come each round until only one player remains.',
+      'Be the last player standing! Everybody starts on their own side of a giant gear, and one side is marked for elimination. A quick sample round shows you how it works first.',
+      'Each round a random number pops up in the middle and you get 5 seconds to vote 0 or 1 - in secret. Then the votes are added into the total, and the gear clicks round one side at a time with a counter going down. Every 0 makes it turn one side less, and if everybody votes 1 the marked side goes as it is.',
+      'Whoever is standing on the side that lands on the mark is out! A new number and a new gear come each round until only one player is left.',
     ],
     controls: [
       { input: '0', does: 'Vote 0' },
       { input: '1', does: 'Vote 1' },
-      { input: 'WASD', does: 'Move around your side of the gear' },
+      { input: 'WASD', does: 'Run around your side of the gear' },
     ],
     reserved: false,
     // Built: see `45-binary-bs`. The assets stage is still to do - the gear is
@@ -134,12 +135,12 @@ const ENTRIES = [
     title: 'Chef Caricature',
     kind: 'free-for-all',
     description: [
-      'One at a time, each player gets thirty seconds at the easel while everybody else watches. The outline of an ingredient or a dish is on the board: hold the button down and trace it without letting go.',
-      'Once your ink has gone all the way round and closed the shape, the duck eats the drawing for a point and the next outline is up. Scribbling off the line does not count. There is no rubbing out, and letting go before the shape is closed wipes the attempt.',
-      'Most dishes after everybody\'s turn wins.',
+      'Draw fast and draw clean! One at a time, each player gets 30 seconds at the easel while everybody else watches.',
+      'An outline of an ingredient or a dish is on the board. Hold the button and trace it all the way round without letting go. Close the shape and the duck eats your drawing for 1 point - then the next outline pops up.',
+      "Stay on the line: scribbling off it does not count, there is no rubbing out, and letting go early wipes your try. Most dishes after everybody's turn wins.",
     ],
     controls: [
-      { input: 'Hold left click + drag', does: 'Trace the outline' },
+      { input: 'Hold left click + drag', does: 'Trace the outline without letting go' },
     ],
     reserved: false,
     // Built: see `35-chef-caricature`. The assets stage is still to do - the duck
@@ -152,14 +153,15 @@ const ENTRIES = [
     title: 'Color Coded',
     kind: 'free-for-all',
     description: [
-      'Spawn on floating color panels as a giant wheel spins to select a color. Once the color is revealed, players have 2 seconds to get onto a panel matching the spinner’s color. The panels are very slippery ice: nobody stops when they let go or turns on the spot, and running is fast and hard to steer.',
-      'You can push whoever is in front of you, and bodies collide too, and a collision keeps its speed - run into somebody and they go, and you nearly stop. When the timer ends, every panel of a different color disappears, and anyone standing on one falls and is eliminated. The dropped panels rise back and become solid only once they are all the way up, but fewer matching panels remain as the rounds go on. Last player standing wins - and you get to watch the last one fall.',
+      'Be the last player standing! You start on floating colour panels while a giant wheel spins to pick a colour. When it stops, you have 2 seconds to get onto a panel that matches.',
+      'Every other panel drops away, and anybody on one falls and is out. The dropped panels rise back up each round, but fewer matching ones are left every time.',
+      'Watch out - the panels are slippery ice! You slide, you cannot turn on the spot, and running is fast but hard to steer. Shove whoever is in front of you, but remember a crash keeps its speed: bump into somebody and they go flying while you nearly stop.',
     ],
     controls: [
       { input: 'WASD', does: 'Move - it is ice, so you slide' },
       { input: 'Left click / Space / E', does: 'Push whoever is in front of you' },
-      { input: 'Shift', does: 'Run: nearly twice as fast, and much harder to turn or stop' },
-      { input: 'Mouse', does: 'Camera' },
+      { input: 'Shift', does: 'Run - fast, but hard to turn or stop' },
+      { input: 'Mouse', does: 'Move the camera' },
     ],
     reserved: false,
     // Built: see `44-color-coded`. The assets stage is still to do - the panels
@@ -172,12 +174,12 @@ const ENTRIES = [
     title: 'Duck Hunt',
     kind: 'free-for-all',
     description: [
-      'Balloons float up round the arena in waves - one each, a wave about every second - each one in somebody\'s colour and shape. Shoot yours and leave everybody else\'s alone.',
-      'One of yours is a point. One of somebody else\'s takes a point off them and gives you nothing. Every shot, hit or miss, costs half a second before you can shoot again. Most points after forty-five seconds wins.',
+      "Pop your own balloons - and only yours! Balloons float up round the arena in waves, and each one is in somebody's colour and shape.",
+      "Shoot one of yours: 1 point. Shoot somebody else's: they lose a point and you get nothing. Every shot, hit or miss, needs half a second to reload. Most points after 45 seconds wins.",
     ],
     controls: [
       { input: 'Mouse', does: 'Aim' },
-      { input: 'Left click', does: 'Shoot' },
+      { input: 'Left click', does: 'Shoot - half a second to reload' },
     ],
     reserved: false,
     // Built: see `19-duck-hunt`. The assets stage is still to do - balloons
@@ -190,12 +192,13 @@ const ENTRIES = [
     title: 'Feeding Time',
     kind: 'free-for-all',
     description: [
-      'Ducks swim about a pond and you stand on the bank with a pocket of crackers. Point where you want to throw, hold the left button to charge the power meter and let go to throw - the longer you hold, the further it goes.',
-      'A cracker that lands near a duck feeds it for a point, and that duck is busy eating for a moment. You can throw again a quarter of a second later. Most ducks fed after forty-five seconds wins.',
+      'Feed the most ducks! Ducks swim about a pond and you are on the bank with a pocket full of crackers.',
+      'Aim where you want to throw, hold the left button to charge the power meter, then let go to throw - the longer you hold, the farther it flies. A cracker that lands near a duck feeds it for 1 point, and that duck stops to eat for a moment. You can throw again a quarter of a second later.',
+      'Most ducks fed after 45 seconds wins.',
     ],
     controls: [
       { input: 'Mouse', does: 'Aim at the water' },
-      { input: 'Hold left click, release', does: 'Charge the power meter, then throw' },
+      { input: 'Hold left click, release', does: 'Charge the power meter, then let go to throw' },
     ],
     reserved: false,
     // Built: see `28-feeding-time`. The assets stage is still to do - the ducks
@@ -208,8 +211,8 @@ const ENTRIES = [
     title: 'Find Yourself',
     kind: 'free-for-all',
     description: [
-      'Everybody\'s face goes under a cup, with an empty one or two spare, and then the cups shuffle - two at a time, trading places.',
-      'When they stop you have seven seconds to click the cup your own face is under. Three stages, each shuffle longer and faster than the last, worth one, two and three points. Most points wins.',
+      "Follow your own face! Everybody's face goes under a cup - with one or two empty cups spare - and then the cups shuffle, trading places two at a time.",
+      'When they stop you have 7 seconds to click the cup hiding YOUR face. There are three stages, each with a longer, faster shuffle, worth 1, 2 and 3 points. Most points wins.',
     ],
     controls: [
       { input: 'Mouse', does: 'Aim' },
@@ -226,9 +229,9 @@ const ENTRIES = [
     title: 'Helping Dad',
     kind: 'free-for-all',
     description: [
-      'A maze of narrow corridors in the dark, and a torch in your own colour. Put the mouse on your torch to pick it up, and it follows the mouse - no faster than a careful walk.',
-      'The whole maze turns slowly under you, so a mouse left where it was is a torch walking into a wall, and Dad\'s junk slides up and down the corridors: go into a piece and it is a bump like any other, though one that slides onto a torch holding still is not. Hold still and let it pass.',
-      'Touch a wall and Dad yells: you drop the torch and stand stunned for a second and a half, then have to pick it up again where it fell. You place in the order you reach the finish; at two minutes, anybody still in is placed by how far they had left.',
+      'Be first out of the maze! It is dark, the corridors are narrow, and you carry a torch in your own colour. Put your mouse on the torch to pick it up - it follows your mouse, no faster than a careful walk.',
+      "The whole maze turns slowly under you, so a mouse left where it was is a torch walking into a wall. Dad's junk slides up and down the corridors too: bumping into a piece is like any other bump, but a piece that slides onto a torch holding still does not count - so hold still and let it pass.",
+      'Touch a wall and Dad yells! You drop the torch and are stunned for 1.5 seconds, then have to pick it up again where it fell. You place in the order you reach the finish. At 2 minutes, anybody still in is placed by how far they had left to go.',
     ],
     controls: [
       { input: 'Mouse', does: 'Pick up the torch and guide it through the turning maze' },
@@ -245,15 +248,15 @@ const ENTRIES = [
     title: "He's One Shot",
     kind: 'free-for-all',
     description: [
-      'First person, everybody against everybody, in a big walled arena full of cover, and one shot eliminates. Your gun needs a second and a half between shots, and nobody can be shot for the first two seconds.',
-      'Being eliminated does not take you out of it: you start again beside whoever got you, as their hunter. You keep walking and shooting at whoever is still standing - but not at the one you hunt for, whose side you are on, and nobody can shoot you any more.',
-      'Jump, and pick up shields lying about the arena: a shield takes the next hit instead of eliminating you. The last one standing wins; at a minute and a half, everybody still standing shares first.',
+      'Last one standing wins! It is first person, everybody against everybody, in a big walled arena full of cover - and one shot eliminates. Your gun needs 1.5 seconds between shots, and nobody can be shot for the first 2 seconds.',
+      'Getting shot does not end your game: you start again beside whoever got you, as their hunter. Keep walking and shooting at whoever is still standing - but never at the one you hunt for, since you are on their side now - and nobody can shoot you any more.',
+      'Jump over cover and grab the shields lying about the arena: a shield takes the next hit instead of eliminating you. At 1.5 minutes, everybody still standing shares first place.',
     ],
     controls: [
       { input: 'WASD / Arrow keys', does: 'Move' },
       { input: 'Space', does: 'Jump' },
       { input: 'Mouse', does: 'Look and aim' },
-      { input: 'Left click', does: 'Capture the mouse, then shoot' },
+      { input: 'Left click', does: 'Click once to lock the mouse, then shoot' },
     ],
     reserved: false,
     // Built: see `32-hes-one-shot`. The assets stage is still to do - players
@@ -266,10 +269,12 @@ const ENTRIES = [
     title: 'Highest In The Room',
     kind: 'free-for-all',
     description: [
-      'Race upward by pressing the key for the arrow shown on screen - W for up, S for down, A for left, D for right - with a small preview of the next arrow beside it. Every correct input builds another block beneath you, while the camera follows the player currently in the lead.',
-      'Make a mistake and you are knocked down 4 blocks. If you fall 10 blocks behind the leader, you are eliminated. The last player remaining wins.',
+      'Climb the highest! Press the key for the arrow on screen - W for up, S for down, A for left, D for right - and a small preview shows the next one. Every correct press builds another block under you, and the camera follows whoever is in the lead.',
+      'Press the wrong key and you tumble down 4 blocks. Fall 10 blocks behind the leader and you are out. The last player left wins.',
     ],
-    controls: [{ input: 'W A S D', does: 'Press the key for the displayed arrow: W up, S down, A left, D right' }],
+    controls: [
+      { input: 'W A S D', does: 'Press the key for the arrow shown: W up, S down, A left, D right' },
+    ],
     reserved: false,
     // Built: see `43-highest-in-the-room`. The assets stage is still to do - the
     // towers are boxes and the players are the island's capsule.
@@ -281,15 +286,15 @@ const ENTRIES = [
     title: 'I Just Work Here',
     kind: 'free-for-all',
     description: [
-      'Search the office for the four pieces of your bazooka - they are in your colour - and bring them back to your desk one at a time.',
-      'Once all four are on your desk you are armed and can start eliminating everybody else. Careful: a rocket that bursts too near you takes you with it, so do not fire at a wall you are standing next to. Last one standing wins.',
+      'Build your bazooka, then blast everybody else! Search the office for the 4 pieces in your colour and bring them back to your desk one at a time.',
+      'Once all 4 are on your desk you are armed and can start eliminating. Careful: a rocket that bursts too near you takes you with it, so do not fire at a wall you are standing next to. Last one standing wins.',
     ],
     controls: [
       { input: 'WASD', does: 'Move' },
       { input: 'Mouse', does: 'Aim' },
-      { input: 'Left Click', does: 'Pick up / place piece' },
-      { input: 'Right Click', does: 'Fire bazooka' },
-      { input: 'Space', does: 'Drop piece' },
+      { input: 'Left click', does: 'Pick up or place a piece' },
+      { input: 'Right click', does: 'Fire the bazooka' },
+      { input: 'Space', does: 'Drop a piece' },
     ],
     reserved: false,
     // Built: see `42-i-just-work-here`. The assets stage is still to do - the
@@ -302,12 +307,13 @@ const ENTRIES = [
     title: "I'll Just Wait",
     kind: 'free-for-all',
     description: [
-      'A race through three clock-reading targets. Each goes up at the top in awkward words - "Quarter till 4:05" - and each is harder than the last. Your clock starts at 12:00: wind it to the target and confirm.',
-      'Right, and you are on to the next target. Wrong, and your clock goes back to 12:00 to try again. Everybody can see everybody else\'s clock - so you could always just wait for somebody to show you. The first to get all three wins; otherwise the game ends at two and a half minutes.',
+      'Be first to read three clocks! Each target goes up at the top in awkward words - "Quarter till 4:05" - and each is harder than the last. Your clock starts at 12:00: wind it to the target and confirm.',
+      "Right, and you are on to the next target. Wrong, and your clock goes back to 12:00 to try again. Everybody can see everybody else's clock - so you could always just wait for somebody to show you!",
+      'The first to get all three wins. If nobody does, the game ends at 2.5 minutes.',
     ],
     controls: [
-      { input: 'Left click / hold', does: 'Wind the clock forward - hold to speed up' },
-      { input: 'Right click / hold', does: 'Wind the clock back - hold to speed up' },
+      { input: 'Left click / hold', does: 'Wind the clock forward - hold to go faster' },
+      { input: 'Right click / hold', does: 'Wind the clock back - hold to go faster' },
       { input: 'Space', does: 'Confirm the time' },
     ],
     reserved: false,
@@ -321,8 +327,8 @@ const ENTRIES = [
     title: 'I See The Light',
     kind: 'free-for-all',
     description: [
-      'Red light, green light. On green, every press of space is a step towards the finish - seventy of them. A three-two-one warns you the light is about to change.',
-      'On red, hold your cursor inside a circle that wanders about the screen, swelling and shrinking as it goes. Let it slip out, or press space on red, and you are out. The race ends when three are over the line, or at two minutes.',
+      'Race to the finish - and obey the light! On green, every press of space is a step forward, and it takes 70 of them. A 3-2-1 warns you the light is about to change.',
+      'On red, freeze and keep your cursor inside a circle that wanders about the screen, swelling and shrinking as it goes. Let it slip out, or press space on red, and you are out. The race ends when three players are over the line, or at 2 minutes.',
     ],
     controls: [
       { input: 'Space', does: 'Step forward on green' },
@@ -339,8 +345,8 @@ const ENTRIES = [
     title: 'Keyboard Warrior',
     kind: 'free-for-all',
     description: [
-      'Fifteen letters float into the arena one at a time, after a pause that is different every time.',
-      'The first letter key you press after one appears is your only answer, right or wrong. Of everybody who got it right, the quickest gets the point. Each letter stays up four seconds at most. Most points wins.',
+      'Be the fastest typist! 15 letters float into the arena one at a time, after a pause that is different every time.',
+      'The first letter key you press after one appears is your only answer, right or wrong. Of everybody who got it right, the quickest wins the point. Each letter stays up 4 seconds at most. Most points wins.',
     ],
     controls: [
       { input: 'Keyboard', does: 'Type the letter on screen - one try each' },
@@ -356,12 +362,12 @@ const ENTRIES = [
     title: 'Lady Luck',
     kind: 'free-for-all',
     description: [
-      'A field of three-leaf clovers with three four-leaf clovers hidden in it at any time. Find one and click it: it is ringed in your colour, nobody else can have it, and a new one grows somewhere else.',
-      'Clicking anything else - a three-leaf clover, a claimed one, bare grass - costs you a point and a second before you can click again, and every click in that second costs another. Scores can go below zero. Most points after forty-five seconds wins.',
+      'Find the lucky clovers! A field of three-leaf clovers has three four-leaf clovers hidden in it at any time. Click one to claim it: it is ringed in your colour, nobody else can have it, and a new one grows somewhere else.',
+      'Click anything else - a three-leaf clover, a claimed one, bare grass - and you lose a point and cannot click for 1 second. Every click in that second costs another point. Scores can go below zero, so click smart! Most points after 45 seconds wins.',
     ],
     controls: [
       { input: 'Mouse', does: 'Aim' },
-      { input: 'Left click', does: 'Claim a clover' },
+      { input: 'Left click', does: 'Claim a four-leaf clover' },
     ],
     reserved: false,
     // Built: see `23-lady-luck`. The assets stage is still to do - the clovers
@@ -374,8 +380,8 @@ const ENTRIES = [
     title: 'Let Him Cook',
     kind: 'free-for-all',
     description: [
-      'Six baskets of ingredients, three of each. Watch the chef take between six and ten of them into the pot, and remember what went in - and in what order.',
-      'Then take turns, in a random order, putting the recipe back together from the start: the first cook owes the chef\'s first ingredient, the next his second, and so on. Ten seconds a turn. Anything but the one due - never in the recipe, or in it but later - or running out of time, and you are out. Get it right and you go to the back of the line.',
+      'Remember the recipe! There are six baskets of ingredients, three of each. Watch the chef put 6 to 10 of them into the pot - and remember what went in, and in what order.',
+      "Then take turns, in a random order, putting the recipe back together from the start: the first cook adds the chef's first ingredient, the next cook his second, and so on. You get 10 seconds a turn. Pick anything but the one that is due - never in the recipe, or in it but later - or run out of time, and you are out. Get it right and you go to the back of the line.",
       'If the whole recipe is back in the pot and more than one cook is left, the chef cooks again, faster. Last cook standing wins.',
     ],
     controls: [
@@ -393,7 +399,7 @@ const ENTRIES = [
     title: 'Make Some Noise',
     kind: 'free-for-all',
     description: [
-      'You are a duck on a floating island with one minute to wreck as much of it as you possibly can.',
+      'Wreck as much as you can! You are a duck on a floating island with 1 minute to smash it up.',
       'Different parts of the island are worth different amounts. Fall off the edge and your turn ends that instant.',
     ],
     controls: [],
@@ -406,13 +412,13 @@ const ENTRIES = [
     title: 'Make The Cut',
     kind: 'free-for-all',
     description: [
-      'Everybody stands on a tower in a web of strings: three for every player, and one fewer eliminating strings than there are players. Nobody can tell them apart. A random player cuts first, and the turn passes round.',
-      'On your turn you have twelve seconds to walk up to a string and cut it - run out and the nearest one is cut for you. A normal string: nothing happens. An eliminating one: you are launched off the tower. Last one standing wins.',
+      'Do not cut the wrong string! Everybody stands on a tower in a web of strings: 3 for every player, with one fewer eliminating strings than there are players. Nobody can tell them apart. A random player cuts first, and the turn passes round.',
+      'On your turn you have 12 seconds to walk up to a string and cut it - run out of time and the nearest one is cut for you. A normal string does nothing. An eliminating one launches you off the tower! Last one standing wins.',
     ],
     controls: [
       { input: 'WASD', does: 'Move' },
       { input: 'Mouse', does: 'Aim at a string' },
-      { input: 'Left click', does: 'Cut the string (on your turn, within reach)' },
+      { input: 'Left click', does: 'Cut the string - on your turn, when you are close enough' },
     ],
     reserved: false,
     // Built: see `24-make-the-cut`. The assets stage is still to do - the
@@ -425,9 +431,9 @@ const ENTRIES = [
     title: 'Messy Maze',
     kind: 'free-for-all',
     description: [
-      'Everybody starts in a different corner of a maze and races for the middle.',
-      'Spinning platforms sit along the way, and stepping on one spins you and swaps your four movement keys for random letters - the new ones are shown on screen. The middle only counts once you have been spun by two different platforms.',
-      'You place in the order you reach the middle. The race ends when three are in, thirty seconds after the first gets there, or at four minutes.',
+      'Race to the middle of the maze! Everybody starts in a different corner.',
+      'Spinning platforms sit along the way. Step on one and it spins you round and swaps your four movement keys for random letters - the new ones are shown on screen. The middle only counts once you have been spun by 2 different platforms.',
+      'You place in the order you reach the middle. The race ends when three players are in, 30 seconds after the first gets there, or at 4 minutes.',
     ],
     controls: [
       { input: 'WASD', does: 'Move, until a platform changes your keys' },
@@ -444,11 +450,13 @@ const ENTRIES = [
     title: 'M.I.L.F (fishing)',
     kind: 'free-for-all',
     description: [
-      'Fish for 25 seconds and decide when to pull based on how much your fishing rod bends. A slight bend means a smaller fish, while a dramatic bend means a much bigger fish.',
-      'Five different fish sizes can bite at unpredictable times for each player - the heaviest is called your mom - and there is no guarantee the biggest fish will appear. Every pull - fish or not - takes a moment to cast again, and anything that bites meanwhile is missed.',
-      'Pull when you think the fish is ready - but if the rod is not bent, you get nothing. The player with the biggest total catch wins.',
+      'Land the biggest catch! You fish for 25 seconds and decide when to pull by how much your rod bends: a slight bend is a small fish, a dramatic bend is a much bigger one.',
+      'Five sizes of fish can bite at unpredictable times for each player - the heaviest is called your mom - and there is no guarantee the biggest will show up. Every pull, fish or not, takes a moment before you can cast again, and anything that bites meanwhile is missed.',
+      'Pull when you think the fish is ready - but if the rod is not bent, you get nothing. The biggest total catch wins.',
     ],
-    controls: [{ input: 'Left Click', does: 'Pull the rod / reel in fish' }],
+    controls: [
+      { input: 'Left click', does: 'Pull the rod and reel in the fish' },
+    ],
     reserved: false,
     // Built: see `50-milf-fishing`. The assets stage is still to do - the lake, the rods
     // and the fish are primitives and the players are the island's capsule.
@@ -461,8 +469,8 @@ const ENTRIES = [
     title: 'Musical Mayhem',
     kind: 'free-for-all',
     description: [
-      'Musical chairs, with shoving. A ring of chairs, one fewer than the players still in, and a tune that plays for a time nobody can know.',
-      'While it plays, keep running round - stand about or get too close to the chairs and you are thrown to the edge, and trying to sit early gets you thrown there too. When it stops, sit in an empty chair. Push whoever is in front of you to knock them back, and off their chair if they have not been sitting a whole second.',
+      'Musical chairs, with shoving! A ring of chairs - one fewer than the players still in - and a tune that plays for a time nobody can guess.',
+      'While it plays, keep running round: stand about or get too close to the chairs and you are thrown to the edge, and so are you if you try to sit early. When it stops, grab an empty chair! Push whoever is in front of you to knock them back, and right off their chair if they have not been sitting a whole second.',
       'Whoever is left standing is out and a chair goes, until one player is left.',
     ],
     controls: [
@@ -481,14 +489,14 @@ const ENTRIES = [
     title: 'OG Black Friday',
     kind: 'free-for-all',
     description: [
-      'Sprint around a chaotic supermarket pushing your trolley and collect the 3 items on your grocery list. There are 10 different items scattered through the store, and every player has their own list - a beam of light shows you where yours are.',
-      'Click to grab whatever is in reach, or to put something you do not need back. Ram other trolleys with Space: the newest thing in theirs flies out and lands somewhere random in the store.',
-      'Find all 3 items and get through a checkout before everyone else. The first player to complete their grocery list wins.',
+      'Be first to finish your shopping list! Sprint around a chaotic supermarket pushing your trolley to collect the 3 items on your list. There are 10 different items scattered through the store, every player has their own list, and a beam of light shows you where yours are.',
+      'Click to grab whatever is in reach, or to put back something you do not need. Ram other trolleys with Space: the newest thing in theirs flies out and lands somewhere random in the store.',
+      'Find all 3 items and get through a checkout before everybody else. The first player to complete their list wins.',
     ],
     controls: [
       { input: 'WASD', does: 'Move' },
-      { input: 'Left Click', does: 'Pick up / place item' },
-      { input: 'Space', does: 'Push shopping cart' },
+      { input: 'Left click', does: 'Pick up or put down an item' },
+      { input: 'Space', does: 'Ram another trolley' },
     ],
     reserved: false,
     // Built: see `49-needs-a-walmart`. The assets stage is still to do - the store,
@@ -502,13 +510,13 @@ const ENTRIES = [
     title: 'One Piece?!',
     kind: 'free-for-all',
     description: [
-      'Each player receives a 6-piece square puzzle featuring their own face. Players must drag, rotate, and place each piece correctly to complete their square.',
-      'Players are ranked by the order in which they successfully solve their puzzle, with the first player to complete it taking first place.',
+      'Solve your puzzle first! Everybody gets a 6-piece square puzzle with their own face on it. Drag, turn and place each piece correctly to finish your square.',
+      'You are ranked by the order you finish in: the first player to complete theirs takes first place.',
     ],
     controls: [
-      { input: 'Mouse Drag', does: 'Move puzzle pieces' },
-      { input: 'Left Click', does: 'Select piece' },
-      { input: 'Right Click / Scroll', does: 'Rotate piece' },
+      { input: 'Mouse drag', does: 'Move puzzle pieces' },
+      { input: 'Left click', does: 'Pick up a piece' },
+      { input: 'Right click / Scroll', does: 'Turn the piece' },
     ],
     reserved: false,
     // Built: see `41-one-piece`. The assets stage is still to do - the faces
@@ -521,14 +529,14 @@ const ENTRIES = [
     title: 'Perfect Game',
     kind: 'free-for-all',
     description: [
-      'A bent column of 30 crabs moves from left to right across the beach - the same column for everybody, every turn. One turn each, while everybody else watches.',
-      'You have 10 seconds to choose your position behind the line and the angle of your coconut throw - and when to let it go. When time runs out it rolls anyway.',
-      'The coconut rolls along the chosen path, bouncing off the walls down either side of the beach, hitting as many crabs as possible. 1 point for every crab hit; the player with the most points wins. Hit all 30 for a perfect game.',
+      'Knock down all 30 crabs! A bent column of 30 crabs moves left to right across the beach - the same column for everybody, every turn. You get one turn each while everybody else watches.',
+      'You have 10 seconds to choose where to stand behind the line, the angle of your coconut throw, and when to let it go. When time runs out it rolls anyway.',
+      'The coconut rolls along your path, bouncing off the walls down either side of the beach and hitting as many crabs as it can. Every crab is 1 point and the most points wins. Hit all 30 for a perfect game!',
     ],
     controls: [
-      { input: 'WASD', does: 'Adjust position' },
-      { input: 'Mouse', does: 'Aim / adjust throw angle' },
-      { input: 'Left Click', does: 'Roll coconut' },
+      { input: 'WASD', does: 'Move your position' },
+      { input: 'Mouse', does: 'Aim - set your throw angle' },
+      { input: 'Left click', does: 'Roll the coconut' },
     ],
     reserved: false,
     // Built: see `51-perfect-game`. The assets stage is still to do - the beach, the
@@ -541,9 +549,9 @@ const ENTRIES = [
     title: 'Pet Race',
     kind: 'free-for-all',
     description: [
-      'Ten seconds to read the table and pick a pet - dog, cat, rabbit, hamster or fish. Each has its own speed, grip, boost and stamina, and none of them is simply the best. Pick nothing and you get the fish, which flops on the line for the whole race.',
-      'Then three, two, one, and thirty seconds to race down a course of hedges, puddles and treats. Hold the button to boost: it drains your stamina, and letting go lets it fill again. Treats top it up.',
-      'The race ends when three are home, everybody is, or the thirty seconds run out. Finishers place by time, everybody else by how far they got.',
+      'Pick your pet and race! You get 10 seconds to read the table and choose a dog, cat, rabbit, hamster or fish. Each has its own speed, grip, boost and stamina, and none of them is simply the best. Pick nothing and you get the fish, which flops on the line for the whole race.',
+      'Then 3-2-1, and 30 seconds to race down a course of hedges, puddles and treats. Hold the button to boost: it drains your stamina, and letting go lets it fill again. Treats top it up.',
+      'The race ends when three are home, everybody is, or the 30 seconds run out. Finishers place by time, everybody else by how far they got.',
     ],
     controls: [
       { input: 'Left click / 1-5', does: 'Choose a pet from the table' },
@@ -561,9 +569,9 @@ const ENTRIES = [
     title: 'Probable Stop',
     kind: 'free-for-all',
     description: [
-      'Six rounds, three bridges each. You have five seconds to stand on one, and you can change your mind as often as you like until the time runs out.',
-      'Then everybody walks across. In the first four rounds two of the three bridges hold; in the last two only one does. A bridge that does not hold snaps and drops whoever is on it.',
-      'Survive all six rounds, or be the last one left, to win.',
+      'Pick the bridge that holds! There are 6 rounds with 3 bridges each. You have 5 seconds to stand on one, and you can change your mind as often as you like until time runs out.',
+      'Then everybody walks across. In the first 4 rounds 2 of the 3 bridges hold; in the last 2 only 1 does. A bridge that does not hold snaps and drops whoever is on it.',
+      'Survive all 6 rounds, or be the last one left, to win.',
     ],
     controls: [
       { input: 'A / D or Arrow keys', does: 'Move to the bridge on the left or right' },
@@ -581,14 +589,14 @@ const ENTRIES = [
     title: 'Punch Buggy',
     kind: 'free-for-all',
     description: [
-      'A round platform over the sea, and a fist that comes off. Face the pointer, click to shoot your punch out, and click again to pull it back.',
-      'A fist that hits somebody in the side or back knocks them out. One that meets their front, where their own fist is, is blocked and only shoves them - but a shove off the edge is out too. After ten seconds the platform starts to shrink.',
-      'Last one standing wins. Thirty seconds on the clock.',
+      'Punch your rivals off the platform! It is a round platform over the sea, and your fist comes off. Face the pointer, click to shoot your punch out, and click again to pull it back.',
+      'A fist that hits somebody in the side or back knocks them out. One that meets their front, where their own fist is, is blocked and only shoves them - but a shove off the edge is out too. After 10 seconds the platform starts to shrink.',
+      'Last one standing wins. You have 30 seconds on the clock.',
     ],
     controls: [
       { input: 'WASD', does: 'Move' },
       { input: 'Mouse', does: 'Aim' },
-      { input: 'Left click', does: 'Punch, then click again to pull it back' },
+      { input: 'Left click', does: 'Punch - click again to pull it back' },
     ],
     reserved: false,
     // Built: see `20-punch-buggy`. The assets stage is still to do - the
@@ -601,13 +609,13 @@ const ENTRIES = [
     title: 'Shanty Matrix',
     kind: 'free-for-all',
     description: [
-      'Survive as long as you can on the deck of a pirate ship while giant cannonballs fly across it from every direction, at every speed.',
-      "A red lane lights up across the deck the moment a ball is fired, a second before it arrives. Dodge out of its way - and push the other players into it. Anybody a cannonball hits goes overboard and is out.",
+      'Dodge the cannonballs! Survive as long as you can on the deck of a pirate ship while giant cannonballs fly across it from every direction, at every speed.',
+      'A red lane lights up across the deck the moment a ball is fired, a second before it arrives. Get out of its way - and shove the other players into it! Anybody a cannonball hits goes overboard and is out.',
       'The barrage gets faster and fiercer the longer it goes. The last player standing wins.',
     ],
     controls: [
       { input: 'WASD', does: 'Move' },
-      { input: 'Left Click / Space', does: 'Push whoever is in front of you' },
+      { input: 'Left click / Space', does: 'Push whoever is in front of you' },
     ],
     reserved: false,
     // Built: see `47-shanty-matrix`. The assets stage is still to do - the ship
@@ -621,8 +629,8 @@ const ENTRIES = [
     title: 'Sharing Is Caring',
     kind: 'free-for-all',
     description: [
-      'Tag, backwards. A crown sits in the middle of a walled arena: walk into it and it is yours, and you score a point for every second you wear it.',
-      'Bump into whoever is wearing it to take it - they are knocked back and dazed for a moment. The wearer is a little faster than everybody else, so use the rocks, the wall and your boost. Most points after a minute wins.',
+      'Wear the crown as long as you can! It sits in the middle of a walled arena: walk into it and it is yours, and you score 1 point for every second you wear it.',
+      'Bump into whoever is wearing it to steal it - they are knocked back and dazed for a moment. The wearer is a little faster than everybody else, so use the rocks, the wall and your boost. Most points after 1 minute wins.',
     ],
     controls: [
       { input: 'WASD', does: 'Move' },
@@ -639,13 +647,13 @@ const ENTRIES = [
     title: 'Spidey Senses',
     kind: 'free-for-all',
     description: [
-      "Play a game of chicken as everyone slowly inches toward a trapdoor hiding a spider's nest. Decide when to stop - a click stops you where you stand.",
-      'The trapdoor thuds once or twice as a false alarm, then on the 2nd, 3rd or 4th thud - always before anybody can reach it - it becomes dangerous: it rattles and red eyes glint under the lid. Click too late and a spider jumps out at you, and you are out. If nobody is too late, the spider takes whoever stopped furthest from the trapdoor - the chicken - with the same jump scare.',
+      "Play chicken with a spider! Everybody slowly inches toward a trapdoor hiding a spider's nest. Decide when to stop - a click stops you where you stand.",
+      'The trapdoor thuds once or twice as a false alarm, then on the 2nd, 3rd or 4th thud - always before anybody can reach it - it turns dangerous: it rattles and red eyes glint under the lid. Click too late and a spider jumps out at you, and you are out. If nobody is too late, the spider takes whoever stopped furthest from the trapdoor - the chicken - with the same jump scare.',
       'Somebody goes every round. The last player remaining wins.',
     ],
     controls: [
       { input: 'WASD', does: 'Slowly move toward or away from the trapdoor' },
-      { input: 'Left Click', does: 'Stop / react to the trapdoor' },
+      { input: 'Left click', does: 'Stop where you are' },
     ],
     reserved: false,
     // Built: see `48-spidey-senses`. The assets stage is still to do - the cellar,
@@ -659,9 +667,9 @@ const ENTRIES = [
     title: 'Sprint Triathlon',
     kind: 'free-for-all',
     description: [
-      'Three legs, back to back. Swim by clicking - sixty strokes. Bike by pressing space - eighty turns of the pedals. Then run by typing the sentence on the screen, like this one:',
+      'Win the three-part race! Swim by clicking - 60 strokes. Bike by pressing space - 80 turns of the pedals. Then run by typing the sentence on the screen, like this one:',
       'Duck walked up to a lemonade stand, and he said to the man running the stand, hey! Got any grapes?',
-      'Every right key is a stride; a wrong one trips you up for a moment. The race ends when three have finished, or at two and a half minutes. Fastest time wins.',
+      'Every right key is a stride; a wrong one trips you up for a moment. The race ends when three have finished, or at 2.5 minutes. Fastest time wins.',
     ],
     controls: [
       { input: 'Left click', does: 'Swim' },
@@ -679,8 +687,8 @@ const ENTRIES = [
     title: 'Synchronize Steps',
     kind: 'free-for-all',
     description: [
-      'Everybody starts at the top of a tower twenty steps high, and the higher you stay the better. Every two seconds you pick how far to go down: 1, 4 or 6.',
-      'Alone on a number, you stay where you are. Exactly two on the same number, you both go down that many - except a pair on 1, which drops eight. Three or more on the same number all drop eight. Pick nothing and one is picked for you.',
+      'Stay as high up the tower as you can! Everybody starts at the top of a 20-step tower, and every 2 seconds you pick how far to go down: 1, 4 or 6.',
+      'Alone on a number? You stay where you are. Exactly two on the same number? You both go down that many - except a pair on 1, which drops 8. Three or more on the same number? All of you drop 8. Pick nothing and one is picked for you.',
       'Reach the bottom and you are out, and that ends the game. Highest up at the end wins.',
     ],
     controls: [
@@ -698,7 +706,7 @@ const ENTRIES = [
     title: 'Tetris Master',
     kind: 'free-for-all',
     description: [
-      'Blocks of awkward shapes, one tower each. Build it high and build it stable.',
+      'Build the best tower! Everybody stacks blocks of awkward shapes into their own tower - build it high and build it steady.',
       'Earthquakes and worse are coming for it. The best tower still standing at the end wins.',
     ],
     controls: [],
@@ -711,8 +719,8 @@ const ENTRIES = [
     title: 'Time It',
     kind: 'free-for-all',
     description: [
-      'You are given a target time, never under six and a half seconds. The stopwatch starts on Start!, and everybody can watch it for the first two and a half seconds - then it is covered and you are counting in your head.',
-      'Click to stop your timer. The round ends when everybody has stopped, or at thirty seconds. Closest to the target wins; anybody who never stopped comes last.',
+      'Stop the clock as close to the target as you can! You are given a target time, never under 6.5 seconds. The stopwatch starts on Start! and everybody can watch it for the first 2.5 seconds - then it is covered and you are counting in your head.',
+      'Click to stop your timer. The round ends when everybody has stopped, or at 30 seconds. Closest to the target wins; anybody who never stopped comes last.',
     ],
     controls: [
       { input: 'Left click', does: 'Stop your stopwatch' },
@@ -728,9 +736,9 @@ const ENTRIES = [
     title: 'Wack-Attack',
     kind: 'free-for-all',
     description: [
-      'Walk about a field with a hammer while moles pop out of sixteen holes. Stand over one and swing - the hammer comes down in front of you, the way you are facing - before it goes back down.',
-      'An ordinary mole is a point. The golden mole is three, is rarer, and ducks back down much sooner. First hit on a mole takes it. Bring the hammer down on somebody\'s head instead and they are stunned for a moment.',
-      'Most points after forty-five seconds wins.',
+      'Whack the most moles! Walk about a field with a hammer while moles pop out of 16 holes. Stand over one and swing - the hammer comes down in front of you, the way you are facing - before it goes back down.',
+      "An ordinary mole is 1 point. The golden mole is worth 3, is rarer, and ducks back down much sooner. The first hit on a mole takes it. Bring the hammer down on somebody's head instead and they are stunned for a moment.",
+      'Most points after 45 seconds wins.',
     ],
     controls: [
       { input: 'WASD', does: 'Move' },
@@ -747,8 +755,9 @@ const ENTRIES = [
     title: "What's Your RPM?",
     kind: 'free-for-all',
     description: [
-      'Race down a feed of sixty reels on your mini phone by scrolling the mouse wheel as fast as you can. First to the end wins.',
-      'Every so often an ad takes over and the feed stops dead until you click its Skip Ad button - somewhere different every time, and smaller the further you get. Miss it and a popup opens that has to be closed, by a small button in a different corner every time, before you can try again. The game ends at two minutes; everybody else places by how far down the feed they got.',
+      'Be first to the end of the feed! Race down a feed of 60 reels on your mini phone by scrolling the mouse wheel as fast as you can.',
+      'Every so often an ad takes over and the feed stops dead until you click its Skip Ad button - somewhere different every time, and smaller the further you get. Miss it and a popup opens that has to be closed, by a small button in a different corner every time, before you can try again.',
+      'The game ends at 2 minutes; everybody else places by how far down the feed they got.',
     ],
     controls: [
       { input: 'Mouse wheel', does: 'Scroll through the reels' },
@@ -765,15 +774,15 @@ const ENTRIES = [
     title: "Where's Midnight?",
     kind: 'free-for-all',
     description: [
-      'A junkyard at night, and an all-black cat called Midnight somewhere in it. Everybody searches the same yard with their own camera.',
+      'Find the black cat first! It is a junkyard at night, and an all-black cat called Midnight is somewhere in it. Everybody searches the same yard with their own camera.',
       'Eighteen other cats are hiding in it too, and in the dark every one of them is just a pair of glowing eyes. Get your torch on one and its colour tells you whether you have found him.',
-      'Click him and you have found him. A click on anything else costs a second and a half before you can click again. You place in the order you find him; the round ends when three have, everybody has, or at ninety seconds.',
+      'Click him and you have found him. A click on anything else costs 1.5 seconds before you can click again. You place in the order you find him; the round ends when three have, everybody has, or at 90 seconds.',
     ],
     controls: [
       { input: 'WASD', does: 'Pan the view' },
       { input: 'Wheel', does: 'Zoom towards the pointer' },
       { input: 'F', does: 'Torch on or off - closest zoom only, and it locks the camera' },
-      { input: 'Left click', does: 'Say that is him - a wrong one costs a second and a half' },
+      { input: 'Left click', does: 'Say that is him - a wrong one costs 1.5 seconds' },
     ],
     reserved: false,
     // Built: see `37-wheres-midnight`. The assets stage is still to do - the
@@ -786,13 +795,13 @@ const ENTRIES = [
     title: "You're The Bomb",
     kind: 'free-for-all',
     description: [
-      'Escape a dangerous room before a giant rolling pin crushes everyone. Press Space to scan and reveal the bombs surrounding you, then carefully navigate around them while pushing other players out of your way.',
-      'You have 45 seconds before the rolling pin reaches the room. Players who survive can escape through the hole at the end - the first out of it wins.',
+      'Escape the room before it gets crushed! A giant rolling pin is coming for everybody. Press Space to scan and reveal the bombs around you, then carefully find a way past them - pushing other players out of your way.',
+      'You have 45 seconds before the rolling pin reaches the room. Anybody who survives can escape through the hole at the end - the first one out wins.',
     ],
     controls: [
       { input: 'WASD', does: 'Move' },
       { input: 'Space', does: 'Scan for nearby bombs' },
-      { input: 'Left Click', does: 'Push' },
+      { input: 'Left click', does: 'Push whoever is in front of you' },
     ],
     reserved: false,
     // Built: see `46-youre-the-bomb`. The assets stage is still to do - the room,
@@ -806,10 +815,10 @@ const ENTRIES = [
     title: 'Zombie Tag',
     kind: 'free-for-all',
     description: [
-      'Six zombies chase everybody round a walled arena full of crates. You all start in the middle, and everything is solid - bodies included.',
-      'Get caught and you turn into a zombie and join the chase. Every fifteen seconds three more climb in over the wall, so the room only ever gets busier.',
-      'You move twice as fast as a zombie. Space shoves whoever is next to you and knocks them down for a second - handy for leaving somebody behind - and then needs three seconds before it works again.',
-      'Last one still running wins. The camera never moves: the whole arena is in front of you all round.',
+      'Stay human as long as you can! Six zombies chase everybody round a walled arena full of crates. You all start in the middle, and everything is solid - bodies included.',
+      'Get caught and you turn into a zombie and join the chase. Every 15 seconds, 3 more climb in over the wall, so the room only ever gets busier.',
+      'You move twice as fast as a zombie. Space shoves whoever is next to you and knocks them down for a second - great for leaving somebody behind - and then needs 3 seconds before it works again.',
+      'Last one still running wins. The camera never moves, so the whole arena is in front of you all round.',
     ],
     controls: [
       { input: 'WASD / Arrow keys', does: 'Move' },

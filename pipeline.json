@@ -201,7 +201,8 @@
         "48-spidey-senses",
         "49-needs-a-walmart",
         "50-milf-fishing",
-        "51-perfect-game"
+        "51-perfect-game",
+        "52-turn-order"
       ],
       "generation": 1,
       "contract": {
@@ -932,7 +933,8 @@
         "48-spidey-senses",
         "49-needs-a-walmart",
         "50-milf-fishing",
-        "51-perfect-game"
+        "51-perfect-game",
+        "52-turn-order"
       ],
       "generation": 1,
       "contract": {
@@ -1016,7 +1018,8 @@
         "09-net"
       ],
       "dependents": [
-        "14-garden"
+        "14-garden",
+        "52-turn-order"
       ],
       "generation": 1,
       "contract": {
@@ -1238,7 +1241,8 @@
       ],
       "dependents": [
         "14-garden",
-        "15-minigames"
+        "15-minigames",
+        "52-turn-order"
       ],
       "generation": 1,
       "contract": {
@@ -4626,6 +4630,75 @@
         "No models: the beach, the crabs and the coconut are primitives, players are the island capsule",
         "No curve on the throw: the coconut rolls dead straight between the walls",
         "No music of its own yet; the round is silent under the cues"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "52-turn-order",
+      "phase": "P7",
+      "title": "Party session and turn order: two to eight browsers join one party, the host locks the roster, every player rolls an authoritative d6, tied groups reroll, and all clients receive one final order",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "09-net",
+        "10-party",
+        "13-modes"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "52.1",
+          "title": "Pure two-to-eight-player party-order state machine, commands, snapshots and validation",
+          "status": "done"
+        },
+        {
+          "id": "52.2",
+          "title": "Host-authoritative seeded d6 rolls, idempotent actions and tied-group rerolls",
+          "status": "done"
+        },
+        {
+          "id": "52.3",
+          "title": "Room synchronization, revisioned snapshots and late-subscriber resync over the public network contract",
+          "status": "done"
+        },
+        {
+          "id": "52.4",
+          "title": "Minimal host and guest interface for create, join, start, roll and final-order browser testing",
+          "status": "done"
+        },
+        {
+          "id": "52.5",
+          "title": "Two-player and eight-player verification, contract, workflow scripts and MODULE.md",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-20T20:40:56.397Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No board movement, tile actions, obstacles or summit win condition",
+        "No minigame selection, practice, final attempt or reward dice",
+        "No durable database; the first adapter keeps active parties in the existing room lifecycle",
+        "No high-frequency server simulation or networked animation frames"
       ],
       "budgets": {
         "drawCallsMax": 0,

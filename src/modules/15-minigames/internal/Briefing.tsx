@@ -270,7 +270,7 @@ function Controls({ game }: { game: ReturnType<typeof minigameById> }) {
       {game.controls.map((control) => (
         <div key={control.input} style={controlRow} data-control={control.input}>
           <span style={keyCap}>{control.input}</span>
-          <span>{control.does}</span>
+          <span style={controlDoes}>{control.does}</span>
         </div>
       ))}
     </div>
@@ -335,22 +335,27 @@ const faded: React.CSSProperties = {
 const controlList: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: 8,
+  gap: 10,
 }
 
 const controlRow: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: 12,
+  gap: 14,
+}
+
+/** What the control does: the largest text on the panel, since it is the part read at a glance. */
+const controlDoes: React.CSSProperties = {
+  font: `600 19px/1.3 ${FONT}`,
 }
 
 const keyCap: React.CSSProperties = {
   flex: '0 0 auto',
-  minWidth: 150,
-  padding: '4px 12px',
+  minWidth: 190,
+  padding: '6px 14px',
   borderRadius: 999,
   background: ISLAND.warmSand,
-  font: `700 12px/1.4 ${FONT}`,
+  font: `700 17px/1.4 ${FONT}`,
   textAlign: 'center',
 }
 

@@ -24,7 +24,10 @@
     "relay": "node server/relay.mjs",
     "start": "node server/relay.mjs",
     "dev:multi": "npm run build && node server/relay.mjs",
-    "brief": "node scripts/brief.mjs"
+    "brief": "node scripts/brief.mjs",
+    "brief:turn-order": "node scripts/brief.mjs 52-turn-order",
+    "test:turn-order": "vitest run src/modules/52-turn-order",
+    "gate:turn-order": "node scripts/gate.mjs 52-turn-order"
   },
   "dependencies": {
     "@react-three/fiber": "^9.7.0",
