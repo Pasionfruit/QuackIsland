@@ -64,6 +64,44 @@ describe('what is solid', () => {
     expect(panelLift(SEED, ROUND_LENGTH - 0.01, wrong)).toBeCloseTo(0, 2)
     expect(panelLift(SEED, drop + 1, right)).toBe(0)
   })
+
+  it('is standable exactly when it is drawn flush: it rises steadily and arrives as the rebuild ends', () => {
+    for (const round of [1, 2, 5]) {
+      const deal = dealFor(SEED, round)
+      const start = (round - 1) * ROUND_LENGTH
+      const wrongs = deal.panels.map((c, i) => (c === deal.colour ? -1 : i)).filter((i) => i >= 0)
+      const rebuild = start + PHASES.spin + PHASES.reveal + PHASES.drop
+      for (const panel of wrongs) {
+        let last = -Infinity
+        for (let t = 0; t < PHASES.rebuild - 1e-6; t += 0.01) {
+          const lift = panelLift(SEED, rebuild + t, panel)
+          // Rising, in a straight line, and unstandable the whole way up.
+          expect(lift).toBeGreaterThanOrEqual(last)
+          expect(lift).toBeCloseTo(-(1 - t / PHASES.rebuild), 9)
+          expect(lift).toBeLessThan(0)
+          expect(solid(SEED, rebuild + t, panel)).toBe(false)
+          last = lift
+        }
+        // Flush and solid together, at the moment the next round's spin starts.
+        expect(panelLift(SEED, start + ROUND_LENGTH, panel)).toBe(0)
+        expect(solid(SEED, start + ROUND_LENGTH, panel)).toBe(true)
+      }
+    }
+  })
+
+  it('never has a panel that looks up and is not solid, or looks down and is', () => {
+    // A tenth of a second before it arrives, a panel is still visibly on its way: at least a tenth of the drop down.
+    const deal = dealFor(SEED, 1)
+    const wrong = deal.panels.findIndex((c) => c !== deal.colour)
+    const nearly = panelLift(SEED, ROUND_LENGTH - 0.1, wrong)
+    expect(nearly).toBeLessThan(-0.03)
+    for (let t = PHASES.spin + PHASES.reveal + PHASES.drop; t < ROUND_LENGTH + 2; t += 0.01) {
+      // Not the instant of the boundary itself, where a rounding error is the difference.
+      if (Math.abs(t - ROUND_LENGTH) < 1e-6) continue
+      const lift = panelLift(SEED, t, wrong)
+      expect(solid(SEED, t, wrong)).toBe(lift > -1e-9)
+    }
+  })
 })
 
 describe('the floor', () => {

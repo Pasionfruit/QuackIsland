@@ -8,10 +8,11 @@
  *
  * While the colour is up, its panels bob and every other panel flickers
  * darker as the two seconds run out - a panel is never drawn any colour but
- * its own. Then they drop away into the cloud, and
- * through the rebuild rise slowly back. Everybody is the island's capsule in
- * their colour; you have a white ring at your feet. A shove is a lunge.
- * Somebody falling tumbles away below.
+ * its own. Then they drop away into the cloud, and through the rebuild rise
+ * steadily back, **dark until the last moment and flush exactly when they can be
+ * stood on** - what you see and what holds you are the same thing. Everybody is the island's capsule in
+ * their colour; you have a white ring at your feet. Everybody leans into the way
+ * they are sliding, and a runner leans hard. Somebody falling tumbles away below.
  *
  * The camera sits behind and above you, turned by the mouse. Once you have
  * fallen, it pulls back to watch the whole arena.
@@ -24,7 +25,7 @@ import { useMemo, useReducer, useRef, type RefObject } from 'react'
 import { Color, DoubleSide, Group, InstancedMesh, Matrix4, Mesh, Vector3 } from 'three'
 import { createAvatar } from '../../02-player'
 import { GRID, HALF, PANEL_COLOURS, dealFor, panelCentre, panelColour, panelLift, when, wheelAngle } from './arena'
-import { COLOURS, PUSH, ROUND, clock, isStanding, type Game } from './rules'
+import { COLOURS, ROUND, clock, isStanding, type Game } from './rules'
 
 export const PALETTE = {
   sky: '#8fd0f2',
@@ -100,7 +101,8 @@ function Panels({ live }: { live: RefObject<Game> }) {
       colour.set(PANEL_COLOURS[panelColour(g.seed, t, i)])
       // Never whitened: a panel's colour is what it is. Only the wrong ones darken, flickering as the two seconds run out.
       if (w.phase === 'reveal' && !right) colour.lerp(DARK, Math.max(0, (w.t - 0.8) / (w.length - 0.8)) * (0.5 + 0.3 * Math.sin(c.elapsedTime * 30)))
-      else if (w.phase === 'rebuild' && !right) colour.lerp(DARK, 0.35 * (1 + panelLift(g.seed, t, i)))
+      // Still rising: dark, easing back to its own colour over the last of the climb - and its own colour, flush, is solid.
+      else if (w.phase === 'rebuild' && !right) colour.lerp(DARK, 0.5 * Math.min(1, -lift * 4))
       panels.setColorAt(i, colour)
     }
     panels.count = count
@@ -158,7 +160,7 @@ function Wheel({ live }: { live: RefObject<Game> }) {
   )
 }
 
-/** Somebody: in their colour, lunging when they shove, tumbling when they fall. */
+/** Somebody: in their colour, leaning into the way they slide, tumbling when they fall. */
 function Body({ index, live }: { index: number; live: RefObject<Game> }) {
   const group = useRef<Group>(null)
   const lean = useRef<Group>(null)
@@ -182,10 +184,15 @@ function Body({ index, live }: { index: number; live: RefObject<Game> }) {
     }
     group.current.position.set(s.x, p.y, s.z)
     group.current.rotation.y = p.yaw + Math.PI
-    const since = g.elapsed - p.pushedAt
-    const lunge = since >= 0 && since < 0.3 ? Math.sin((since / 0.3) * Math.PI) * 0.45 : 0
+    // Leaning into the slide: the velocity in the body's own frame, forward and sideways, more the faster it goes.
+    const turn = p.yaw + Math.PI
+    const forward = p.vx * Math.sin(turn) + p.vz * Math.cos(turn)
+    const sideways = p.vx * Math.cos(turn) - p.vz * Math.sin(turn)
+    const k = p.out === null ? 0.05 : 0
+    const cap = (v: number) => Math.max(-0.4, Math.min(0.4, v))
     const tumble = p.out !== null ? Math.min(3, (g.elapsed - p.out) * 5) : 0
-    lean.current.rotation.x = lunge + tumble
+    lean.current.rotation.x = cap(forward * k) + tumble
+    lean.current.rotation.z = cap(-sideways * k)
     if (ring.current) ring.current.visible = p.mine && isStanding(p)
   })
   return (
@@ -198,27 +205,6 @@ function Body({ index, live }: { index: number; live: RefObject<Game> }) {
         <meshBasicMaterial color="#ffffff" transparent opacity={0.85} side={DoubleSide} depthWrite={false} />
       </mesh>
     </group>
-  )
-}
-
-/** A faint arc on the floor in front of you, as far as a shove reaches. */
-function Reach({ live }: { live: RefObject<Game> }) {
-  const arc = useRef<Mesh>(null)
-  useFrame(() => {
-    const g = live.current
-    const me = g.players.find((p) => p.mine)
-    if (!arc.current) return
-    arc.current.visible = !!me && isStanding(me) && !g.over
-    if (!me) return
-    arc.current.position.set(me.x, 0.03, me.z)
-    // The ring's sector is laid along +X; turned to the way you face.
-    arc.current.rotation.set(-Math.PI / 2, 0, me.yaw + Math.PI / 2)
-  })
-  return (
-    <mesh ref={arc} visible={false} renderOrder={4}>
-      <ringGeometry args={[0.75, PUSH.reach, 24, 1, -PUSH.arc, PUSH.arc * 2]} />
-      <meshBasicMaterial color="#ffffff" transparent opacity={0.22} side={DoubleSide} depthWrite={false} />
-    </mesh>
   )
 }
 
@@ -264,7 +250,6 @@ export function ColorScene({ live, look }: { live: RefObject<Game>; look: RefObj
       {game.players.map((p, index) => (
         <Body key={`${game.id}:${p.id}`} index={index} live={live} />
       ))}
-      <Reach live={live} />
     </>
   )
 }

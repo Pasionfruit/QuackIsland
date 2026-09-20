@@ -2810,7 +2810,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T04:25:45.809Z"
+          "at": "2026-09-20T04:52:44.275Z"
         },
         "human": {
           "status": "pending"
@@ -3528,7 +3528,7 @@
     {
       "id": "40-whats-your-rpm",
       "phase": "P6",
-      "title": "Minigame 31, What's Your RPM?: a race down a feed of sixty reels on a mini phone - mouse wheel to scroll, capped at 360 reels a minute - with ads that stop you dead until you click a Skip Ad button that is somewhere different each time and shrinks as you go; everybody walking their lane on a track, first to the end wins",
+      "title": "Minigame 31, What's Your RPM?: a race down a feed of sixty reels on a mini phone - mouse wheel to scroll, capped at 360 reels a minute - with ads that stop you dead until you click a Skip Ad button that is somewhere different each time and shrinks as you go - miss it and a popup opens that has to be closed; everybody walking their lane on a track, first to the end wins",
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
@@ -3575,6 +3575,11 @@
           "status": "done"
         },
         {
+          "id": "40.8",
+          "title": "Missing the skip button opens a popup that has to be closed",
+          "status": "done"
+        },
+        {
           "id": "40.7",
           "title": "The assets: models, sprites and sound in place of primitives",
           "status": "planned"
@@ -3583,7 +3588,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-18T23:46:10.406Z"
+          "at": "2026-09-20T04:51:31.609Z"
         },
         "human": {
           "status": "pending"
@@ -3856,7 +3861,7 @@
     {
       "id": "44-color-coded",
       "phase": "P6",
-      "title": "Minigame 34, Color Coded: a grid of colour panels over nothing; a giant wheel picks a colour, two seconds to shove your way onto it, every other panel drops and whoever is on one falls; the panels rebuild with fewer of the colour each round; last one standing wins",
+      "title": "Minigame 34, Color Coded: a grid of colour panels over nothing; a giant wheel picks a colour, two seconds to get onto it on ice - running and colliding, no shove - every other panel drops and whoever is on one falls; the panels rebuild with fewer of the colour each round; last one standing wins",
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
@@ -3914,6 +3919,11 @@
         },
         {
           "id": "44.9",
+          "title": "Ice: velocity, running and collisions in place of the shove; a rebuilt panel is drawn flush exactly when it can be stood on",
+          "status": "done"
+        },
+        {
+          "id": "44.9",
           "title": "The assets: models, sprites and sound in place of primitives",
           "status": "planned"
         }
@@ -3921,7 +3931,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-19T04:19:28.814Z"
+          "at": "2026-09-20T04:52:08.224Z"
         },
         "human": {
           "status": "pending"
@@ -3932,6 +3942,7 @@
       "nonGoals": [
         "No models: panels and the wheel are flat colour, players are the island capsule",
         "No jumping",
+        "No shove: the floor is ice, running is the way to hit somebody, and bodies collide",
         "No music of its own yet; the round is silent under the cues"
       ],
       "budgets": {

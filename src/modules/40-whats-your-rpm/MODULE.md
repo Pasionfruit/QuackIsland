@@ -8,7 +8,8 @@ Everybody has the same mini phone with the same sixty reels on it. **Scroll the
 mouse wheel** to move through them, as fast as you can. Every few reels an
 **ad** takes over the screen and your feed stops dead until you **click its
 Skip Ad button** - which is somewhere different every time, and smaller the
-further down the feed you are. **The first to the end of the feed wins, and
+further down the feed you are. **Miss it, and a popup opens over the ad that has
+to be closed** before the skip button can be got at again. **The first to the end of the feed wins, and
 the game ends there.** Otherwise it ends at two minutes, or once everybody has
 finished or left. Places go by who finished, soonest first, then by how far
 down the feed everybody else got.
@@ -26,6 +27,30 @@ reels and the same ads in the same places.
   screen, and a size that shrinks from full to 55% from the first ad to the last.
 - Each ad sells something silly with a big button of its own that does nothing
   - like every ad button you did not mean to press.
+
+## Missing the skip button
+
+A **miss** is a left click anywhere on the ad but the Skip Ad button - the ad's
+big blue button included, which is the one you are meant to reach for. It opens a
+**popup** over the whole ad: a fake prize, virus warning or permission prompt,
+with a big blue OK that does nothing, and a small **✕ close button in a corner
+that is different every time**. Until that is pressed the skip button is under
+the popup and cannot be clicked, and clicking anywhere else on the popup is
+neither a fresh miss nor a close.
+
+- **It is yours alone.** The popup is on your own phone and nothing else: it is
+  not on the wire, and costs everybody else nothing. What it costs you is the time
+  to find the ✕, which is the point. A guest and the host play it the same way.
+- **Each popup is a different one.** `popupAt(seed, ad, misses)` picks the copy
+  and the corner from the seed, the ad and how many times that ad has been missed,
+  so a browser that misses twice sees two popups, and the same miss is the same
+  popup on any screen.
+- **It goes with the ad.** A popup belongs to the ad it was opened on: skip the
+  ad, start another game or be unblocked and it is gone. Paused, a click on the ad
+  is not a miss.
+- **The stand-ins never miss.** They find the skip button after their reaction
+  time as before; the popup is a way of getting your own clicks wrong.
+- The caption under your phone says **A popup! Close it first** while one is up.
 
 ## The wheel
 
@@ -78,6 +103,12 @@ each skip button.
 - Spin the wheel as hard as you can: the rpm tops out at about 360.
 - At reel 4 an ad takes over. Scrolling does nothing. Your phone on the track
   flashes red. Click **Skip Ad** and the feed carries on.
+- At the next ad, **miss it on purpose**: click the big blue button, or anywhere
+  else on the ad. A popup should open over everything, and the caption should say
+  to close it. Click where the skip button is: nothing should happen. Click on the
+  popup itself: nothing should happen. Press its small ✕: it should close and the
+  skip button should work. Miss again: a different popup, with the ✕ somewhere
+  else.
 - Later ads put the button somewhere else, and smaller.
 - Watch the stand-ins walk their lanes, their phones going red at their ads.
 - Get to the end first: *You're all caught up*, the game ends straight away and

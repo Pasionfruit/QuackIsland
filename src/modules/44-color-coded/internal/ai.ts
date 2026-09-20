@@ -3,30 +3,52 @@
  *
  * While the wheel spins a stand-in drifts about the middle of the arena, away
  * from the edge. When the colour comes up it takes a moment to see it, then
- * heads for the panel of that colour that is nearest and least crowded -
- * aiming for its middle - and stays there. Anybody standing close in front of
- * it may get a shove, more likely when they are near a gap or the edge; a
- * stand-in shoves more readily once the colour is up.
+ * makes for the panel of that colour that is nearest and least crowded - aiming
+ * for its middle - and stays there. **It runs when it has a long way to go and
+ * walks the last of it**, because a runner cannot turn or stop on ice and a
+ * stand-in that ran all the way in would slide off the far side.
+ *
+ * It steers the way anybody has to on ice: the speed it asks for is proportional
+ * to how far it has to go, so it eases in and stops on the spot rather than
+ * sliding through; and if the way ahead, where it would slide to, is nothing, it
+ * asks for the opposite of the speed it has and stops.
+ *
+ * There is no shove, so **it charges**: somebody close by, with a way down behind
+ * them, may be run into - more likely once the colour is up, and by a rougher
+ * stand-in. A charge is a run at them for a moment, which is all a collision needs.
  *
  * Its own randomness comes from the seed. Only ever runs on the host.
  */
 import { createRng, hashSeed } from '../../00-core'
 import { GRID, HALF, dealFor, panelAt, panelCentre, solid, when } from './arena'
-import { PUSH, canAct, clock, cooldownLeft, isStanding, push, steer, wrapAngle, yawTowards, type Game, type Player } from './rules'
+import { BODY, canAct, clock, isStanding, speedOf, steer, wrapAngle, yawTowards, type Game, type Player } from './rules'
 
 export const BOT = {
   /** Seconds to take in the colour, quickest and slowest. */
   reaction: [0.25, 0.7] as readonly [number, number],
-  /** Its pace as a share of a full walk, wandering and making for the colour. */
+  /**
+   * How much speed, metres a second, a stand-in asks for a metre from where it is
+   * going: less than a body's grip, so it comes in without overshooting.
+   */
+  approach: 2.2,
+  /** Its pace as a share of a walk while it wanders. */
   wander: 0.45,
-  rush: 1,
-  /** How often it looks for somebody to shove, seconds. */
+  /** It runs when the goal is further than this, metres, and the colour is up. */
+  runFrom: 3.5,
+  /** How often it looks for somebody to charge, seconds. */
   think: 0.35,
-  /** The chance of a shove when somebody is there, the gentlest stand-in and the roughest, before the colour and after. */
+  /** The chance of a charge when somebody is there, the gentlest stand-in and the roughest, before the colour and after. */
   temper: [0.15, 0.45] as readonly [number, number],
   riled: 2.2,
   /** How close to the middle of a panel it is content to stand. */
-  settle: 0.35,
+  settle: 0.3,
+  /** How far off it will pick somebody to charge, metres, and how long the charge lasts, seconds. */
+  charge: 3.6,
+  chargeFor: 0.7,
+  /** Once the colour is up, how close to its panel a stand-in has to be before it will spare a moment to charge, metres. */
+  spare: 2,
+  /** How far ahead, in seconds of the speed it has, it looks for nothing under it. */
+  lookahead: 0.5,
 } as const
 
 interface Mind {
@@ -36,6 +58,8 @@ interface Mind {
   goal: { x: number; z: number }
   goalFor: string
   thoughtAt: number
+  /** Who it is charging, and until when. */
+  charging: { index: number; until: number } | null
   at: number
 }
 
@@ -53,6 +77,7 @@ function mindFor(game: Game, bot: Player): Mind {
       goal: { x: bot.x, z: bot.z },
       goalFor: '',
       thoughtAt: 0,
+      charging: null,
       at: game.elapsed,
     }
     minds.set(key, mind)
@@ -81,7 +106,7 @@ export function bestPanel(game: Game, index: number): number {
   return best
 }
 
-/** Moves every stand-in on: where to, which way to face, and whether to shove. */
+/** Moves every stand-in on: where to, how fast, which way to face, and whether to run at somebody. */
 export function botSteer(game: Game): void {
   const w = when(clock(game))
   game.players.forEach((bot, index) => {
@@ -93,8 +118,11 @@ export function botSteer(game: Game): void {
     if (seen) {
       // On the colour, as near its middle as it can get.
       const key = `${w.round}:panel`
+      // From the drop on, the panels that are gone stay gone: it stays where it is if that is one that is still there.
+      const here = panelAt(bot.x, bot.z)
+      const stay = (w.phase === 'drop' || w.phase === 'rebuild') && solid(game.seed, clock(game), here)
       if (mind.goalFor !== key || game.elapsed - mind.thoughtAt > 0.6) {
-        const panel = bestPanel(game, index)
+        const panel = stay ? here : bestPanel(game, index)
         if (panel >= 0) {
           const m = panelCentre(panel)
           const spread = (GRID.cell / 2 - 0.6) * 0.6
@@ -102,7 +130,7 @@ export function botSteer(game: Game): void {
         }
         mind.goalFor = key
       }
-      pace = BOT.rush
+      pace = 1
     } else if (mind.goalFor !== `${w.round}:wander` || Math.hypot(mind.goal.x - bot.x, mind.goal.z - bot.z) < 0.5) {
       // Drifting about the middle, well in from the edge.
       const reach = HALF * 0.55
@@ -110,41 +138,72 @@ export function botSteer(game: Game): void {
       mind.goalFor = `${w.round}:wander`
     }
 
-    const dx = mind.goal.x - bot.x
-    const dz = mind.goal.z - bot.z
-    const d = Math.hypot(dx, dz)
-    // Never a step onto nothing, once panels have gone.
-    const next = { x: bot.x + (dx / Math.max(d, 1e-6)) * 0.5, z: bot.z + (dz / Math.max(d, 1e-6)) * 0.5 }
-    const safe = solid(game.seed, clock(game), panelAt(next.x, next.z))
-    const moving = d > BOT.settle && safe
-    const scale = moving ? Math.min(1, d) * pace : 0
-    let yaw = moving ? yawTowards(bot, mind.goal) : bot.yaw
-
-    // A shove for whoever is close in front - more likely if they are near a way down.
-    if (game.elapsed - mind.thoughtAt >= BOT.think && cooldownLeft(game, bot) <= 0) {
+    // A charge at whoever is close by and near a way down - which is not the panel it is making for.
+    if (mind.charging && (game.elapsed >= mind.charging.until || !isStanding(game.players[mind.charging.index]))) mind.charging = null
+    // Only when it can spare the time: once the colour is up, a stand-in still on its way charges nobody.
+    const settled = !seen || Math.hypot(mind.goal.x - bot.x, mind.goal.z - bot.z) < BOT.spare
+    if (!mind.charging && game.elapsed - mind.thoughtAt >= BOT.think && settled) {
       mind.thoughtAt = game.elapsed
-      let target: Player | null = null
+      let target = -1
       let targetD = Infinity
-      for (const p of game.players) {
-        if (p === bot || !isStanding(p)) continue
+      game.players.forEach((p, i) => {
+        if (p === bot || !isStanding(p)) return
         const pd = Math.hypot(p.x - bot.x, p.z - bot.z)
-        if (pd < PUSH.reach * 0.95 && pd < targetD) {
-          target = p
+        if (pd < BOT.charge && pd < targetD) {
+          target = i
           targetD = pd
         }
-      }
-      if (target) {
-        const toward = yawTowards(bot, target)
-        const beyond = { x: target.x + (target.x - bot.x) / targetD * 2.5, z: target.z + (target.z - bot.z) / targetD * 2.5 }
+      })
+      if (target >= 0) {
+        const rival = game.players[target]
+        const beyond = { x: rival.x + ((rival.x - bot.x) / targetD) * 2.5, z: rival.z + ((rival.z - bot.z) / targetD) * 2.5 }
         const drop = !solid(game.seed, clock(game) + 1, panelAt(beyond.x, beyond.z)) || panelAt(beyond.x, beyond.z) < 0
         const chance = mind.temper * (seen ? BOT.riled : 1) * (drop ? 1.6 : 0.6)
-        if (mind.random() < chance) {
-          steer(game, index, 0, 0, toward)
-          push(game, index)
-          yaw = toward
-        }
+        if (mind.random() < chance) mind.charging = { index: target, until: game.elapsed + BOT.chargeFor }
       }
     }
-    steer(game, index, moving ? (dx / d) * scale : 0, moving ? (dz / d) * scale : 0, wrapAngle(yaw))
+
+    let goal = mind.goal
+    let run = false
+    if (mind.charging) {
+      // Run at where they are about to be.
+      const rival = game.players[mind.charging.index]
+      goal = { x: rival.x + rival.vx * 0.15, z: rival.z + rival.vz * 0.15 }
+      run = true
+      pace = 1
+    }
+
+    const dx = goal.x - bot.x
+    const dz = goal.z - bot.z
+    const d = Math.hypot(dx, dz)
+    if (!mind.charging && seen && d > BOT.runFrom) run = true
+    const top = run ? BODY.run : BODY.walk
+    // Never a slide onto nothing, once panels have gone: if it would end up over a gap or the edge, stop.
+    const speed = speedOf(bot)
+    const ahead = { x: bot.x + bot.vx * BOT.lookahead, z: bot.z + bot.vz * BOT.lookahead }
+    const towards = { x: bot.x + (dx / Math.max(d, 1e-6)) * 0.6, z: bot.z + (dz / Math.max(d, 1e-6)) * 0.6 }
+    // Along the whole slide, not just its end: two right panels that only touch at a corner are a way through for the end and not for the middle.
+    const safe =
+      solid(game.seed, clock(game), panelAt(towards.x, towards.z)) &&
+      [0.25, 0.5, 0.75, 1].every((f) => solid(game.seed, clock(game), panelAt(bot.x + (ahead.x - bot.x) * f, bot.z + (ahead.z - bot.z) * f)))
+    let mx = 0
+    let mz = 0
+    let yaw = bot.yaw
+    if (!safe) {
+      // Ask for the opposite of the speed it has, so it comes to a stop.
+      mx = -bot.vx / BODY.walk
+      mz = -bot.vz / BODY.walk
+      run = false
+    } else if (d > BOT.settle || mind.charging) {
+      const want = Math.min(1, (BOT.approach * d) / top) * pace
+      mx = (dx / Math.max(d, 1e-6)) * want
+      mz = (dz / Math.max(d, 1e-6)) * want
+      yaw = yawTowards(bot, goal)
+    } else if (speed > 0.3) {
+      // Arrived, and still sliding: brake.
+      mx = -bot.vx / BODY.walk
+      mz = -bot.vz / BODY.walk
+    }
+    steer(game, index, mx, mz, wrapAngle(yaw), run)
   })
 }

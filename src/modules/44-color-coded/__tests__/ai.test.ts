@@ -1,10 +1,10 @@
 /**
- * The stand-ins: they make for the colour, they shove, one is left - the same way every time.
+ * The stand-ins: they make for the colour on the ice, they run into each other, one is left - the same way every time.
  */
 import { describe, expect, it } from 'vitest'
 import { PHASES, dealFor, panelAt } from '../internal/arena'
 import { botSteer } from '../internal/ai'
-import { ROUND, createGame, placings, stepGame, type Game } from '../internal/rules'
+import { BODY, ROUND, SLIDE, createGame, placings, stepGame, type Game } from '../internal/rules'
 
 function play(seed: number, n: number, until = ROUND.limit): Game {
   const g = createGame(seed, Array.from({ length: n }, (_, i) => ({ id: `stand-in ${i}`, bot: true })), seed)
@@ -30,16 +30,39 @@ describe('the stand-ins', () => {
     expect(on / all).toBeGreaterThan(0.75)
   })
 
-  it('play a game down to one standing, shoving some of the others off', () => {
-    let shoved = 0
+  it('play a game down to one standing, knocking some of the others off', () => {
+    let knocked = 0
     for (let seed = 1; seed <= 10; seed++) {
       const g = play(seed * 97, 2 + (seed % 7))
       expect(g.over).toBe(true)
       expect(g.players.filter((p) => p.out === null).length).toBeLessThanOrEqual(1)
-      shoved += g.players.filter((p) => p.by !== null).length
+      knocked += g.players.filter((p) => p.by !== null).length
     }
-    expect(shoved).toBeGreaterThan(5)
+    expect(knocked).toBeGreaterThan(5)
   }, 30000)
+
+  it('run when they have a long way to go, and are not sliding past their panel by the time they get there', () => {
+    let ran = false
+    let arrived = 0
+    let settled = 0
+    for (let seed = 1; seed <= 8; seed++) {
+      const g = createGame(seed * 31, Array.from({ length: 3 }, (_, i) => ({ id: `stand-in ${i}`, bot: true })), seed)
+      while (g.elapsed < PHASES.spin + PHASES.reveal - 0.02) {
+        botSteer(g)
+        stepGame(g, 1 / 60)
+        if (g.players.some((p) => p.run)) ran = true
+        // Never faster than the speed limit, however they were hit.
+        for (const p of g.players) expect(Math.hypot(p.vx, p.vz)).toBeLessThanOrEqual(SLIDE.cap + 1e-9)
+      }
+      const deal = dealFor(g.seed, 1)
+      for (const p of g.players) {
+        arrived += 1
+        if (deal.panels[panelAt(p.x, p.z)] === deal.colour && Math.hypot(p.vx, p.vz) < BODY.walk) settled += 1
+      }
+    }
+    expect(ran).toBe(true)
+    expect(settled / arrived).toBeGreaterThan(0.75)
+  })
 
   it('play the same way every time', () => {
     const a = play(4242, 6)

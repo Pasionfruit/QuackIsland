@@ -2,24 +2,25 @@
  * One game, on the wire.
  *
  * The host sends the clock and every player: where they are, how high (falling
- * below), which way they face, when they fell and who shoved them, how many
- * they have shoved off, when they last shoved, and whether they have left. The
- * panels are not sent: the seed and the clock make them.
+ * below), **how fast they are sliding**, which way they face, when they fell and
+ * who knocked them, how many they have knocked off, whether they are running, and
+ * whether they have left. The panels are not sent: the seed and the clock make
+ * them.
  *
- * A guest sends what its hands are doing - which way it is walking, which way
- * it faces, and **how many times it has clicked, as a running count** - ten
- * times a second and whenever that changes. Repeating the count never doubles a
- * shove, and losing a message never loses one.
+ * A guest sends what its hands are doing - which way it is walking, which way it
+ * faces, and whether it is holding run - twenty times a second and whenever the
+ * walk or the run changes. That is a state, not an event, so a repeated message
+ * changes nothing and a lost one is made good by the next.
  */
 import { HALF } from './arena'
 import { MAX_PLAYERS } from './setup'
-import { ROUND, type Game, type Player } from './rules'
+import { ROUND, SLIDE, type Game, type Player } from './rules'
 
 export const SNAPSHOT_TAG = 'cc'
 export const INTENT_TAG = 'cc-in'
 
-/** `[id, x cm, z cm, y cm, yaw mrad, out cs or -1, by or -1, kills, pushed at cs or -1, flags: 1 left]`. */
-export type WirePlayer = [string, number, number, number, number, number, number, number, number, number]
+/** `[id, x cm, z cm, y cm, yaw mrad, out cs or -1, by or -1, kills, vx dm/s, vz dm/s, flags: 1 left, 2 running]`. */
+export type WirePlayer = [string, number, number, number, number, number, number, number, number, number, number]
 
 export interface Snapshot {
   id: number
@@ -35,6 +36,9 @@ const isInt = (v: unknown): v is number => Number.isInteger(v)
 const cm = (v: number) => Math.round(v * 100)
 /** How far out anybody can be, centimetres: a fall carries you on past the edge. */
 const REACH = (HALF + 40) * 100
+/** How fast anybody can be going, decimetres a second: the speed limit, and a little over for rounding. */
+const FAST = Math.ceil(SLIDE.cap * 10) + 2
+const dms = (v: number) => Math.max(-FAST, Math.min(FAST, Math.round(v * 10)))
 
 export function encodeSnapshot(game: Game): Record<string, unknown> {
   return {
@@ -53,8 +57,9 @@ export function encodeSnapshot(game: Game): Record<string, unknown> {
         p.out === null ? -1 : cm(p.out),
         p.by ?? -1,
         p.kills,
-        p.pushedAt < 0 ? -1 : cm(p.pushedAt),
-        p.left ? 1 : 0,
+        dms(p.vx),
+        dms(p.vz),
+        (p.left ? 1 : 0) | (p.run ? 2 : 0),
       ],
     ),
   }
@@ -68,15 +73,16 @@ export function decodeSnapshot(message: Record<string, unknown>): Snapshot | nul
   const count = message.p.length
   const players: WirePlayer[] = []
   for (const raw of message.p) {
-    if (!Array.isArray(raw) || raw.length !== 10) return null
-    const [id, x, z, y, yaw, out, by, kills, pushedAt, flags] = raw
+    if (!Array.isArray(raw) || raw.length !== 11) return null
+    const [id, x, z, y, yaw, out, by, kills, vx, vz, flags] = raw
     if (typeof id !== 'string' || id.length === 0) return null
     if (!isInt(x) || Math.abs(x) > REACH || !isInt(z) || Math.abs(z) > REACH) return null
     if (!isInt(y) || y > 0 || y < -ROUND.depth * 100 || !isInt(yaw) || Math.abs(yaw) > 3200) return null
     if (!(out === -1 || (isCount(out) && out <= (ROUND.limit + 1) * 100))) return null
     if (!isInt(by) || by < -1 || by >= count || !isCount(kills) || kills >= count) return null
-    if (!isInt(pushedAt) || pushedAt < -1 || (flags !== 0 && flags !== 1)) return null
-    players.push([id, x, z, y, yaw, out, by, kills, pushedAt, flags])
+    if (!isInt(vx) || Math.abs(vx) > FAST || !isInt(vz) || Math.abs(vz) > FAST) return null
+    if (!isInt(flags) || flags < 0 || flags > 3) return null
+    players.push([id, x, z, y, yaw, out, by, kills, vx, vz, flags])
   }
   return { id: message.g as number, seed: message.s as number, elapsed: message.e, over: message.o === 1, players }
 }
@@ -94,7 +100,7 @@ export function applySnapshot(game: Game, snap: Snapshot, me: string): Game {
   game.id = snap.id
   game.seed = snap.seed
   game.over = snap.over
-  game.players = snap.players.map(([id, x, z, y, yaw, out, by, kills, pushedAt, flags]) => {
+  game.players = snap.players.map(([id, x, z, y, yaw, out, by, kills, vx, vz, flags]) => {
     const known = game.players.find((p) => p.id === id)
     const player: Player = known ?? {
       id,
@@ -104,17 +110,17 @@ export function applySnapshot(game: Game, snap: Snapshot, me: string): Game {
       z: 0,
       y: 0,
       vy: 0,
-      kx: 0,
-      kz: 0,
+      vx: 0,
+      vz: 0,
       yaw: 0,
       mx: 0,
       mz: 0,
+      run: false,
       out: null,
       by: null,
       kills: 0,
-      pushedAt: -Infinity,
-      shovedBy: null,
-      shovedAt: -Infinity,
+      knockedBy: null,
+      knockedAt: -Infinity,
       left: false,
       leftAt: null,
     }
@@ -126,8 +132,10 @@ export function applySnapshot(game: Game, snap: Snapshot, me: string): Game {
       out: out < 0 ? null : out / 100,
       by: by < 0 ? null : by,
       kills,
-      pushedAt: pushedAt < 0 ? -Infinity : pushedAt / 100,
-      left: flags === 1,
+      vx: vx / 10,
+      vz: vz / 10,
+      run: (flags & 2) !== 0,
+      left: (flags & 1) !== 0,
     })
     // A guest's own facing is its own mouse's; everybody else's is the host's.
     if (!player.mine || !known) player.yaw = yaw / 1000
@@ -142,19 +150,20 @@ export interface Intent {
   mx: number
   mz: number
   yaw: number
-  /** Every click so far this game. */
-  clicks: number
+  /** Whether it is holding run. */
+  run: boolean
 }
 
 const fixed = (v: number) => Math.round(v * 1000) / 1000
 
 export function encodeIntent(i: Intent): Record<string, unknown> {
-  return { t: INTENT_TAG, g: i.game, x: fixed(i.mx), z: fixed(i.mz), y: fixed(i.yaw), c: i.clicks }
+  return { t: INTENT_TAG, g: i.game, x: fixed(i.mx), z: fixed(i.mz), y: fixed(i.yaw), r: i.run ? 1 : 0 }
 }
 
 export function decodeIntent(message: Record<string, unknown>): Intent | null {
   if (message.t !== INTENT_TAG) return null
-  if (!isCount(message.g) || !isNumber(message.x) || !isNumber(message.z) || !isNumber(message.y) || !isCount(message.c)) return null
+  if (!isCount(message.g) || !isNumber(message.x) || !isNumber(message.z) || !isNumber(message.y)) return null
+  if (message.r !== 0 && message.r !== 1) return null
   if (Math.abs(message.x) > 1.01 || Math.abs(message.z) > 1.01 || Math.abs(message.y) > 4) return null
-  return { game: message.g as number, mx: message.x, mz: message.z, yaw: message.y, clicks: message.c }
+  return { game: message.g as number, mx: message.x, mz: message.z, yaw: message.y, run: message.r === 1 }
 }

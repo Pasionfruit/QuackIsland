@@ -142,6 +142,13 @@ export function solid(seed: number, elapsed: number, index: number): boolean {
 /**
  * How far up a panel is, for drawing: 0 in place, down to -1 fallen away. A
  * wrong panel drops in the drop and rises back through the rebuild.
+ *
+ * **It rises in a straight line and arrives exactly as the rebuild ends** - which
+ * is the moment `solid` says it can be stood on again. It used to ease out, and
+ * an ease-out looks finished long before it is: a panel at a hundredth of its way
+ * down looks like a panel, and it was still a second from being one. So what you
+ * see and what holds you are the same thing: a panel is standable exactly when it
+ * has stopped rising, and never before.
  */
 export function panelLift(seed: number, elapsed: number, index: number): number {
   const w = when(elapsed)
@@ -149,9 +156,8 @@ export function panelLift(seed: number, elapsed: number, index: number): number 
   const deal = dealFor(seed, w.round)
   if (deal.panels[index] === deal.colour) return 0
   if (w.phase === 'drop') return -Math.min(1, (w.t / 0.5) ** 2)
-  // Slowly back: most of the way over the rebuild, the last of it gently.
-  const k = Math.min(1, w.t / (w.length * 0.9))
-  return -(1 - (1 - (1 - k) ** 3))
+  // Back up at a steady pace, flush at the very end of the rebuild and not before.
+  return -(1 - Math.min(1, w.t / w.length))
 }
 
 /** The colour a panel is drawn at `elapsed`: this round's deal, or - until the next spin starts - the one before. */

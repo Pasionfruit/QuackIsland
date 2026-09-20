@@ -647,11 +647,11 @@ const ENTRIES = [
     kind: 'free-for-all',
     description: [
       'Race down a feed of sixty reels on your mini phone by scrolling the mouse wheel as fast as you can. First to the end wins.',
-      'Every so often an ad takes over and the feed stops dead until you click its Skip Ad button - somewhere different every time, and smaller the further you get. The game ends at two minutes; everybody else places by how far down the feed they got.',
+      'Every so often an ad takes over and the feed stops dead until you click its Skip Ad button - somewhere different every time, and smaller the further you get. Miss it and a popup opens that has to be closed, by a small button in a different corner every time, before you can try again. The game ends at two minutes; everybody else places by how far down the feed they got.',
     ],
     controls: [
       { input: 'Mouse wheel', does: 'Scroll through the reels' },
-      { input: 'Left click', does: 'Skip ads' },
+      { input: 'Left click', does: 'Skip ads - and close the popup a miss opens' },
     ],
     reserved: false,
     // Built: see `40-whats-your-rpm`. The assets stage is still to do - the
@@ -700,13 +700,13 @@ const ENTRIES = [
     title: 'Color Coded',
     kind: 'free-for-all',
     description: [
-      'Spawn on floating color panels as a giant wheel spins to select a color. Once the color is revealed, players have 2 seconds to push each other and get onto a panel matching the spinner’s color.',
-      'When the timer ends, every panel of a different color disappears, and anyone standing on one falls and is eliminated. The surviving platforms slowly rebuild before the next round, but fewer matching platforms remain as the rounds go on. Last player standing wins.',
+      'Spawn on floating color panels as a giant wheel spins to select a color. Once the color is revealed, players have 2 seconds to get onto a panel matching the spinner’s color. The panels are ice: nobody stops when they let go or turns on the spot, and running is fast and hard to steer.',
+      'There is no shoving, but bodies collide, and a collision keeps its speed - run into somebody and they go, and you nearly stop. When the timer ends, every panel of a different color disappears, and anyone standing on one falls and is eliminated. The dropped panels rise back and become solid only once they are all the way up, but fewer matching panels remain as the rounds go on. Last player standing wins.',
     ],
     controls: [
-      { input: 'WASD', does: 'Move' },
+      { input: 'WASD', does: 'Move - it is ice, so you slide' },
+      { input: 'Shift', does: 'Run: nearly twice as fast, and much harder to turn or stop' },
       { input: 'Mouse', does: 'Camera' },
-      { input: 'Left Click', does: 'Push' },
     ],
     reserved: false,
     // Built: see `44-color-coded`. The assets stage is still to do - the panels

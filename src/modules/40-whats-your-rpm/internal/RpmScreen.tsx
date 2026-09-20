@@ -13,7 +13,11 @@
  *
  * **Click Skip Ad.** An ad stops the feed dead and throws away whatever was
  * queued. Its skip button is somewhere different every time, and smaller the
- * further down the feed you are.
+ * further down the feed you are. **Miss it** - click anywhere else on the ad,
+ * the big blue button included - and a popup opens over the lot that has to be
+ * closed, by its own small close button, before the skip button can be got at
+ * again. The popup is only ever on your own screen: it costs you time and
+ * nobody else anything, so it is not on the wire.
  */
 import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
@@ -21,7 +25,7 @@ import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
 import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
-import { adCopyAt, reelAt } from './reels'
+import { adCopyAt, popupAt, reelAt, type PopupCopy } from './reels'
 import { RpmScene } from './RpmScene'
 import {
   COLOURS,
@@ -80,6 +84,10 @@ export function RpmScreen({ run }: { run: MinigameRun }) {
   const wheel = useRef<Wheel>(newWheel())
   /** The ad whose skip button was clicked since the last frame. */
   const skipping = useRef<number | null>(null)
+  /** The popup a missed click opened, until it is closed: which game and ad it is on. */
+  const [popup, setPopup] = useState<{ game: number; ad: number; copy: PopupCopy } | null>(null)
+  /** How many times the ad you are on has been missed, so each popup is a different one. */
+  const missed = useRef({ key: '', count: 0 })
   /** How far you had got, a moment at a time, for the speedometer. */
   const samples = useRef<{ at: number; progress: number }[]>([])
   /** The game the wheel was last reset for. */
@@ -133,6 +141,14 @@ export function RpmScreen({ run }: { run: MinigameRun }) {
   const ready = game.players.length > 0
   const mine = game.players.find((p) => p.mine)
   const playing = ready && !game.over
+  // Only a popup on the ad you are stuck on counts: a new game, or the ad gone, and it is gone with it.
+  const popupUp = !!mine && !!popup && popup.game === game.id && popup.ad === mine.skipped && blocked(game, mine) ? popup : null
+  const onMiss = (ad: number) => {
+    if (paused.current || live.current.over) return
+    const id = live.current.id
+    if (missed.current.key !== `${id}:${ad}`) missed.current = { key: `${id}:${ad}`, count: 0 }
+    setPopup({ game: id, ad, copy: popupAt(live.current.seed, ad, missed.current.count++) })
+  }
   const left = timeLeft(game)
   const speed = playing && mine && !blocked(game, mine) ? Math.round(rpm(samples.current)) : 0
   const reel = mine ? Math.min(FEED.reels, Math.floor(mine.progress) + 1) : 0
@@ -144,7 +160,7 @@ export function RpmScreen({ run }: { run: MinigameRun }) {
       caption = 'All caught up! Waiting for the host…'
       captionColour = '#8ff0ad'
     } else if (blocked(game, mine)) {
-      caption = 'An ad! Click Skip Ad'
+      caption = popupUp ? 'A popup! Close it first' : 'An ad! Click Skip Ad'
       captionColour = '#ffb1a8'
     } else if (mine.progress === 0) {
       caption = 'Scroll down with the mouse wheel - fast!'
@@ -202,6 +218,9 @@ export function RpmScreen({ run }: { run: MinigameRun }) {
               game={game}
               player={mine}
               speed={speed}
+              popup={popupUp?.copy ?? null}
+              onMiss={onMiss}
+              onClose={() => setPopup(null)}
               onSkip={(index) => {
                 if (!paused.current) skipping.current = index
               }}
@@ -221,7 +240,23 @@ export function RpmScreen({ run }: { run: MinigameRun }) {
 }
 
 /** Your mini phone: the feed, and an ad over it when one is in the way. */
-function Phone({ game, player, speed, onSkip }: { game: Game; player: Player; speed: number; onSkip: (index: number) => void }) {
+function Phone({
+  game,
+  player,
+  speed,
+  popup,
+  onSkip,
+  onMiss,
+  onClose,
+}: {
+  game: Game
+  player: Player
+  speed: number
+  popup: PopupCopy | null
+  onSkip: (index: number) => void
+  onMiss: (index: number) => void
+  onClose: () => void
+}) {
   const at = player.progress
   const first = Math.max(0, Math.floor(at) - 1)
   const shown: number[] = []
@@ -251,7 +286,10 @@ function Phone({ game, player, speed, onSkip }: { game: Game; player: Player; sp
             y={ad.y}
             size={ad.size}
             count={game.ads.length}
+            popup={popup}
             onSkip={() => onSkip(player.skipped)}
+            onMiss={() => onMiss(player.skipped)}
+            onClose={onClose}
           />
         ) : null}
       </div>
@@ -299,10 +337,39 @@ function CaughtUp() {
 }
 
 /** An ad over the whole screen, with its skip button somewhere on it. */
-function AdCover({ seed, index, x, y, size, count, onSkip }: { seed: number; index: number; x: number; y: number; size: number; count: number; onSkip: () => void }) {
+export function AdCover({
+  seed,
+  index,
+  x,
+  y,
+  size,
+  count,
+  popup,
+  onSkip,
+  onMiss,
+  onClose,
+}: {
+  seed: number
+  index: number
+  x: number
+  y: number
+  size: number
+  count: number
+  popup: PopupCopy | null
+  onSkip: () => void
+  onMiss: () => void
+  onClose: () => void
+}) {
   const copy = adCopyAt(seed, index)
   return (
-    <div style={adCover} data-ad={index}>
+    <div
+      style={adCover}
+      data-ad={index}
+      // Anywhere on the ad but the skip button - which stops its own pointerdown - is a miss.
+      onPointerDown={(e) => {
+        if (e.button === 0) onMiss()
+      }}
+    >
       <div style={{ position: 'absolute', left: 12, top: 40, ...adChip }}>
         Sponsored · Ad {index + 1} of {count}
       </div>
@@ -325,6 +392,40 @@ function AdCover({ seed, index, x, y, size, count, onSkip }: { seed: number; ind
       >
         Skip Ad ⏭
       </button>
+      {popup ? <Popup copy={popup} onClose={onClose} /> : null}
+    </div>
+  )
+}
+
+/**
+ * What a missed click opens: over the whole ad, so the skip button under it
+ * cannot be reached, with a close button that is small and in a different
+ * corner every time. Clicking anywhere else on it does nothing.
+ */
+function Popup({ copy, onClose }: { copy: PopupCopy; onClose: () => void }) {
+  const right = copy.corner === 0 || copy.corner === 2
+  const top = copy.corner === 0 || copy.corner === 1
+  return (
+    <div style={popupBackdrop} data-popup onPointerDown={(e) => e.stopPropagation()}>
+      <div style={popupCard}>
+        <div style={{ fontSize: 40, lineHeight: 1 }}>{copy.emoji}</div>
+        <div style={{ font: `800 17px/1.2 ${FONT}`, marginTop: 8 }}>{copy.title}</div>
+        <div style={{ font: `13px/1.35 ${FONT}`, opacity: 0.8, marginTop: 6 }}>{copy.body}</div>
+        <div style={popupFake}>OK</div>
+        <button
+          type="button"
+          aria-label="Close popup"
+          style={{ ...popupClose, ...(right ? { right: 6 } : { left: 6 }), ...(top ? { top: 6 } : { bottom: 6 }) }}
+          onPointerDown={(e) => {
+            if (e.button !== 0) return
+            e.stopPropagation()
+            onClose()
+          }}
+          data-popup-close
+        >
+          ✕
+        </button>
+      </div>
     </div>
   )
 }
@@ -523,6 +624,52 @@ const adAction: React.CSSProperties = {
   background: '#2f6fed',
   color: '#fff',
   font: `700 15px/1.2 ${FONT}`,
+  cursor: 'pointer',
+}
+
+const popupBackdrop: React.CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  zIndex: 3,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: 'rgba(15, 20, 26, 0.6)',
+  animation: 'rpm-pop 0.12s ease-out',
+}
+
+const popupCard: React.CSSProperties = {
+  position: 'relative',
+  width: '78%',
+  boxSizing: 'border-box',
+  padding: '26px 16px 16px',
+  borderRadius: 14,
+  background: '#fff',
+  color: LOOK.ink,
+  textAlign: 'center',
+  boxShadow: '0 8px 0 rgba(0,0,0,0.25)',
+}
+
+/** Like the ad's big button, it looks like the way out and is not. */
+const popupFake: React.CSSProperties = {
+  marginTop: 14,
+  padding: '9px 0',
+  borderRadius: 999,
+  background: '#2f6fed',
+  color: '#fff',
+  font: `700 14px/1.2 ${FONT}`,
+}
+
+const popupClose: React.CSSProperties = {
+  position: 'absolute',
+  width: 26,
+  height: 26,
+  padding: 0,
+  borderRadius: 999,
+  border: 'none',
+  background: 'rgba(31, 42, 51, 0.2)',
+  color: LOOK.ink,
+  font: `700 13px/26px ${FONT}`,
   cursor: 'pointer',
 }
 

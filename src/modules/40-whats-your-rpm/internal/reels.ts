@@ -25,6 +25,19 @@ export interface AdCopy {
   action: string
 }
 
+/**
+ * The popup a missed click on an ad opens: something that has to be closed
+ * before the ad can be got at again. `corner` is which corner of the popup its
+ * close button is in - 0 top right, 1 top left, 2 bottom right, 3 bottom left -
+ * because it is never where you left the last one.
+ */
+export interface PopupCopy {
+  emoji: string
+  title: string
+  body: string
+  corner: 0 | 1 | 2 | 3
+}
+
 const EMOJI = ['🌋', '🦆', '🐈', '🍍', '🥥', '🏝️', '🐢', '🦀', '🍳', '🎧', '💃', '🛹', '🐶', '🍕', '🎸', '🧃', '🌮', '🐸', '🎯', '🧋', '🦩', '🐙', '🍩', '🎮']
 const WHO = ['duckfluencer', 'lavalamp', 'coconut.tv', 'island_eats', 'sandyclaws', 'tiki.tok', 'volcano.vlogs', 'shellshock', 'palmreader', 'wave.check', 'krill.issue', 'beach.bum']
 const CAPTIONS = [
@@ -59,6 +72,22 @@ const PRODUCTS: readonly AdCopy[] = [
   { emoji: '🍳', product: 'VolcanoChef', pitch: 'Cook eggs on real lava', action: 'Buy now' },
   { emoji: '🦀', product: 'PinchFit', pitch: 'The crab-inspired workout', action: 'Join now' },
 ]
+
+const POPUPS: readonly Omit<PopupCopy, 'corner'>[] = [
+  { emoji: '🎁', title: 'CONGRATULATIONS!', body: 'You are our 1,000,000th viewer. Claim your prize.' },
+  { emoji: '⚠️', title: 'Your phone has 7 viruses', body: 'Tap anywhere to fix them. Do not tap the X.' },
+  { emoji: '🔔', title: 'Allow notifications?', body: 'Ads would like to tell you about more ads.' },
+  { emoji: '🦆', title: 'Ducks near you!', body: 'Lonely ducks are 2 km from your location.' },
+  { emoji: '🍪', title: 'We use cookies', body: 'All of them. Please stop scrolling while we count.' },
+  { emoji: '⭐', title: 'Enjoying Reels?', body: 'Rate us 5 stars. There is no other button.' },
+]
+
+/** The popup that opens on the `misses`th miss (from 0) of ad `index`: the same on every screen for a seed. */
+export function popupAt(seed: number, index: number, misses: number): PopupCopy {
+  const random = createRng(hashSeed(seed, `whats-your-rpm:popup:${index}:${misses}`))
+  const copy = POPUPS[Math.floor(random() * POPUPS.length)]
+  return { ...copy, corner: Math.floor(random() * 4) as PopupCopy['corner'] }
+}
 
 /** Reel `index` of the feed with this seed. */
 export function reelAt(seed: number, index: number): Reel {
