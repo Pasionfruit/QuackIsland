@@ -13,6 +13,7 @@ import { decodeTurnOrderMessage, encodeTurnOrderMessage } from './protocol'
 import {
   EMPTY_TURN_ORDER,
   applyTurnOrderRoll,
+  canAcknowledgeTurnOrder,
   comparePlayerIds,
   createTurnOrder,
   reconcileTurnOrderPlayers,
@@ -22,6 +23,10 @@ import {
 } from './rules'
 
 const store = createStore<TurnOrderSnapshot>(EMPTY_TURN_ORDER)
+const handoffStore = createStore<{ sessionId: string | null; acknowledged: boolean }>({
+  sessionId: null,
+  acknowledged: false,
+})
 let sessionSerial = 0
 let actionSerial = 0
 
@@ -33,8 +38,44 @@ export function useTurnOrder(): TurnOrderSnapshot {
   return useStore(store)
 }
 
+export function isTurnOrderAcknowledged(sessionId = store.get().sessionId): boolean {
+  const handoff = handoffStore.get()
+  return Boolean(sessionId && handoff.sessionId === sessionId && handoff.acknowledged)
+}
+
+export function useTurnOrderAcknowledged(): boolean {
+  const handoff = useStore(handoffStore)
+  const sessionId = useTurnOrder().sessionId
+  return Boolean(sessionId && handoff.sessionId === sessionId && handoff.acknowledged)
+}
+
+/**
+ * A downstream module calls this only after it has consumed the exact final
+ * order and is ready to present the next phase. The result stays immutable and
+ * readable; only this module's full-screen presentation is released.
+ */
+export function acknowledgeTurnOrder(sessionId: string): boolean {
+  const current = store.get()
+  if (!canAcknowledgeTurnOrder(current, sessionId)) return false
+  if (!isTurnOrderAcknowledged(sessionId)) {
+    handoffStore.set({ sessionId, acknowledged: true })
+  }
+  return true
+}
+
+function adoptSnapshot(snapshot: TurnOrderSnapshot): void {
+  if (store.get().sessionId !== snapshot.sessionId) {
+    handoffStore.set({ sessionId: snapshot.sessionId, acknowledged: false })
+  }
+  store.set(snapshot)
+}
+
 export function resetTurnOrder(): void {
   if (store.get().phase !== 'idle') store.set(EMPTY_TURN_ORDER)
+  const handoff = handoffStore.get()
+  if (handoff.sessionId !== null || handoff.acknowledged) {
+    handoffStore.set({ sessionId: null, acknowledged: false })
+  }
 }
 
 function active(): boolean {
@@ -59,7 +100,7 @@ function makeSession(): TurnOrderSnapshot | null {
   const sessionId = `${net.room}:${Date.now().toString(36)}:${sessionSerial.toString(36)}`
   const seed = hashSeed(CONVENTIONS.worldSeed, `turn-order:${sessionId}`)
   const snapshot = createTurnOrder(sessionId, net.room, seed, connectedPlayers())
-  store.set(snapshot)
+  adoptSnapshot(snapshot)
   return snapshot
 }
 
@@ -73,7 +114,7 @@ function ensureHostSession(): TurnOrderSnapshot | null {
     current,
     connectedPlayers().map((player) => player.id),
   )
-  if (reconciled !== current) store.set(reconciled)
+  if (reconciled !== current) adoptSnapshot(reconciled)
   return reconciled
 }
 
@@ -93,7 +134,7 @@ function acceptRoll(playerId: string, sessionId: string, actionId: string): void
   if (!current || current.sessionId !== sessionId) return
   const next = applyTurnOrderRoll(current, playerId, nextDie(current), actionId)
   if (next === current) return
-  store.set(next)
+  adoptSnapshot(next)
   announce(next)
 }
 
@@ -158,6 +199,6 @@ export function listenForTurnOrder(): () => void {
     if (from !== hostPeerId()) return
     const current = store.get()
     if (current.sessionId === message.snapshot.sessionId && current.revision >= message.snapshot.revision) return
-    store.set(message.snapshot)
+    adoptSnapshot(message.snapshot)
   })
 }

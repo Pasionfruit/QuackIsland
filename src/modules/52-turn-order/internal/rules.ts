@@ -189,3 +189,7 @@ export function rollsFor(snapshot: TurnOrderSnapshot, playerId: string): readonl
     .filter((roll) => roll.playerId === playerId)
     .sort((a, b) => a.round - b.round)
 }
+
+export function canAcknowledgeTurnOrder(snapshot: TurnOrderSnapshot, sessionId: string): boolean {
+  return snapshot.phase === 'complete' && snapshot.sessionId === sessionId
+}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyTurnOrderRoll,
+  canAcknowledgeTurnOrder,
   createTurnOrder,
   reconcileTurnOrderPlayers,
   type DieValue,
@@ -90,5 +91,14 @@ describe('turn order rules', () => {
     state = reconcileTurnOrderPlayers(state, ['p1', 'p2'])
     expect(state.phase).toBe('complete')
     expect(state.turnOrder).toEqual(['p1', 'p2'])
+  })
+
+  it('acknowledges only the exact completed session', () => {
+    let state = begin(['p1', 'p2'])
+    expect(canAcknowledgeTurnOrder(state, 'ROOM:session')).toBe(false)
+    state = roll(state, 'p1', 6)
+    state = roll(state, 'p2', 2)
+    expect(canAcknowledgeTurnOrder(state, 'another-session')).toBe(false)
+    expect(canAcknowledgeTurnOrder(state, 'ROOM:session')).toBe(true)
   })
 })

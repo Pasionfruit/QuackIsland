@@ -202,7 +202,8 @@
         "49-needs-a-walmart",
         "50-milf-fishing",
         "51-perfect-game",
-        "52-turn-order"
+        "52-turn-order",
+        "53-board-movement"
       ],
       "generation": 1,
       "contract": {
@@ -403,7 +404,8 @@
         "48-spidey-senses",
         "49-needs-a-walmart",
         "50-milf-fishing",
-        "51-perfect-game"
+        "51-perfect-game",
+        "53-board-movement"
       ],
       "generation": 1,
       "contract": {
@@ -934,7 +936,8 @@
         "49-needs-a-walmart",
         "50-milf-fishing",
         "51-perfect-game",
-        "52-turn-order"
+        "52-turn-order",
+        "53-board-movement"
       ],
       "generation": 1,
       "contract": {
@@ -1019,7 +1022,8 @@
       ],
       "dependents": [
         "14-garden",
-        "52-turn-order"
+        "52-turn-order",
+        "53-board-movement"
       ],
       "generation": 1,
       "contract": {
@@ -1242,7 +1246,8 @@
       "dependents": [
         "14-garden",
         "15-minigames",
-        "52-turn-order"
+        "52-turn-order",
+        "53-board-movement"
       ],
       "generation": 1,
       "contract": {
@@ -4642,15 +4647,17 @@
       "id": "52-turn-order",
       "phase": "P7",
       "title": "Party session and turn order: two to eight browsers join one party, the host locks the roster, every player rolls an authoritative d6, tied groups reroll, and all clients receive one final order",
-      "status": "ready_for_review",
+      "status": "passed",
       "dependsOn": [
         "00-core",
         "09-net",
         "10-party",
         "13-modes"
       ],
-      "dependents": [],
-      "generation": 1,
+      "dependents": [
+        "53-board-movement"
+      ],
+      "generation": 2,
       "contract": {
         "version": "0.1.0",
         "snapshot": null,
@@ -4681,19 +4688,52 @@
           "id": "52.5",
           "title": "Two-player and eight-player verification, contract, workflow scripts and MODULE.md",
           "status": "done"
+        },
+        {
+          "id": "52.6",
+          "title": "Additive completed-session handoff so a downstream module can release the overlay without mutating the final order",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T20:40:56.397Z"
+          "at": "2026-09-20T22:00:09.732Z"
         },
         "human": {
-          "status": "pending"
+          "status": "pass",
+          "at": "2026-09-20T22:01:15.646Z",
+          "note": "Completion handoff approved"
         },
-        "history": []
+        "history": [
+          {
+            "at": "2026-09-20T21:48:42.920Z",
+            "result": "pass",
+            "note": "Two-browser party and turn-order test passed"
+          },
+          {
+            "at": "2026-09-20T22:01:15.646Z",
+            "result": "pass",
+            "note": "Completion handoff approved"
+          }
+        ]
       },
-      "freeze": null,
+      "freeze": {
+        "sha256": "e9c11611166437342fe7ac88ed1b3cfdd658e8de411ebe2d62345fc3946159bc",
+        "files": {
+          "src/modules/52-turn-order/MODULE.md": "f06e20d15e3d9f2477359831baf3c77e0cc37027c256c62563902b2881e347a7",
+          "src/modules/52-turn-order/__tests__/protocol.test.ts": "e91efc725192766fb3e47fb65282a9a9d7d2264a9460e14565468b9eaba96682",
+          "src/modules/52-turn-order/__tests__/rules.test.ts": "b117161a5eb2a289aa545919b65b41a48cb131bd9bfc4c5871cde35365902eb6",
+          "src/modules/52-turn-order/index.ts": "b5e813504bde02ecb486f5178470e670eace0154f91698f807f92a44073ea77f",
+          "src/modules/52-turn-order/internal/TurnOrderView.tsx": "05228618127901d58d58468f61e218c4a47da9bbe106f3e9c3097c563d57f077",
+          "src/modules/52-turn-order/internal/protocol.ts": "db8833ba508f36a2847da8fd631ee29dd1a4818c595d58ceb7fcdaf06c708dc4",
+          "src/modules/52-turn-order/internal/rules.ts": "d3ea3c868cd615479cf1c43322d4fbaaf83ea45fa1a19d7733432d6cd9a03647",
+          "src/modules/52-turn-order/internal/state.ts": "2c995fb190ce31354049dcf819b936d904d93fd88cb6b95ee61d5f083cb5e393",
+          "src/modules/52-turn-order/internal/turn-order.css": "3e42c70d2500d7ef6066ea8209134261fe293eea3607f422d08138d6901a5038"
+        },
+        "at": "2026-09-20T22:01:15.646Z",
+        "commit": "fbd6475"
+      },
       "nonGoals": [
         "No board movement, tile actions, obstacles or summit win condition",
         "No minigame selection, practice, final attempt or reward dice",
@@ -4705,7 +4745,94 @@
         "trianglesMax": 0
       },
       "measured": null,
-      "blockers": []
+      "blockers": [],
+      "unfreezes": [
+        {
+          "at": "2026-09-20T21:57:23.877Z",
+          "reason": "Add a public completion handoff for 53-board-movement",
+          "priorSha256": "331820e76f0540798548d8a5c7acf7220c44015e6656ebb5ea46d3d5dbd1f977",
+          "generation": 1
+        }
+      ]
+    },
+    {
+      "id": "53-board-movement",
+      "phase": "P7",
+      "title": "Volcano board movement: consume the locked player order, roll one host-authoritative d6 per turn, move along the 120-tile track, finish the round after everyone acts, and stop when somebody reaches the summit",
+      "status": "in_progress",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "10-party",
+        "13-modes",
+        "52-turn-order"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "53.1",
+          "title": "Pure board-session state from the frozen turn order, player positions, active turn and validation",
+          "status": "planned"
+        },
+        {
+          "id": "53.2",
+          "title": "Host-authoritative seeded d6 rolls, idempotent movement, round completion and summit winner",
+          "status": "planned"
+        },
+        {
+          "id": "53.3",
+          "title": "Revisioned room snapshots, late-subscriber sync and host handoff over the public network contract",
+          "status": "planned"
+        },
+        {
+          "id": "53.4",
+          "title": "Move each local player along existing board tiles while ordinary network position sync carries remote bodies",
+          "status": "planned"
+        },
+        {
+          "id": "53.5",
+          "title": "Active-player roll interface, position table, round-complete handoff and summit result",
+          "status": "planned"
+        },
+        {
+          "id": "53.6",
+          "title": "Two-player and eight-player verification, workflow scripts, contract and MODULE.md",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "red",
+          "at": null,
+          "failed": "not run"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No minigame selection or transition after round completion",
+        "No golden, silver or bronze bonus dice",
+        "No tile actions, obstacles, branching routes or movement choices",
+        "No durable database or server-side simulation loop"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": [
+        "Frozen dependency 52-turn-order keeps its full-screen dialog and keyboard capture active after phase=complete, but exposes no public handoff or dismissal API. 53-board-movement cannot present roll controls without covering or bypassing a frozen dependency. Reopen 52 and add an additive public handoff that lets the next module acknowledge the final order while retaining its state."
+      ]
     }
   ]
 }

@@ -10,6 +10,7 @@ export {
   EMPTY_TURN_ORDER,
   TURN_ORDER,
   applyTurnOrderRoll,
+  canAcknowledgeTurnOrder,
   comparePlayerIds,
   createTurnOrder,
   reconcileTurnOrderPlayers,
@@ -30,12 +31,15 @@ export {
 } from './internal/protocol'
 
 export {
+  acknowledgeTurnOrder,
   getTurnOrder,
+  isTurnOrderAcknowledged,
   listenForTurnOrder,
   requestTurnOrderRoll,
   resetTurnOrder,
   syncTurnOrderLifecycle,
   useTurnOrder,
+  useTurnOrderAcknowledged,
 } from './internal/state'
 
 export { TurnOrder } from './internal/TurnOrderView'

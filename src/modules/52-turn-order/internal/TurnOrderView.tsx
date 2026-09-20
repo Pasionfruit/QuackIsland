@@ -9,6 +9,7 @@ import {
   requestTurnOrderRoll,
   syncTurnOrderLifecycle,
   useTurnOrder,
+  useTurnOrderAcknowledged,
 } from './state'
 import './turn-order.css'
 
@@ -38,8 +39,9 @@ function TurnOrderOverlay(): React.JSX.Element | null {
   const net = useNet()
   const peers = usePeers()
   const snapshot = useTurnOrder()
+  const acknowledged = useTurnOrderAcknowledged()
   const peerKey = useMemo(() => peers.map((peer) => peer.id).sort().join(','), [peers])
-  const showing = mode === 'island' && party.phase === 'playing'
+  const showing = mode === 'island' && party.phase === 'playing' && !acknowledged
 
   useEffect(() => listenForTurnOrder(), [])
 

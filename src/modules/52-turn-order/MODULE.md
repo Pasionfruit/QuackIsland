@@ -12,7 +12,7 @@ This is deliberately a vertical slice. `10-party` still owns creating and
 joining a room, readying up, starting, and moving everybody to the volcano.
 This module begins when that party reaches `playing` in the `island` game mode.
 It ends on a visible `board_ready` equivalent: the completed order remains on
-screen and the next module can consume it.
+screen until the next module confirms that it has consumed that exact session.
 
 ## Public contract
 
@@ -26,6 +26,8 @@ screen and the next module can consume it.
 | `rollsFor` | A player's ordered roll history |
 | `encodeTurnOrderMessage` / `decodeTurnOrderMessage` | Bounded room protocol |
 | `getTurnOrder` / `useTurnOrder` | Current revisioned snapshot, plain or React-safe |
+| `acknowledgeTurnOrder(sessionId)` | Releases the completed overlay after a downstream module consumes that exact session |
+| `isTurnOrderAcknowledged` / `useTurnOrderAcknowledged` | Plain and React-safe handoff state without changing the immutable result |
 | `requestTurnOrderRoll` | Requests one roll for the local player |
 | `listenForTurnOrder` | Subscribes to the opaque `09-net` room channel |
 | `syncTurnOrderLifecycle` | Starts, resets, reconciles, or requests a full snapshot |
@@ -52,6 +54,18 @@ roster is locked.
 All incoming data is bounded and validated before it reaches state. Dice come
 from `00-core`'s seeded RNG. There is no `Math.random`, server loop, polling,
 per-party timer, or networked animation.
+
+## Completion handoff
+
+The final order is data that later modules depend on, while the roll dialog is
+only its presentation. They deliberately have separate lifetimes. A downstream
+module reads a `complete` snapshot, creates its own state, then calls
+`acknowledgeTurnOrder(snapshot.sessionId)`. The call succeeds only for the
+currently completed session, hides the dialog locally, and leaves the snapshot
+unchanged. A stale session id cannot dismiss a new game's order screen.
+
+Without an acknowledgement the original behavior is preserved: the final
+order remains visible. Resetting or starting a new session clears the handoff.
 
 ## Tie rule
 
@@ -113,7 +127,8 @@ Run `npm run dev:multi`, then use a normal and private browser window.
 9. Join after the roster is locked. The new relay id should be shown the locked
    party message and must not receive a roll.
 10. Confirm the final screen says board movement is the next module and that
-    walking controls do not move the duck behind the overlay.
+    walking controls do not move the duck behind the overlay. Until a downstream
+    module acknowledges the completed session, the screen must remain visible.
 
 Eight-player behavior is covered by the automated suite; the same manual flow
 can be repeated with up to eight browsers when desired.
