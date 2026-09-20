@@ -40,7 +40,7 @@ function mindFor(game: Game, bot: Player): Mind {
   const key = `${game.id}:${game.seed}:${bot.id}`
   const known = minds.get(key)
   if (known && known.round === w.round.round) return known
-  const random = createRng(hashSeed(game.seed, `spidy-senses:bot:${bot.id}:${w.round.round}`))
+  const random = createRng(hashSeed(game.seed, `spidey-senses:bot:${bot.id}:${w.round.round}`))
   const mind: Mind = {
     round: w.round.round,
     // Braver more often than not: the square pulls it towards the edge.

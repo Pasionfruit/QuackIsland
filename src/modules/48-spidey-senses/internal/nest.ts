@@ -84,7 +84,7 @@ export function scheduleFor(seed: number): Round[] {
   const rounds: Round[] = []
   let start = 0
   for (let round = 1; round <= MAX_ROUNDS; round++) {
-    const random = createRng(hashSeed(seed, `spidy-senses:round:${round}`))
+    const random = createRng(hashSeed(seed, `spidey-senses:round:${round}`))
     const creep = start + TIMING.ready
     const springs = creep + TIMING.spring[0] + random() * (TIMING.spring[1] - TIMING.spring[0])
     const window = windowFor(round)

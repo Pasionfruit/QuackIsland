@@ -1,5 +1,5 @@
 /**
- * 48-spidy-senses - the public contract.
+ * 48-spidey-senses - the public contract.
  *
  * Minigame 44. A game of chicken round a trapdoor with a spider's nest under
  * it: everybody creeps in, and a click stops you where you stand. At a random
@@ -17,7 +17,7 @@ import { registerMinigame } from '../15-minigames'
 import { NestScreen } from './internal/NestScreen'
 import { newGame } from './internal/setup'
 
-registerMinigame('spidy-senses', {
+registerMinigame('spidey-senses', {
   newGame: () => newGame(),
   Panel: NestScreen,
 })

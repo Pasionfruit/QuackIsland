@@ -54,7 +54,7 @@ export const CUES = {
   holdMouse: 'Hold_Mouse_Audio.mp3',
   launch: 'Launch_Audio.mp3',
   spinning: 'Spinning_Audio.mp3',
-  /** Spidy Senses' jump scare: a shriek with the spider lunging at you. */
+  /** Spidey Senses' jump scare: a shriek with the spider lunging at you. */
   spiderJumpscare: 'Spider_Jumpscare_Audio.mp3',
   stepDown: 'Step_Down_Stair_Audio.mp3',
   /** A two-second sting, not a loop: the moment before a reveal. */

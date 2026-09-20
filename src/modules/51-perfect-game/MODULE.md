@@ -23,9 +23,11 @@ The beach is 32 m wide, running 35 m from the throwers down to the sea.
 
 **The column** (`columnFor`): thirty crabs, one behind another from 4 m to 26 m
 north of the line, **bent** into one of three shapes - **an arc, an S, or a
-hook** - by 1.2 to 3.4 m, either way. **Every turn deals its own**, from the seed
-and the turn, so nobody copies the throw before theirs; everybody faces the same
-kinds of column.
+hook** - by 1.2 to 3.4 m, either way. **One column for the whole game**: it comes
+from the seed alone, so **every thrower faces the same crabs**, in the same places
+at the same moments of their turn. (It used to deal a new one each turn, so nobody
+could copy the throw before theirs. Now they can, and a stand-in's throw is there
+to be learned from.) A new game is a new seed and so a new column.
 
 **It marches** from the left at 2.2 m/s (`columnX`), from the moment a turn's
 aiming starts: off the left of the beach at first, right of the middle by the
@@ -37,14 +39,22 @@ time the ten seconds are up.
 - **The angle**: the throw points at wherever the mouse is on the sand, up to 69°
   either side of straight at the sea.
 - **When**: a click rolls it; otherwise it rolls itself at ten seconds.
-- **The coconut rolls dead straight** at 13 m/s until it leaves the beach.
+- **The coconut rolls** at 13 m/s, in a straight line, **and bounces off a wall down
+  each side of the beach** (`WALL`) - the walls stand at the edge of the beach and
+  the coconut's middle turns round a coconut's radius short of them - until it
+  reaches the sea. A bounce is a mirror: the east-west half of its way turns
+  round, the north-south half does not, so it goes on towards the sea the whole
+  time and **a bounce costs it no time**. A steep throw crosses the beach three or
+  four times.
 - **A crab is hit** (`hits`) the first moment the coconut's middle comes within
   0.9 m of its middle - both their sizes. The coconut rolls on through, hitting
   every crab in its way. Because the column keeps marching while it rolls, **when
   you let go matters as much as where you aim.**
 
-Coconut and crabs each move in a straight line at a steady speed, so each crab's
-hit - whether, and exactly when - is solved in closed form rather than stepped:
+Between bounces coconut and crabs each move in a straight line at a steady speed,
+so the path is cut into straight legs (`legsOf`) and each crab's hit - whether,
+and exactly when, in the first leg that meets it - is solved in closed form leg by
+leg rather than stepped:
 nothing is ever missed however fast it rolls, and every screen gets the same
 crabs from the same throw.
 
@@ -62,7 +72,7 @@ is (`TURN`):
 | --- | --- | --- |
 | intro | 3 s | *Next up: …* - not before the first turn, which the screen's own three-two-one counts in. |
 | aim | up to 10 s | Move, aim, roll. The column marches. |
-| rolling | until the coconut leaves the beach | The coconut rolls; crabs are knocked flying as it hits them; the count goes up. |
+| rolling | until the coconut reaches the sea | The coconut rolls; crabs are knocked flying as it hits them; the count goes up. |
 | result | 3 s | *N crabs!*, *No crabs!*, or *PERFECT GAME!* |
 
 - **Somebody who has left** has their turn skipped; **a thrower who leaves**
@@ -119,7 +129,9 @@ three turns (about a minute) is plenty.
 
 - **A stand-in finds the best throw there is** (`bestThrow`): it tries every spot
   along the line, every angle and every moment from three seconds in - time to walk
-  anywhere - with the same exact arithmetic as the rules.
+  anywhere - with the same exact arithmetic as the rules, walls included. The
+  column is the game's, so the best throw is too: it is worked out once and every
+  stand-in's every turn starts from it.
 - **Then its hand shakes**: it lets go off its angle by up to 0.015-0.09 rad and
   off its moment by up to 0.35 s, how much depending on the stand-in. It rarely
   gets the throw it planned.
@@ -135,9 +147,9 @@ testing, not because anybody else needs them.
 
 | Export | What it is |
 | --- | --- |
-| `BEACH`, `BOX`, `COLUMN`, `COCONUT` | The numbers. |
-| `columnFor`, `Column`, `Shape`, `bendAt`, `columnX`, `crabAt` | The column, from the seed and the turn, and where it is when. |
-| `heading`, `travel`, `coconutAt`, `hits`, `clampThrow`, `Throw` | The coconut, and which crabs a throw hits. |
+| `BEACH`, `BOX`, `COLUMN`, `COCONUT`, `WALL` | The numbers. |
+| `columnFor`, `Column`, `Shape`, `bendAt`, `columnX`, `crabAt` | The game's column, from the seed, and where it is when. |
+| `heading`, `headingAt`, `travel`, `coconutAt`, `pathAt`, `foldX`, `legsOf`, `Leg`, `hits`, `clampThrow`, `Throw` | The coconut - straight and off the walls - and which crabs a throw hits. |
 | `TURN`, `HOME`, `ROLL_SLACK`, `COLOURS` | The turn's timings, where a thrower starts, how old a guest's roll may be. |
 | `createGame`, `Game`, `Player`, `Entrant`, `Phase`, `turnOrder` | A game at its start. |
 | `thrower`, `tau`, `phaseOf`, `aimTo`, `roll`, `throwOf`, `turnHits` | A turn. |
@@ -150,14 +162,19 @@ testing, not because anybody else needs them.
 
 ## Invariants you may rely on
 
-- **Thirty crabs from near end to far, bent, the same for the same seed and turn;
-  all three shapes, bent both ways, a new one each turn.** Tested.
+- **Thirty crabs from near end to far, bent, the same for the same seed; all three
+  shapes, bent both ways, from one seed to another. One column for the whole game:
+  there is no turn to ask it for.** Tested.
 - **The column marches left to right from off the left of the beach.** Tested.
-- **The coconut rolls straight the way it is aimed until it leaves the beach; the
-  thrower stays in the box and the angle in range.** Tested.
+- **The coconut rolls straight the way it is aimed until it reaches a wall, and
+  bounces off it - never past it, never with a jump, the east-west way turned round
+  and the north-south way kept - until it reaches the sea; the thrower stays in the
+  box and the angle in range.** Tested.
+- **The legs of its path join up end to end, and a crab is hit once however many
+  legs pass it.** Tested.
 - **The hits are exactly the crabs the coconut comes within reach of** - checked
-  against stepping it through finely - **in the order it meets them, never before
-  the roll.** Tested.
+  against stepping it through finely, straight and after a bounce - **in the order
+  it meets them, never before the roll.** Tested.
 - **A perfect game is possible, and nothing more.** Tested.
 - **Everybody throws once, in an order from the seed; the first turn aims at once,
   every other has its "next up"; a turn rolls itself at ten seconds; only the
@@ -173,13 +190,23 @@ testing, not because anybody else needs them.
 
 - No models: the beach, the crabs and the coconut are primitives, players are the
   island's capsule.
-- No spin on the throw: the coconut rolls dead straight.
+- No spin on the throw: the coconut rolls dead straight between walls.
+- No ceiling on the bounces and no loss of speed at a wall: it goes on at full
+  speed until it reaches the sea.
 - No music of its own: the round is silent under the cues until an entry goes into
   `ROUND_MUSIC` in `15-minigames`.
 
 ## Known limitations
 
 - **A guest's clock is trusted** for its roll, within half a second.
+- **The column marches through the walls.** It starts off the left of the beach and
+  ends off the right, and the walls stand across its way; the crabs sink out of
+  sight below the sand as they cross one, and come up out of it, rather than
+  scuttling through solid wall. A crab beyond a wall cannot be hit, since the
+  coconut's middle cannot get past it.
+- **Everybody throws at the same column.** A thrower who watches the ones before
+  them can copy a throw that worked, and a stand-in's throw is the best there is,
+  shaken. That is what was asked for; it makes going last an advantage.
 - **The mouse aims only over the sand**: pointed at the sea or the sky, the aim
   holds where it was.
 - **Not played with two browsers yet.** The wire is tested in Node only, and
@@ -200,8 +227,15 @@ click, and waits for the podium.
 - **Let the ten seconds run out**: it should roll by itself.
 - **Next time, click early** with the column still coming: time it so the column
   walks into the coconut's path. The result should say how many crabs.
-- **Look at the column across turns**: an arc, an S or a hook, bent one way or the
-  other.
+- **Look at the column across turns**: it should be **the same crabs in the same
+  shape every turn**, an arc, an S or a hook, bent one way or the other, and only
+  a new game should change it.
+- **Look at the sides of the beach**: a low wooden wall down each. The dotted aim
+  line should **bend off them**, running on across the beach the way the coconut
+  will go. Aim hard to one side: the dots should reach the wall and come back.
+- **Roll one at a wall**: the coconut should bounce off it, roll on the other way
+  and keep hitting crabs, spinning the right way after the bounce. The result
+  should count crabs hit after the bounce.
 - **At the end** the podium, the most crabs highest.
 
 ### With two or more browsers

@@ -1117,9 +1117,9 @@ try {
     if (s.got < 1) throw new Error('never got anything on the list')
     await page.waitFor(`!!document.querySelector('[data-podium]')`, 40000)
     say('results', await page.shot('7-results.png'))
-  } else if (opt.steer && opt.game === 'spidy-senses') {
+  } else if (opt.steer && opt.game === 'spidey-senses') {
     // Round one: hold W, let go at 1.8 metres, click 0.2 s after the spring. Round two: stand still and never click - the jump scare.
-    const read = `(async () => { const s = ${gameState(opt.game)}; const n = await import('/src/modules/48-spidy-senses/internal/nest.ts'); const w = n.when(s.seed, s.elapsed); const me = s.players.find((p) => p.mine); return { e: s.elapsed, over: s.over, round: w.round.round, phase: w.phase, springs: w.round.springs, judged: w.round.judged, d: Math.hypot(me.x, me.z), stoppedAt: me.stoppedAt, out: me.out, how: me.how, left: s.players.filter((p) => p.out === null && !p.left).length } })()`
+    const read = `(async () => { const s = ${gameState(opt.game)}; const n = await import('/src/modules/48-spidey-senses/internal/nest.ts'); const w = n.when(s.seed, s.elapsed); const me = s.players.find((p) => p.mine); return { e: s.elapsed, over: s.over, round: w.round.round, phase: w.phase, springs: w.round.springs, judged: w.round.judged, d: Math.hypot(me.x, me.z), stoppedAt: me.stoppedAt, out: me.out, how: me.how, left: s.players.filter((p) => p.out === null && !p.left).length } })()`
     const key = (code, down) => page.eval(`window.dispatchEvent(new KeyboardEvent('${down ? 'keydown' : 'keyup'}', { code: '${code}', key: '${code.slice(3).toLowerCase()}' }))`)
     const click = () => page.eval(`(() => { const b = document.querySelector('[data-board]'); const r = b.getBoundingClientRect(); b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 })) })()`)
     let s = await page.eval(read)

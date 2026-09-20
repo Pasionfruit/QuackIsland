@@ -18,7 +18,7 @@ function play(seed: number, n: number): Game {
 describe('the stand-ins', () => {
   it('know a good throw when they see one', () => {
     for (let seed = 1; seed <= 5; seed++) {
-      const best = bestThrow(seed * 13, 0)
+      const best = bestThrow(seed * 13)
       expect(best.hit).toBeGreaterThan(COLUMN.crabs / 2)
     }
   })
@@ -29,10 +29,10 @@ describe('the stand-ins', () => {
     let turns = 0
     for (let seed = 1; seed <= 8; seed++) {
       const g = play(seed * 29, 3)
-      g.players.forEach((p, i) => {
+      g.players.forEach((p) => {
         turns++
-        const turn = g.order.indexOf(i)
-        const best = bestThrow(g.seed, turn, 3).hit
+        // One column for the whole game, so one best throw for everybody's turn.
+        const best = bestThrow(g.seed, 3).hit
         if (p.score! > 0) scored++
         if (p.score! < best) short++
         expect(p.score!).toBeLessThanOrEqual(best + 2)
@@ -41,6 +41,14 @@ describe('the stand-ins', () => {
     expect(scored).toBeGreaterThan(turns * 0.7)
     expect(short).toBeGreaterThan(turns * 0.4)
   }, 60000)
+
+  it('all plan from the same best throw, since the column is the same every turn, and are told apart by their hands', () => {
+    const g = play(31, 3)
+    const scores = g.players.map((p) => p.score)
+    expect(scores.every((v) => v !== null)).toBe(true)
+    // The best throw is one throw, and worked out once.
+    expect(bestThrow(g.seed, 3)).toBe(bestThrow(g.seed, 3))
+  }, 30000)
 
   it('play the same way every time', () => {
     const a = play(4242, 3)

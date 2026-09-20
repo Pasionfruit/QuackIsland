@@ -5,12 +5,14 @@
  * everybody else watches. A bent column of thirty crabs marches from left to
  * right across the beach. **Ten seconds** to choose where to stand behind the
  * line and the angle of the coconut - and when to let it go: click to roll it
- * early, or it rolls when the time runs out. It rolls in a straight line,
- * **every crab it hits is a point**, and the most points after everybody's turn
- * wins. Hit all thirty and that is a perfect game.
+ * early, or it rolls when the time runs out. It rolls in a straight line - off
+ * the walls down either side of the beach, if it gets to them - **every crab it
+ * hits is a point**, and the most points after everybody's turn wins. Hit all
+ * thirty and that is a perfect game.
  *
- * Each turn deals its own column - an arc, an S or a hook, bent more or less -
- * so nobody gets to copy the throw before theirs.
+ * **The whole game has one column** - an arc, an S or a hook, bent more or less,
+ * dealt from the seed - so every thrower faces the same crabs, in the same places
+ * at the same moments of their turn.
  *
  * Everything here is pure.
  */
@@ -122,7 +124,7 @@ export function phaseOf(game: Game): Phase {
 /** The crabs this turn's throw hits, and when. */
 export function turnHits(game: Game): { crab: number; at: number }[] {
   const thrown = throwOf(game)
-  return thrown ? hits(columnFor(game.seed, game.turn), thrown) : []
+  return thrown ? hits(columnFor(game.seed), thrown) : []
 }
 
 /** The thrower moves or aims: kept in the box and the angle in range. Only while aiming, only the thrower. */

@@ -206,8 +206,8 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'players',
   },
-  'spidy-senses': {
-    title: 'Spidy Senses',
+  'spidey-senses': {
+    title: 'Spidey Senses',
     screen: 'NestScreen',
     anchor: `document.querySelector('[data-board]')`,
     people: 'players',

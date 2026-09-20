@@ -3,7 +3,9 @@
  *
  * On its turn a stand-in works out a throw: it tries every place along the
  * line, every angle and every moment to let go - with the same exact
- * arithmetic the rules use - and picks the one that hits the most. Then its
+ * arithmetic the rules use, bounces off the walls included - and picks the one
+ * that hits the most. The column is the same every turn, so it works that out
+ * once for the game and every stand-in's plan starts from it. Then its
  * hand shakes: **it lets go a little off where it meant**, by an amount that
  * is its own - a steady stand-in by a hair, a shaky one by a lot - so it rarely
  * gets the throw it planned. It walks to its spot and swings its aim round in
@@ -27,9 +29,18 @@ export const BOT = {
   ready: 3,
 } as const
 
-/** The best throw there is for a column, by trying every place, angle and moment - from `earliest` on - on a grid. */
-export function bestThrow(seed: number, turn: number, earliest = 1.5): { throw: Throw; hit: number } {
-  const column = columnFor(seed, turn)
+const bests = new Map<string, { throw: Throw; hit: number }>()
+
+/**
+ * The best throw there is for a game's column, by trying every place, angle and
+ * moment - from `earliest` on - on a grid. The column is the game's, so the answer
+ * is too: worked out once and kept.
+ */
+export function bestThrow(seed: number, earliest = 1.5): { throw: Throw; hit: number } {
+  const key = `${seed}:${earliest}`
+  const known = bests.get(key)
+  if (known) return known
+  const column = columnFor(seed)
   let best: Throw = { ...HOME, at: TURN.aim / 2 }
   let bestHit = -1
   for (let x = BOX.x0 + 1; x <= BOX.x1 - 1 + 1e-9; x += 1) {
@@ -44,7 +55,10 @@ export function bestThrow(seed: number, turn: number, earliest = 1.5): { throw: 
       }
     }
   }
-  return { throw: best, hit: bestHit }
+  const found = { throw: best, hit: bestHit }
+  bests.set(key, found)
+  if (bests.size > 16) bests.delete(bests.keys().next().value!)
+  return found
 }
 
 interface Plan {
@@ -63,7 +77,7 @@ function planFor(game: Game, index: number): Plan {
     const steady = createRng(hashSeed(game.seed, `perfect-game:bot:${bot.id}`))()
     const shake = BOT.shake[0] + steady * (BOT.shake[1] - BOT.shake[0])
     // No earlier than it can walk anywhere on the line and turn to any angle.
-    const wanted = bestThrow(game.seed, game.turn, BOT.ready).throw
+    const wanted = bestThrow(game.seed, BOT.ready).throw
     const wobble = (random() * 2 - 1) * shake
     const late = (random() * 2 - 1) * BOT.late
     plan = { key, throw: { ...wanted, angle: wanted.angle + wobble, at: Math.max(0.5, Math.min(TURN.aim - 0.1, wanted.at + late)) } }

@@ -3,12 +3,13 @@
 ## What this is
 
 Minigame 33, free-for-all. **Everybody on a tower of their own, racing upward by
-typing arrows.** An arrow is on the screen: press it. **Right, and another block
+typing arrows.** An arrow is on the screen: press its key. **Right, and another block
 goes in under you. Wrong, and you are knocked down four.** The camera follows
 whoever is highest, and **ten blocks behind them you are out.** The last one left
 wins.
 
-**↑ ↓ ← → - press the arrow on the screen.**
+**W A S D - press the key for the arrow on the screen**: W is up, S down, A left,
+D right. A small preview shows the arrow after it.
 
 It plugs into `15-minigames` with `registerMinigame('highest-in-the-room', ...)`
 and one import line in `src/App.tsx`. It took the free slot 33.
@@ -32,8 +33,12 @@ and one import line in `src/App.tsx`. It took the free slot 33.
 
 ## Controls
 
-- **The four arrow keys**, by `KeyboardEvent.code`. Each press counts once:
-  **holding a key down does not repeat it.** The arrow keys never scroll the page.
+- **W, A, S and D**, by `KeyboardEvent.code` - the physical keys, so they are in the
+  same place on any layout. W is the up arrow, S down, A left, D right, and each is
+  written on its arrow in the corner. Each press counts once: **holding a key down
+  does not repeat it.** **The arrow keys themselves do nothing now.** A key pressed
+  with Ctrl, Alt or the system key held is the browser's, not a press - Ctrl+W
+  closes a tab - and is ignored.
 - Keys during the three-two-one, on a pause, once you are out or once it is over
   do nothing.
 
@@ -48,9 +53,20 @@ and one import line in `src/App.tsx`. It took the free slot 33.
 - **The red band** is ten blocks below the leader and rises with them: a tower
   whose top is in it is out.
 - **Stripes on the back wall** every five blocks, so you can see the speed.
-- **Your arrow** is big, on the right of the screen, beside the towers. **Only the
-  one arrow is ever shown** - never the ones after it, so there is no reading
-  ahead. Its border flashes red, and the edge of the screen too, on a wrong key.
+- **Your arrow** is big, on the right of the screen, beside the towers, with its key
+  in the corner. **Beside it, small and dimmer, is a preview of the next arrow** -
+  the one you will be on if this one is right (`nextArrowFor`). Nothing further
+  ahead is shown: one is enough to have your fingers ready. Its border flashes red,
+  and the edge of the screen too, on a wrong key, and a wrong key leaves the arrow
+  and its preview where they are.
+- **The change from one arrow to the next is a slide, not a jump** (`ArrowTrack`).
+  Each arrow is its own element keyed by its place in the sequence, so a right key
+  moves the *same* elements to new places: the arrow you were on slides off to the
+  left and fades, the preview slides across and grows into the big one, and a new
+  preview slides in from the right behind it. They are CSS transitions of 150 ms on
+  transform and opacity, so they carry on smoothly at six keys a second and start
+  over from wherever they had got to when the next key lands. Tested: the elements
+  are the same ones before and after, not new ones.
 - **The HUD:** time left, how many are climbing, and a pill per player with their
   height and how far behind the leader they are.
 - **Banners:** *Press the arrow* at the start, *Wrong - down 4*, *3 from out!*
@@ -113,7 +129,7 @@ testing, not because anybody else needs them.
 | Export | What it is |
 | --- | --- |
 | `ARROWS`, `CLIMB`, `ROUND`, `COLOURS`, `Arrow` | The numbers. |
-| `arrowAt`, `arrowFor` | The arrows for a seed. |
+| `arrowAt`, `arrowFor`, `nextArrowFor` | The arrows for a seed, and the one after the one a player is on. |
 | `createGame`, `Game`, `Player`, `Entrant` | A game at its start. |
 | `press`, `canPress` | A key. |
 | `knockOut`, `behind`, `leader`, `leaderHeight`, `isIn` | Falling behind. |
@@ -122,7 +138,7 @@ testing, not because anybody else needs them.
 | `newGame`, `waitingGame`, `gameRoster`, `nextSeed`, `myId`, `ME`, `SOLO_PLAYERS`, `MAX_PLAYERS`, `GameSetup` | Putting a game together from the lobby. |
 | `encodeSnapshot`, `decodeSnapshot`, `applySnapshot`, `encodePress`, `decodePress`, `SNAPSHOT_TAG`, `PRESS_TAG`, `Snapshot`, `WirePlayer` | The wire. Decoding refuses a message whole rather than half-reading it. |
 | `TowerScene`, `PALETTE`, `BLOCK`, `SPACING`, `towerX` | The 3D view. |
-| `TowerScreen`, `KEYS`, `GLYPHS` | The panel `15-minigames` draws, the keys and how the arrows are drawn. |
+| `TowerScreen`, `ArrowTrack`, `KEYS`, `KEYCAPS`, `GLYPHS` | The panel `15-minigames` draws, the arrow with its preview, the keys (W A S D) and how the arrows are drawn. |
 
 ## Invariants you may rely on
 
@@ -163,13 +179,19 @@ Open the minigames dashboard (alone, or as host of a lobby), open **Highest In
 The Room** (33) and press play.
 
 - **During the three, two, one**, five towers should stand at the floor, side on,
-  with one big arrow on the right, and nothing after it. Arrow keys should do
-  nothing yet.
-- **Press the arrow shown.** Your capsule should hop up a block, the next arrow
-  should come up, and your pill's height should go up.
+  with one big arrow on the right with its key (W, A, S or D) in the corner, a
+  small dimmer preview of the next beside it, and nothing after that. The keys
+  should do nothing yet.
+- **Press the key for the arrow shown.** Your capsule should hop up a block and
+  your pill's height should go up, and the arrow should **slide** off to the left
+  as the preview slides across and grows into its place, with a new preview
+  sliding in behind it. The arrow that comes up should be the one that was the
+  preview. Press quickly: it should stay smooth, never jump.
 - **Press a wrong one.** Your tower should sink four, the screen edge flash red,
-  *Wrong - down 4*, and the same arrow stay up.
-- **Hold a key down.** It should count once.
+  *Wrong - down 4*, and the same arrow and the same preview stay up.
+- **Press the arrow keys.** They should do nothing at all.
+- **Hold a key down.** It should count once. **Ctrl+W** should close the tab and
+  not press anything.
 - **Watch the camera** follow whoever is highest - you or a stand-in - and the red
   band ten below them. Fall into it: *Knocked out*, your tower grey.
 - **The results** should be the podium: the last left first.

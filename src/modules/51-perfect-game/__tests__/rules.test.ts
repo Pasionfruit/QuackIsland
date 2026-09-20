@@ -47,7 +47,7 @@ describe('the turns', () => {
     g.elapsed = 4 + travel(t) + 0.01
     stepGame(g, 0.01)
     expect(phaseOf(g)).toBe('result')
-    expect(g.players[who].score).toBe(hits(columnFor(SEED, 0), t).length)
+    expect(g.players[who].score).toBe(hits(columnFor(SEED), t).length)
     runUntil(g, (x) => x.turn === 1)
     expect(thrower(g)).not.toBe(who)
     expect(g.aim).toEqual(HOME)
@@ -126,6 +126,6 @@ describe('the end', () => {
     g.elapsed = 6
     aimTo(g, thrower(g), -2, 3, -0.1)
     roll(g, thrower(g))
-    expect(turnHits(g)).toEqual(hits(columnFor(SEED, 0), { x: -2, z: 3, angle: -0.1, at: 6 }))
+    expect(turnHits(g)).toEqual(hits(columnFor(SEED), { x: -2, z: 3, angle: -0.1, at: 6 }))
   })
 })

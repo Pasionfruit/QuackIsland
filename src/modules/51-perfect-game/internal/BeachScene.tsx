@@ -22,7 +22,7 @@ import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { useMemo, useReducer, useRef, type RefObject } from 'react'
 import { CanvasTexture, CircleGeometry, Color, CylinderGeometry, DoubleSide, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, MeshStandardMaterial, RepeatWrapping, SphereGeometry, SRGBColorSpace, Vector3 } from 'three'
 import { createAvatar } from '../../02-player'
-import { BEACH, BOX, COCONUT, COLUMN, coconutAt, columnFor, crabAt, heading, hits, travel } from './beach'
+import { BEACH, BOX, COCONUT, COLUMN, coconutAt, columnFor, crabAt, heading, headingAt, hits, pathAt, travel } from './beach'
 import { COLOURS, phaseOf, tau, throwOf, thrower, type Game } from './rules'
 
 export const PALETTE = {
@@ -37,6 +37,8 @@ export const PALETTE = {
   rope: '#c9a36a',
   palm: '#2f8f4a',
   trunk: '#8a6a45',
+  wall: '#b98b5c',
+  wallCap: '#e9cf9a',
 } as const
 
 /** Where the mouse is on the sand - for aiming - or null off it. The screen reads it. */
@@ -95,7 +97,12 @@ function Rig({ live }: { live: RefObject<Game> }) {
   return null
 }
 
-/** The beach: sand, the sea and its surf, palms at the sides, the rope along the line and the thrower's box. */
+/** How tall the walls are: over the coconut's top, so it can be seen to hit them. */
+const WALL_HEIGHT = 1.1
+/** How thick, outward from the edge of the beach. */
+const WALL_THICK = 0.5
+
+/** The beach: sand, the sea and its surf, a wall down each side, palms beyond, the rope along the line and the thrower's box. */
 function Beach({ pointer }: { pointer: RefObject<PointerRef> }) {
   const surf = useRef<Mesh>(null)
   useFrame(({ clock }) => {
@@ -135,6 +142,20 @@ function Beach({ pointer }: { pointer: RefObject<PointerRef> }) {
         <planeGeometry args={[BOX.x1 - BOX.x0, BOX.z1 - BOX.z0]} />
         <meshBasicMaterial color="#ffffff" transparent opacity={0.18} />
       </mesh>
+      {/* The walls the coconut bounces off: their inside faces are the edge of the beach. */}
+      {[-1, 1].map((s) => (
+        <group key={s} position={[s * (BEACH.halfX + WALL_THICK / 2), 0, (BEACH.near + BEACH.far) / 2]}>
+          <mesh position={[0, WALL_HEIGHT / 2, 0]} castShadow receiveShadow>
+            <boxGeometry args={[WALL_THICK, WALL_HEIGHT, BEACH.near - BEACH.far]} />
+            <meshStandardMaterial color={PALETTE.wall} roughness={0.85} />
+          </mesh>
+          {/* A cap along the top, a little proud, so the wall has an edge to catch the light. */}
+          <mesh position={[-s * 0.05, WALL_HEIGHT + 0.05, 0]}>
+            <boxGeometry args={[WALL_THICK + 0.2, 0.1, BEACH.near - BEACH.far]} />
+            <meshStandardMaterial color={PALETTE.wallCap} roughness={0.7} />
+          </mesh>
+        </group>
+      ))}
       {/* Palms down both sides. */}
       {[-1, 1].flatMap((s) =>
         [-24, -14, -4, 4].map((z, k) => (
@@ -202,7 +223,7 @@ function Crabs({ live }: { live: RefObject<Game> }) {
   useFrame(({ clock }) => {
     const g = live.current
     const t = tau(g)
-    const column = columnFor(g.seed, g.turn)
+    const column = columnFor(g.seed)
     const thrown = throwOf(g)
     const hit = new Map((thrown ? hits(column, thrown) : []).map((h) => [h.crab, h.at]))
     const phase = phaseOf(g)
@@ -211,19 +232,22 @@ function Crabs({ live }: { live: RefObject<Game> }) {
       const home = crabAt(column, i, at !== undefined && t >= at ? at : t)
       group.visible = phase !== 'over'
       if (at !== undefined && t >= at && thrown) {
-        // Knocked: flung along the coconut's way and up, spinning, and gone.
+        // Knocked: flung along the coconut's way - the way it was going when it hit, bounces and all - and up, spinning, and gone.
         const since = t - at
-        const h = heading(thrown.angle)
+        const h = headingAt(thrown, (at - thrown.at) * COCONUT.speed)
         group.visible = since < FLIGHT
         group.position.set(home.x + h.x * since * 6 + (i % 2 ? 1 : -1) * since * 2, since * 7 - since * since * 7, home.z + h.z * since * 6)
         group.rotation.set(since * 9, since * 7, since * 5)
         return
       }
-      group.position.set(home.x, 0, home.z)
+      // Over the wall the column marches through: below the sand outside it, and up out of it as it crosses in.
+      const under = Math.max(0, Math.min(1, (Math.abs(home.x) - (BEACH.halfX - 0.4)) / 1.2)) * 1.2
+      group.visible = phase !== 'over' && under < 1.1
+      group.position.set(home.x, -under, home.z)
       group.rotation.set(0, 0, 0)
       // Scuttling: the legs pumping, the shell bobbing.
       legs.forEach((leg, k) => (leg.rotation.x = Math.sin(clock.elapsedTime * 18 + k * 1.3 + i) * 0.5))
-      group.position.y = 0.03 * Math.abs(Math.sin(clock.elapsedTime * 18 + i))
+      group.position.y += 0.03 * Math.abs(Math.sin(clock.elapsedTime * 18 + i))
     })
   })
   return (
@@ -236,7 +260,7 @@ function Crabs({ live }: { live: RefObject<Game> }) {
 }
 
 const DOT = new CircleGeometry(0.09, 10)
-const DOTS = 60
+const DOTS = 90
 const M = new Matrix4()
 
 /** The coconut, in the thrower's hands or rolling; and while they aim, a dotted line where it will go. */
@@ -278,21 +302,25 @@ function Coconut({ live }: { live: RefObject<Game> }) {
       // Into the surf at the end: sinking out of sight.
       const gone = t - thrown.at - travel(thrown)
       ball.current.position.set(at.x, 0.45 - Math.max(0, gone) * 1.5, at.z)
-      axis.set(-h.z, 0, h.x).normalize()
-      ball.current.quaternion.setFromAxisAngle(axis, -rolled / 0.45)
+      // Rolling the way it is going just now - which turns round at a wall.
+      const going = headingAt(thrown, Math.max(0, rolled))
+      axis.set(-going.z, 0, going.x).normalize()
+      ball.current.quaternion.setFromAxisAngle(axis, -rolled / COCONUT.radius)
     } else {
       // Held just in front of the thrower, bobbing as they line up.
       ball.current.position.set(g.aim.x + h.x * 0.8, 0.45 + 0.05 * Math.sin(clock.elapsedTime * 4), g.aim.z + h.z * 0.8)
     }
-    // The dotted line, while they aim.
+    // The dotted line, while they aim: where the coconut would go, off the walls and all.
     const aiming = phase === 'aim'
     dots.current.visible = aiming
     if (aiming) {
-      const length = travel({ ...g.aim, at: 0 }) * COCONUT.speed
+      const aim = { ...g.aim, at: 0 }
+      const length = travel(aim) * COCONUT.speed
       for (let k = 0; k < DOTS; k++) {
         const s = 1.2 + ((k + ((clock.elapsedTime * 2) % 1)) / DOTS) * (length - 1.2)
+        const on = pathAt(aim, s)
         M.makeRotationX(-Math.PI / 2)
-        M.setPosition(g.aim.x + h.x * s, 0.04, g.aim.z + h.z * s)
+        M.setPosition(on.x, 0.04, on.z)
         dots.current.setMatrixAt(k, M)
       }
       dots.current.instanceMatrix.needsUpdate = true
@@ -301,7 +329,7 @@ function Coconut({ live }: { live: RefObject<Game> }) {
   return (
     <group>
       <mesh ref={ball} castShadow>
-        <sphereGeometry args={[0.45, 20, 14]} />
+        <sphereGeometry args={[COCONUT.radius, 20, 14]} />
         <meshStandardMaterial map={texture} roughness={0.9} />
       </mesh>
       <instancedMesh ref={dots} args={[DOT, undefined, DOTS]}>

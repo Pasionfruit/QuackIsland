@@ -1,4 +1,4 @@
-# 48-spidy-senses
+# 48-spidey-senses
 
 ## What this is
 
@@ -12,7 +12,7 @@ furthest back.** Somebody goes every round. The last one left wins.
 
 **WASD to creep in, back and round; left click to stop - and to react.**
 
-It plugs into `15-minigames` with `registerMinigame('spidy-senses', ...)` and one
+It plugs into `15-minigames` with `registerMinigame('spidey-senses', ...)` and one
 import line in `src/App.tsx`. Like 42 and 43, it arrived with every free-for-all
 slot taken, so the free-for-all target went from 32 to 33 and it took 44.
 
@@ -195,9 +195,9 @@ testing, not because anybody else needs them.
 
 ## How to review
 
-Open the minigames dashboard (alone, or as host of a lobby), open **Spidy Senses**
+Open the minigames dashboard (alone, or as host of a lobby), open **Spidey Senses**
 (44) and press play. `node .claude/skills/run-localrot/scripts/solo.mjs --game
-spidy-senses --steer` creeps in and reacts in round one, then stands still and
+spidey-senses --steer` creeps in and reacts in round one, then stands still and
 never clicks in round two to get eaten, screenshotting the spring, the reveal and
 the jump scare.
 

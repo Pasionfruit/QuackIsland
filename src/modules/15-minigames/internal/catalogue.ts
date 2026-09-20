@@ -588,9 +588,9 @@ const ENTRIES = [
     title: 'Perfect Game',
     kind: 'free-for-all',
     description: [
-      'A bent column of 30 crabs moves from left to right across the beach. One turn each, while everybody else watches.',
+      'A bent column of 30 crabs moves from left to right across the beach - the same column for everybody, every turn. One turn each, while everybody else watches.',
       'You have 10 seconds to choose your position behind the line and the angle of your coconut throw - and when to let it go. When time runs out it rolls anyway.',
-      'The coconut rolls along the chosen path, hitting as many crabs as possible. 1 point for every crab hit; the player with the most points wins. Hit all 30 for a perfect game.',
+      'The coconut rolls along the chosen path, bouncing off the walls down either side of the beach, hitting as many crabs as possible. 1 point for every crab hit; the player with the most points wins. Hit all 30 for a perfect game.',
     ],
     controls: [
       { input: 'WASD', does: 'Adjust position' },
@@ -685,10 +685,10 @@ const ENTRIES = [
     title: 'Highest In The Room',
     kind: 'free-for-all',
     description: [
-      'Race upward by correctly typing the arrow keys shown on screen. Every correct input builds another block beneath you, while the camera follows the player currently in the lead.',
+      'Race upward by pressing the key for the arrow shown on screen - W for up, S for down, A for left, D for right - with a small preview of the next arrow beside it. Every correct input builds another block beneath you, while the camera follows the player currently in the lead.',
       'Make a mistake and you are knocked down 4 blocks. If you fall 10 blocks behind the leader, you are eliminated. The last player remaining wins.',
     ],
-    controls: [{ input: '↑ ↓ ← →', does: 'Press the displayed arrow key' }],
+    controls: [{ input: 'W A S D', does: 'Press the key for the displayed arrow: W up, S down, A left, D right' }],
     reserved: false,
     // Built: see `43-highest-in-the-room`. The assets stage is still to do - the
     // towers are boxes and the players are the island's capsule.
@@ -833,9 +833,9 @@ const ENTRIES = [
     done: { environment: true, controls: true, assets: false },
   },
   {
-    id: 'spidy-senses',
+    id: 'spidey-senses',
     number: 44,
-    title: 'Spidy Senses',
+    title: 'Spidey Senses',
     kind: 'free-for-all',
     description: [
       "Play a game of chicken as everyone slowly inches toward a trapdoor hiding a spider's nest. Decide when to stop - a click stops you where you stand.",
@@ -847,7 +847,7 @@ const ENTRIES = [
       { input: 'Left Click', does: 'Stop / react to the trapdoor' },
     ],
     reserved: false,
-    // Built: see `48-spidy-senses`. The assets stage is still to do - the cellar,
+    // Built: see `48-spidey-senses`. The assets stage is still to do - the cellar,
     // the trapdoor and the spider are primitives and the players are the island's capsule.
     // Added as a forty-fourth slot, the same way as 42 and 43.
     done: { environment: true, controls: true, assets: false },

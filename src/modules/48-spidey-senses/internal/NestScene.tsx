@@ -1,5 +1,5 @@
 /**
- * Spidy Senses in three dimensions, over your shoulder.
+ * Spidey Senses in three dimensions, over your shoulder.
  *
  * A dim stone cellar lit by one lantern hanging over **the trapdoor** in the
  * middle of the floor: old boards with iron bands and a ring to pull. Chalk

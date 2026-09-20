@@ -2,12 +2,14 @@
  * Highest In The Room, on the screen.
  *
  * The towers are drawn in their own canvas by `TowerScene`; this is the shell:
- * the arrow keys turned into presses for `useTowerNet`, and the words - the
- * clock, who is still climbing and how far behind, **the arrow to press** -
- * only that one, never the ones after it - and what just happened.
+ * the keys turned into presses for `useTowerNet`, and the words - the clock,
+ * who is still climbing and how far behind, **the arrow to press and a small
+ * preview of the one after it** - and what just happened.
  *
- * **↑ ↓ ← → - press the arrow on the screen.** Holding a key down presses it
- * once; the arrow keys never scroll the page behind the game.
+ * **W A S D - press the key for the arrow on the screen**: W up, S down, A left,
+ * D right. Holding a key down presses it once. When you get one right, the arrow
+ * you were on slides away, the preview grows into its place and a new preview
+ * slides in behind it, so there is never a jump to look for the next arrow.
  */
 import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
@@ -15,7 +17,7 @@ import { ACESFilmicToneMapping } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, playCue, useFinish, type MinigameRun } from '../../15-minigames'
 import { TowerScene } from './TowerScene'
-import { CLIMB, COLOURS, ROUND, arrowFor, behind, clock, isIn, placings, type Arrow, type Game } from './rules'
+import { CLIMB, COLOURS, ROUND, arrowAt, arrowFor, behind, clock, isIn, nextArrowFor, placings, type Arrow, type Game } from './rules'
 import { myId, newGame, waitingGame } from './setup'
 import { useTowerNet } from './useTowerNet'
 
@@ -30,10 +32,12 @@ const LOOK = {
 
 const FONT = "ui-rounded, 'Hiragino Maru Gothic ProN', 'Segoe UI', system-ui, -apple-system, sans-serif"
 
-/** The keys, by `KeyboardEvent.code`. */
-export const KEYS: Record<string, Arrow> = { ArrowUp: 0, ArrowDown: 1, ArrowLeft: 2, ArrowRight: 3 }
+/** The keys, by `KeyboardEvent.code`: W up, S down, A left, D right. */
+export const KEYS: Record<string, Arrow> = { KeyW: 0, KeyS: 1, KeyA: 2, KeyD: 3 }
 /** How each arrow is drawn: its glyph. */
 export const GLYPHS = ['↑', '↓', '←', '→'] as const
+/** The key that presses each arrow, as it is written on the arrow. */
+export const KEYCAPS = ['W', 'S', 'A', 'D'] as const
 
 const minutes = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 
@@ -72,11 +76,11 @@ export function TowerScreen({ run }: { run: MinigameRun }) {
     return () => cancelAnimationFrame(frame)
   }, [])
 
-  // The arrow keys: each press once, never a held key's repeats, and never the page scrolling.
+  // W A S D: each press once, never a held key's repeats. A key with control, alt or the
+  // system key held is the browser's or the system's - Ctrl+W closes the tab - not a press.
   useEffect(() => {
     const onDown = (e: KeyboardEvent) => {
-      if (!(e.code in KEYS)) return
-      e.preventDefault()
+      if (!(e.code in KEYS) || e.ctrlKey || e.altKey || e.metaKey) return
       if (e.repeat || paused.current || live.current.over) return
       keys.current.push(KEYS[e.code])
     }
@@ -96,7 +100,7 @@ export function TowerScreen({ run }: { run: MinigameRun }) {
     if (mine.out !== null) banner = t - mine.out < 3 ? { text: 'Knocked out', sub: `${CLIMB.behind} blocks behind - watching the rest`, tone: 'out' } : { text: 'Out - watching the rest', tone: 'hint' }
     else if (game.elapsed - mine.wrongAt < 0.9) banner = { text: `Wrong - down ${CLIMB.knock}`, tone: 'out' }
     else if (gap >= CLIMB.behind - 3) banner = { text: `${CLIMB.behind - gap} from out!`, sub: 'climb!', tone: 'warn' }
-    else if (t < 3 && mine.typed === 0) banner = { text: 'Press the arrow', sub: 'every right one is a block higher', tone: 'hint' }
+    else if (t < 3 && mine.typed === 0) banner = { text: 'Press the arrow', sub: 'W A S D - every right one is a block higher', tone: 'hint' }
   }
 
   return (
@@ -150,12 +154,17 @@ export function TowerScreen({ run }: { run: MinigameRun }) {
         {mine && game.elapsed - mine.wrongAt < 0.4 && !game.over ? <div style={{ ...flash, opacity: 1 - (game.elapsed - mine.wrongAt) / 0.4 }} /> : null}
 
         {ready && mine && isIn(mine) && !game.over ? (
-          <div style={prompt} data-arrow={arrowFor(game, mine)}>
-            <div style={{ ...arrowBox, borderColor: game.elapsed - mine.wrongAt < 0.3 ? LOOK.red : '#fff', transform: game.elapsed - mine.pressedAt < 0.08 && mine.wrongAt !== mine.pressedAt ? 'scale(0.92)' : 'none' }}>
-              {GLYPHS[arrowFor(game, mine)]}
-            </div>
+          <div style={prompt} data-arrow={arrowFor(game, mine)} data-next={nextArrowFor(game, mine)}>
+            <ArrowTrack
+              seed={game.seed}
+              at={mine.typed}
+              wrong={game.elapsed - mine.wrongAt < 0.3}
+              pressed={game.elapsed - mine.pressedAt < 0.08 && mine.wrongAt !== mine.pressedAt}
+            />
           </div>
         ) : null}
+
+        <style>{KEYFRAMES}</style>
 
         {banner ? (
           <div style={bannerWrap}>
@@ -169,6 +178,47 @@ export function TowerScreen({ run }: { run: MinigameRun }) {
     </div>
   )
 }
+
+/**
+ * The arrow to press, and the one after it as a preview beside it.
+ *
+ * Each arrow is its own element, keyed by which arrow it is in the sequence, so
+ * when you get one right the *same* elements move to their new places instead of
+ * new ones appearing: the one you were on slides off to the left and fades, the
+ * preview slides across and grows into the big one, and a new preview slides in
+ * from the right. The moves are CSS transitions on transform and opacity, so they
+ * carry on smoothly however fast the keys come, and start over from wherever they
+ * were when the next key lands.
+ */
+export function ArrowTrack({ seed, at, wrong, pressed }: { seed: number; at: number; wrong: boolean; pressed: boolean }) {
+  // The one just done is kept a moment, to slide off; anything older is gone.
+  const shown = [at - 1, at, at + 1].filter((i) => i >= 0)
+  return (
+    <div style={track} data-track>
+      {shown.map((i) => {
+        const slot = (i - at) as -1 | 0 | 1
+        const arrow = arrowAt(seed, i)
+        return (
+          <div
+            key={i}
+            data-slot={slot}
+            style={{
+              ...cardBase,
+              ...SLOTS[slot],
+              ...(slot === 0 ? { borderColor: wrong ? LOOK.red : '#fff', transform: pressed ? 'scale(0.92)' : SLOTS[0].transform } : null),
+            }}
+          >
+            <span data-glyph={arrow}>{GLYPHS[arrow]}</span>
+            <span style={cap}>{KEYCAPS[arrow]}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/** A new preview comes in from the right, small, and settles into its place. */
+const KEYFRAMES = '@keyframes tower-in { from { opacity: 0; transform: translateX(210px) scale(0.3); } }'
 
 /** The canvas, rendered once - see `TowerScene`. */
 const Stage = memo(function Stage({ live }: { live: RefObject<Game> }) {
@@ -255,17 +305,47 @@ const prompt: React.CSSProperties = {
   pointerEvents: 'none',
 }
 
-const arrowBox: React.CSSProperties = {
+/** The room for the big arrow and, beside it, the preview: 110 wide and a little over half again. */
+const track: React.CSSProperties = { position: 'relative', width: 188, height: 110 }
+
+/** Every arrow is drawn full size and scaled into its slot from its left edge, so a slot is only a transform. */
+const cardBase: React.CSSProperties = {
+  position: 'absolute',
+  left: 0,
+  top: 0,
   width: 110,
   height: 110,
+  boxSizing: 'border-box',
   borderRadius: 26,
-  border: '5px solid #fff',
+  // Not the `border` shorthand: the colour changes on a wrong key, and React warns about mixing the two.
+  borderWidth: 5,
+  borderStyle: 'solid',
+  borderColor: '#fff',
   background: 'rgba(42,34,51,0.85)',
   color: '#fff',
   font: `900 76px/100px ${FONT}`,
   textAlign: 'center',
   boxShadow: '0 6px 0 rgba(0,0,0,0.3)',
-  transition: 'transform 60ms',
+  transformOrigin: 'left center',
+  transition: 'transform 150ms cubic-bezier(0.2, 0.8, 0.3, 1), opacity 150ms ease-out, background 150ms, border-color 60ms',
+  // Only ever plays when an arrow is added, the preview: the others are already there.
+  animation: 'tower-in 150ms cubic-bezier(0.2, 0.8, 0.3, 1)',
+}
+
+/** Where each arrow is: the one just done sliding off, this one, and the one after it, small and dimmer. */
+const SLOTS: Record<-1 | 0 | 1, React.CSSProperties> = {
+  [-1]: { transform: 'translateX(-70px) scale(0.5)', opacity: 0, pointerEvents: 'none' },
+  0: { transform: 'translateX(0) scale(1)', opacity: 1 },
+  1: { transform: 'translateX(126px) scale(0.56)', opacity: 0.7, background: 'rgba(42,34,51,0.6)' },
+}
+
+/** The key, small in the corner of the arrow. */
+const cap: React.CSSProperties = {
+  position: 'absolute',
+  right: 8,
+  bottom: 4,
+  font: `800 15px/1 ${FONT}`,
+  opacity: 0.7,
 }
 
 const bannerWrap: React.CSSProperties = {

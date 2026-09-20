@@ -28,6 +28,7 @@ export {
   ROUND,
   arrowAt,
   arrowFor,
+  nextArrowFor,
   behind,
   canPress,
   clock,
@@ -56,4 +57,4 @@ export { PRESS_TAG, SNAPSHOT_TAG, applySnapshot, decodePress, decodeSnapshot, en
 
 export { BLOCK, PALETTE, SPACING, TowerScene, towerX } from './internal/TowerScene'
 
-export { GLYPHS, KEYS, TowerScreen } from './internal/TowerScreen'
+export { ArrowTrack, GLYPHS, KEYCAPS, KEYS, TowerScreen } from './internal/TowerScreen'

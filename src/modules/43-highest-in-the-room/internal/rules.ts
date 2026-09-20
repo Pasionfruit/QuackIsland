@@ -147,6 +147,16 @@ export function arrowFor(game: Game, p: Player): Arrow {
   return arrowAt(game.seed, p.typed)
 }
 
+/**
+ * The arrow after the one a player has to press: what the screen shows as a
+ * preview. The sequence is the seed's and the same for everybody, so it is no
+ * secret and no advantage - it is the arrow they will be on if this one is right,
+ * and a wrong key leaves both where they are.
+ */
+export function nextArrowFor(game: Game, p: Player): Arrow {
+  return arrowAt(game.seed, p.typed + 1)
+}
+
 /** How high the highest player still in is. */
 export function leaderHeight(game: Game): number {
   let top = 0

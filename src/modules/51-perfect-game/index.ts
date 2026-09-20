@@ -22,7 +22,7 @@ registerMinigame('perfect-game', {
   Panel: BeachScreen,
 })
 
-export { BEACH, BOX, COCONUT, COLUMN, bendAt, clampThrow, coconutAt, columnFor, columnX, crabAt, heading, hits, travel, type Column, type Shape, type Throw } from './internal/beach'
+export { BEACH, BOX, COCONUT, COLUMN, WALL, bendAt, clampThrow, coconutAt, columnFor, columnX, crabAt, foldX, heading, headingAt, hits, legsOf, pathAt, travel, type Column, type Leg, type Shape, type Throw } from './internal/beach'
 
 export { COLOURS, HOME, ROLL_SLACK, TURN, advanceTurn, aimTo, createGame, judgeEnd, leave, phaseOf, placings, roll, stepGame, tau, throwOf, thrower, tick, turnHits, turnOrder, type Entrant, type Game, type Phase, type Player } from './internal/rules'
 

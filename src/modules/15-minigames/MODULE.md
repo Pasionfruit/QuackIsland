@@ -46,7 +46,7 @@ named; eight are free slots waiting for one, all of them one-vs-all.
 free-for-all slot was taken, so the free-for-all target went from 30 to 31 and
 the new game took the next number, 42, rather than one of the free one-vs-all
 slots - those are kept for one-vs-all games. *Shanty Matrix* arrived the same
-way and took 43, *Spidy Senses* 44, *OG Black Friday* 45 and *M.I.L.F (fishing)* 46.
+way and took 43, *Spidey Senses* 44, *OG Black Friday* 45 and *M.I.L.F (fishing)* 46.
 
 **The kinds moved once, deliberately.** *Make Some Noise* (26), *Perfect Game*
 (27) and *Chef Caricature* (28) were written down as one-vs-all and are

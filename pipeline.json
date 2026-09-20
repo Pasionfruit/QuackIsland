@@ -137,7 +137,7 @@
         "45-binary-bs",
         "46-youre-the-bomb",
         "47-shanty-matrix",
-        "48-spidy-senses",
+        "48-spidey-senses",
         "49-needs-a-walmart",
         "50-milf-fishing",
         "51-perfect-game"
@@ -198,7 +198,7 @@
         "45-binary-bs",
         "46-youre-the-bomb",
         "47-shanty-matrix",
-        "48-spidy-senses",
+        "48-spidey-senses",
         "49-needs-a-walmart",
         "50-milf-fishing",
         "51-perfect-game"
@@ -399,7 +399,7 @@
         "45-binary-bs",
         "46-youre-the-bomb",
         "47-shanty-matrix",
-        "48-spidy-senses",
+        "48-spidey-senses",
         "49-needs-a-walmart",
         "50-milf-fishing",
         "51-perfect-game"
@@ -929,7 +929,7 @@
         "45-binary-bs",
         "46-youre-the-bomb",
         "47-shanty-matrix",
-        "48-spidy-senses",
+        "48-spidey-senses",
         "49-needs-a-walmart",
         "50-milf-fishing",
         "51-perfect-game"
@@ -1458,7 +1458,7 @@
         "45-binary-bs",
         "46-youre-the-bomb",
         "47-shanty-matrix",
-        "48-spidy-senses",
+        "48-spidey-senses",
         "49-needs-a-walmart",
         "50-milf-fishing",
         "51-perfect-game"
@@ -1519,7 +1519,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-19T22:28:27.027Z"
+          "at": "2026-09-20T05:12:49.117Z"
         },
         "human": {
           "status": "pending"
@@ -3778,7 +3778,7 @@
     {
       "id": "43-highest-in-the-room",
       "phase": "P6",
-      "title": "Minigame 33, Highest In The Room: press the arrow on the screen - right builds a block under you, wrong knocks you down four; ten behind whoever is highest and you are out; the camera follows the leader; last one left wins",
+      "title": "Minigame 33, Highest In The Room: press the W A S D key for the arrow on the screen, with a preview of the next that slides into place - right builds a block under you, wrong knocks you down four; ten behind whoever is highest and you are out; the camera follows the leader; last one left wins",
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
@@ -3830,6 +3830,11 @@
           "status": "done"
         },
         {
+          "id": "43.9",
+          "title": "W A S D in place of the arrow keys, a preview of the next arrow, and a slide from one arrow to the next",
+          "status": "done"
+        },
+        {
           "id": "43.8",
           "title": "The assets: models, sprites and sound in place of primitives",
           "status": "planned"
@@ -3838,7 +3843,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-19T04:01:25.319Z"
+          "at": "2026-09-20T05:10:53.803Z"
         },
         "human": {
           "status": "pending"
@@ -3848,7 +3853,7 @@
       "freeze": null,
       "nonGoals": [
         "No models: the towers are boxes and the players are the island capsule",
-        "No typing anything but the four arrows",
+        "No typing anything but W A S D - the arrow keys themselves do nothing",
         "No music of its own yet; the round is silent under the cues"
       ],
       "budgets": {
@@ -4207,9 +4212,9 @@
       "blockers": []
     },
     {
-      "id": "48-spidy-senses",
+      "id": "48-spidey-senses",
       "phase": "P6",
-      "title": "Minigame 44, Spidy Senses: a game of chicken round a trapdoor over a spider's nest; everybody creeps in and a click stops you; at a random moment it springs and whoever has not clicked in a fraction of a second gets the spider and a jump scare; if nobody is too late the one furthest back is the chicken; last one left wins",
+      "title": "Minigame 44, Spidey Senses: a game of chicken round a trapdoor over a spider's nest; everybody creeps in and a click stops you; at a random moment it springs and whoever has not clicked in a fraction of a second gets the spider and a jump scare; if nobody is too late the one furthest back is the chicken; last one left wins",
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
@@ -4269,7 +4274,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-19T16:31:33.616Z"
+          "at": "2026-09-20T05:12:03.900Z"
         },
         "human": {
           "status": "pending"
@@ -4463,7 +4468,7 @@
     {
       "id": "51-perfect-game",
       "phase": "P6",
-      "title": "Minigame 27, Perfect Game: one turn each while everybody watches; a bent column of thirty crabs marches left to right across the beach; ten seconds to choose a spot, an angle and a moment, then the coconut rolls in a straight line; a point a crab; most points wins",
+      "title": "Minigame 27, Perfect Game: one turn each while everybody watches; one bent column of thirty crabs, the same every turn of a game, marches left to right across the beach; ten seconds to choose a spot, an angle and a moment, then the coconut rolls, bouncing off a wall down each side of the beach; a point a crab; most points wins",
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
@@ -4515,6 +4520,11 @@
           "status": "done"
         },
         {
+          "id": "51.9",
+          "title": "One column for the whole game, and side walls the coconut bounces off, its hits solved leg by leg",
+          "status": "done"
+        },
+        {
           "id": "51.8",
           "title": "The assets: models, sprites and sound in place of primitives",
           "status": "planned"
@@ -4523,7 +4533,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-19T17:04:15.442Z"
+          "at": "2026-09-20T05:11:28.863Z"
         },
         "human": {
           "status": "pending"
@@ -4533,7 +4543,7 @@
       "freeze": null,
       "nonGoals": [
         "No models: the beach, the crabs and the coconut are primitives, players are the island capsule",
-        "No curve on the throw: the coconut rolls dead straight",
+        "No curve on the throw: the coconut rolls dead straight between the walls",
         "No music of its own yet; the round is silent under the cues"
       ],
       "budgets": {

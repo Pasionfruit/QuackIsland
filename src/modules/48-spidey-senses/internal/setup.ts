@@ -37,7 +37,7 @@ let dealt = 0
 /** A seed for the rounds, and so an id to tell games apart. */
 export function nextSeed(): number {
   dealt += 1
-  return hashSeed(CONVENTIONS.worldSeed, `spidy-senses:${getNet().room ?? 'solo'}:${dealt}:${Date.now()}`)
+  return hashSeed(CONVENTIONS.worldSeed, `spidey-senses:${getNet().room ?? 'solo'}:${dealt}:${Date.now()}`)
 }
 
 export interface GameSetup {

@@ -1,5 +1,5 @@
 /**
- * The rules of Spidy Senses, as arithmetic.
+ * The rules of Spidey Senses, as arithmetic.
  *
  * A game of chicken round a trapdoor with a spider's nest under it. Every round
  * everybody starts back on a ring round it and **creeps in** - slowly. A click

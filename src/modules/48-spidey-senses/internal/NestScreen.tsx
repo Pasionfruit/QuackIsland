@@ -1,5 +1,5 @@
 /**
- * Spidy Senses, on the screen.
+ * Spidey Senses, on the screen.
  *
  * The cellar is drawn in its own canvas by `NestScene`; this is the shell: the
  * keys and the clicks turned into hands for `useNestNet`, the words - the
@@ -157,7 +157,7 @@ export function NestScreen({ run }: { run: MinigameRun }) {
   return (
     <div style={page}>
       <div style={hud}>
-        <span style={{ fontWeight: 700, fontSize: 16 }}>Spidy Senses</span>
+        <span style={{ fontWeight: 700, fontSize: 16 }}>Spidey Senses</span>
         {ready ? (
           <>
             <span style={{ ...pill, background: LOOK.ink, color: '#fff' }} data-round={w.round.round} data-phase={w.phase}>
