@@ -1118,7 +1118,7 @@ try {
     await page.waitFor(`!!document.querySelector('[data-podium]')`, 40000)
     say('results', await page.shot('7-results.png'))
   } else if (opt.steer && opt.game === 'spidey-senses') {
-    // Round one: hold W, let go at 1.8 metres, click 0.2 s after the spring. Round two: stand still and never click - the jump scare.
+    // Round one: hold W, let go at 3.4 metres (the railing keeps everybody 2.7 m out), click 0.2 s after the spring. Round two: stand still and never click - the jump scare, which the chicken gets too.
     const read = `(async () => { const s = ${gameState(opt.game)}; const n = await import('/src/modules/48-spidey-senses/internal/nest.ts'); const w = n.when(s.seed, s.elapsed); const me = s.players.find((p) => p.mine); return { e: s.elapsed, over: s.over, round: w.round.round, phase: w.phase, springs: w.round.springs, judged: w.round.judged, d: Math.hypot(me.x, me.z), stoppedAt: me.stoppedAt, out: me.out, how: me.how, left: s.players.filter((p) => p.out === null && !p.left).length } })()`
     const key = (code, down) => page.eval(`window.dispatchEvent(new KeyboardEvent('${down ? 'keydown' : 'keyup'}', { code: '${code}', key: '${code.slice(3).toLowerCase()}' }))`)
     const click = () => page.eval(`(() => { const b = document.querySelector('[data-board]'); const r = b.getBoundingClientRect(); b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 })) })()`)
@@ -1134,7 +1134,8 @@ try {
         if (!shots.has('out')) {
           shots.add('out')
           log.push({ round: s.out, how: s.how })
-          if (s.how === 'eaten') {
+          // Everybody the spider takes is scared: eaten or the chicken.
+          if (s.how) {
             await sleep(450)
             const scare = await page.eval(`document.querySelector('[data-scare]')?.dataset.scare ?? 'none'`)
             say('jump scare', scare, await page.shot('5-scare.png'))
@@ -1145,8 +1146,8 @@ try {
       }
       const creep = s.phase === 'creep'
       if (s.round === 1 && creep && s.stoppedAt === null) {
-        if (s.d > 1.8 && !walking) { await key('KeyW', true); walking = true }
-        if (s.d <= 1.8 && walking) { await key('KeyW', false); walking = false }
+        if (s.d > 3.4 && !walking) { await key('KeyW', true); walking = true }
+        if (s.d <= 3.4 && walking) { await key('KeyW', false); walking = false }
         if (s.e > s.springs + 0.05 && !shots.has('spring')) { shots.add('spring'); say('sprung', JSON.stringify(s), await page.shot('3-sprung.png')) }
         if (s.e > s.springs + 0.2) {
           await click()

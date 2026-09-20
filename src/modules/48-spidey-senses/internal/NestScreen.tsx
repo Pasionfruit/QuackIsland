@@ -19,7 +19,7 @@ import { getNet, useNet, usePeers } from '../../09-net'
 import { CUES, playCue, useFinish, type MinigameRun } from '../../15-minigames'
 import { when } from './nest'
 import { NestScene } from './NestScene'
-import { COLOURS, distance, isStanding, placings, type Game } from './rules'
+import { COLOURS, distance, isStanding, placings, type Game, type Player } from './rules'
 import { myId, newGame, waitingGame } from './setup'
 import { useNestNet } from './useNestNet'
 
@@ -48,6 +48,15 @@ const KEYS: Record<string, [number, number]> = {
 
 /** How long the jump scare fills the screen, seconds: as long as its shriek. */
 export const SCARE = 1.47
+
+/**
+ * Whether a player is in their jump scare just now. **Everybody the spider takes
+ * gets one** - too slow, or the chicken, which is how second place goes in the last
+ * round - from the moment it takes them for `SCARE` seconds.
+ */
+export function scaredNow(game: Pick<Game, 'elapsed'>, p: Pick<Player, 'how' | 'outAt'>): boolean {
+  return p.how !== null && p.outAt !== null && game.elapsed >= p.outAt && game.elapsed - p.outAt < SCARE
+}
 
 const names = (list: string[]) => (list.length <= 1 ? (list[0] ?? '') : `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`)
 
@@ -134,7 +143,7 @@ export function NestScreen({ run }: { run: MinigameRun }) {
   useNestSounds(game)
   const left = game.players.filter(isStanding).length
   const taken = ready && w.phase === 'reveal' ? game.players.filter((p) => p.out === w.round.round) : []
-  const scared = !!mine && mine.how === 'eaten' && mine.outAt !== null && game.elapsed - mine.outAt < SCARE && game.elapsed >= mine.outAt
+  const scared = !!mine && scaredNow(game, mine)
 
   let banner: { text: string; sub?: string; tone: 'out' | 'hint' | 'good' | 'warn' } | null = null
   if (ready && !game.over && mine) {
@@ -149,7 +158,7 @@ export function NestScreen({ run }: { run: MinigameRun }) {
     } else if (w.phase === 'ready') {
       banner =
         w.round.round === 1
-          ? { text: 'Creep up on the trapdoor…', sub: 'W in, S back · click to stop before the spider jumps · furthest back is the chicken', tone: 'hint' }
+          ? { text: 'Creep up on the trapdoor…', sub: 'W in, S back · click to stop before the spider jumps · it comes out on the 2nd, 3rd or 4th thud · furthest back is the chicken', tone: 'hint' }
           : { text: `Round ${w.round.round}`, sub: `${left} left`, tone: 'hint' }
     } else if (mine.stoppedAt !== null) banner = { text: `Stopped at ${distance(mine).toFixed(1)} m`, tone: 'warn' }
   }
@@ -377,8 +386,8 @@ function useNestSounds(game: Game): void {
       if (isStanding(p) || s.out.has(p.id)) continue
       s.out.add(p.id)
       if (p.left) continue
-      if (p.mine && p.how === 'eaten') playCue(CUES.spiderJumpscare, 1)
-      else if (p.mine) playCue(CUES.wrongSelection, 0.8)
+      // The shriek is for whoever the spider takes, however it took them.
+      if (p.mine) playCue(CUES.spiderJumpscare, 1)
       playCue(CUES.fallingOver, p.mine ? 0.7 : 0.35)
     }
   }, [game])

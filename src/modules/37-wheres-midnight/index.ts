@@ -3,7 +3,8 @@
  *
  * Minigame 15. A junkyard at night, everybody standing in the same spot with
  * the same view of it, and an all-black cat called Midnight hidden somewhere
- * among the wrecks. Drag to look round, zoom in, and click him. A click on
+ * among the wrecks. W A S D to look round, zoom in, and click him - the flashlight
+ * works at the closest zoom only, and locks the camera while it is on. A click on
  * anything else costs a second and a half, so clicking everything is slower
  * than looking. You place in the order everybody finds him.
  *

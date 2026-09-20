@@ -6,11 +6,14 @@ Minigame 15. **A junkyard at night, and an all-black cat called Midnight hidden
 somewhere in it.** Everybody stands in the same spot, looking at the same yard,
 each holding their own camera.
 
-- **Drag to turn** - whatever was under the pointer when you pressed stays under
-  it as you move.
+- **W A S D to pan** the view - A and D turn it left and right, W and S up and
+  down. There is no dragging. It pans at a share of the field of view, so it is
+  quick when wide and slow when zoomed right in.
 - **Wheel to zoom**, towards the pointer rather than the middle.
-- **Flashlight**, once zoomed in to **2×** or more: a button at the bottom of
-  the board, or **F**. Zoom back out and it goes off.
+- **Flashlight**, at the **closest zoom only**: a button at the bottom of the
+  board, or **F**. **While it is on the camera is locked** - no panning and no
+  zooming - so the light stays on whatever you had lined up. Switch it off to move
+  again.
 - **Click him** and you have found him, timed at that moment.
 - **Click anything else** - junk, ground, sky - and you wait **1.5 seconds**
   before you can click again, so clicking everything is slower than looking.
@@ -18,7 +21,7 @@ each holding their own camera.
 Ninety seconds, or until three have found him. **You place in the order
 everybody finds him**; whoever never does shares last place.
 
-**Left drag, wheel, left click.**
+**W A S D, wheel, left click.**
 
 It plugs into `15-minigames` with `registerMinigame('wheres-midnight', ...)` and
 one import line in `src/App.tsx`. Nothing else in the build knows it exists.
@@ -106,12 +109,15 @@ pitch. The field of view runs **60° to 6°**, which is **1× to about 10×**.
 
 `pin` is the whole of both controls: it turns the view until a given world
 direction sits under a given point on the screen, by iterating rather than
-solving, and clamps as it goes. A drag pins whatever you grabbed; a zoom pins
-whatever was under the pointer before the field of view changed. There is a test
-for each, at four window shapes and three zooms.
+solving, and clamps as it goes. A zoom pins whatever was under the pointer before
+the field of view changed. There is a test for it, at four window shapes and three
+zooms.
 
-**A press that does not move by 5 pixels is a click**, settled on release - a
-drag that starts on a bin bag must not also be a guess at it.
+**Panning is the keys' job** (`pan`): `panRate` radians a second for every radian
+of field of view, diagonals no faster, clamped to the yard. **The flashlight is for
+the closest zoom only** (`canTorch`: a field of view of `torchFov` or less) and
+**locks the camera** while it is on: the wheel and the keys are ignored until it is
+off. A click is a press and a release, with nothing to tell it from a drag any more.
 
 ## The night
 
@@ -127,7 +133,8 @@ one are the same two glints.
 eye down the middle of the view, its cone 0.8 of the view's height whatever the
 zoom, so it always lights the same share of the screen. It is in the scene all
 the time and turned down to nothing when off, so switching it does not
-recompile every material. It needs **2×** zoom; zooming back out puts it away.
+recompile every material. It needs the **closest zoom**, and while it is on the
+camera cannot move - so it is a lens on one spot, not a way of sweeping the yard.
 
 The junk is **instanced**: every part is a box, a cylinder, a tyre, a blob, a
 sphere or a cone, so each is one `InstancedMesh` with a colour per instance,
@@ -230,14 +237,17 @@ Midnight?** and press play.
 - **A dark junkyard**, a moon over the back fence, litter everywhere, and pairs
   of faint yellow-green dots here and there. Not a black screen with a HUD on
   it, and not a lit-up junkyard either.
-- **Zoom past 2×.** A *flashlight* button appears at the bottom; it and **F**
-  light the middle of the view. Zoom back out and it goes away, off.
+- **Zoom all the way in.** A *flashlight* button appears at the bottom; it and **F**
+  light the middle of the view. At any other zoom, F does nothing. With it on, **W A
+  S D and the wheel do nothing** - the button says the camera is locked. Switch it
+  off and they work again.
 - **Click a pair of eyes that is not his.** A wrong guess, like any junk - and
   with the flashlight on it is plainly a ginger or a white or a grey cat sitting
   there, not him.
-- **Drag.** The scene should follow the pointer exactly - pick a drum, drag it
-  across the screen, and it should stay under the cursor. Try it zoomed in.
-- **Drag to the limits.** You should not be able to turn past the yard, or past
+- **W A S D.** Holding D should turn the view right, A left, W up, S down, smoothly,
+  and slower the further you are zoomed in. Diagonals are no quicker. Dragging with
+  the mouse should do nothing.
+- **Pan to the limits.** You should not be able to turn past the yard, or past
   straight down, and it should stop rather than fight you.
 - **Wheel.** It should zoom towards whatever is under the pointer - a thing in
   the corner should stay in the corner and grow. The pill should count up to
@@ -253,7 +263,7 @@ Midnight?** and press play.
 - **Let the clock run out** without finding him: the ring should light up anyway
   so you can see where he was, and the results should say *never*.
 - **Play again.** A different yard and a different hiding place.
-- **Resize the window, tall and wide.** A drag should still hold what it grabbed.
+- **Resize the window, tall and wide.** The wheel should still zoom towards the pointer.
 
 ### With two or more browsers
 

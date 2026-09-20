@@ -1,9 +1,10 @@
 /**
- * The camera you hold: a drag that grabs the scene, a wheel that zooms towards
- * the pointer, and limits that keep the yard in front of you.
+ * The camera you hold: W A S D that pan it, a wheel that zooms towards the
+ * pointer, a flashlight that only the closest zoom allows, and limits that keep
+ * the yard in front of you.
  */
 import { describe, expect, it } from 'vitest'
-import { VIEW, anglesOf, clampView, direction, magnification, pin, rayThrough, startView, wheelFov, zoomAt, type Vec3 } from '../internal/view'
+import { VIEW, anglesOf, canTorch, clampView, direction, magnification, pan, pin, rayThrough, startView, wheelFov, zoomAt, type Vec3 } from '../internal/view'
 
 const ASPECTS = [0.6, 1, 16 / 9, 2.4]
 const near = (a: Vec3, b: Vec3, digits = 5) => {
@@ -58,8 +59,8 @@ describe('a ray through the screen', () => {
   })
 })
 
-describe('a drag', () => {
-  it('keeps whatever was grabbed under the pointer, at any zoom', () => {
+describe('pinning a direction under a point', () => {
+  it('keeps a direction under the point it was pinned to, at any zoom - which is what makes the wheel zoom towards the pointer', () => {
     for (const aspect of ASPECTS) {
       for (const fov of [VIEW.fovMax, 20, VIEW.fovMin]) {
         const view = { ...startView(), fov }
@@ -72,13 +73,125 @@ describe('a drag', () => {
 
   it('never turns past the fan the yard is in, or past straight down', () => {
     const view = startView()
-    // Dragged hard enough to spin right round, if it were allowed to.
+    // Pinned hard enough to spin right round, if it were allowed to.
     for (let i = 0; i < 20; i++) pin(view, 1, 1, { x: -1, y: -1, z: 1 }, 1.6)
     expect(Math.abs(view.yaw)).toBeLessThanOrEqual(VIEW.yawLimit + 1e-9)
     expect(view.pitch).toBeGreaterThanOrEqual(VIEW.pitchMin - 1e-9)
     expect(view.pitch).toBeLessThanOrEqual(VIEW.pitchMax + 1e-9)
     // The yard is laid in front of you: the limits keep it there.
     expect(VIEW.yawLimit).toBeGreaterThan((60 * Math.PI) / 180 / 2)
+  })
+})
+
+describe('W A S D', () => {
+  const held = (view: ReturnType<typeof startView>, right: number, up: number, seconds: number, dt = 1 / 60) => {
+    for (let t = 0; t < seconds - 1e-9; t += dt) pan(view, right, up, dt)
+    return view
+  }
+
+  it('turn the view: A and D left and right, W and S up and down', () => {
+    const view = startView()
+    const before = { ...view }
+    held(view, -1, 0, 0.3)
+    expect(view.yaw).toBeGreaterThan(before.yaw)
+    expect(view.pitch).toBeCloseTo(before.pitch, 9)
+    const d = startView()
+    held(d, 1, 0, 0.3)
+    expect(d.yaw).toBeLessThan(before.yaw)
+    const w = startView()
+    held(w, 0, 1, 0.3)
+    expect(w.pitch).toBeGreaterThan(before.pitch)
+    expect(w.yaw).toBeCloseTo(before.yaw, 9)
+    const sKey = startView()
+    held(sKey, 0, -1, 0.3)
+    expect(sKey.pitch).toBeLessThan(before.pitch)
+    // Left is left: the point that was on the right of the middle comes towards it.
+    const right = rayThrough(before, 0.5, 0, 1)
+    const after = rayThrough(held({ ...before }, 1, 0, 0.3), 0.5, 0, 1)
+    expect(after.x).not.toBeCloseTo(right.x, 3)
+  })
+
+  it('go slower the more it is zoomed in, by the same share of the view, so a second is about the same amount of screen at any zoom', () => {
+    const turned = (fov: number) => {
+      const view = { ...startView(), fov, pitch: 0 }
+      held(view, 1, 0, 0.5)
+      return -view.yaw
+    }
+    expect(turned(VIEW.fovMax)).toBeGreaterThan(turned(30) * 1.8)
+    expect(turned(30)).toBeGreaterThan(turned(VIEW.fovMin) * 4)
+    // A share of the view a second, whatever the view: the same to a few per cent.
+    const share = (fov: number) => turned(fov) / ((fov * Math.PI) / 180)
+    expect(share(VIEW.fovMin)).toBeCloseTo(share(VIEW.fovMax), 3)
+    // At the widest, quick; zoomed right in, slow enough to walk a crosshair along a bin bag.
+    expect((turned(VIEW.fovMax) / 0.5) * (180 / Math.PI)).toBeGreaterThan(40)
+    expect((turned(VIEW.fovMin) / 0.5) * (180 / Math.PI)).toBeLessThan(10)
+  })
+
+  it('are no faster on a diagonal, nothing for both directions at once, and nothing for no time', () => {
+    const straight = startView()
+    const diagonal = startView()
+    pan(straight, 1, 0, 0.05)
+    pan(diagonal, 1, 1, 0.05)
+    const along = Math.hypot(diagonal.yaw, diagonal.pitch - VIEW.start.pitch)
+    expect(along).toBeCloseTo(Math.abs(straight.yaw), 9)
+    const still = startView()
+    pan(still, 1, 0, 0)
+    pan(still, 0, 0, 1)
+    pan(still, -1, 0, 0.05)
+    pan(still, 1, 0, 0.05)
+    expect(still).toEqual(startView())
+  })
+
+  it('never turn past the fan the yard is in, or past straight down, however long they are held', () => {
+    const view = startView()
+    held(view, -1, 1, 20)
+    expect(view.yaw).toBeCloseTo(VIEW.yawLimit, 9)
+    expect(view.pitch).toBeCloseTo(VIEW.pitchMax, 9)
+    held(view, 1, -1, 20)
+    expect(view.yaw).toBeCloseTo(-VIEW.yawLimit, 9)
+    expect(view.pitch).toBeCloseTo(VIEW.pitchMin, 9)
+    // And a frame that took a second - a tab that lost its turn - is a tenth of one.
+    const slow = startView()
+    pan(slow, 1, 0, 5)
+    const fast = startView()
+    pan(fast, 1, 0, 0.1)
+    expect(slow.yaw).toBe(fast.yaw)
+  })
+
+  it('do not change the zoom', () => {
+    const view = { ...startView(), fov: 20 }
+    held(view, 1, 1, 0.5)
+    expect(view.fov).toBe(20)
+  })
+})
+
+describe('the flashlight', () => {
+  it('is for the closest zoom only, not the merely zoomed in', () => {
+    expect(canTorch({ fov: VIEW.fovMax })).toBe(false)
+    expect(canTorch({ fov: 30 })).toBe(false)
+    // Two and a half times and more used to be enough; ten times, nearly, is not.
+    expect(canTorch({ fov: 60 / 2 })).toBe(false)
+    expect(canTorch({ fov: 12 })).toBe(false)
+    expect(canTorch({ fov: 8 })).toBe(false)
+    expect(canTorch({ fov: VIEW.fovMin })).toBe(true)
+    expect(canTorch({ fov: VIEW.torchFov })).toBe(true)
+    expect(canTorch({ fov: VIEW.torchFov + 0.5 })).toBe(false)
+  })
+
+  it('is reached by the wheel, all the way in, from anywhere, and is not reached by anything short of it', () => {
+    let fov: number = VIEW.fovMax
+    let notches = 0
+    while (!canTorch({ fov }) && notches < 200) {
+      fov = wheelFov(fov, -100)
+      notches += 1
+    }
+    expect(canTorch({ fov })).toBe(true)
+    expect(notches).toBeGreaterThan(5)
+    expect(notches).toBeLessThan(200)
+    // One notch back out and it is gone.
+    expect(canTorch({ fov: wheelFov(fov, 100) })).toBe(false)
+    // The closest zoom is still worth having: about ten times.
+    expect(magnification({ ...startView(), fov })).toBeGreaterThan(8)
   })
 })
 

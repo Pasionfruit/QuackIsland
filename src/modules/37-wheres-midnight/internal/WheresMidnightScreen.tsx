@@ -6,20 +6,20 @@
  * `useSearchNet`, and the words - the clock, whether you can click yet, who has
  * found him, and the results.
  *
- * **Drag to turn, wheel to zoom, click him to say you have found him.** A drag
- * grabs the scene: whatever was under the pointer when you pressed stays under
- * it while you move, at any zoom. The wheel zooms towards the pointer rather
- * than towards the middle, so you can chase a suspicious dark patch into the
- * corner of the screen without losing it. Both are `view.ts`; nothing about
- * either is decided here.
+ * **W A S D to turn, wheel to zoom, click him to say you have found him.** The
+ * keys pan the view - see `pan` - at a rate that follows the zoom; nothing drags.
+ * The wheel zooms towards the pointer rather than towards the middle, so you can
+ * chase a suspicious dark patch into the corner of the screen without losing it.
+ * Both are `view.ts`; nothing about either is decided here.
  *
- * **Zoomed in, there is a flashlight.** Past `VIEW.torchZoom` a button - or
- * F - lights the middle of the view; zoom back out and it goes off. It is
- * yours alone: nobody else's yard gets any lighter.
+ * **At the closest zoom, there is a flashlight** - and only there. A button - or F
+ * - lights the middle of the view; zoom back out and it goes off. **While it is on
+ * the camera is locked**: W A S D and the wheel do nothing, so the light is on what
+ * you lined up before you switched it on, and putting it away is what frees you.
+ * It is yours alone: nobody else's yard gets any lighter.
  *
- * **A press that does not move is a click**, which is why a click is settled on
- * release rather than on press - a drag that starts on a bin bag must not also
- * be a guess at it.
+ * **A click is a press and a release**, settled on release: there is nothing left
+ * to drag, so a press is never anything but a guess.
  */
 import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
@@ -29,7 +29,7 @@ import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, type Minigam
 import { COLOURS, SEARCH, placings, timeLeft, type Game } from './rules'
 import { myId, newGame, waitingGame } from './setup'
 import { useSearchNet } from './useSearchNet'
-import { VIEW, magnification, pin, rayThrough, startView, wheelFov, zoomAt, type Vec3, type View } from './view'
+import { VIEW, canTorch as closestZoom, magnification, pan, rayThrough, startView, wheelFov, zoomAt, type Vec3, type View } from './view'
 import { WheresMidnightScene } from './WheresMidnightScene'
 import { look, yardFor } from './yard'
 
@@ -51,6 +51,9 @@ function ordinal(n: number): string {
 }
 
 const seconds = (s: number) => `${s.toFixed(1)}s`
+
+/** The keys that pan the view, by `KeyboardEvent.code`, so they sit in the same place on any layout. */
+const PAN_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD']
 
 /** A miss, marked where it was clicked for a moment: cosmetic, and the game's own answer is the one that counts. */
 interface Splat {
@@ -79,12 +82,16 @@ export function WheresMidnightScreen({ run }: { run: MinigameRun }) {
   const view = useRef<View>(startView())
   const board = useRef<HTMLDivElement>(null)
   const click = useRef<Vec3 | undefined>(undefined)
-  const drag = useRef<{ id: number; x: number; y: number; grab: Vec3; moved: boolean } | null>(null)
+  /** Where a press started, until it is let go: a click is a press and a release. */
+  const pressed = useRef<number | null>(null)
+  /** The pan keys held, by `KeyboardEvent.code`. */
+  const held = useRef(new Set<string>())
   const [splat, setSplat] = useState<Splat | null>(null)
   const [zoom, setZoom] = useState(1)
   const [torchOn, setTorchOn] = useState(false)
   const torch = useRef(false)
-  const canTorch = zoom >= VIEW.torchZoom
+  // Only at the closest zoom.
+  const [canTorch, setCanTorch] = useState(false)
   torch.current = torchOn && canTorch
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
@@ -113,6 +120,12 @@ export function WheresMidnightScreen({ run }: { run: MinigameRun }) {
       const current = live.current
       const said = click.current
       click.current = undefined
+      // W A S D turn the view - unless the round is paused or over, or the flashlight is on and has the camera locked.
+      if (!paused.current && !current.over && !torch.current) {
+        const right = (held.current.has('KeyD') ? 1 : 0) - (held.current.has('KeyA') ? 1 : 0)
+        const up = (held.current.has('KeyW') ? 1 : 0) - (held.current.has('KeyS') ? 1 : 0)
+        if (right || up) pan(view.current, right, up, dt)
+      }
       if (wire.advance(current, dt, said, paused.current)) setGame({ ...current })
       frame = requestAnimationFrame(tick)
     }
@@ -127,11 +140,13 @@ export function WheresMidnightScreen({ run }: { run: MinigameRun }) {
     if (!el) return
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
-      if (paused.current) return
+      // With the flashlight on the camera is locked: no zoom either.
+      if (paused.current || torch.current) return
       const at = on(e)
       if (!at) return
       zoomAt(view.current, wheelFov(view.current.fov, e.deltaY), at.nx, at.ny, at.aspect)
       setZoom(magnification(view.current))
+      setCanTorch(closestZoom(view.current))
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
@@ -144,43 +159,35 @@ export function WheresMidnightScreen({ run }: { run: MinigameRun }) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.code !== 'KeyF' || e.repeat || paused.current) return
-      if (magnification(view.current) >= VIEW.torchZoom) setTorchOn((on) => !on)
+      if (e.code === 'KeyF') {
+        if (e.repeat || paused.current) return
+        // The flashlight is for the closest zoom only; off, it can always be put away.
+        setTorchOn((on) => (on ? false : closestZoom(view.current)))
+        return
+      }
+      if (PAN_KEYS.includes(e.code)) held.current.add(e.code)
     }
+    const onUp = (e: KeyboardEvent) => held.current.delete(e.code)
+    const onBlur = () => held.current.clear()
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    window.addEventListener('keyup', onUp)
+    window.addEventListener('blur', onBlur)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('keyup', onUp)
+      window.removeEventListener('blur', onBlur)
+    }
   }, [])
 
   const onDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0 || paused.current) return
-    const at = on(e)
-    if (!at) return
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId)
-    } catch {
-      // A pointer the browser does not know - a synthetic one - cannot be captured; dragging works without.
-    }
-    drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY, grab: rayThrough(view.current, at.nx, at.ny, at.aspect), moved: false }
-  }
-
-  const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const held = drag.current
-    if (!held || held.id !== e.pointerId) return
-    const at = on(e)
-    if (!at) return
-    if (!held.moved && Math.hypot(e.clientX - held.x, e.clientY - held.y) < VIEW.dragPixels) return
-    held.moved = true
-    // Whatever was grabbed stays under the pointer. `pin` does the turning and
-    // the clamping, which is what stops the view leaving the fan the yard was
-    // laid in - there is nothing behind you but fence.
-    pin(view.current, at.nx, at.ny, held.grab, at.aspect)
+    pressed.current = e.pointerId
   }
 
   const onUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    const held = drag.current
-    drag.current = null
-    if (!held || held.id !== e.pointerId || paused.current) return
-    if (held.moved) return
+    const was = pressed.current
+    pressed.current = null
+    if (was !== e.pointerId || paused.current) return
     const at = on(e)
     if (!at) return
     const dir = rayThrough(view.current, at.nx, at.ny, at.aspect)
@@ -255,13 +262,15 @@ export function WheresMidnightScreen({ run }: { run: MinigameRun }) {
 
       <div
         ref={board}
-        style={{ ...boardStyle, cursor: drag.current?.moved ? 'grabbing' : 'crosshair' }}
+        style={{ ...boardStyle, cursor: 'crosshair' }}
         data-board
+        // Where the camera is, redrawn every frame the round runs: for the run-localrot skill, and for anybody debugging a pan.
+        data-view={`${view.current.yaw.toFixed(3)},${view.current.pitch.toFixed(3)},${view.current.fov.toFixed(2)}`}
+        data-locked={torch.current ? 1 : 0}
         onPointerDown={onDown}
-        onPointerMove={onMove}
         onPointerUp={onUp}
         onPointerCancel={() => {
-          drag.current = null
+          pressed.current = null
         }}
       >
         {ready ? <Stage live={live} view={view} torch={torch} /> : <div style={{ ...vignette, background: '#0b1018' }} />}
@@ -276,9 +285,10 @@ export function WheresMidnightScreen({ run }: { run: MinigameRun }) {
             onPointerUp={(e) => e.stopPropagation()}
             onClick={() => setTorchOn((on) => !on)}
           >
-            🔦 {torchOn ? 'flashlight on' : 'flashlight'}
+            🔦 {torchOn ? 'flashlight on - camera locked' : 'flashlight'}
           </button>
         ) : null}
+        {ready && !game.over && !canTorch && zoom > 1.5 ? <div style={torchHint}>the flashlight works at the closest zoom</div> : null}
         {splat ? (
           <div style={{ ...miss, left: splat.left, top: splat.top }} data-miss>
             ✕
@@ -317,7 +327,7 @@ function Hints() {
   return (
     <div style={hints}>
       <span>
-        <b>drag</b> look round
+        <b>W A S D</b> look round
       </span>
       <span>
         <b>wheel</b> zoom
@@ -326,7 +336,7 @@ function Hints() {
         <b>click</b> that&rsquo;s him
       </span>
       <span>
-        <b>F</b> flashlight, zoomed in
+        <b>F</b> flashlight, fully zoomed - it locks the camera
       </span>
     </div>
   )
@@ -473,6 +483,20 @@ const hints: React.CSSProperties = {
   padding: '6px 12px',
   borderRadius: 999,
   background: LOOK.panel,
+  font: `12px/1.4 ${FONT}`,
+  pointerEvents: 'none',
+}
+
+/** Above the flashlight's place, while it is not allowed yet: why the button is not there. */
+const torchHint: React.CSSProperties = {
+  position: 'absolute',
+  left: '50%',
+  bottom: 52,
+  transform: 'translateX(-50%)',
+  padding: '3px 12px',
+  borderRadius: 999,
+  background: LOOK.panel,
+  color: LOOK.faded,
   font: `12px/1.4 ${FONT}`,
   pointerEvents: 'none',
 }

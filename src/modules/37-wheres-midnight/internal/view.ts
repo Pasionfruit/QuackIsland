@@ -3,12 +3,19 @@
  *
  * Everybody stands at the same spot - up on a stack of crushed cars at the near
  * edge of the junkyard - and can turn and zoom but never walk. That is the
- * "holding a camera" the brief asks for: a drag turns it, the wheel zooms it.
+ * "holding a camera" the brief asks for: **W A S D pan it, the wheel zooms it.**
  *
- * **A drag grabs the scene.** Whatever was under the pointer when you pressed
- * stays under the pointer as you move it, at any zoom. **The wheel zooms towards
- * the pointer**: the thing you are pointing at stays where it is while
- * everything else grows round it. Both come from `pin`.
+ * **Panning is the keys' job** (`pan`): A and D turn it left and right, W and S up
+ * and down, at a rate that is a share of the field of view - so it is quick when
+ * the view is wide and slow when it is zoomed right in, and always about the same
+ * fraction of the screen a second. **The wheel zooms towards the pointer**: the
+ * thing you are pointing at stays where it is while everything else grows round it.
+ * That comes from `pin`, which turns the view until a direction sits under a point
+ * on the screen.
+ *
+ * **The flashlight is for the closest zoom only, and it locks the camera** - see
+ * `canTorch`: it works at the narrowest field of view and nowhere else, and while it
+ * is on nothing pans or zooms, so the light is on whatever you had lined up.
  *
  * Pure, and the same numbers three.js uses: a yaw about +Y then a pitch about
  * the camera's own X (Euler order `YXZ`), and a vertical field of view.
@@ -43,10 +50,19 @@ export const VIEW = {
   start: { yaw: 0, pitch: radians(-16), fov: 60 },
   /** How far a wheel notch zooms: the field of view is scaled by exp(delta times this). */
   wheelRate: 0.0016,
-  /** How far, in pixels, a press has to move before it is a drag rather than a click. */
-  dragPixels: 5,
-  /** How zoomed in, as a magnification, before the flashlight can be switched on. */
-  torchZoom: 2,
+  /**
+   * How fast W A S D turn the view: radians a second for every radian of field of
+   * view. At the widest view that is a bit over a turn of the yard's fan in a
+   * second; at the closest, a few degrees a second, which is what it takes to walk
+   * the crosshair along a piece of junk.
+   */
+  panRate: 1.1,
+  /**
+   * The flashlight works at the closest zoom and no other: this many degrees of
+   * field of view, a hair over the narrowest, so a wheel that has stopped at the
+   * limit is within it however it got there.
+   */
+  torchFov: 6.05,
 } as const
 
 export function startView(): View {
@@ -58,6 +74,32 @@ export function clampView(view: View): View {
   view.pitch = Math.max(VIEW.pitchMin, Math.min(VIEW.pitchMax, view.pitch))
   view.fov = Math.max(VIEW.fovMin, Math.min(VIEW.fovMax, view.fov))
   return view
+}
+
+/**
+ * Turns the view for `dt` seconds of keys held: `right` is A to D (-1 to 1) and
+ * `up` is S to W. The rate is a share of the field of view, so it is quick when
+ * wide and slow when zoomed in; diagonals are no faster. Clamped to the yard.
+ * Positive yaw turns left, so D takes it down. Mutates and returns the view.
+ */
+export function pan(view: View, right: number, up: number, dt: number): View {
+  let x = Math.max(-1, Math.min(1, right))
+  let y = Math.max(-1, Math.min(1, up))
+  const length = Math.hypot(x, y)
+  if (length < 1e-9 || !(dt > 0)) return view
+  if (length > 1) {
+    x /= length
+    y /= length
+  }
+  const step = radians(view.fov) * VIEW.panRate * Math.min(dt, 0.1)
+  view.yaw -= x * step
+  view.pitch += y * step
+  return clampView(view)
+}
+
+/** Whether the flashlight may be switched on: only at the closest zoom. */
+export function canTorch(view: Pick<View, 'fov'>): boolean {
+  return view.fov <= VIEW.torchFov
 }
 
 /** The way the camera faces for a yaw and a pitch. Unit length. */

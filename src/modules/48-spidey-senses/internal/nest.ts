@@ -5,9 +5,10 @@
  * **The whole schedule is arithmetic on the seed and the clock.** When each
  * round's trapdoor springs - a random moment - how long you have to react once
  * it does, and the little twitches it gives beforehand to fool you, all come
- * from the seed and the round number. So every screen works out for itself when
- * the lid will rattle and when the spider comes out, and none of it is sent.
- * Who it takes is the host's.
+ * from the seed and the round number. **The spider comes out on the second, third
+ * or fourth thud**: one to three false alarms, and then the spring. So every screen
+ * works out for itself when the lid will rattle and when the spider comes out, and
+ * none of it is sent. Who it takes is the host's.
  *
  * Everything here is pure.
  */
@@ -18,8 +19,14 @@ export const CELLAR = {
   half: 15,
   /** Half the trapdoor's side. */
   lid: 1,
-  /** As close to the middle of the trapdoor as anybody can stand: at its edge. */
-  near: 1.6,
+  /**
+   * The railing round the trapdoor: a rope on posts, this far from its middle.
+   * **Nobody can get to the trapdoor**: they cannot cross it, and `near` is where
+   * a body standing against it ends up.
+   */
+  rail: 2.3,
+  /** As close to the middle of the trapdoor as anybody can stand: a body's width outside the railing, against it. */
+  near: 2.7,
   /** Where everybody starts each round, and as far back as anybody can go. */
   far: 9,
 } as const
@@ -29,6 +36,16 @@ export const TIMING = {
   ready: 1.5,
   /** The trapdoor springs this long into the creep, soonest and latest. */
   spring: [5, 15] as readonly [number, number],
+  /**
+   * How many thuds the trapdoor gives before the spider comes out, the one that
+   * lets it out included: **the second, the third or the fourth**. Every thud but the
+   * last is a false alarm - a small lift and a thud, never red - and the last is the
+   * spring.
+   */
+  thuds: [2, 4] as readonly [number, number],
+  /** The first thud comes at least this long into the creep, and no two are closer than `apart`, the last and the spring included. */
+  lead: 1,
+  apart: 1.3,
   /** How long you have to click once it springs: in round one, and the least it shrinks to. */
   window: [0.62, 0.38] as readonly [number, number],
   /** How much the window shrinks each round. */
@@ -59,7 +76,7 @@ export interface Round {
   judged: number
   /** When the round ends and the next begins. */
   end: number
-  /** Little rattles before the real thing, to fool you, on the game's clock. */
+  /** Little rattles before the real thing, to fool you, on the game's clock: one to three, so the spring is the second to fourth thud. */
   twitches: number[]
 }
 
@@ -90,14 +107,12 @@ export function scheduleFor(seed: number): Round[] {
     const window = windowFor(round)
     const judged = springs + window + TIMING.grace
     const end = judged + TIMING.reveal
-    // Nought to two twitches, each a good while before the real thing and not on top of each other.
-    const twitches: number[] = []
-    const count = Math.floor(random() * 3)
-    for (let k = 0; k < count; k++) {
-      const at = creep + 1.5 + random() * Math.max(0, springs - creep - 3)
-      if (at < springs - 1.2 && twitches.every((w) => Math.abs(w - at) > 1)) twitches.push(at)
-    }
-    twitches.sort((a, b) => a - b)
+    // One to three false alarms and then the spring: the spider comes out on the second, third or fourth thud.
+    // Placed so that there are always exactly that many, `apart` from each other - a spring five seconds in has just room for three.
+    const count = TIMING.thuds[0] - 1 + Math.floor(random() * (TIMING.thuds[1] - TIMING.thuds[0] + 1))
+    const slack = Math.max(0, springs - creep - TIMING.lead - count * TIMING.apart)
+    const offsets = Array.from({ length: count }, () => random() * slack).sort((a, b) => a - b)
+    const twitches = offsets.map((o, k) => creep + TIMING.lead + k * TIMING.apart + o)
     rounds.push({ round, start, creep, springs, window, judged, end, twitches })
     start = end
   }

@@ -5,10 +5,13 @@
 Minigame 44, free-for-all. **A game of chicken round a trapdoor with a spider's
 nest under it.** Every round everybody starts back on a ring round the trapdoor
 and **creeps in**, slowly. **A click stops you** where you stand for the rest of
-the round. At a random moment **the trapdoor springs** - and anybody who has not
+the round. **Nobody can reach the trapdoor** - there is a railing round it. The
+trapdoor gives one to three false-alarm thuds, and **the spider comes out on the
+2nd, 3rd or 4th thud**; anybody who has not
 clicked within a fraction of a second **gets the spider, with a jump scare, and
 is out.** If nobody was too late, the spider takes **the chicken: whoever stopped
-furthest back.** Somebody goes every round. The last one left wins.
+furthest back** - and gets the same jump scare, second place in the last round
+included. Somebody goes every round. The last one left wins.
 
 **WASD to creep in, back and round; left click to stop - and to react.**
 
@@ -30,15 +33,16 @@ game always ends.
 
 A stone cellar, a 2 m trapdoor in the middle, chalk rings every two metres.
 **Everybody starts each round 9 m out** (`CELLAR.far`) and can creep **no closer
-than 1.6 m** (`CELLAR.near`, the trapdoor's edge) and no further back than the
-ring.
+than 2.7 m** (`CELLAR.near`) - a body's width outside the **railing** (`CELLAR.rail`,
+2.3 m), which is round the trapdoor on posts and rope so that nobody can ever get
+to it - and no further back than the ring.
 
 **A round is all arithmetic on the seed and the clock** (`scheduleFor`, `when`):
 
 | Phase | How long | What happens |
 | --- | --- | --- |
 | ready | 1.5 s | Everybody still in is back on the ring. Nobody can move or click. |
-| creep | 5-15 s, then the window | Creep in or back. The lid may **twitch** once or twice - a false alarm, a small lift and a thud, never red. At a random moment it **springs**: it pops up and chatters, red eyes glint in the gap and a red glow spills across the floor, with a loud thud. From then, **the window** to click: 0.62 s in round one, 0.04 s less each round, down to 0.38 s. Then a quarter of a second of grace for a click still on its way. |
+| creep | 5-15 s, then the window | Creep in or back. The lid **twitches** one to three times - false alarms, each a small lift and a thud, never red, at least 1.3 s apart. At a random moment it **springs**, and that is the **2nd, 3rd or 4th thud** (`TIMING.thuds`): it pops up and chatters, red eyes glint in the gap and a red glow spills across the floor, with a loud thud. From then, **the window** to click: 0.62 s in round one, 0.04 s less each round, down to 0.38 s. Then a quarter of a second of grace for a click still on its way. |
 | reveal | 3.5 s | The lid flies open and the spider leaps onto whoever it is taking, webs them up and drags them into the nest. |
 
 Every screen works out when the trapdoor springs and twitches for itself -
@@ -83,7 +87,8 @@ lobby while in. Everybody left taken in the same round: they share first.
 - **You** have a ring at your feet, white while you can creep and amber once you
   have stopped. **Everybody who has stopped has an amber dot over their head**, and
   a ✋ in the HUD.
-- **The jump scare**: too late, and the screen goes black and **a spider charges
+- **The jump scare**: taken by the spider - too late, or the chicken, so second
+  place gets it too - and the screen goes black and **a spider charges
   down a dark corridor straight at you** (`Spider_Jumpscare_gif.gif`) until it
   fills the screen, shaking as it lunges, under a shriek
   (`Spider_Jumpscare_Audio.mp3`). The film runs 1.1 s and is taken off the screen
@@ -163,10 +168,15 @@ testing, not because anybody else needs them.
 
 - **The same seed, the same rounds; ready, creep, reveal, each round starting
   where the last ended.** Tested.
-- **It springs at a random moment in range, differently every round; twitches
-  come well before it, small; the spring rattles to the reveal.** Tested.
+- **It springs at a random moment in range, differently every round; there are
+  always one to three twitches before it, so the spider comes out on the 2nd, 3rd
+  or 4th thud, in order and apart; the spring rattles to the reveal.** Tested.
+- **Nobody can get to the trapdoor, from any side or edging round, and nor can the
+  stand-ins.** Tested.
+- **Everybody the spider takes - too late or the chicken - gets the jump scare, and
+  nobody it did not take does.** Tested.
 - **The window shrinks round by round, to a floor.** Tested.
-- **Nobody moves in the ready; creeping stops at the trapdoor's edge and at the
+- **Nobody moves in the ready; creeping stops at the railing and at the
   ring; a stopped player stays put and does not budge.** Tested.
 - **A guest's click is believed from its own clock, but never from the future or
   more than half a second back.** Tested.
@@ -205,14 +215,16 @@ the jump scare.
   trapdoor ahead under a lantern, the others round the ring.
 - **Hold W.** You should creep in - slowly - the camera rising so the lid stays in
   view over your head. The HUD distance should count down; you should stop at the
-  trapdoor's edge. **S** backs you off, **A** and **D** edge you round.
-- **Watch for twitches**: a little lift and a thud, no red. Don't click.
+  railing and go no further. **S** backs you off, **A** and **D** edge you round.
+- **Watch for twitches**: a little lift and a thud, no red. Don't click. There are
+  one to three, then the spring: the spider comes out on the 2nd, 3rd or 4th thud.
 - **When it springs** - popped lid, red eyes, red glow, loud thud - **click.** Your
   ring should go amber, *Stopped at …*, and you should be safe.
 - **Next round, don't click.** A spider should lunge out of the dark at you,
   shaking, then *Too slow!*, and you should see yourself webbed and dragged into
   the pit.
-- **Click early, far back**: you should be *Chicken!* if you were the furthest.
+- **Click early, far back**: you should be *Chicken!* if you were the furthest -
+  with the same jump scare.
 - **The results** should be the podium, the later out the higher.
 
 ### With two or more browsers

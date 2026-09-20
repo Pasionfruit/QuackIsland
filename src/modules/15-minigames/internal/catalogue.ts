@@ -380,9 +380,9 @@ const ENTRIES = [
       'Click him and you have found him. A click on anything else costs a second and a half before you can click again. You place in the order you find him; the round ends when three have, everybody has, or at ninety seconds.',
     ],
     controls: [
-      { input: 'Left drag', does: 'Look around - the scene follows the pointer' },
+      { input: 'WASD', does: 'Pan the view' },
       { input: 'Wheel', does: 'Zoom towards the pointer' },
-      { input: 'F', does: 'Torch on or off, once zoomed in close' },
+      { input: 'F', does: 'Torch on or off - closest zoom only, and it locks the camera' },
       { input: 'Left click', does: 'Say that is him - a wrong one costs a second and a half' },
     ],
     reserved: false,
@@ -841,7 +841,7 @@ const ENTRIES = [
     kind: 'free-for-all',
     description: [
       "Play a game of chicken as everyone slowly inches toward a trapdoor hiding a spider's nest. Decide when to stop - a click stops you where you stand.",
-      'At a random point the trapdoor becomes dangerous: it rattles and red eyes glint under the lid. Click too late and a spider jumps out at you, and you are out. If nobody is too late, the spider takes whoever stopped furthest from the trapdoor - the chicken.',
+      'A railing keeps everybody away from the trapdoor. It thuds once or twice as a false alarm, then on the 2nd, 3rd or 4th thud it becomes dangerous: it rattles and red eyes glint under the lid. Click too late and a spider jumps out at you, and you are out. If nobody is too late, the spider takes whoever stopped furthest from the trapdoor - the chicken - with the same jump scare.',
       'Somebody goes every round. The last player remaining wins.',
     ],
     controls: [
