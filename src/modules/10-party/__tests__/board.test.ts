@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { BOARD, buildBoard, tileSpacing, trackLength, trackPointAt } from '../internal/board'
+import {
+  BOARD,
+  buildBoard,
+  connectorDots,
+  tileSpacing,
+  trackLength,
+  trackPointAt,
+} from '../internal/board'
 import { PLAYER } from '../../02-player'
 import {
   ISLAND,
@@ -109,8 +116,30 @@ describe('the spiral', () => {
     expect(BOARD.tiles).toBe(120)
   })
 
-  it('makes each tile half again as wide as the duck standing on it', () => {
-    expect(BOARD.tileRadius).toBeCloseTo(PLAYER.radius * 1.5, 9)
+  it('makes each tile big enough for eight ducks to stand on at once', () => {
+    // Three times the 3.5-radius floor that eight need, so there is room to move.
+    expect(BOARD.tileRadius).toBeCloseTo(PLAYER.radius * 10.5, 9)
+    // One duck in the middle and seven round it, each touching its neighbours
+    // at worst. Every one has to sit wholly inside the tile's inscribed circle
+    // (which the rounded corners never cut into) without overlapping another.
+    const r = PLAYER.radius
+    const ring = r / Math.sin(Math.PI / 7)
+    const spots = [{ x: 0, z: 0 }]
+    for (let i = 0; i < 7; i++) {
+      const a = (i / 7) * Math.PI * 2
+      spots.push({ x: Math.cos(a) * ring, z: Math.sin(a) * ring })
+    }
+    expect(spots).toHaveLength(8)
+    for (const spot of spots) {
+      expect(Math.hypot(spot.x, spot.z) + r).toBeLessThanOrEqual(BOARD.tileRadius)
+    }
+    for (let i = 0; i < spots.length; i++) {
+      for (let j = i + 1; j < spots.length; j++) {
+        expect(Math.hypot(spots[i].x - spots[j].x, spots[i].z - spots[j].z)).toBeGreaterThanOrEqual(
+          r * 2 - 1e-9,
+        )
+      }
+    }
   })
 
   it('starts at the outside and finishes in the middle', () => {
@@ -284,6 +313,47 @@ describe('the spiral', () => {
     expect(BOARD.tiles / BOARD.turns).toBeGreaterThan(20)
     // And long enough to be a race rather than a lap of a table.
     expect(trackLength()).toBeGreaterThan(BOARD.outer * 8)
+  })
+
+  it('keeps the whole of the last tile inside the crater rim', () => {
+    // A tile's corner is the furthest part of it, and the rounded corner still
+    // reaches about 1.15 times the half-width from the middle.
+    const last = tiles[tiles.length - 1]
+    expect(last.radius + BOARD.tileRadius * 1.2).toBeLessThan(ISLAND.crater)
+  })
+
+  it('joins each tile to the next with a dotted line', () => {
+    const dots = connectorDots()
+    // Several dots per gap, or it is not a line.
+    expect(dots.length).toBeGreaterThan((tiles.length - 1) * 3)
+    // Never on a tile: each dot is clear of every tile it could sit under.
+    // Measured in three dimensions, not across the map - where the road climbs
+    // the crater wall two tiles are metres apart on the map and twenty apart in
+    // height, and it is the second number that says whether a dot is on one.
+    for (const dot of dots) {
+      for (const tile of tiles) {
+        const apart = Math.hypot(dot.x - tile.x, dot.y - tile.y, dot.z - tile.z)
+        expect(apart).toBeGreaterThan(BOARD.tileRadius)
+      }
+    }
+    // Evenly dotted, not clumped: neighbours within a gap are about a spacing
+    // apart, and a gap between two gaps is bigger than one between two dots.
+    const nearest = dots.map((d, i) =>
+      i === 0
+        ? Infinity
+        : Math.hypot(d.x - dots[i - 1].x, d.y - dots[i - 1].y, d.z - dots[i - 1].z),
+    )
+    const within = nearest.filter((n) => n < BOARD.dotSpacing * 2)
+    for (const n of within) {
+      expect(n).toBeGreaterThan(BOARD.dotSpacing * 0.5)
+      expect(n).toBeLessThan(BOARD.dotSpacing * 1.5)
+    }
+  })
+
+  it('runs the dotted line down the road, and never off the island', () => {
+    for (const dot of connectorDots()) {
+      expect(Math.hypot(dot.x, dot.z)).toBeLessThan(BOARD.outer * (1 + 0.3))
+    }
   })
 
   it('gives the same board every time', () => {

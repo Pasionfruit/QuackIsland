@@ -272,7 +272,9 @@
         "drawCallsMax": 8
       },
       "measured": null,
-      "blockers": []
+      "blockers": [
+        "Gate infrastructure blocker: passed dependency 52-turn-order has no contract.snapshot.d.ts, so check:contracts fails even though check:frozen confirms it is untouched. The declaration generator must be repaired and 52-turn-order reopened/re-gated to create the missing snapshot before 53-board-movement can reach review."
+      ]
     },
     {
       "id": "01-terrain",
@@ -4657,10 +4659,10 @@
       "dependents": [
         "53-board-movement"
       ],
-      "generation": 2,
+      "generation": 3,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/52-turn-order/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -4698,12 +4700,12 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T22:00:09.732Z"
+          "at": "2026-09-20T22:39:00.505Z"
         },
         "human": {
           "status": "pass",
-          "at": "2026-09-20T22:01:15.646Z",
-          "note": "Completion handoff approved"
+          "at": "2026-09-20T22:40:44.058Z",
+          "note": "Contract snapshot repair approved"
         },
         "history": [
           {
@@ -4715,15 +4717,21 @@
             "at": "2026-09-20T22:01:15.646Z",
             "result": "pass",
             "note": "Completion handoff approved"
+          },
+          {
+            "at": "2026-09-20T22:40:44.058Z",
+            "result": "pass",
+            "note": "Contract snapshot repair approved"
           }
         ]
       },
       "freeze": {
-        "sha256": "e9c11611166437342fe7ac88ed1b3cfdd658e8de411ebe2d62345fc3946159bc",
+        "sha256": "4a113c22a30dacb95f60763db40c68c0fc931ad81f439ebe780b063f6bd79d59",
         "files": {
           "src/modules/52-turn-order/MODULE.md": "f06e20d15e3d9f2477359831baf3c77e0cc37027c256c62563902b2881e347a7",
           "src/modules/52-turn-order/__tests__/protocol.test.ts": "e91efc725192766fb3e47fb65282a9a9d7d2264a9460e14565468b9eaba96682",
           "src/modules/52-turn-order/__tests__/rules.test.ts": "b117161a5eb2a289aa545919b65b41a48cb131bd9bfc4c5871cde35365902eb6",
+          "src/modules/52-turn-order/contract.snapshot.d.ts": "031f9443faef83e2edc05e5a72dc9456a74fc672fa6c05950e7507aa3aa01f15",
           "src/modules/52-turn-order/index.ts": "b5e813504bde02ecb486f5178470e670eace0154f91698f807f92a44073ea77f",
           "src/modules/52-turn-order/internal/TurnOrderView.tsx": "05228618127901d58d58468f61e218c4a47da9bbe106f3e9c3097c563d57f077",
           "src/modules/52-turn-order/internal/protocol.ts": "db8833ba508f36a2847da8fd631ee29dd1a4818c595d58ceb7fcdaf06c708dc4",
@@ -4731,8 +4739,8 @@
           "src/modules/52-turn-order/internal/state.ts": "2c995fb190ce31354049dcf819b936d904d93fd88cb6b95ee61d5f083cb5e393",
           "src/modules/52-turn-order/internal/turn-order.css": "3e42c70d2500d7ef6066ea8209134261fe293eea3607f422d08138d6901a5038"
         },
-        "at": "2026-09-20T22:01:15.646Z",
-        "commit": "fbd6475"
+        "at": "2026-09-20T22:40:44.058Z",
+        "commit": "731abda"
       },
       "nonGoals": [
         "No board movement, tile actions, obstacles or summit win condition",
@@ -4752,6 +4760,12 @@
           "reason": "Add a public completion handoff for 53-board-movement",
           "priorSha256": "331820e76f0540798548d8a5c7acf7220c44015e6656ebb5ea46d3d5dbd1f977",
           "generation": 1
+        },
+        {
+          "at": "2026-09-20T22:35:24.268Z",
+          "reason": "Repair missing contract snapshot generation required by 53-board-movement",
+          "priorSha256": "e9c11611166437342fe7ac88ed1b3cfdd658e8de411ebe2d62345fc3946159bc",
+          "generation": 2
         }
       ]
     },
@@ -4779,39 +4793,39 @@
         {
           "id": "53.1",
           "title": "Pure board-session state from the frozen turn order, player positions, active turn and validation",
-          "status": "planned"
+          "status": "done"
         },
         {
           "id": "53.2",
           "title": "Host-authoritative seeded d6 rolls, idempotent movement, round completion and summit winner",
-          "status": "planned"
+          "status": "done"
         },
         {
           "id": "53.3",
           "title": "Revisioned room snapshots, late-subscriber sync and host handoff over the public network contract",
-          "status": "planned"
+          "status": "done"
         },
         {
           "id": "53.4",
           "title": "Move each local player along existing board tiles while ordinary network position sync carries remote bodies",
-          "status": "planned"
+          "status": "done"
         },
         {
           "id": "53.5",
           "title": "Active-player roll interface, position table, round-complete handoff and summit result",
-          "status": "planned"
+          "status": "done"
         },
         {
           "id": "53.6",
           "title": "Two-player and eight-player verification, workflow scripts, contract and MODULE.md",
-          "status": "planned"
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "red",
-          "at": null,
-          "failed": "not run"
+          "at": "2026-09-20T22:41:50.436Z",
+          "failed": "test"
         },
         "human": {
           "status": "pending"
@@ -4831,7 +4845,7 @@
       },
       "measured": null,
       "blockers": [
-        "Frozen dependency 52-turn-order keeps its full-screen dialog and keyboard capture active after phase=complete, but exposes no public handoff or dismissal API. 53-board-movement cannot present roll controls without covering or bypassing a frozen dependency. Reopen 52 and add an additive public handoff that lets the next module acknowledge the final order while retaining its state."
+        "Full gate is blocked by a reproducible failure in dependency 10-party's board.test.ts: BOARD.tileRadius is mutated during that dependency's own test process, causing either the eight-duck tile-size assertion or dotted-line clearance assertion to fail. Module 53 only reads the public BOARD contract, its focused 11 tests pass, and project boundaries prohibit repairing dependency internals from this module."
       ]
     }
   ]

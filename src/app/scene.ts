@@ -23,6 +23,7 @@ import { ISLAND, Party, getParty, groundWithIsland } from '../modules/10-party'
 import { getGameMode } from '../modules/13-modes'
 import { getMinigameScreen } from '../modules/15-minigames'
 import { TurnOrder } from '../modules/52-turn-order'
+import { BoardMovement } from '../modules/53-board-movement'
 import { isSettingsOpen } from './settingsOpen'
 
 /**
@@ -193,6 +194,7 @@ export const SCENE: SceneEntry[] = [
   { id: '09-net', order: 90, enabled: true, Component: NetPlayers },
   { id: '10-party', order: 100, enabled: true, Component: PartyIfChosen },
   { id: '52-turn-order', order: 520, enabled: true, Component: TurnOrder },
+  { id: '53-board-movement', order: 530, enabled: true, Component: BoardMovement },
 ]
 
 // Toggling a module on or off has to reach the canvas, which is a different

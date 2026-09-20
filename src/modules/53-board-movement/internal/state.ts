@@ -108,7 +108,8 @@ function makeSession(): BoardMovementSnapshot | null {
   const order = getTurnOrder()
   if (!net.host || !net.room || !net.id || order.phase !== 'complete' || !order.sessionId) return null
   const seed = hashSeed(order.seed, `board-movement:${order.sessionId}`)
-  const snapshot = createBoardMovement(order, seed, BOARD.tiles)
+  const created = createBoardMovement(order, seed, BOARD.tiles)
+  const snapshot = reconcileBoardPlayers(created, connectedPlayerIds())
   adoptSnapshot(snapshot)
   if (snapshot.phase !== 'invalid') acknowledgeTurnOrder(order.sessionId)
   return snapshot

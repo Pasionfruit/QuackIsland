@@ -41,8 +41,12 @@ export const BOARD = {
    * Inside the rim rather than on it. The rim is a 58-degree crease, so a tile
    * three metres outside it sits five metres down a wall - which is a strange
    * place to finish a race whose prize is on the flat ground just past it.
+   *
+   * Far enough in that the whole tile is inside it, too: a tile reaches about
+   * five metres from its middle at the corner, so its middle has to be at
+   * least that far in from the rim or the corner hangs over the wall.
    */
-  inner: ISLAND.crater * 0.8,
+  inner: ISLAND.crater * 0.7,
   /** How many times round. */
   turns: 3,
   /**
@@ -59,13 +63,16 @@ export const BOARD = {
   /** Where in the wave the track starts, so tile one is not on a crest. */
   wavePhase: 0.6,
   /**
-   * How wide a tile is: **half again as wide as the duck standing on it**.
+   * How far a tile reaches from its middle to its edge: **room for a full party
+   * of eight ducks to stand on it at once, and walk about**.
    *
    * Written against the duck rather than as a number, because that is the
-   * actual requirement - a tile you can stand on with a little room, and no
-   * more.
+   * actual requirement. Eight discs fit in a circle 3.31 of their radii out, so
+   * the floor is 3.5 duck radii; this is three times that, which is what
+   * leaves room to move rather than just to stand. The rounded corners cost
+   * nothing at either size: the inscribed circle is what has to hold.
    */
-  tileRadius: PLAYER.radius * 1.5,
+  tileRadius: PLAYER.radius * 10.5,
   /**
    * How far a tile sits above the ground, in metres.
    *
@@ -73,13 +80,28 @@ export const BOARD = {
    * it. Tiles are also tilted to the slope they sit on, which is what stops
    * the uphill corner burying itself on a cone this steep.
    */
-  tileLift: 0.34,
+  tileLift: 0.5,
   /** How thick a tile is. */
   tileThickness: 0.22,
   /** How round the corners of a tile are, as a fraction of its half-width. */
   tileRound: 0.34,
   /** Every nth tile is marked, so progress is countable at a glance. */
   markEvery: 10,
+  /** How wide each dot of the dotted line between tiles is, across. */
+  dotRadius: 0.32,
+  /** Roughly how far apart the dots are, along the ground, in metres. */
+  dotSpacing: 1.7,
+  /**
+   * How far the line stops short of a tile's edge, in metres.
+   *
+   * The tile is a square turned to face along the track, and the track leans up
+   * to twenty degrees off dead ahead where the wave is steepest, so a tile is a
+   * little longer along the road than it is wide. This covers that and leaves a
+   * gap you can see.
+   */
+  dotMargin: 0.9,
+  /** How far a dot sits above the ground, in metres. Less than a tile. */
+  dotLift: 0.16,
 } as const
 
 export interface Tile {
@@ -201,6 +223,43 @@ export function buildBoard(count: number = BOARD.tiles): Tile[] {
     })
   }
   return tiles
+}
+
+export interface ConnectorDot {
+  /** Island-local, on the ground; the view lifts it and lays it in the slope. */
+  x: number
+  y: number
+  z: number
+}
+
+/**
+ * The dotted line joining each tile to the next, as the dots that make it up.
+ *
+ * Walked along the very same curve the tiles are, so the line runs down the
+ * middle of the road rather than cutting corners between tile centres - which
+ * on a spiral this tight would put it off the track. Each gap gets a whole
+ * number of dots, spread evenly and centred, so the line stops the same
+ * distance short of both tiles instead of running out mid-dot.
+ */
+export function connectorDots(count: number = BOARD.tiles): ConnectorDot[] {
+  const table = arcTable()
+  const total = table.arc[table.arc.length - 1]
+  const gaps = Math.max(1, count - 1)
+  const step = total / gaps
+  const clear = BOARD.tileRadius + BOARD.dotMargin
+  const dots: ConnectorDot[] = []
+
+  for (let i = 0; i < gaps; i++) {
+    const from = i * step + clear
+    const to = (i + 1) * step - clear
+    if (to <= from) continue
+    const n = Math.max(1, Math.round((to - from) / BOARD.dotSpacing))
+    for (let k = 0; k < n; k++) {
+      const point = trackPointAt(angleAtLength(table, from + ((k + 0.5) * (to - from)) / n))
+      dots.push({ x: point.x, y: point.y, z: point.z })
+    }
+  }
+  return dots
 }
 
 /** How long the whole track is, in metres, along the ground it climbs. */

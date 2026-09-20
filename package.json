@@ -27,7 +27,10 @@
     "brief": "node scripts/brief.mjs",
     "brief:turn-order": "node scripts/brief.mjs 52-turn-order",
     "test:turn-order": "vitest run src/modules/52-turn-order",
-    "gate:turn-order": "node scripts/gate.mjs 52-turn-order"
+    "gate:turn-order": "node scripts/gate.mjs 52-turn-order",
+    "brief:board-movement": "node scripts/brief.mjs 53-board-movement",
+    "test:board-movement": "vitest run src/modules/53-board-movement",
+    "gate:board-movement": "node scripts/gate.mjs 53-board-movement"
   },
   "dependencies": {
     "@react-three/fiber": "^9.7.0",

@@ -6,14 +6,15 @@
  * not anybody is playing on it - and a board that appeared out of nothing
  * would read as a bug rather than as a place.
  *
- * Four draw calls: the land, the tiles, the crater rim, and the treasure.
- * The tiles are one instanced mesh, so a hundred and twenty of them cost the
- * same as one.
+ * Five draw calls: the land, the tiles, the dotted line between them, the
+ * crater rim, and the treasure. The tiles and the dots are each one instanced
+ * mesh, so a hundred and twenty tiles and a thousand dots cost one call apiece.
  */
 import { useEffect, useMemo, useRef } from 'react'
 import {
   BufferAttribute,
   BufferGeometry,
+  CircleGeometry,
   Color,
   ExtrudeGeometry,
   InstancedMesh,
@@ -22,7 +23,7 @@ import {
   Shape,
   Vector3,
 } from 'three'
-import { BOARD, buildBoard } from './board'
+import { BOARD, buildBoard, connectorDots } from './board'
 import { ISLAND, partyHeightLocalAt } from './island'
 import { buildIslandMesh } from './mesh'
 
@@ -111,10 +112,31 @@ const GOLD = '#f0c34a'
 
 export function Arena() {
   const tilesMesh = useRef<InstancedMesh>(null)
+  const dotsMesh = useRef<InstancedMesh>(null)
 
   const land = useMemo(() => buildIsland(), [])
   const tileGeometry = useMemo(() => buildTile(), [])
   const tiles = useMemo(() => buildBoard(), [])
+  const dots = useMemo(() => connectorDots(), [])
+  const dotGeometry = useMemo(() => {
+    // A flat disc, facing up; each dot is tipped into the slope it sits on.
+    const geometry = new CircleGeometry(BOARD.dotRadius, 10)
+    geometry.rotateX(-Math.PI / 2)
+    return geometry
+  }, [])
+  const dotMaterial = useMemo(
+    () =>
+      new MeshStandardMaterial({
+        color: '#ffffff',
+        roughness: 0.6,
+        metalness: 0,
+        // A little light of its own, so the line still reads on the shaded side
+        // of the cone.
+        emissive: new Color('#ffffff'),
+        emissiveIntensity: 0.25,
+      }),
+    [],
+  )
 
   const sand = useMemo(
     () => new MeshStandardMaterial({ color: SAND, roughness: 0.95, metalness: 0 }),
@@ -180,7 +202,36 @@ export function Arena() {
   }, [tiles])
 
   useEffect(() => {
+    const mesh = dotsMesh.current
+    if (!mesh) return
+
+    const dummy = new Object3D()
+    const normal = new Vector3()
+    const up = new Vector3(0, 1, 0)
+
+    for (let i = 0; i < dots.length; i++) {
+      const dot = dots[i]
+      groundNormalAt(dot.x, dot.z, normal)
+      dummy.position.set(
+        dot.x + normal.x * BOARD.dotLift,
+        dot.y + normal.y * BOARD.dotLift,
+        dot.z + normal.z * BOARD.dotLift,
+      )
+      dummy.quaternion.setFromUnitVectors(up, normal)
+      dummy.updateMatrix()
+      mesh.setMatrixAt(i, dummy.matrix)
+    }
+
+    mesh.count = dots.length
+    mesh.layers.enable(BOARD_LAYER)
+    mesh.instanceMatrix.needsUpdate = true
+    mesh.computeBoundingSphere()
+  }, [dots])
+
+  useEffect(() => {
     return () => {
+      dotGeometry.dispose()
+      dotMaterial.dispose()
       land.dispose()
       tileGeometry.dispose()
       sand.dispose()
@@ -188,7 +239,7 @@ export function Arena() {
       rock.dispose()
       gold.dispose()
     }
-  }, [land, tileGeometry, sand, tileMaterial, rock, gold])
+  }, [dotGeometry, dotMaterial, land, tileGeometry, sand, tileMaterial, rock, gold])
 
   return (
     <group position={[ISLAND.centreX, 0, ISLAND.centreZ]}>
@@ -198,6 +249,11 @@ export function Arena() {
         ref={tilesMesh}
         args={[tileGeometry, tileMaterial, BOARD.tiles]}
         receiveShadow
+      />
+
+      <instancedMesh
+        ref={dotsMesh}
+        args={[dotGeometry, dotMaterial, dots.length]}
       />
 
       {/* The crater rim: a low wall of rock round the flat top.

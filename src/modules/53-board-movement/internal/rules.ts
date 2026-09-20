@@ -152,6 +152,8 @@ export function applyBoardRoll(
   actionId: string,
 ): BoardMovementSnapshot {
   if (snapshot.phase !== 'turn' || activeBoardPlayer(snapshot) !== playerId) return snapshot
+  const activeTurnIndex = snapshot.activeTurnIndex
+  if (activeTurnIndex === null) return snapshot
   if (!validBoardDice(dice)) return snapshot
   if (!actionId || actionId.length > 80 || snapshot.appliedActionIds.includes(actionId)) return snapshot
 
@@ -168,13 +170,13 @@ export function applyBoardRoll(
   ].slice(-BOARD_MOVEMENT.maxMoves)
   const appliedActionIds = [...snapshot.appliedActionIds, actionId].slice(-BOARD_MOVEMENT.maxActionHistory)
   const won = toTile === snapshot.tileCount - 1
-  const lastTurn = snapshot.activeTurnIndex === snapshot.turnOrder.length - 1
+  const lastTurn = activeTurnIndex === snapshot.turnOrder.length - 1
 
   return {
     ...snapshot,
     revision: snapshot.revision + 1,
     phase: won ? 'won' : lastTurn ? 'round_complete' : 'turn',
-    activeTurnIndex: won || lastTurn ? null : snapshot.activeTurnIndex + 1,
+    activeTurnIndex: won || lastTurn ? null : activeTurnIndex + 1,
     positions,
     moves,
     winnerId: won ? playerId : null,

@@ -181,7 +181,8 @@ from the island's edge to the treasure.
 
 | | |
 | --- | --- |
-| Tile | a **rounded square**, 1.2 m across — half again the duck's 0.8 m |
+| Tile | a **rounded square**, 8.4 m across — eight of the duck's 0.8 m fit with room to walk about |
+| Line | a **dotted white line** of flat dots down the road between each pair of tiles, stopping short of both (`connectorDots()`, one instanced draw call) |
 | Spacing | 20.3 m of walking between one and the next, 40 tiles a lap |
 | Climb | 9 m up to 150 m — the whole mountain — at a **5.8% gradient** |
 | Cone | 58° at the crater, easing to flat at its foot; 150 m tall |
@@ -383,8 +384,8 @@ Two browsers in one lobby; `DEPLOY.md` has the commands.
   rim with one side bitten out of it, not a ring and not a bowl.
 - **Sail round the island.** The coast should be visibly longer one way than the
   other — never an arc you could have drawn with a compass.
-- **Stand on a tile.** It should be about half again your own width: room to
-  stand, and no more.
+- **Stand on a tile.** It should be wide enough for eight of you at once,
+  with room to walk about, and a dotted white line running on to the next one.
 - **Look up from halfway.** You should be able to see the track above you
   wrapping the cone, and the treasure over the rim.
 - **Step off the last tile.** The treasure should be right there, inside the

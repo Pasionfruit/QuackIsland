@@ -8,11 +8,31 @@
  * useful failure and a puzzling one.
  */
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, rmSync, existsSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { fail, moduleDir, ok, readPipeline } from './lib/pipeline.mjs'
+import { fail, moduleDir, ok, readPipeline, ROOT } from './lib/pipeline.mjs'
+
+/** Find the requested entry declaration regardless of TypeScript's common source root. */
+function emittedDeclaration(out, id) {
+  const rootEntry = join(out, 'index.d.ts')
+  if (existsSync(rootEntry)) return rootEntry
+
+  const matches = []
+  const pending = [out]
+  while (pending.length > 0) {
+    const dir = pending.pop()
+    for (const item of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, item.name)
+      if (item.isDirectory()) pending.push(path)
+      else if (item.name === 'index.d.ts' && dir.replaceAll('\\', '/').endsWith(`/${id}`)) {
+        matches.push(path)
+      }
+    }
+  }
+  return matches.length === 1 ? matches[0] : null
+}
 
 /** Emit a .d.ts for one module's public entry point. */
 export function declarationFor(id) {
@@ -21,24 +41,25 @@ export function declarationFor(id) {
   const out = mkdtempSync(join(tmpdir(), 'contract-'))
   try {
     execFileSync(
-      process.platform === 'win32' ? 'npx.cmd' : 'npx',
-      ['tsc', entry, '--declaration', '--emitDeclarationOnly', '--outDir', out,
+      process.execPath,
+      [join(ROOT, 'node_modules', 'typescript', 'bin', 'tsc'), entry,
+       '--declaration', '--emitDeclarationOnly', '--outDir', out,
        '--jsx', 'react-jsx', '--module', 'esnext', '--moduleResolution', 'bundler',
        '--target', 'ES2020', '--skipLibCheck', '--strict'],
       { stdio: 'pipe' },
     )
-    const f = join(out, 'index.d.ts')
-    return existsSync(f) ? readFileSync(f, 'utf8').replace(/\r\n/g, '\n').trim() : null
+    const f = emittedDeclaration(out, id)
+    return f ? readFileSync(f, 'utf8').replace(/\r\n/g, '\n').trim() : null
   } catch (err) {
     // tsc exits non-zero on type errors; typecheck reports those properly.
-    const f = join(out, 'index.d.ts')
-    return existsSync(f) ? readFileSync(f, 'utf8').replace(/\r\n/g, '\n').trim() : null
+    const f = emittedDeclaration(out, id)
+    return f ? readFileSync(f, 'utf8').replace(/\r\n/g, '\n').trim() : null
   } finally {
     rmSync(out, { recursive: true, force: true })
   }
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const pipeline = readPipeline()
   console.log('\ncontracts\n')
   let bad = 0
