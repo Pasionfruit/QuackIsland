@@ -19,14 +19,28 @@
  */
 import { createRng, hashSeed } from '../../00-core'
 
+/**
+ * The votes being shown and added into the total in the middle, one at a time: they are
+ * shown for a moment, then each is added in `each` seconds after the last.
+ */
+export const REVEAL = { show: 0.5, each: 0.32 } as const
+
+/**
+ * The gear turning a side at a time, like the teeth of a clicking gear: each side takes
+ * `move` seconds to swing round and then holds still until `pace` is up, and only then
+ * does the next one go. The most it ever clicks is a side fewer than the most players
+ * there can be, seven, and it has the time for all of them.
+ */
+export const TURN = { pace: 0.6, move: 0.26, most: 7 } as const
+
 /** Seconds of each phase of a round. */
 export const PHASES = {
   /** The number is up: five seconds to vote. */
   vote: 5,
-  /** The votes are shown. */
-  reveal: 1.8,
-  /** The gear turns. */
-  turn: 2.6,
+  /** The votes are shown, then added into the total one at a time: room for eight. */
+  reveal: REVEAL.show + 8 * REVEAL.each + 0.14,
+  /** The gear turns, a side at a time: room for seven clicks. */
+  turn: TURN.most * TURN.pace,
   /** The side at the mark drops away. */
   drop: 1.6,
   /** Everybody left steps onto the new gear. */
@@ -42,6 +56,13 @@ export const NUMBERS = { least: 2, most: 15 } as const
 
 export const ROUND = {
   countdown: 0,
+  /**
+   * The sample round played before round one, seconds: one round's worth, on a gear of four
+   * made-up players, so that anybody who has not played sees how it goes before it counts.
+   * A real game has it - see `Game.lead` - and the rules' own tests, which build a game
+   * without one, do not.
+   */
+  demo: ROUND_LENGTH,
   /** How long the host waits past the end of the vote for a guest's vote on the wire, seconds. */
   grace: 0.3,
 } as const
@@ -145,6 +166,8 @@ export interface Game {
   /** The round the seats and the votes are for. */
   round: number
   results: Result[]
+  /** Seconds before round one: the sample round. Nothing counts until they are over. */
+  lead: number
 }
 
 export interface Entrant {
@@ -206,7 +229,7 @@ function seat(game: Game): void {
   for (const p of game.players) p.vote = null
 }
 
-export function createGame(seed: number, entrants: readonly Entrant[], id = 1): Game {
+export function createGame(seed: number, entrants: readonly Entrant[], id = 1, lead = 0): Game {
   const game: Game = {
     seed,
     id,
@@ -215,14 +238,16 @@ export function createGame(seed: number, entrants: readonly Entrant[], id = 1): 
     round: 1,
     seats: [],
     results: [],
+    lead,
     players: entrants.map((e) => ({ id: e.id, mine: e.mine ?? false, bot: e.bot ?? false, x: 0, z: 0, vote: null, out: null, left: false, leftAt: null })),
   }
   seat(game)
   return game
 }
 
+/** The game's clock: from the end of the sample round, and negative until then. */
 export function clock(game: Game): number {
-  return game.elapsed - ROUND.countdown
+  return game.elapsed - game.lead - ROUND.countdown
 }
 
 /** Which side a player is on this round, or -1. */

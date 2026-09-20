@@ -26,10 +26,12 @@ import {
   BUILD_STEPS,
   MINIGAMES,
   MINIGAME_TARGET,
+  minigameById,
   minigamesOfKind,
   nextStep,
   progress,
   type Minigame,
+  type MinigameId,
   type MinigameKind,
 } from './catalogue'
 import {
@@ -55,6 +57,17 @@ export const ROWS = 4
 export const PER_PAGE = COLUMNS * ROWS
 
 type Filter = 'all' | MinigameKind
+
+/**
+ * A game for the party, picked at random from the ones that can be played - the
+ * ones somebody has built, not the ones that are only a name or a free slot - or
+ * `null` when there are none. `random` is a number in [0, 1): a test's, or the dice's.
+ */
+export function randomPlayable(built: readonly MinigameId[], random: () => number = Math.random): MinigameId | null {
+  const playable = built.filter((id) => !minigameById(id).reserved)
+  if (playable.length === 0) return null
+  return playable[Math.min(playable.length - 1, Math.floor(random() * playable.length))]
+}
 
 /** How many pages `count` tiles come to: always at least one, even with nothing on it. */
 export function pageCount(count: number): number {
@@ -109,6 +122,22 @@ export function Dashboard() {
         <span style={{ color: ISLAND.fadedInk }}>Volcano Island</span>
 
         <span style={{ flex: 1 }} />
+
+        {/* The dice: a game picked at random, from the ones that can be played, for the whole party. */}
+        <button
+          type="button"
+          onClick={clicked(() => {
+            const id = randomPlayable(builtMinigames())
+            if (id) openMinigame(id)
+          }, SELECT_GAME_SOUND)}
+          disabled={built === 0}
+          aria-label="pick a random game"
+          title="Pick a random game for the party"
+          data-dice
+          style={{ ...button, ...dice, opacity: built === 0 ? 0.4 : 1 }}
+        >
+          🎲
+        </button>
 
         <Tab now={filter} is="all" onPick={setFilter}>
           all {MINIGAMES.length}
@@ -281,6 +310,8 @@ const grid: React.CSSProperties = {
   gridTemplateRows: `repeat(${ROWS}, 1fr)`,
   gap: 12,
 }
+
+const dice: React.CSSProperties = { fontSize: 18, lineHeight: 1, padding: '4px 10px' }
 
 const pager: React.CSSProperties = {
   flex: '0 0 auto',

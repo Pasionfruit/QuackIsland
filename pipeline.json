@@ -1516,6 +1516,16 @@
           "status": "done"
         },
         {
+          "id": "15.11",
+          "title": "A dice on the dashboard that picks a built game at random for the party",
+          "status": "done"
+        },
+        {
+          "id": "15.12",
+          "title": "One-vs-all games open on a party tab where the host clicks who the 1 is, or rolls a dice",
+          "status": "done"
+        },
+        {
           "id": "15.7",
           "title": "The games themselves, one build at a time, three stages each",
           "status": "planned"
@@ -1524,7 +1534,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T18:09:42.631Z"
+          "at": "2026-09-20T19:42:17.812Z"
         },
         "human": {
           "status": "pending"
@@ -4068,6 +4078,11 @@
           "status": "done"
         },
         {
+          "id": "45.9",
+          "title": "A sample round before the game, votes added into the total one at a time, and the gear clicking round a side at a time with a counter going down",
+          "status": "done"
+        },
+        {
           "id": "45.8",
           "title": "The assets: models, sprites and sound in place of primitives",
           "status": "planned"
@@ -4076,7 +4091,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-19T04:34:34.126Z"
+          "at": "2026-09-20T18:36:08.750Z"
         },
         "human": {
           "status": "pending"

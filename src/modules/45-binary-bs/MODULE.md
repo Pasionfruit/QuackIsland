@@ -34,17 +34,42 @@ before them, whose owner now wants a second 0, and so on. Nobody sees anybody
 else's vote until the five seconds are up: that is where the BS comes in. You
 see *who* has voted (a tick over their head, and in their pill), never *what*.
 
+## The sample round
+
+**Before round one there is a round played for show** (`ROUND.demo`, one round's length,
+about fifteen seconds), on a gear of four made-up players - Ann, Bo, Cy and Di - so that
+anybody who has not played sees how it goes before it counts. The number is 7, so if
+everybody voted 1 the striped side, Di's, would go; Bo votes 0, one side less, and it
+is Cy's that goes. It is a real `Game` on its own clock, run by the same rules, with
+the votes put in for it at set moments (`viewOf`, `SAMPLE`); the yellow box at the bottom
+says what is happening as it happens, and the pill at the top says *sample round*. The
+game's own clock (`clock`) starts when it is over - a real game has a `lead` of that long
+(`createGame`'s fourth argument; the rules' own tests build one without) - so nothing
+counts, and nobody can vote or walk, until then. Every screen works it out from the same
+clock.
+
 ## The round
 
-**About twelve seconds**, all arithmetic on the clock (`when`):
+**About fifteen seconds**, all arithmetic on the clock (`when`):
 
 | Phase | Seconds | What happens |
 | --- | --- | --- |
 | vote | 5 | The number is up, the marked side striped. Vote, and change your mind if you like. Walk about your side. |
-| reveal | 1.8 | Everybody's vote over their head, and the sum at the top: *7 − 2 zeros = 5 → side 1 of 4*. |
-| turn | 2.6 | The gear turns that many sides, everybody riding it. |
+| reveal | 3.2 | Everybody's vote over their head, and then **the votes added into the total in the middle, one at a time** (0.5 s in, then one every 0.32 s: room for eight): a 0 takes one off, a 1 adds nothing, and the total goes *7 → 6 → 6 → 5*. The sum ends up at the top: *7 − 2 zeros = 5 → 5 mod 4 = 1 → side 2*. |
+| turn | 4.2 | **The gear turns a side at a time**, like the teeth of a clicking gear, with a counter going down in the middle: room for seven clicks. |
 | drop | 1.6 | The side at the mark drops away with whoever is on it. |
 | reseat | 1.2 | Everybody left walks onto a new gear with a side fewer, in roster order. |
+
+**The tally** (`tallied`, `totalAfter`): once the votes are shown they are added into the number in
+the middle in the order of the sides, and the top of the screen says whose vote has just gone in and what it
+did. It is only how the count is shown - the count itself is as it was, the number less the zeros.
+
+**The turn** (`turnState`, `clicksOf`): the gear turns **one side at a time**. Each side swings round in 0.26 s
+and then **holds still for the rest of 0.6 s** before the next one moves, so every one is clearly at rest
+before the next goes; and **the counter in the middle goes down by one as each stops**, from the sides to turn
+to 0 - the number of sides the count comes to round the gear, so never more than one less than the sides (a count
+of 12 on a five-sided gear is two clicks, 12 mod 5). If the count lands on the mark already there are no clicks
+and the counter starts at 0. The number in the middle stays the right way up while the gear turns under it.
 
 The number is 2 to 15, from the seed and the round. **Exactly one side goes each
 round**, so a game of `n` is `n - 1` rounds. If the side that comes round belongs
@@ -71,13 +96,14 @@ then anybody who left while in.
   at the top with the number, the sides and who is marked, and over each head is
   a tick once they have voted - **your own vote, over your own head**.
 - **At the reveal**, everybody's vote over their head (0 blue, 1 green, – for no
-  vote), and the sum at the top.
-- **The turn and the drop**: the gear grinds round, everybody on it, then the side
-  at the mark falls away, whoever is on it tumbling after. *X is out!*
+  vote), and then **the votes added into the total in the middle one at a time**, with the sum at the top.
+- **The turn and the drop**: the gear clicks round a side at a time with a counter going
+  down in the middle, everybody on it, then the side at the mark falls away, whoever is on it
+  tumbling after. *X is out!*
 - **The HUD:** the round, how many are left, and a pill per player with their side
   and - a tick during the vote, their vote after it.
-- **Sound:** a sting under the vote, the grind of the turn, a crash as the side
-  drops, a fall for whoever goes, a bump for your vote.
+- **Sound:** a sting under the vote, a tick as each vote is added into the total, a click as each
+  side of the gear comes to rest, a crash as the side drops, a fall for whoever goes, a bump for your vote.
 - **The results** are the podium, from `useFinish`.
 
 ## One gear across the lobby
@@ -118,7 +144,7 @@ testing, not because anybody else needs them.
 
 | Export | What it is |
 | --- | --- |
-| `PHASES`, `ROUND_LENGTH`, `NUMBERS`, `ROUND`, `GEAR`, `COLOURS` | The numbers. |
+| `PHASES`, `ROUND_LENGTH`, `NUMBERS`, `ROUND`, `REVEAL`, `TURN`, `GEAR`, `COLOURS` | The numbers. |
 | `when`, `voteEnds`, `dropsAt`, `Phase`, `When` | The schedule. |
 | `numberFor`, `markedSide`, `tally`, `mod` | The count. |
 | `sideAngle`, `onSide`, `seatSpot`, `clampToSide` | Where the sides are. |

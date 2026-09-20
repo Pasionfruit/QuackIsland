@@ -128,6 +128,8 @@ export {
   useLoopCue,
 } from './internal/sound'
 
+export { chooseTheOne, getTheOne, isInParty, partyOf, randomOne, useTheOne, type Member } from './internal/party'
+
 export { MinigameScreen } from './internal/MinigameScreen'
 export { CountOver } from './internal/Transitions'
 export { TopTimer } from './internal/TopTimer'

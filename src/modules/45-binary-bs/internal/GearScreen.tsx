@@ -14,6 +14,7 @@ import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
 import { CUES, playCue, useFinish, type MinigameRun } from '../../15-minigames'
+import { clicksOf, isSample, sampleCaption, tallied, totalAfter, turnState, viewOf } from './display'
 import { GearScene } from './GearScene'
 import { COLOURS, PHASES, canVote, clock, isIn, markedSide, numberFor, placings, sideOf, voteEnds, when, type Game } from './rules'
 import { myId, newGame, waitingGame } from './setup'
@@ -112,34 +113,54 @@ export function GearScreen({ run }: { run: MinigameRun }) {
   const ready = game.players.length > 0
   const mineIndex = game.players.findIndex((p) => p.mine)
   const mine = game.players[mineIndex]
-  const t = clock(game)
+  // Before round one, what is drawn is the sample round: made-up players on a gear of four, run by the same rules.
+  const view = viewOf(game)
+  const sample = isSample(view)
+  const t = clock(view)
   const w = when(t)
-  useGearSounds(game)
-  const left = game.players.filter(isIn).length
-  const sides = game.seats.length
-  const number = ready ? numberFor(game.seed, game.round) : 0
+  useGearSounds(view)
+  const left = view.players.filter(isIn).length
+  const sides = view.seats.length
+  const number = ready ? numberFor(view.seed, view.round) : 0
   const marked = sides > 0 ? markedSide(number, sides) : -1
-  const markedWho = game.seats[marked]
-  const result = game.results.find((r) => r.round === game.round)
+  const markedWho = view.seats[marked]
+  const result = view.results.find((r) => r.round === view.round)
   const voting = mineIndex >= 0 && canVote(game, mineIndex)
 
   let call: { big: string; sub?: string; tone?: 'red' } | null = null
-  if (ready && !game.over && t >= 0 && w.round === game.round) {
+  if (ready && !view.over && t >= 0 && w.round === view.round) {
     if (w.phase === 'vote') {
       call = {
-        big: `${Math.max(0, voteEnds(game.round) - t).toFixed(1)}`,
-        sub: `${number} on a ${sides}-sided gear - ${markedWho !== undefined ? `${nameOf(game.players[markedWho].id)} ${markedWho === mineIndex ? 'are' : 'is'} marked` : ''} · every 0 turns it one side less`,
+        big: `${Math.max(0, voteEnds(view.round) - t).toFixed(1)}`,
+        sub: `${number} on a ${sides}-sided gear - ${markedWho !== undefined ? `${nameOf(view.players[markedWho].id)} ${markedWho === mineIndex ? 'are' : 'is'} marked` : ''} · every 0 takes one off`,
       }
     } else if (result) {
-      const victim = game.players[result.victim]
-      const sum = `${result.number} − ${result.zeros} zero${result.zeros === 1 ? '' : 's'} = ${result.steps} → side ${result.side + 1} of ${result.seats.length}`
-      if (w.phase === 'reveal' || w.phase === 'turn') call = { big: sum, sub: `turning ${result.steps}…` }
-      else call = { big: victim ? `${nameOf(victim.id)} ${result.victim === mineIndex ? 'are' : 'is'} out!` : 'Nobody on it', sub: sum, tone: 'red' }
+      const victim = view.players[result.victim]
+      const clicks = clicksOf(result)
+      // The number, less a one for each 0, and - if that is more than the gear has sides, or less than none - how many it comes to round the gear.
+      const sum = `${result.number} − ${result.zeros} zero${result.zeros === 1 ? '' : 's'} = ${result.steps}${result.steps === clicks ? '' : ` → ${result.steps} mod ${result.seats.length} = ${clicks}`} → side ${result.side + 1}`
+      if (w.phase === 'reveal') {
+        // The votes added into the total in the middle, one at a time.
+        const k = tallied(result, w)
+        const last = k > 0 ? result.seats[k - 1] : -1
+        const said = last >= 0 ? result.votes[last] : null
+        call =
+          k < result.seats.length
+            ? {
+                big: `${result.number} → ${totalAfter(result, k)}`,
+                sub: last >= 0 ? `${nameOf(view.players[last].id)} voted ${said === null ? '–' : said}: ${said === 0 ? 'takes one off' : 'adds nothing'} · ${k} of ${result.seats.length} added` : 'the votes are shown…',
+              }
+            : { big: sum, sub: `${clicks} side${clicks === 1 ? '' : 's'} to turn` }
+      } else if (w.phase === 'turn') {
+        // The counter going down as each side stops.
+        const left = clicks - turnState(clicks, w).done
+        call = { big: `${left}`, sub: left === 0 ? (clicks === 0 ? 'it is already at the mark' : 'stopped') : `side${left === 1 ? '' : 's'} still to turn` }
+      } else call = { big: victim ? `${nameOf(victim.id)} ${result.victim === mineIndex ? 'are' : 'is'} out!` : 'Nobody on it', sub: sum, tone: 'red' }
     }
   }
 
   let banner: { text: string; sub?: string; tone: 'out' | 'hint' } | null = null
-  if (ready && !game.over && mine) {
+  if (ready && !game.over && mine && !sample) {
     if (mine.out !== null) banner = t - mine.out < 3 ? { text: 'Your side went!', sub: 'watching the rest', tone: 'out' } : { text: 'Out - watching the rest', tone: 'hint' }
     else if (w.phase === 'vote' && mine.vote === null) banner = { text: 'Press 0 or 1', sub: marked === sideOf(game, mineIndex) ? 'your side is marked!' : 'votes are secret until the end', tone: 'hint' }
   }
@@ -154,8 +175,8 @@ export function GearScreen({ run }: { run: MinigameRun }) {
         <span style={{ fontWeight: 700, fontSize: 16 }}>Binary BS</span>
         {ready ? (
           <>
-            <span style={{ ...pill, background: LOOK.ink, color: '#fff' }} data-round={game.round}>
-              round {game.round}
+            <span style={{ ...pill, background: sample ? LOOK.sun : LOOK.ink, color: sample ? LOOK.ink : '#fff' }} data-round={sample ? 'sample' : view.round}>
+              {sample ? 'sample round' : `round ${view.round}`}
             </span>
             <span style={{ ...pill, background: LOOK.ink, color: '#fff' }} data-left={left}>
               {left} left
@@ -165,9 +186,9 @@ export function GearScreen({ run }: { run: MinigameRun }) {
           <span style={{ color: LOOK.faded }}>waiting for the host…</span>
         )}
         <span style={{ flex: 1 }} />
-        {game.players.map((p, index) => {
+        {view.players.map((p, index) => {
           const colour = COLOURS[index % COLOURS.length]
-          const side = sideOf(game, index)
+          const side = sideOf(view, index)
           const shown = result && w.phase !== 'vote' ? result.votes[index] : undefined
           return (
             <span
@@ -195,6 +216,14 @@ export function GearScreen({ run }: { run: MinigameRun }) {
 
       <div style={boardStyle} data-board>
         <Stage live={live} />
+
+        {sample ? (
+          <div style={sampleWrap} data-sample={w.phase}>
+            <div style={sampleBox}>
+              <b>{sampleCaption(w).title}</b> · {sampleCaption(w).text} <i>(your 0 and 1 count from round one)</i>
+            </div>
+          </div>
+        ) : null}
 
         {call ? (
           <div style={callWrap} data-phase={w.phase}>
@@ -266,17 +295,33 @@ const GL = { antialias: true, powerPreference: 'high-performance' as const }
 
 /** A tick through the last seconds of the vote, the gear grinding round, a crash as a side drops, a fall for whoever goes. */
 function useGearSounds(game: Game): void {
-  const seen = useRef<{ id: number; phase: string; out: Set<string> }>({ id: -1, phase: '', out: new Set() })
+  const seen = useRef<{ id: number; phase: string; out: Set<string>; tally: number; clicks: number }>({ id: -2, phase: '', out: new Set(), tally: 0, clicks: 0 })
   useEffect(() => {
-    if (seen.current.id !== game.id) seen.current = { id: game.id, phase: '', out: new Set(game.players.filter((p) => p.out !== null).map((p) => p.id)) }
+    if (seen.current.id !== game.id) seen.current = { id: game.id, phase: '', out: new Set(game.players.filter((p) => p.out !== null).map((p) => p.id)), tally: 0, clicks: 0 }
     const s = seen.current
     if (game.players.length === 0 || game.over || clock(game) < 0) return
     const w = when(clock(game))
     const phase = `${w.round}:${w.phase}`
     if (phase !== s.phase) {
+      s.tally = 0
+      s.clicks = 0
+    }
+    const counted = game.results.find((r) => r.round === w.round)
+    if (counted && w.phase === 'reveal') {
+      // A tick as each vote is added into the total in the middle.
+      const k = tallied(counted, w)
+      if (k > s.tally) playCue(CUES.bump, 0.3)
+      s.tally = k
+    }
+    if (counted && w.phase === 'turn') {
+      // A click as each side comes to rest.
+      const done = turnState(clicksOf(counted), w).done
+      if (done > s.clicks) playCue(CUES.bump, 0.7)
+      s.clicks = done
+    }
+    if (phase !== s.phase) {
       s.phase = phase
       if (w.phase === 'vote') playCue(CUES.suspense, 0.4)
-      else if (w.phase === 'turn') playCue(CUES.spinning, 0.5)
       else if (w.phase === 'drop') playCue(CUES.woodenBridgeCollapse, 0.6)
     }
     for (const p of game.players) {
@@ -334,6 +379,29 @@ const callWrap: React.CSSProperties = {
   gap: 4,
   pointerEvents: 'none',
   padding: '0 16px',
+}
+
+/** The words over the sample round: what is happening, as it happens. */
+const sampleWrap: React.CSSProperties = {
+  position: 'absolute',
+  bottom: 104,
+  left: 0,
+  right: 0,
+  display: 'flex',
+  justifyContent: 'center',
+  pointerEvents: 'none',
+  padding: '0 16px',
+}
+
+const sampleBox: React.CSSProperties = {
+  maxWidth: 640,
+  padding: '8px 16px',
+  borderRadius: 14,
+  background: LOOK.sun,
+  color: LOOK.ink,
+  font: `600 15px/1.35 ${FONT}`,
+  boxShadow: '0 4px 0 rgba(0,0,0,0.3)',
+  textAlign: 'center',
 }
 
 const callBox: React.CSSProperties = {

@@ -104,6 +104,12 @@ arrangement exists to have.
 or the other, with a count of what is named against what is planned. Forty-six
 slots come to three pages.
 
+**The dice**, to the left of the *all* filter, **picks a game at random for the party**:
+one of the games that can be played - something has been built for it, so never a
+free slot or a name with nothing behind it - and opens it, for everybody in the lobby,
+the same as picking its tile (`randomPlayable`). It is greyed out while nothing is
+built.
+
 **The grid never changes shape.** A page with fewer than twenty on it - the last
 one, or a filter down to a handful - keeps its five by four and leaves the rest
 empty, rather than stretching a handful of tiles across the whole window. Tiles
@@ -155,6 +161,15 @@ from under the cursor.
 Every game gets this screen, built or not, out of its catalogue entry - which
 is what makes forty-one briefings a thing that already exists rather than a
 thing to generate.
+
+**A one-vs-all game has a third tab, `the party`, and opens on it.** One player against
+everybody else needs to know who the 1 is, so the tab lays out the party - everybody in the lobby,
+the host first, you marked - and **the host clicks a name to say who the 1 is**, or rolls the
+dice (🎲) for somebody at random. Alone, it is you. It is the host's word, carried the way the game
+that is open is (`hostChoice`, tag `minigame-one`, in `party.ts`): guests see the party and who the 1
+is on their own screens and cannot change it, and a joiner is told. Until the host says, or if the
+one leaves the lobby, it is the host. A game asks `getTheOne()` or `useTheOne()` for the id;
+free-for-all games have no such tab.
 
 ## Fade, three, two, one - and Finish
 
@@ -344,6 +359,7 @@ the island's 3D bus.
 | Export | What it is |
 | --- | --- |
 | `MINIGAMES` | All forty-six entries, in number order. |
+| `getTheOne`, `useTheOne`, `chooseTheOne`, `partyOf`, `randomOne`, `isInParty`, `Member` | Who the 1 is in a one-vs-all game, and the party it is chosen from. |
 | `MINIGAME_TARGET` | How many of each kind there are meant to be. |
 | `minigameById`, `minigamesOfKind`, `isMinigameId` | Reading the catalogue. |
 | `BUILD_STEPS`, `nextStep`, `stepsDone`, `isPlayable`, `progress` | The three stages, and how far each game and the catalogue as a whole has got. |
@@ -459,6 +475,8 @@ party panel, bottom left.
 - **Read the dim ones.** Eight tiles should be visibly fainter and say *free
   slot*. Those are the numbers nobody has named yet, and they should look
   unfinished on purpose.
+- **The dice.** Press the 🎲 left of *all*: a built game should open, for the whole party;
+  press it again from the dashboard and it may be a different one.
 - **Filter to one vs all.** Eight tiles on one page, the grid still five by four
   with the rest of it empty.
 - **Open a game from page two and press escape.** You should come back to page

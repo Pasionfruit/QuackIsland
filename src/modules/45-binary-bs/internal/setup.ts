@@ -7,7 +7,7 @@
  */
 import { CONVENTIONS, hashSeed } from '../../00-core'
 import { getNet, getPeers } from '../../09-net'
-import { createGame, type Game } from './rules'
+import { ROUND, createGame, type Game } from './rules'
 
 export const ME = 'you'
 /** You and four stand-ins: a five-sided gear to start. */
@@ -51,12 +51,14 @@ export function newGame({ seed = nextSeed(), roster = gameRoster(), me = myId() 
     seed,
     roster.map((entry) => ({ id: entry.id, bot: entry.bot, mine: entry.id === me })),
     seed || 1,
+    // A sample round first.
+    ROUND.demo,
   )
 }
 
 /** A gear with nobody on it yet, for a guest to hold until the host's first snapshot. */
 export function waitingGame(): Game {
-  const game = createGame(0, [], 0)
+  const game = createGame(0, [], 0, ROUND.demo)
   game.over = false
   return game
 }

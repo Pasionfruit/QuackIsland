@@ -1,7 +1,8 @@
 /**
  * One game's own screen, before it starts.
  *
- * The title, one panel you flip between **how it plays** and **the controls**,
+ * The title, one panel you flip between **how it plays**, **the controls** and - for a
+ * one-vs-all game - **the party**, where the host says who the 1 is,
  * the three build stages underneath, and play at the bottom. Every game gets
  * this, built or not, out of its catalogue entry - which is what makes
  * forty-one briefings a thing that already exists rather than a thing to
@@ -12,8 +13,8 @@
  * panel keeps one size either way, so flipping between them does not move the
  * play button out from under the cursor.
  */
-import { useState } from 'react'
-import { useNet } from '../../09-net'
+import { useEffect, useState } from 'react'
+import { getMyName, useNet, usePeers } from '../../09-net'
 import { BUILD_STEPS, minigameById, nextStep } from './catalogue'
 import {
   FONT,
@@ -28,6 +29,7 @@ import {
   screen,
   wordmark,
 } from './look'
+import { chooseTheOne, isInParty, partyOf, randomOne, useTheOne, type Member } from './party'
 import type { MinigameRun } from './registry'
 import { backOut, playMinigame } from './state'
 import { clicked } from './sound'
@@ -44,12 +46,14 @@ const STEP_MEANS: Record<(typeof BUILD_STEPS)[number], string> = {
   assets: 'Models, sprites and sound. Last, and never first.',
 }
 
-type Leaf = 'how' | 'controls'
+type Leaf = 'how' | 'controls' | 'party'
 
 export function Briefing({ run }: { run: MinigameRun }) {
   const game = minigameById(run.id)
   const net = useNet()
-  const [leaf, setLeaf] = useState<Leaf>('how')
+  // A one-vs-all game opens on its party: the first thing the host has to settle is who the 1 is.
+  const oneVsAll = game.kind === 'one-vs-all'
+  const [leaf, setLeaf] = useState<Leaf>(oneVsAll ? 'party' : 'how')
   const up = nextStep(game)
   // The briefing is only ever up until the black has come down over it - the
   // three-two-one is over the game, not here - so this is the only moment it
@@ -99,10 +103,20 @@ export function Briefing({ run }: { run: MinigameRun }) {
             >
               controls
             </button>
+            {oneVsAll ? (
+              <button
+                type="button"
+                data-leaf="party"
+                onClick={clicked(() => setLeaf('party'))}
+                style={{ ...button, ...(leaf === 'party' ? buttonOn : null) }}
+              >
+                the party
+              </button>
+            ) : null}
           </div>
 
           <div style={panel}>
-            {leaf === 'how' ? <How game={game} /> : <Controls game={game} />}
+            {leaf === 'how' ? <How game={game} /> : leaf === 'controls' ? <Controls game={game} /> : <Party isHost={isHost} />}
           </div>
 
           {/* The three stages, in order, with the one owed next marked. The
@@ -159,6 +173,71 @@ export function Briefing({ run }: { run: MinigameRun }) {
       </div>
 
     </div>
+  )
+}
+
+/**
+ * The party, for a one-vs-all game: everybody in the lobby, the host first, with
+ * the 1 marked. **The host clicks a name to say who the 1 is**, or rolls the dice for
+ * somebody at random; a guest sees who it is and cannot change it.
+ */
+function Party({ isHost }: { isHost: boolean }) {
+  const net = useNet()
+  const peers = usePeers()
+  const chosen = useTheOne()
+  const party = partyOf({ id: net.id ?? 'you', name: getMyName() }, peers)
+  const one = isInParty(party, chosen) ? chosen : null
+  const first = party[0]?.id ?? null
+
+  // Until the host says, or when the one has left: the host is.
+  useEffect(() => {
+    if (isHost && first !== null && one === null) chooseTheOne(first)
+  }, [isHost, first, one])
+
+  return (
+    <div data-party>
+      <p style={paragraph}>
+        {isHost ? 'Who is the 1? Everybody else plays against them. Click a name, or roll the dice.' : 'The host says who the 1 is: everybody else plays against them.'}
+      </p>
+      <div style={partyRow}>
+        {party.map((member) => (
+          <PartyChip key={member.id} member={member} isOne={member.id === one} canPick={isHost} />
+        ))}
+        {isHost ? (
+          <button
+            type="button"
+            onClick={clicked(() => {
+              const id = randomOne(party)
+              if (id) chooseTheOne(id)
+            })}
+            aria-label="pick the 1 at random"
+            title="Pick the 1 at random"
+            data-one-dice
+            style={{ ...button, ...diceButton }}
+          >
+            🎲
+          </button>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+function PartyChip({ member, isOne, canPick }: { member: Member; isOne: boolean; canPick: boolean }) {
+  return (
+    <button
+      type="button"
+      disabled={!canPick}
+      onClick={clicked(() => chooseTheOne(member.id))}
+      data-member={member.id}
+      data-one={isOne ? 'yes' : 'no'}
+      style={{ ...button, ...(isOne ? buttonOn : null), cursor: canPick ? 'pointer' : 'default', opacity: canPick || isOne ? 1 : 0.75 }}
+    >
+      {member.name}
+      {member.you ? ' (you)' : ''}
+      {member.host ? ' · host' : ''}
+      {isOne ? ' · the 1' : ''}
+    </button>
   )
 }
 
@@ -243,6 +322,10 @@ const paragraph: React.CSSProperties = {
   margin: '0 0 10px',
   lineHeight: 1.55,
 }
+
+const partyRow: React.CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }
+
+const diceButton: React.CSSProperties = { fontSize: 18, lineHeight: 1, padding: '4px 10px' }
 
 const faded: React.CSSProperties = {
   margin: 0,

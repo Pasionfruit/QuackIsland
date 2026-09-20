@@ -18,7 +18,10 @@ import { useFrame } from '@react-three/fiber'
 import { useMemo, useReducer, useRef, type RefObject } from 'react'
 import { CanvasTexture, Color, DoubleSide, Group, Mesh, MeshBasicMaterial, SRGBColorSpace, Vector3 } from 'three'
 import { createAvatar } from '../../02-player'
+import { hubValue, turnAngle, viewOf } from './display'
 import { COLOURS, GEAR, clock, markedSide, numberFor, when, type Game, type Result } from './rules'
+
+export { turnAngle }
 
 export const PALETTE = {
   sky: '#1d1830',
@@ -31,18 +34,6 @@ export const PALETTE = {
 
 const THICK = 0.6
 const TEETH_EACH = 3
-
-/** How far the gear has turned at `t`, radians counter-clockwise seen from above: nothing until the turn, all of it after. */
-export function turnAngle(result: Result | undefined, sides: number, t: number): number {
-  if (!result) return 0
-  const w = when(t)
-  if (w.round !== result.round || w.phase === 'vote' || w.phase === 'reveal') return 0
-  const full = (result.steps * Math.PI * 2) / Math.max(1, sides)
-  if (w.phase !== 'turn') return full
-  const k = w.t / w.length
-  // Starts slow, runs, settles.
-  return full * (k < 0.5 ? 4 * k ** 3 : 1 - (-2 * k + 2) ** 3 / 2)
-}
 
 const textures = new Map<string, CanvasTexture>()
 
@@ -84,12 +75,12 @@ function Gear({ live }: { live: RefObject<Game> }) {
   const wedges = useRef<(Group | null)[]>([])
   const stripe = useRef<Mesh>(null)
   const hubTop = useRef<Mesh>(null)
-  const g = live.current
+  const g = viewOf(live.current)
   const sides = Math.max(1, g.seats.length)
   const step = (Math.PI * 2) / sides
 
   useFrame(({ clock: c }) => {
-    const game = live.current
+    const game = viewOf(live.current)
     const t = clock(game)
     const w = when(t)
     const result = resultNow(game)
@@ -110,8 +101,9 @@ function Gear({ live }: { live: RefObject<Game> }) {
     }
     if (hubTop.current) {
       const m = hubTop.current.material as MeshBasicMaterial
-      const n = String(numberFor(game.seed, game.round))
-      const want = badge(n, PALETTE.hub)
+      // The number, then the total as the votes are added in, then the sides still to turn as it clicks round.
+      const hub = hubValue(game, result, t)
+      const want = badge(String(hub.value), hub.phase === 'number' ? PALETTE.hub : hub.phase === 'total' ? '#4b3f8f' : '#b3261e')
       if (m.map !== want) {
         m.map = want
         m.needsUpdate = true
@@ -120,6 +112,7 @@ function Gear({ live }: { live: RefObject<Game> }) {
   })
 
   return (
+    <>
     <group ref={turn}>
       {Array.from({ length: sides }, (_, side) => {
         const player = g.seats[side]
@@ -155,11 +148,13 @@ function Gear({ live }: { live: RefObject<Game> }) {
         <cylinderGeometry args={[GEAR.hub, GEAR.hub, 0.5, 40]} />
         <meshStandardMaterial color={PALETTE.hub} roughness={0.4} />
       </mesh>
+    </group>
+      {/* The number on the hub stays the right way up while the gear turns under it. */}
       <mesh ref={hubTop} position={[0, 0.31, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[GEAR.hub * 0.92, 40]} />
         <meshBasicMaterial transparent />
       </mesh>
-    </group>
+    </>
   )
 }
 
@@ -188,7 +183,7 @@ function Body({ index, live }: { index: number; live: RefObject<Game> }) {
   const avatar = useMemo(() => createAvatar(colour), [colour])
   const shown = useRef<{ x: number; z: number } | null>(null)
   useFrame(({ camera }, delta) => {
-    const g = live.current
+    const g = viewOf(live.current)
     const p = g.players[index]
     if (!group.current || !p) return
     const t = clock(g)
@@ -239,14 +234,14 @@ export function GearScene({ live }: { live: RefObject<Game> }) {
   const [, redraw] = useReducer((n: number) => n + 1, 0)
   const cast = useRef('')
   useFrame(() => {
-    const g = live.current
+    const g = viewOf(live.current)
     const key = `${g.id}:${g.round}:${g.seats.join(',')}:${g.players.map((p) => p.id).join(',')}`
     if (key !== cast.current) {
       cast.current = key
       redraw()
     }
   })
-  const game = live.current
+  const game = viewOf(live.current)
   const background = useMemo(() => new Color(PALETTE.sky), [])
   return (
     <>

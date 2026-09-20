@@ -115,8 +115,8 @@ const ENTRIES = [
     title: 'Binary BS',
     kind: 'free-for-all',
     description: [
-      'Players spawn on different sides of a giant gear - as many sides as players - with one side marked to be removed. A random number appears in the center, and players have 5 seconds to vote 0 or 1, in secret.',
-      'When the countdown ends the gear turns by the number, one side less for every 0, and removes the side that lands on the mark along with everyone standing on it. If everyone votes 1, the marked side goes. A new number and a new gear come each round until only one player remains.',
+      'A short sample round plays first to show how it works. Then players spawn on different sides of a giant gear - as many sides as players - with one side marked to be removed. A random number appears in the center, and players have 5 seconds to vote 0 or 1, in secret.',
+      'When the countdown ends the votes are added into the total in the center one at a time, and then the gear turns by it - one side at a time, like a clicking gear, with a counter going down - one side less for every 0, and removes the side that lands on the mark along with everyone standing on it. If everyone votes 1, the marked side goes. A new number and a new gear come each round until only one player remains.',
     ],
     controls: [
       { input: '0', does: 'Vote 0' },
