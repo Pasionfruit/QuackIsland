@@ -13,6 +13,13 @@
  *
  * **Left click to stop the stopwatch.** Anywhere on the stage, once it has
  * started; once only.
+ *
+ * **The answer is left up before Finish.** When the round ends the cover lifts,
+ * the green hand points at the target and everybody's marks appear on the dial -
+ * and the shared **Finish** does not come down over it for `WATCH.reveal` more
+ * seconds, which is the round's own hold: the screen tells `useFinish` the round
+ * is over only once that has passed. Through it, **your own actual time** is up in
+ * the middle of the top of the stage, and how far it was from the target.
  */
 import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
@@ -41,8 +48,10 @@ const MONO = "ui-monospace, 'Cascadia Mono', 'Consolas', 'Menlo', monospace"
 export function TimeItScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the round from here.
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
-  // Held back through the two seconds of Finish; see `useFinish`.
-  const results = useFinish(game.over, () =>
+  /** Whether the answer has been up long enough for Finish to come down: this screen's own hold, see `WATCH.reveal`. */
+  const [settled, setSettled] = useState(false)
+  // Held back through the two seconds of Finish; see `useFinish`. Told the round is over only once the answer has been shown.
+  const results = useFinish(game.over && settled, () =>
     placings(game).map((e) => ({ id: e.timer.id, place: e.place, name: nameOf(e.timer.id), colour: COLOURS[e.index % COLOURS.length], mine: e.timer.id === me })),
   )
   const paused = useRef(run.paused)
@@ -58,6 +67,8 @@ export function TimeItScreen({ run }: { run: MinigameRun }) {
   const clicked = useRef<number | null>(null)
   /** When the last frame was, so a click between frames can be read to the millisecond. */
   const frameAt = useRef(performance.now())
+  /** Seconds the answer has been up, since the round ended - held by a pause, and none while it is still going. */
+  const shown = useRef(0)
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
 
@@ -71,6 +82,10 @@ export function TimeItScreen({ run }: { run: MinigameRun }) {
       const click = clicked.current
       clicked.current = null
       if (wire.advance(current, dt, click, paused.current)) setGame({ ...current })
+      // The answer's own clock: runs from the moment the round is over, and not while paused.
+      if (!current.over) shown.current = 0
+      else if (!paused.current) shown.current += Math.min(Math.max(dt, 0), 0.25)
+      setSettled(current.over && shown.current >= WATCH.reveal)
       frameAt.current = performance.now()
       frame = requestAnimationFrame(tick)
     }
@@ -145,6 +160,7 @@ export function TimeItScreen({ run }: { run: MinigameRun }) {
             <div style={captionStyle}>{WATCH.limit} second limit</div>
           </div>
         ) : null}
+        {game.over && ready && mine && !settled ? <Answer game={game} target={target} /> : null}
         {!briefing && readout ? (
           <div style={readoutWrap}>
             <div style={{ ...readoutBox, color: t >= 0 && !showing(game) ? LOOK.faded : '#fff' }} data-readout={readout} data-stopped={stopped ? 1 : 0}>
@@ -156,6 +172,36 @@ export function TimeItScreen({ run }: { run: MinigameRun }) {
       </div>
 
       {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
+    </div>
+  )
+}
+
+/**
+ * Your own time, once the round is over and the answer is up: what you stopped at,
+ * and how far that was from the target, green if it was within half a second.
+ * Nobody else's is spelled out - theirs are the marks on the dial.
+ */
+export function Answer({ game, target }: { game: Game; target: number }) {
+  const mine = game.players.find((p) => p.mine)
+  if (!mine) return null
+  const stopped = mine.stopped !== null && mine.stopped >= 0 ? mine.stopped : null
+  const off = stopped === null ? null : Math.round((stopped - target) * 100) / 100
+  const close = off !== null && Math.abs(off) < 0.5
+  return (
+    <div style={readoutWrap} data-answer>
+      <div style={captionStyle}>{stopped === null ? (mine.left ? 'You left' : 'You never stopped') : 'Your time'}</div>
+      {stopped !== null ? (
+        <>
+          <div style={{ ...readoutBox, color: close ? '#8ff0ad' : '#ffb1a8' }} data-your-time={stopped.toFixed(2)}>
+            {stopped.toFixed(2)}s
+          </div>
+          <div style={captionStyle} data-off={(off ?? 0).toFixed(2)}>
+            {off === 0 ? 'Right on the target!' : `${Math.abs(off ?? 0).toFixed(2)}s ${(off ?? 0) > 0 ? 'over' : 'under'} the ${target.toFixed(2)}s target`}
+          </div>
+        </>
+      ) : (
+        <div style={captionStyle}>The target was {target.toFixed(2)}s</div>
+      )}
     </div>
   )
 }

@@ -56,4 +56,4 @@ export {
 
 export { FILL, FOV, POINTS, STAGE, TILT, frameScene, standX, type Shot } from './internal/camera'
 
-export { TimeItScreen } from './internal/TimeItScreen'
+export { Answer, TimeItScreen } from './internal/TimeItScreen'

@@ -89,8 +89,21 @@ counting.
 - **Stopped:** your button goes down, and the HUD ticks you. "Stopped - waiting for
   the others".
 - **The end:** the cover lifts. A green hand points at the target, and a mark in
-  every player's colour sits round the dial where they stopped. The results card
-  gives each time and how far off, green within half a second.
+  every player's colour sits round the dial where they stopped.
+- **The answer is left up before Finish.** The round ends the moment the last stop
+  comes in, and it used to go straight to the shared **Finish**, which dims the
+  stage and covers it - so the reveal was there for a moment under a word. Now the
+  screen holds the round open for `WATCH.reveal` (2.5 s) more before it tells the
+  minigame screen the round is over: the cover lifts, the hand and the marks are
+  there to look at, and only then does Finish come down, and then the podium. The
+  hold is each screen's own clock, from when it saw the round end, and a pause
+  stops it; nothing about it is on the wire. The round music plays through it.
+- **Your own actual time is spelled out through it** (`Answer`): *Your time*, what
+  you stopped at to the hundredth in big digits - green within half a second of the
+  target, red beyond it - and *0.12s over the 9.75s target* (or *under*, or *Right
+  on the target!*). If you never stopped it says so, and gives the target. **Only
+  your own**: everybody else's is the mark on the dial. Before this the only place
+  your time appeared was the podium's small print.
 
 ## The camera does not move
 
@@ -104,7 +117,7 @@ Exported because it is worth testing, not because anything else needs it.
 
 | Export | What it is |
 | --- | --- |
-| `WATCH`, `COLOURS` | The rules and the look, as numbers. |
+| `WATCH`, `COLOURS` | The rules and the look, as numbers - `WATCH.reveal` is how long the answer is left up before Finish. |
 | `targetFor`, `stopwatch`, `showing` | The target and the stopwatch. Pure. |
 | `createGame`, `stop`, `leave`, `stepGame`, `offBy`, `placings` | The round. Pure. |
 | `Game`, `Timer`, `Entrant` | Its shapes. |
@@ -112,7 +125,7 @@ Exported because it is worth testing, not because anything else needs it.
 | `newGame`, `gameRoster`, `nextSeed`, `waitingGame`, `myId`, `ME`, `SOLO_TIMERS`, `MAX_TIMERS` | Dealing a round. |
 | `encodeSnapshot`, `decodeSnapshot`, `applySnapshot`, `encodeIntent`, `decodeIntent`, `HIDDEN`, `SNAPSHOT_TAG`, `INTENT_TAG` | A shared round on the wire. Pure. |
 | `frameScene`, `STAGE`, `standX`, `POINTS`, `TILT`, `FOV`, `FILL` | The stage and the camera. Pure. |
-| `TimeItScreen` | The panel the registry draws. |
+| `TimeItScreen`, `Answer` | The panel the registry draws, and the card that gives your own time before Finish. |
 
 ## Invariants you may rely on
 
@@ -159,7 +172,10 @@ Open a lobby, leave the game on Volcano Island, press **minigames**, open
 - **Count, and click.** Your button goes down, the HUD ticks you, "Stopped -
   waiting for the others". Click again: nothing.
 - **The end.** The cover lifts, a green hand points at the target, and coloured
-  marks show where everybody stopped. The results give each time and how far off.
+  marks show where everybody stopped - and **stays up for two and a half seconds**
+  with *Your time* over it, your stop to the hundredth and how far over or under
+  the target it was - before Finish comes down and the podium follows. Pause
+  during it: the two and a half seconds should stop where they are.
 - **Wait out thirty seconds without clicking.** The round ends, "You never
   stopped", and you are last.
 

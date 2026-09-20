@@ -28,6 +28,13 @@ export const WATCH = {
   target: [6.5, 15] as readonly [number, number],
   /** How far ahead of the host's stopwatch a guest's stop may be, for a guest a little ahead of it. */
   grace: 0.5,
+  /**
+   * How long the answer is left up once the round is over - the cover lifting, the
+   * green hand at the target, everybody's marks on the dial and your own time -
+   * before **Finish** comes down over it, seconds. Each screen's own: nothing
+   * about it goes on the wire.
+   */
+  reveal: 2.5,
 } as const
 
 /** The round's target, to the hundredth of a second. */

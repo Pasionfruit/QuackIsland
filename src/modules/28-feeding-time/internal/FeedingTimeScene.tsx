@@ -13,12 +13,59 @@
  * itself is rendered once by the screen; see Duck Hunt's notes.
  */
 import { useFrame } from '@react-three/fiber'
-import { memo, useLayoutEffect, useMemo, useReducer, useRef, type RefObject } from 'react'
+import { memo, useLayoutEffect, useMemo, useReducer, useRef, type Ref, type RefObject } from 'react'
 import { Color, Group, type DirectionalLight, type MeshBasicMaterial } from 'three'
 import { createRng, hashSeed } from '../../00-core'
 import { createAvatar } from '../../02-player'
 import { frameScene } from './camera'
 import { COLOURS, POND, aimThrow, duckAt, ducksFor, landing, spotOf, type Cracker, type Game, type Point } from './rules'
+
+/**
+ * The dark edge every ring of a player's colour is drawn with. The colours are
+ * bright, and one of them is a blue that is very nearly the pond's own - a
+ * blue ring on blue water could not be seen - so each ring gets a dark navy
+ * outline that stands out against water, sand and grass alike, whatever colour it
+ * is inside it.
+ */
+export const OUTLINE = '#0d1b2a'
+/** How far the outline reaches past each side of the ring it edges, metres. */
+const EDGE = 0.07
+
+/**
+ * A ring of a player's colour laid flat, with a dark outline round it: the
+ * outline is the same ring a little wider both ways, drawn just under it. The
+ * refs let a caller fade or recolour the two together.
+ */
+export function OutlinedRing({
+  inner,
+  outer,
+  colour,
+  opacity = 1,
+  segments = 36,
+  fill,
+  edge,
+}: {
+  inner: number
+  outer: number
+  colour?: string
+  opacity?: number
+  segments?: number
+  fill?: Ref<MeshBasicMaterial>
+  edge?: Ref<MeshBasicMaterial>
+}) {
+  return (
+    <>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.006, 0]} renderOrder={1}>
+        <ringGeometry args={[Math.max(0.01, inner - EDGE), outer + EDGE, segments]} />
+        <meshBasicMaterial ref={edge} color={OUTLINE} transparent opacity={opacity} depthWrite={false} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={2}>
+        <ringGeometry args={[inner, outer, segments]} />
+        <meshBasicMaterial ref={fill} color={colour} transparent opacity={opacity} depthWrite={false} />
+      </mesh>
+    </>
+  )
+}
 
 export const PALETTE = {
   background: '#bfe4f2',
@@ -160,6 +207,7 @@ function CrackerView({ cracker, live }: { cracker: Cracker; live: RefObject<Game
   const holder = useRef<Group>(null)
   const ripple = useRef<Group>(null)
   const rippleMaterial = useRef<MeshBasicMaterial>(null)
+  const rippleEdge = useRef<MeshBasicMaterial>(null)
   const colour = COLOURS[cracker.player % COLOURS.length]
   useFrame(() => {
     const group = holder.current
@@ -190,6 +238,7 @@ function CrackerView({ cracker, live }: { cracker: Cracker; live: RefObject<Game
         box.position.set(at.x, 0.04, at.z)
         box.scale.setScalar(0.4 + age * (fedDuck ? 2.4 : 1.2))
         rippleMaterial.current.opacity = 1 - age / 0.8
+        if (rippleEdge.current) rippleEdge.current.opacity = 1 - age / 0.8
         rippleMaterial.current.color.set(fedDuck ? colour : '#ffffff')
       }
     }
@@ -203,10 +252,7 @@ function CrackerView({ cracker, live }: { cracker: Cracker; live: RefObject<Game
         </mesh>
       </group>
       <group ref={ripple} visible={false}>
-        <mesh rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.55, 0.7, 28]} />
-          <meshBasicMaterial ref={rippleMaterial} transparent opacity={1} />
-        </mesh>
+        <OutlinedRing inner={0.55} outer={0.7} segments={28} fill={rippleMaterial} edge={rippleEdge} />
       </group>
     </>
   )
@@ -264,10 +310,7 @@ function AimView({ live, hands }: { live: RefObject<Game>; hands: SceneHands }) 
         </mesh>
       </group>
       <group ref={lands} visible={false}>
-        <mesh rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.3, 0.55, 28]} />
-          <meshBasicMaterial ref={landsMaterial} transparent opacity={0.95} depthWrite={false} />
-        </mesh>
+        <OutlinedRing inner={0.3} outer={0.55} segments={28} opacity={0.95} fill={landsMaterial} />
       </group>
     </>
   )
@@ -295,10 +338,9 @@ const FeederBody = memo(function FeederBody({ index, count, mine }: { index: num
         <primitive object={avatar} />
       </group>
       {mine ? (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-          <ringGeometry args={[0.55, 0.75, 28]} />
-          <meshBasicMaterial color={colour} />
-        </mesh>
+        <group position={[0, 0.02, 0]}>
+          <OutlinedRing inner={0.55} outer={0.75} segments={28} colour={colour} />
+        </group>
       ) : null}
     </group>
   )

@@ -103,12 +103,22 @@ ducks behind.
 
 - **The pond:** grass, a sandy edge, reeds round the far side, and everybody on
   the bank facing the water, a ring under your own spot.
+- **Every ring of a player's colour has a dark outline** (`OutlinedRing`,
+  `OUTLINE`, a dark navy): under your own spot, round the duck a feed ripples out
+  from, and where a held throw would land. The second player's blue is very nearly
+  the pond's own, so a blue ring on the water - the landing marker, the ripple - was
+  almost invisible; the outline is a wider ring of the same shape drawn just under
+  it, so there is always a dark edge to see whatever colour is inside and whatever
+  it is over, water, sand or grass. It fades with the ring it edges. Tested: the
+  outline has at least 4:1 contrast against the water, the sand and the grass, and
+  is dark enough against the colours that are hard to see on the water. The white
+  ring under the pointer is left as it is: it is white, and shows.
 - **Ducks** paddle their loops, bobbing; a duck eating dips its head.
 - **Crackers** arc out from whoever threw them and land with a ripple - white for a
   miss, a ring in the thrower's colour round the duck for a feed.
 - **Your aim:** a dotted line from your spot to a white ring under the pointer
   (the ring is the size a cracker has to land within to feed), and while the
-  button is held a ring in your colour where the throw would land.
+  button is held an outlined ring in your colour where the throw would land.
 - **The power meter** at the bottom: fills in your colour while held, a white tick
   at the power that reaches the pointer, and "point at the water · hold to charge
   · let go to throw" under it.
