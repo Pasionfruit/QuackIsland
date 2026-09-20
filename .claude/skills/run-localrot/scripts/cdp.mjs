@@ -548,16 +548,18 @@ export function oneShotPlay({ mode = 'play', fire = true } = {}) {
     const eye = rules.eyeOf(me)
     let target = null
     let best = Infinity
-    for (const p of g.players) {
-      if (p === me || !rules.isStanding(p)) continue
+    const mine = g.players.indexOf(me)
+    for (const [i, p] of g.players.entries()) {
+      // Not somebody on my side: a hunter's shots pass through the one it hunts for.
+      if (p === me || !rules.isStanding(p) || rules.allied(g, mine, i)) continue
       const d = Math.hypot(p.x - me.x, p.z - me.z)
-      if (d < best && arena.lineClear(A, eye, { x: p.x, y: 1.2, z: p.z })) { best = d; target = p }
+      if (d < best && arena.lineClear(A, eye, { x: p.x, y: p.y + 1.2, z: p.z })) { best = d; target = p }
     }
     let wantYaw
     let wantPitch = 0
     if (target) {
       wantYaw = Math.atan2(-(target.x - me.x), -(target.z - me.z))
-      wantPitch = Math.atan2(1.2 - rules.BODY.eye, best)
+      wantPitch = Math.atan2(target.y + 1.2 - eye.y, best)
       state.target = target.id
     } else {
       if (!w.goal || performance.now() - w.goalAt > 3000) { w.goal = arena.openPoint(A, Math.random, 0.5); w.goalAt = performance.now() }

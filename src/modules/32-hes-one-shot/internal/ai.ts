@@ -11,13 +11,16 @@
  * is worth more than it looks: whoever comes back out is a stranger again.
  *
  * It walks slower while it has somebody in its sights, so it can be caught
- * standing about. Eliminated, it carries on hunting exactly the same way.
+ * standing about. Eliminated, it carries on hunting exactly the same way - but
+ * **for whoever eliminated it**, so it never sees, and never shoots at, anybody on
+ * that side. It jumps now and then as it goes, and heads for a shield when there
+ * is one and it has none.
  *
  * Its own randomness comes from the seed. Only ever runs on the host.
  */
 import { createRng, hashSeed } from '../../00-core'
-import { arenaFor, lineClear, openPoint, type Point } from './arena'
-import { BODY, aimDirection, canAct, canShoot, eyeOf, fire, isTarget, walk, wrapAngle, type Game, type Player } from './rules'
+import { arenaFor, lineClear, openPoint, type Arena, type Point } from './arena'
+import { BODY, aimDirection, allied, canAct, canShoot, eyeOf, fire, isStanding, isTarget, pickupReady, walk, wrapAngle, type Game, type Player } from './rules'
 
 export const BOT = {
   /** How far a stand-in sees, metres. */
@@ -42,6 +45,11 @@ export const BOT = {
   aiming: 0.35,
   /** Where on a body it aims: the chest. */
   chest: 1.2,
+  /** How often, a second, it jumps while it walks, and while it has somebody in its sights. */
+  jump: 0.4,
+  jumpAiming: 0.25,
+  /** The chance that a new place to head for is a shield, when there is one and it has none. */
+  shieldSeek: 0.45,
 } as const
 
 interface Mind {
@@ -82,24 +90,41 @@ function mindFor(game: Game, bot: Player): Mind {
   return mind
 }
 
+/** Where a stand-in heads next: now and then a shield that is there, if it has none; otherwise somewhere open. */
+function nextGoal(game: Game, bot: Player, mind: Mind, arena: Arena): Point {
+  if (isStanding(bot) && !bot.shield && mind.random() < BOT.shieldSeek) {
+    let best: Point | null = null
+    let bestDistance = Infinity
+    arena.pickups.forEach((at, k) => {
+      const d = Math.hypot(at.x - bot.x, at.z - bot.z)
+      if (pickupReady(game, k) && d < bestDistance) {
+        best = at
+        bestDistance = d
+      }
+    })
+    if (best) return best
+  }
+  return openPoint(arena, mind.random, BODY.radius)
+}
+
 /** The yaw that looks from `from` towards `to`. */
 export function yawTowards(from: Point, to: Point): number {
   return Math.atan2(-(to.x - from.x), -(to.z - from.z))
 }
 
-/** Who a stand-in can see to shoot: the nearest standing player in front of it, in range, in the open. */
+/** Who a stand-in can see to shoot: the nearest standing player in front of it, in range, in the open - and not on its own side. */
 export function sightedBy(game: Game, index: number, keep: string | null): number {
   const bot = game.players[index]
   const arena = arenaFor(game.seed)
   let best = -1
   let bestDistance = Infinity
   game.players.forEach((p, i) => {
-    if (i === index || !isTarget(game, p)) return
+    if (i === index || !isTarget(game, p) || allied(game, index, i)) return
     const d = Math.hypot(p.x - bot.x, p.z - bot.z)
     if (d > BOT.sight || d >= bestDistance) return
     // Somebody already in its sights stays there while it turns; anybody else has to be in front.
     if (p.id !== keep && Math.abs(wrapAngle(yawTowards(bot, p) - bot.yaw)) > BOT.field) return
-    if (!lineClear(arena, eyeOf(bot), { x: p.x, y: BOT.chest, z: p.z })) return
+    if (!lineClear(arena, eyeOf(bot), { x: p.x, y: p.y + BOT.chest, z: p.z })) return
     best = i
     bestDistance = d
   })
@@ -130,13 +155,13 @@ export function botSteer(game: Game, dt: number): void {
     // Where it is headed: once it is there, lurk a while, then somewhere new; or somewhere new once it has stopped getting anywhere.
     const lurking = game.elapsed < mind.lurkUntil
     if (!lurking && Math.hypot(mind.goal.x - bot.x, mind.goal.z - bot.z) < 1) {
-      mind.goal = openPoint(arena, mind.random, BODY.radius)
+      mind.goal = nextGoal(game, bot, mind, arena)
       mind.lurkUntil = game.elapsed + BOT.lurk[0] + mind.random() * (BOT.lurk[1] - BOT.lurk[0])
       mind.lurkYaw = wrapAngle(bot.yaw + (mind.random() * 2 - 1) * 2.5)
       mind.checkedAt = mind.lurkUntil
     }
     if (!lurking && game.elapsed - mind.checkedAt > 1.2) {
-      if (Math.hypot(bot.x - mind.checkedFrom.x, bot.z - mind.checkedFrom.z) < 0.6) mind.goal = openPoint(arena, mind.random, BODY.radius)
+      if (Math.hypot(bot.x - mind.checkedFrom.x, bot.z - mind.checkedFrom.z) < 0.6) mind.goal = nextGoal(game, bot, mind, arena)
       mind.checkedAt = game.elapsed
       mind.checkedFrom = { x: bot.x, z: bot.z }
     }
@@ -144,7 +169,8 @@ export function botSteer(game: Game, dt: number): void {
     if (target) {
       const d = Math.hypot(target.x - bot.x, target.z - bot.z)
       const wantYaw = yawTowards(bot, target)
-      const wantPitch = Math.atan2(BOT.chest - BODY.eye, d)
+      // Up at the chest of somebody who may be in the air, from eyes that may be.
+      const wantPitch = Math.atan2(target.y + BOT.chest - (bot.y + BODY.eye), d)
       bot.yaw = turnTowards(bot.yaw, wantYaw, BOT.turn * step)
       bot.pitch = wantPitch
       const onTarget = Math.abs(wrapAngle(wantYaw - bot.yaw)) < BOT.onTarget
@@ -173,7 +199,11 @@ export function botSteer(game: Game, dt: number): void {
       const ahead = aimDirection(bot.yaw, 0)
       const forward = ((gx * ahead.x + gz * ahead.z) / gd) * pace
       const right = ((gx * -ahead.z + gz * ahead.x) / gd) * pace
-      walk(game, index, { forward, right }, step)
+      const jump = mind.random() < (target ? BOT.jumpAiming : BOT.jump) * step
+      walk(game, index, { forward, right, jump }, step)
+    } else {
+      // Not going anywhere - but a jump in the air comes down.
+      walk(game, index, { forward: 0, right: 0 }, step)
     }
   })
 }

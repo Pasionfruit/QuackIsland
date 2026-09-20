@@ -354,11 +354,13 @@ const ENTRIES = [
     title: "He's One Shot",
     kind: 'free-for-all',
     description: [
-      'First person, everybody against everybody, and one shot eliminates. Your gun needs a second and a half between shots, and nobody can be shot for the first two seconds.',
-      'Being eliminated does not take you out of it: you keep walking and shooting at whoever is still standing, but nobody can shoot you any more. The last one standing wins; at a minute and fifteen, everybody still standing shares first.',
+      'First person, everybody against everybody, in a big walled arena full of cover, and one shot eliminates. Your gun needs a second and a half between shots, and nobody can be shot for the first two seconds.',
+      'Being eliminated does not take you out of it: you start again beside whoever got you, as their hunter. You keep walking and shooting at whoever is still standing - but not at the one you hunt for, whose side you are on, and nobody can shoot you any more.',
+      'Jump, and pick up shields lying about the arena: a shield takes the next hit instead of eliminating you. The last one standing wins; at a minute and a half, everybody still standing shares first.',
     ],
     controls: [
       { input: 'WASD / Arrow keys', does: 'Move' },
+      { input: 'Space', does: 'Jump' },
       { input: 'Mouse', does: 'Look and aim' },
       { input: 'Left click', does: 'Capture the mouse, then shoot' },
     ],

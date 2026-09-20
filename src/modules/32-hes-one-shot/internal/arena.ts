@@ -11,24 +11,41 @@
  * them - so the arena is always one open space with things in it, never a maze
  * with a corner you can be trapped in.
  *
+ * **It is big**: 48 m across, with over fifty pieces of cover. Scattered through
+ * it are a few spots where a shield power-up appears - see `pickups` - spread well
+ * apart and always in the open - and inside the ring everybody starts on, so nobody
+ * starts with one - so getting to one is a run across the arena and a decision
+ * about whether it is worth it.
+ *
  * Everything here is pure.
  */
 import { createRng, hashSeed } from '../../00-core'
 
 export const ARENA = {
-  /** Half the floor's width: the inner face of the wall. */
-  half: 15,
+  /** Half the floor's width: the inner face of the wall. 24 m: a 48 m square, over twice the area it was. */
+  half: 24,
   /** The wall round the edge. */
-  wallHeight: 3,
+  wallHeight: 3.6,
   wallThickness: 1,
-  /** Cover, all of it taller than anybody's eyes. */
-  coverHeight: 2.4,
+  /**
+   * Cover, all of it taller than anybody's eyes - **even at the top of a jump**:
+   * eyes 1.7 m, and a jump takes them 0.9 m higher, to 2.6, under the 2.8 m of the
+   * cover. Nobody shoots over cover, in the air or on the ground.
+   */
+  coverHeight: 2.8,
   /** How many pieces of cover to try for. */
-  cover: 22,
+  cover: 56,
   /** The least gap between two pieces of cover: room for two to pass. */
   gap: 1.8,
   /** Where everybody starts: a ring this far from the middle. */
-  spawnRing: 12.5,
+  spawnRing: 20,
+  /** How many places a shield power-up can appear, and the least distance between two of them. */
+  pickups: 10,
+  pickupGap: 10,
+  /** How much room a pickup needs round it, clear of cover. */
+  pickupRoom: 1.4,
+  /** How far inside the ring everybody starts on the shields stay, so nobody starts on one. */
+  pickupClear: 4,
 } as const
 
 export interface Point {
@@ -56,6 +73,8 @@ export interface Block {
 export interface Arena {
   seed: number
   blocks: Block[]
+  /** Where a shield power-up appears: the same places all game, from the seed. */
+  pickups: Point[]
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v))
@@ -83,7 +102,7 @@ export function arenaFor(seed: number): Arena {
 
   const random = createRng(hashSeed(seed, 'hes-one-shot:arena'))
   const cover: Block[] = []
-  for (let attempt = 0; attempt < 400 && cover.length < ARENA.cover; attempt++) {
+  for (let attempt = 0; attempt < 1200 && cover.length < ARENA.cover; attempt++) {
     // A crate, or a length of wall one way or the other.
     const kind = random()
     let sx: number
@@ -105,7 +124,21 @@ export function arenaFor(seed: number): Arena {
     cover.push(block)
   }
 
-  const arena: Arena = { seed, blocks: [...blocks, ...cover] }
+  // Where the shields appear: in the open, well apart, from a stream of their own so the cover is what it always was for a seed.
+  const luck = createRng(hashSeed(seed, 'hes-one-shot:pickups'))
+  const pickups: Point[] = []
+  const all = [...blocks, ...cover]
+  const reach = ARENA.half - ARENA.pickupRoom - 1
+  for (let attempt = 0; attempt < 600 && pickups.length < ARENA.pickups; attempt++) {
+    const at = { x: (luck() * 2 - 1) * reach, z: (luck() * 2 - 1) * reach }
+    // Inside the ring everybody starts on, well clear of it: nobody starts with a shield by starting on one.
+    if (Math.hypot(at.x, at.z) > ARENA.spawnRing - ARENA.pickupClear) continue
+    if (all.some((b) => Math.hypot(at.x - clamp(at.x, b.x0, b.x1), at.z - clamp(at.z, b.z0, b.z1)) < ARENA.pickupRoom)) continue
+    if (pickups.some((other) => Math.hypot(at.x - other.x, at.z - other.z) < ARENA.pickupGap)) continue
+    pickups.push(at)
+  }
+
+  const arena: Arena = { seed, blocks: all, pickups }
   cache.set(seed, arena)
   if (cache.size > 16) cache.delete(cache.keys().next().value!)
   return arena
@@ -243,4 +276,25 @@ export function openPoint(arena: Arena, random: () => number, radius: number): P
     if (!blocked(arena, p, radius + 0.4)) return p
   }
   return spawnPoint(arena.seed, 1, 0)
+}
+
+/**
+ * Where somebody eliminated starts hunting again: a few metres behind the one
+ * who eliminated them, on the way they came from, at the nearest clear spot -
+ * looking the way their new master looks. Never on top of cover, never outside the
+ * wall. Deterministic: the same killer in the same place, the same spot.
+ */
+export function respawnSpot(arena: Arena, killer: Point & { yaw: number }): Point & { yaw: number } {
+  // "Behind" is the way away from where the killer looks: (sin yaw, cos yaw).
+  const back = Math.atan2(Math.sin(killer.yaw), Math.cos(killer.yaw))
+  for (const distance of [2.6, 3.4, 4.4, 5.6]) {
+    for (const turn of [0, 0.5, -0.5, 1, -1, 1.5, -1.5, 2.2, -2.2]) {
+      const a = back + turn
+      const q = { x: killer.x + Math.sin(a) * distance, z: killer.z + Math.cos(a) * distance }
+      const at = collide(arena, q, SPAWN_ROOM)
+      if (!blocked(arena, at, SPAWN_ROOM - 0.05) && Math.hypot(at.x - q.x, at.z - q.z) < 0.6) return { ...at, yaw: killer.yaw }
+    }
+  }
+  // Nowhere clear nearby: the killer's own spot, pushed out of anything.
+  return { ...collide(arena, killer, SPAWN_ROOM), yaw: killer.yaw }
 }

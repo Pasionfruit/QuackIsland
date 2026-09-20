@@ -36,7 +36,9 @@ describe('a snapshot', () => {
       ['p2', false, game.players[1].out, 0, 0],
       ['p3', true, null, null, 0],
     ])
-    expect(copy.players[1].x).toBeCloseTo(6, 2)
+    // Eliminated, it hunts beside whoever got it - the host moved it there.
+    expect(Math.hypot(copy.players[1].x - game.players[0].x, copy.players[1].z - game.players[0].z)).toBeLessThan(6.5)
+    expect(copy.players[1].x).toBeCloseTo(game.players[1].x, 2)
     expect(copy.shots).toHaveLength(1)
     expect(copy.shots[0]).toMatchObject({ by: 0, hit: 1 })
 
@@ -53,7 +55,9 @@ describe('a snapshot', () => {
     game.players[2].out = 12.5
     game.players[2].by = 1
     applySnapshot(copy, decodeSnapshot(relay(encodeSnapshot(game)))!, 'p3')
-    expect(copy.players[2]).toMatchObject({ out: 12.5, by: 1, x })
+    // ...and moves it: it hunts beside whoever got it, the host's word for where, taken once - which the screen is told of.
+    expect(copy.players[2]).toMatchObject({ out: 12.5, by: 1, respawns: 1 })
+    expect(copy.players[2].x).toBeCloseTo(game.players[2].x, 2)
     game.over = true
     applySnapshot(copy, decodeSnapshot(relay(encodeSnapshot(game)))!, 'p3')
     expect(copy.players[2].x).toBeCloseTo(game.players[2].x, 2)
@@ -82,9 +86,15 @@ describe('a snapshot', () => {
     expect(decodeSnapshot({ ...good, t: 'hd' })).toBeNull()
     expect(decodeSnapshot({ ...good, p: [] })).toBeNull()
     expect(decodeSnapshot({ ...good, o: 2 })).toBeNull()
-    expect(decodeSnapshot({ ...good, p: [['p1', 99999, 0, 0, -1, -1, 0, 0]] })).toBeNull()
-    expect(decodeSnapshot({ ...good, p: [['p1', 0, 0, 0, -1, 3, 0, 0]] })).toBeNull()
-    expect(decodeSnapshot({ ...good, p: [['p1', 0, 0, 0, 9000, -1, 0, 0]] })).toBeNull()
+    expect(decodeSnapshot({ ...good, p: [['p1', 99999, 0, 0, -1, -1, 0, 0, 0]] })).toBeNull()
+    expect(decodeSnapshot({ ...good, p: [['p1', 0, 0, 0, -1, 3, 0, 0, 0]] })).toBeNull()
+    expect(decodeSnapshot({ ...good, p: [['p1', 0, 0, 0, 9500, -1, 0, 0, 0]] })).toBeNull()
+    // The flags are left and shield, and nothing else; nobody is higher than a jump goes.
+    expect(decodeSnapshot({ ...good, p: [['p1', 0, 0, 0, -1, -1, 0, 4, 0]] })).toBeNull()
+    expect(decodeSnapshot({ ...good, p: [['p1', 0, 0, 0, -1, -1, 0, 0, 500]] })).toBeNull()
+    expect(decodeSnapshot({ ...good, p: [['p1', 0, 0, 0, -1, -1, 0, 0, -3]] })).toBeNull()
+    expect(decodeSnapshot({ ...good, k: -1 })).toBeNull()
+    expect(decodeSnapshot({ ...good, k: undefined })).toBeNull()
     expect(decodeSnapshot({ ...good, h: [[1, 5, 0, 0, 0, 0, 0, 0, -1]] })).toBeNull()
     expect(decodeSnapshot({ ...good, h: [[0, 0, 0, 170, 0, 100, 170, 0, -1]] })).toBeNull()
   })
@@ -110,12 +120,16 @@ describe('a snapshot', () => {
 
 describe('what a guest sends', () => {
   it('comes back as what was sent, and is refused when it is not one', () => {
-    expect(decodeMove(relay(encodeMove(41, { x: 1.23456, z: -2.5, yaw: 0.5, pitch: -0.25 })))).toEqual({ game: 41, x: 1.235, z: -2.5, yaw: 0.5, pitch: -0.25 })
-    expect(decodeMove({ t: 'hos-mv', g: 41, x: 1, z: 99, y: 0, p: 0 })).toBeNull()
-    expect(decodeMove({ t: 'hos-mv', g: 41, x: 1, z: 1, y: 0, p: 3 })).toBeNull()
-    expect(decodeShot(relay(encodeShot(41, { x: 1, z: 2, yaw: 3, pitch: 0.1, victim: 'p2' })))).toEqual({ game: 41, x: 1, z: 2, yaw: 3, pitch: 0.1, victim: 'p2' })
+    // Height off the floor comes with it - and no higher than a jump goes.
+    expect(decodeMove(relay(encodeMove(41, { x: 1.23456, z: -2.5, y: 0.6, yaw: 0.5, pitch: -0.25 })))).toEqual({ game: 41, x: 1.235, z: -2.5, y: 0.6, yaw: 0.5, pitch: -0.25 })
+    expect(decodeMove({ t: 'hos-mv', g: 41, x: 1, z: 99, y: 0, p: 0, j: 0 })).toBeNull()
+    expect(decodeMove({ t: 'hos-mv', g: 41, x: 1, z: 1, y: 0, p: 3, j: 0 })).toBeNull()
+    expect(decodeMove({ t: 'hos-mv', g: 41, x: 1, z: 1, y: 0, p: 0, j: 3 })).toBeNull()
+    expect(decodeMove({ t: 'hos-mv', g: 41, x: 1, z: 1, y: 0, p: 0, j: -1 })).toBeNull()
+    expect(decodeMove({ t: 'hos-mv', g: 41, x: 1, z: 1, y: 0, p: 0 })).toBeNull()
+    expect(decodeShot(relay(encodeShot(41, { x: 1, z: 2, y: 0.4, yaw: 3, pitch: 0.1, victim: 'p2' })))).toEqual({ game: 41, x: 1, z: 2, y: 0.4, yaw: 3, pitch: 0.1, victim: 'p2' })
     expect(decodeShot(relay(encodeShot(41, { x: 1, z: 2, yaw: 3, pitch: 0.1, victim: null })))!.victim).toBeNull()
-    expect(decodeShot({ t: 'hos-sh', g: 41, x: 1, z: 2, y: 3, p: 0.1 })).toBeNull()
+    expect(decodeShot({ t: 'hos-sh', g: 41, x: 1, z: 2, y: 3, p: 0.1, j: 0 })).toBeNull()
     expect(decodeShot(relay(encodeMove(41, { x: 1, z: 2, yaw: 3, pitch: 0 })))).toBeNull()
   })
 })
@@ -148,12 +162,12 @@ describe('eight players in one arena', () => {
           const victim = shot.hit >= 0 ? copy.players[shot.hit].id : null
           if (victim) claimedHits.set(`${guest.id}>${victim}`, (claimedHits.get(`${guest.id}>${victim}`) ?? 0) + 1)
           // Shots are never lost: the relay is a WebSocket. Only late.
-          const said = decodeShot(relay(encodeShot(game.id, { x: mine.x, z: mine.z, yaw: mine.yaw, pitch: mine.pitch, victim })))!
+          const said = decodeShot(relay(encodeShot(game.id, { x: mine.x, z: mine.z, y: mine.y, yaw: mine.yaw, pitch: mine.pitch, victim })))!
           claim(game, guest.index, said)
         }
         if (frame % 2 === 0 && random() > 0.25) {
           const said = decodeMove(relay(encodeMove(game.id, mine)))!
-          report(game, guest.index, said, said.yaw, said.pitch, game.elapsed - guest.lastHeard)
+          report(game, guest.index, said, said.yaw, said.pitch, game.elapsed - guest.lastHeard, said.y)
           guest.lastHeard = game.elapsed
         }
       }

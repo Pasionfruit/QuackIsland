@@ -1,11 +1,16 @@
 /**
  * He's One Shot in three dimensions, through your own eyes.
  *
- * A walled square of sand under a bright sky, with crates and lengths of wall to
- * hide behind. Everybody standing is the island's capsule in their own colour.
+ * A big walled square of sand under a bright sky, with crates and lengths of wall
+ * to hide behind. Everybody standing is the island's capsule in their own colour.
  * **A hunter - somebody already eliminated - is a see-through grey ghost with a
- * ring of their colour over their head**, so at a glance you can tell who can
- * still be shot from who is only there to shoot you.
+ * ring of their colour over their head, and a smaller ring inside it in the colour
+ * of whoever they hunt for**, so at a glance you can tell who can still be shot
+ * from who is only there to shoot you, and whose side they are on.
+ *
+ * **A shielded player is inside a pale blue bubble.** Shields lie about the arena
+ * as floating bubbles of the same blue over a ring on the sand, and are gone from
+ * there until they come back.
  *
  * Your gun sits at the bottom right, in your colour, and kicks when it fires.
  * Every shot is a streak from the gun to wherever it stopped, in the shooter's
@@ -20,6 +25,7 @@ import {
   CanvasTexture,
   Color,
   CylinderGeometry,
+  DirectionalLight,
   DoubleSide,
   Group,
   InstancedMesh,
@@ -34,7 +40,7 @@ import {
 } from 'three'
 import { createAvatar } from '../../02-player'
 import { ARENA, arenaFor } from './arena'
-import { BODY, COLOURS, guarded, type Game, type Shot } from './rules'
+import { BODY, COLOURS, crewOf, guarded, pickupReady, type Game, type Shot } from './rules'
 
 export const PALETTE = {
   sky: '#9fd8f0',
@@ -44,6 +50,9 @@ export const PALETTE = {
   crate: '#c98f55',
   plank: '#dcae72',
   hunter: '#6d6880',
+  /** A shield: the bubble round a player, and the one waiting to be picked up. */
+  shield: '#5ad1ff',
+  shieldCore: '#e6fbff',
   gun: '#2d2a33',
   flash: '#fff3b0',
 } as const
@@ -90,11 +99,12 @@ function FirstPersonCamera({ live, look }: { live: RefObject<Game>; look: RefObj
     const me = live.current.players.find((p) => p.mine)
     if (!me) {
       // Waiting for the host: over the arena, looking down on it.
-      camera.position.set(0, 26, 20)
+      camera.position.set(0, 46, 36)
       camera.lookAt(0, 0, 0)
       return
     }
-    camera.position.set(me.x, BODY.eye, me.z)
+    // Eyes go up with a jump.
+    camera.position.set(me.x, BODY.eye + me.y, me.z)
     camera.rotation.set(look.current.pitch, look.current.yaw, 0, 'YXZ')
     // Now rather than at render, so the gun and your own streaks follow this frame's look.
     camera.updateMatrixWorld()
@@ -134,7 +144,7 @@ const ArenaView = memo(function ArenaView({ seed }: { seed: number }) {
         <planeGeometry args={[400, 400]} />
         <meshStandardMaterial color={PALETTE.sandDark} roughness={1} />
       </mesh>
-      <instancedMesh ref={boxes} args={[undefined, undefined, 64]} castShadow receiveShadow>
+      <instancedMesh ref={boxes} args={[undefined, undefined, 128]} castShadow receiveShadow>
         <boxGeometry args={[1, 1, 1]} />
         <meshStandardMaterial roughness={0.85} />
       </instancedMesh>
@@ -164,6 +174,8 @@ function BodyView({ index, live }: { index: number; live: RefObject<Game> }) {
   const group = useRef<Group>(null)
   const turn = useRef<Group>(null)
   const halo = useRef<Mesh>(null)
+  const side = useRef<Mesh>(null)
+  const bubble = useRef<Mesh>(null)
   const burst = useRef<Mesh>(null)
   const colour = COLOURS[index % COLOURS.length]
   const standing = useMemo(() => createAvatar(colour), [colour])
@@ -187,13 +199,24 @@ function BodyView({ index, live }: { index: number; live: RefObject<Game> }) {
       s.x += (p.x - s.x) * k
       s.z += (p.z - s.z) * k
     }
-    group.current.position.set(s.x, 0, s.z)
+    group.current.position.set(s.x, p.y, s.z)
     turn.current.rotation.y = p.yaw + Math.PI
     standing.visible = p.out === null
     hunter.visible = p.out !== null
     if (halo.current) {
       halo.current.visible = p.out !== null
       halo.current.rotation.z = clock.elapsedTime * 2
+    }
+    if (side.current) {
+      // A smaller ring in the colour of whoever they hunt for; nothing for a hunter with nobody to hunt for.
+      const master = p.out !== null ? crewOf(g, index) : null
+      side.current.visible = master !== null
+      if (master !== null) (side.current.material as MeshBasicMaterial).color.set(COLOURS[master % COLOURS.length])
+      side.current.rotation.z = -clock.elapsedTime * 2
+    }
+    if (bubble.current) {
+      bubble.current.visible = p.shield && p.out === null
+      bubble.current.scale.setScalar(1 + Math.sin(clock.elapsedTime * 4 + index) * 0.03)
     }
     if (p.out !== null && wentAt.current === null) wentAt.current = clock.elapsedTime
     if (p.out === null) wentAt.current = null
@@ -217,10 +240,99 @@ function BodyView({ index, live }: { index: number; live: RefObject<Game> }) {
         <ringGeometry args={[0.18, 0.27, 6]} />
         <meshBasicMaterial color={colour} side={DoubleSide} />
       </mesh>
+      <mesh ref={side} position={[0, BODY.height + 0.3, 0]} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
+        <ringGeometry args={[0.07, 0.13, 6]} />
+        <meshBasicMaterial color="#ffffff" side={DoubleSide} />
+      </mesh>
+      <mesh ref={bubble} position={[0, BODY.height / 2, 0]} visible={false}>
+        <sphereGeometry args={[0.95, 20, 14]} />
+        <meshBasicMaterial color={PALETTE.shield} transparent opacity={0.3} depthWrite={false} />
+      </mesh>
       <mesh ref={burst} geometry={PUFF_GEOMETRY} position={[0, 1.1, 0]} visible={false}>
         <meshBasicMaterial color={colour} transparent depthWrite={false} />
       </mesh>
     </group>
+  )
+}
+
+/**
+ * The shields lying about the arena: a pale blue bubble with a bright core,
+ * bobbing over a ring on the sand, turned to face nobody in particular. Gone
+ * while the shield is, and the ring stays so you know where to look.
+ */
+function Pickups({ live, seed }: { live: RefObject<Game>; seed: number }) {
+  const spots = arenaFor(seed).pickups
+  const floating = useRef<(Group | null)[]>([])
+  const rings = useRef<(Mesh | null)[]>([])
+  useFrame(({ clock }) => {
+    const g = live.current
+    spots.forEach((_, k) => {
+      const bob = floating.current[k]
+      if (bob) {
+        bob.visible = pickupReady(g, k)
+        bob.position.y = 0.95 + Math.sin(clock.elapsedTime * 2 + k * 1.7) * 0.12
+        bob.rotation.y = clock.elapsedTime * 1.2
+      }
+      const ring = rings.current[k]
+      if (ring) (ring.material as MeshBasicMaterial).opacity = pickupReady(g, k) ? 0.85 : 0.25
+    })
+  })
+  return (
+    <group>
+      {spots.map((at, k) => (
+        <group key={k} position={[at.x, 0, at.z]}>
+          <mesh ref={(m) => void (rings.current[k] = m)} position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[0.7, 0.95, 28]} />
+            <meshBasicMaterial color={PALETTE.shield} transparent opacity={0.85} depthWrite={false} />
+          </mesh>
+          <group ref={(m) => void (floating.current[k] = m)} position={[0, 0.95, 0]}>
+            <mesh>
+              <sphereGeometry args={[0.5, 20, 14]} />
+              <meshBasicMaterial color={PALETTE.shield} transparent opacity={0.35} depthWrite={false} />
+            </mesh>
+            <mesh>
+              <octahedronGeometry args={[0.2, 0]} />
+              <meshBasicMaterial color={PALETTE.shieldCore} />
+            </mesh>
+          </group>
+        </group>
+      ))}
+    </group>
+  )
+}
+
+/**
+ * The sun, kept over whoever is looking: a light that shadows the whole of a
+ * 48 m arena would need shadow maps too coarse to show a crate's, so it lights
+ * the part you are in and moves with you.
+ */
+function Sun({ live }: { live: RefObject<Game> }) {
+  const light = useMemo(() => {
+    const l = new DirectionalLight('#ffffff', 2.4)
+    l.castShadow = true
+    l.shadow.mapSize.set(2048, 2048)
+    const c = l.shadow.camera
+    c.left = -24
+    c.right = 24
+    c.top = 24
+    c.bottom = -24
+    c.near = 1
+    c.far = 80
+    return l
+  }, [])
+  useFrame(() => {
+    const me = live.current.players.find((p) => p.mine)
+    const x = me?.x ?? 0
+    const z = me?.z ?? 0
+    light.position.set(x + 14, 24, z + 9)
+    light.target.position.set(x, 0, z)
+    light.target.updateMatrixWorld()
+  })
+  return (
+    <>
+      <primitive object={light} />
+      <primitive object={light.target} />
+    </>
   )
 }
 
@@ -376,22 +488,12 @@ export function HesOneShotScene({ live, look }: { live: RefObject<Game>; look: R
   return (
     <>
       <color attach="background" args={[background]} />
-      <fog attach="fog" args={[PALETTE.sky, 30, 90]} />
+      <fog attach="fog" args={[PALETTE.sky, 40, 115]} />
       <hemisphereLight args={['#eef8ff', '#c9a36e', 1.3]} />
-      <directionalLight
-        position={[14, 24, 9]}
-        intensity={2.4}
-        castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-19}
-        shadow-camera-right={19}
-        shadow-camera-top={19}
-        shadow-camera-bottom={-19}
-        shadow-camera-near={1}
-        shadow-camera-far={60}
-      />
+      <Sun live={live} />
       <FirstPersonCamera live={live} look={look} />
       {game.players.length > 0 ? <ArenaView seed={game.seed} /> : null}
+      {game.players.length > 0 ? <Pickups key={`${game.id}:pickups`} live={live} seed={game.seed} /> : null}
       {game.players.map((p, index) => (p.mine ? null : <BodyView key={`${game.id}:${p.id}`} index={index} live={live} />))}
       <Tracers live={live} />
       {game.players.length > 0 ? <Gun key={`${game.id}:gun`} live={live} /> : null}

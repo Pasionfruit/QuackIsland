@@ -6,10 +6,13 @@
  * the words - the countdown, the clock, who is standing, the crosshair with the
  * gun's cooldown round it, who got whom, being eliminated, and the results.
  *
- * **WASD to move, the mouse to aim, left click to shoot.** The first click on
- * the arena takes the mouse - pointer lock, the way any first-person game does
- * it - and shoots nothing; escape gives it back. A browser that will not lock
- * the pointer gets drag-to-aim instead, and every click shoots.
+ * **WASD to move, Space to jump, the mouse to aim, left click to shoot.** The
+ * first click on the arena takes the mouse - pointer lock, the way any
+ * first-person game does it - and shoots nothing; escape gives it back. A browser
+ * that will not lock the pointer gets drag-to-aim instead, and every click shoots.
+ *
+ * Being eliminated moves you - beside whoever got you, whose hunter you now are -
+ * and the mouse is what turns you, so the screen turns you the way you now face.
  */
 import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
@@ -17,7 +20,7 @@ import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, playCue, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { HesOneShotScene, type LookRef } from './HesOneShotScene'
-import { COLOURS, GUN, PITCH_LIMIT, ROUND, clock, cooldownLeft, guarded, isStanding, placings, type Game } from './rules'
+import { COLOURS, GUN, PITCH_LIMIT, ROUND, clock, cooldownLeft, crewOf, guarded, isStanding, placings, type Game } from './rules'
 import { myId, newGame, waitingGame } from './setup'
 import { useShotNet } from './useShotNet'
 
@@ -46,6 +49,9 @@ const KEYS: Record<string, [number, number]> = {
   KeyA: [0, -1],
   ArrowLeft: [0, -1],
 }
+
+/** The jump key, by `KeyboardEvent.code`. */
+const JUMP_KEY = 'Space'
 
 const ordinal = (n: number) => `${n}${n % 10 === 1 && n % 100 !== 11 ? 'st' : n % 10 === 2 && n % 100 !== 12 ? 'nd' : n % 10 === 3 && n % 100 !== 13 ? 'rd' : 'th'}`
 const minutes = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
@@ -79,6 +85,10 @@ export function HesOneShotScreen({ run }: { run: MinigameRun }) {
   const refused = useRef(false)
   /** When your last shot met somebody, by the page clock. */
   const [hitAt, setHitAt] = useState(-Infinity)
+  /** When you picked a shield up, and when yours broke, by the page clock. */
+  const [shieldAt, setShieldAt] = useState(-Infinity)
+  const [brokeAt, setBrokeAt] = useState(-Infinity)
+  const hadShield = useRef(false)
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
 
@@ -103,10 +113,17 @@ export function HesOneShotScreen({ run }: { run: MinigameRun }) {
           right += k[1]
         }
       }
-      const hands = { forward: Math.sign(forward), right: Math.sign(right), yaw: look.current.yaw, pitch: look.current.pitch, fire: trigger.current }
+      const hands = { forward: Math.sign(forward), right: Math.sign(right), yaw: look.current.yaw, pitch: look.current.pitch, jump: held.current.has(JUMP_KEY), fire: trigger.current }
       trigger.current = false
       const result = wire.advance(current, dt, hands, paused.current)
       if (result.shot && result.shot.hit >= 0) setHitAt(now)
+      const after = current.players.find((p) => p.mine)
+      // Eliminated, and moved beside whoever got you: the mouse turns you, so it has to be turned to match.
+      if (result.respawned && after) look.current = { yaw: after.yaw, pitch: 0 }
+      // A shield picked up, and one broken by a hit - which is a shield going with you still standing.
+      if (after && !hadShield.current && after.shield) setShieldAt(now)
+      if (after && hadShield.current && !after.shield && after.out === null) setBrokeAt(now)
+      hadShield.current = !!after?.shield
       if (result.changed) setGame({ ...current })
       frame = requestAnimationFrame(tick)
     }
@@ -118,7 +135,9 @@ export function HesOneShotScreen({ run }: { run: MinigameRun }) {
   useEffect(() => {
     const isLocked = () => !!board.current && document.pointerLockElement === board.current
     const onKey = (e: KeyboardEvent, down: boolean) => {
-      if (!(e.code in KEYS)) return
+      if (!(e.code in KEYS) && e.code !== JUMP_KEY) return
+      // The space bar scrolls a page and presses a focused button: neither is wanted here.
+      if (e.code === JUMP_KEY) e.preventDefault()
       if (down && !paused.current) held.current.add(e.code)
       else held.current.delete(e.code)
     }
@@ -193,12 +212,23 @@ export function HesOneShotScreen({ run }: { run: MinigameRun }) {
   let banner: { text: string; sub?: string; tone: 'count' | 'out' | 'hint' | 'got' } | null = null
   if (ready && !game.over && mine) {
     const got = game.players.filter((p) => p.by === mineIndex && p.out !== null && t - p.out < 2).pop()
+    const since = (n: number) => (performance.now() - n) / 1000
     if (mine.out !== null && t - mine.out < 3) {
       const by = mine.by !== null ? game.players[mine.by] : null
-      banner = { text: "You're a hunter now", sub: by ? `${nameOf(by.id)} got you - keep shooting` : 'keep shooting', tone: 'out' }
-    } else if (got) banner = { text: `You got ${nameOf(got.id)}`, tone: 'got' }
-    else if (!locked && !lockRefused) banner = { text: 'Click to take aim', tone: 'hint' }
+      // Whoever got you may have been got themselves since: it is their side you are on, and them you cannot hurt.
+      const side = crewOf(game, mineIndex)
+      const master = side !== null ? game.players[side] : null
+      banner = {
+        text: "You're a hunter now",
+        sub: by ? `${nameOf(by.id)} got you - you hunt for ${master && master !== by ? nameOf(master.id) : 'them'}, and cannot hurt them` : 'keep shooting',
+        tone: 'out',
+      }
+    } else if (got) banner = { text: `You got ${nameOf(got.id)}`, sub: `${nameOf(got.id)} hunts for you now`, tone: 'got' }
+    else if (since(brokeAt) < 1.5) banner = { text: 'Your shield broke!', sub: 'that one would have got you', tone: 'out' }
+    else if (since(shieldAt) < 1.5 && mine.shield) banner = { text: 'Shield!', sub: 'the next hit is absorbed', tone: 'got' }
+    else if (!locked && !lockRefused) banner = { text: 'Click to take aim', sub: 'WASD move - Space jump - click shoot', tone: 'hint' }
   }
+  const hunts = mine && mine.out !== null ? crewOf(game, mineIndex) : null
 
   const feed = game.players
     .map((p, index) => ({ p, index }))
@@ -245,6 +275,7 @@ export function HesOneShotScreen({ run }: { run: MinigameRun }) {
           >
             {nameOf(p.id)}
             {p.kills > 0 ? ` ·${p.kills}` : ''}
+            {p.shield && p.out === null ? ' 🛡' : ''}
           </span>
         ))}
       </div>
@@ -260,6 +291,7 @@ export function HesOneShotScreen({ run }: { run: MinigameRun }) {
         <Stage live={live} look={look} />
 
         {mine && mine.out !== null && t - mine.out < 0.7 && !game.over ? <div style={{ ...flash, opacity: 1 - (t - mine.out) / 0.7 }} /> : null}
+        {mine && mine.shield && mine.out === null && !game.over ? <div style={shielded} data-shield /> : null}
 
         {ready && mine && !game.over ? (
           <div style={crosshairWrap}>
@@ -276,7 +308,12 @@ export function HesOneShotScreen({ run }: { run: MinigameRun }) {
                 ? [45, 135, 225, 315].map((a) => <line key={a} x1={0} y1={-8} x2={0} y2={-16} stroke={LOOK.red} strokeWidth={3} strokeLinecap="round" transform={`rotate(${a})`} />)
                 : null}
             </svg>
-            {mine.out !== null ? <div style={hunterTag}>HUNTER</div> : null}
+            {mine.out !== null ? (
+              <div style={hunterTag} data-hunts={hunts ?? ''}>
+                {hunts !== null ? `HUNTER FOR ${nameOf(game.players[hunts].id).toUpperCase()}` : 'HUNTER'}
+              </div>
+            ) : null}
+            {mine.shield && mine.out === null ? <div style={{ ...hunterTag, background: 'rgba(40,150,210,0.85)' }}>SHIELD</div> : null}
           </div>
         ) : null}
 
@@ -435,6 +472,14 @@ const crosshairWrap: React.CSSProperties = {
   filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.5))',
 }
 
+/** A pale blue glow round the edge of the screen while your shield is up. */
+const shielded: React.CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  pointerEvents: 'none',
+  boxShadow: 'inset 0 0 70px 10px rgba(90, 209, 255, 0.45)',
+}
+
 const hunterTag: React.CSSProperties = {
   marginTop: 6,
   padding: '1px 8px',
@@ -542,17 +587,20 @@ const againButton: React.CSSProperties = {
  * loud; everybody else's is quieter. A new game is only remembered.
  */
 function useShotSounds(game: Game): void {
-  const seen = useRef<{ id: number; by: Map<string, { shot: number; out: boolean }> }>({ id: -1, by: new Map() })
+  const seen = useRef<{ id: number; by: Map<string, { shot: number; out: boolean; shield: boolean }> }>({ id: -1, by: new Map() })
   useEffect(() => {
     const fresh = seen.current.id !== game.id
     if (fresh) seen.current = { id: game.id, by: new Map() }
     const by = seen.current.by
     for (const p of game.players) {
       const was = by.get(p.id)
-      by.set(p.id, { shot: p.shotAt, out: p.out !== null })
+      by.set(p.id, { shot: p.shotAt, out: p.out !== null, shield: p.shield })
       if (fresh || !was) continue
       if (p.shotAt !== was.shot) playCue(CUES.gunShot, p.mine ? 0.6 : 0.25)
       if (!was.out && p.out !== null) playCue(CUES.fallingOver, p.mine ? 0.7 : 0.4)
+      // A shield picked up, and one that took a hit and broke.
+      if (!was.shield && p.shield) playCue(CUES.bump, p.mine ? 0.5 : 0.2)
+      if (was.shield && !p.shield && p.out === null) playCue(CUES.balloonPop, p.mine ? 0.6 : 0.35)
     }
   }, [game])
 }

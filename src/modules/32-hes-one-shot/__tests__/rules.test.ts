@@ -9,6 +9,7 @@ import {
   BODY,
   CLAIM,
   GUN,
+  JUMP,
   REWIND,
   ROUND,
   aimDirection,
@@ -82,7 +83,8 @@ describe('the arena', () => {
       const cover = arenaFor(seed).blocks.filter((b) => !b.wall)
       expect(cover.length).toBeGreaterThanOrEqual(8)
       for (const b of cover) {
-        expect(b.height).toBeGreaterThan(BODY.eye + 0.3)
+        // Over eye height even at the top of a jump: nobody shoots over it, in the air or on the ground.
+        expect(b.height).toBeGreaterThan(BODY.eye + JUMP.max + 0.1)
         expect(Math.min(b.x0 + ARENA.half, ARENA.half - b.x1, b.z0 + ARENA.half, ARENA.half - b.z1)).toBeGreaterThanOrEqual(ARENA.gap - 1e-9)
         for (const other of cover) {
           if (other === b) continue
@@ -236,7 +238,7 @@ describe('the gun', () => {
     expect(g.players[1].out).toBeNull()
   })
 
-  it('goes through a hunter, who cannot be shot, and a hunter can still shoot', () => {
+  it('goes through a hunter, who cannot be shot, and a hunter can still shoot - anybody but who they hunt for', () => {
     const g = started(game(3))
     put(g, 0, -6, OPEN)
     put(g, 1, 0, OPEN)
@@ -244,25 +246,37 @@ describe('the gun', () => {
     aim(g, 0, g.players[1])
     fire(g, 0)
     expect(isHunter(g.players[1])).toBe(true)
+    // The hunter is put back in the way: a shot goes on through a hunter to whoever is behind.
+    put(g, 1, 0, OPEN)
     reload(g)
     aim(g, 0, g.players[2])
     const through = fire(g, 0)!
     expect(through.hit).toBe(2)
     expect(g.players[2].by).toBe(0)
-    // The hunter turns on the shooter.
+
+    // The hunter hunts for whoever got it - so it cannot turn on them...
     const h = started(game(3))
     put(h, 0, -6, OPEN)
     put(h, 1, 6, OPEN)
     aim(h, 0, h.players[1])
     fire(h, 0)
+    put(h, 1, 6, OPEN)
     aim(h, 1, h.players[0])
-    expect(fire(h, 1)!.hit).toBe(0)
-    expect(h.players[0].by).toBe(1)
-    // Both went at the same moment, behind p3, who nobody shot.
+    expect(fire(h, 1)!.hit).toBe(-1)
+    expect(h.players[0].out).toBeNull()
+    // ...but it can shoot anybody else.
+    reload(h)
+    put(h, 2, 0, OPEN)
+    aim(h, 1, h.players[2])
+    expect(fire(h, 1)!.hit).toBe(2)
+    expect(h.players[2].by).toBe(1)
+    // The one standing at the end is first; then the last to go.
+    stepGame(h, 0.01)
+    expect(h.over).toBe(true)
     expect(placings(h).map((e) => [e.player.id, e.place])).toEqual([
-      ['p3', 1],
-      ['p1', 2],
-      ['p2', 2],
+      ['p1', 1],
+      ['p3', 2],
+      ['p2', 3],
     ])
   })
 })
@@ -318,14 +332,16 @@ describe("a guest's shot", () => {
     expect(shot.hit).toBe(1)
   })
 
-  it('in a crossfire, both shots count: the one shot first is already a hunter, and hunters shoot', () => {
+  it('in a crossfire, only the first shot counts: the one shot is already a hunter for the one who shot them, and cannot hurt them', () => {
     const g = started(game(2))
     put(g, 0, -6, OPEN)
     put(g, 1, 6, OPEN)
     claim(g, 0, { ...facing(g, 0, g.players[1]), victim: 'p2' })
-    claim(g, 1, { ...facing(g, 1, g.players[0]), victim: 'p1' })
-    expect(g.players.map((p) => p.out)).toEqual([clock(g), clock(g)])
-    expect(placings(g).map((e) => e.place)).toEqual([1, 1])
+    put(g, 1, 6, OPEN)
+    const back = claim(g, 1, { ...facing(g, 1, g.players[0]), victim: 'p1' })
+    expect(back!.hit).toBe(-1)
+    expect(g.players.map((p) => p.out)).toEqual([null, clock(g)])
+    expect(placings(g).map((e) => e.place)).toEqual([1, 2])
     expect(stepGame(g, 0.01).over).toBe(true)
   })
 

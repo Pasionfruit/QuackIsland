@@ -9,8 +9,10 @@
  * where it is, and each shot as it fires.
  *
  * The host takes a guest's position only as far as it could have walked since it
- * last heard, and a guest's hit only if it could be true - see `claim`. Nobody is
- * eliminated until the host says so.
+ * last heard, its height only as high as a jump goes, and a guest's hit only if it
+ * could be true - see `claim`. Nobody is eliminated, and nobody's shield is
+ * broken or picked up, until the host says so - and a player eliminated is moved
+ * to a new spot by the host, which the guest takes once, at that moment.
  *
  * The same lessons as the other minigames: a guest keeps listening after the
  * game ends; somebody who leaves the lobby is out; a pause stops the round for everybody. Alone, the clock stops.
@@ -18,7 +20,7 @@
 import { useEffect, useRef } from 'react'
 import { getNet, getPeers, sendToRoom, subscribeRoom } from '../../09-net'
 import { botSteer } from './ai'
-import { ROUND, claim, clock, fire, judgeEnd, leave, look, remember, report, tick, walk, type Claim, type Game, type Shot } from './rules'
+import { ROUND, claim, clock, collect, fire, judgeEnd, leave, look, remember, report, tick, walk, type Claim, type Game, type Shot } from './rules'
 import { myId } from './setup'
 import { applySnapshot, decodeMove, decodeShot, decodeSnapshot, encodeMove, encodeShot, encodeSnapshot, type Snapshot } from './wire'
 
@@ -34,16 +36,29 @@ export interface Hands {
   right: number
   yaw: number
   pitch: number
+  /** The jump key is held. */
+  jump: boolean
   /** The trigger was pulled since the last frame. */
   fire: boolean
 }
 
-export interface ShotNet {
-  /** Moves the game on a frame. The shot you fired, if one went off. */
-  advance(game: Game, dt: number, hands: Hands | null, paused: boolean): { changed: boolean; shot: Shot | null }
+export interface Advanced {
+  changed: boolean
+  /** The shot you fired, if one went off. */
+  shot: Shot | null
+  /**
+   * You were eliminated this frame, and so moved: the screen turns you the way you
+   * now face, since the mouse is what turns you and it has not moved.
+   */
+  respawned: boolean
 }
 
-type Heard = { from: string; game: number } & ({ kind: 'move'; x: number; z: number; yaw: number; pitch: number } | ({ kind: 'shot' } & Claim))
+export interface ShotNet {
+  /** Moves the game on a frame. */
+  advance(game: Game, dt: number, hands: Hands | null, paused: boolean): Advanced
+}
+
+type Heard = { from: string; game: number } & ({ kind: 'move'; x: number; z: number; y: number; yaw: number; pitch: number } | ({ kind: 'shot' } & Claim))
 
 export function useShotNet(): ShotNet {
   const heard = useRef<Heard[]>([])
@@ -52,6 +67,8 @@ export function useShotNet(): ShotNet {
   const applied = useRef<Snapshot | null>(null)
   const sentAt = useRef(0)
   const reportedAt = useRef(0)
+  /** How many times your own player has been moved by being eliminated, as of the last frame. */
+  const respawns = useRef(0)
 
   useEffect(() => {
     return subscribeRoom((from, raw) => {
@@ -70,22 +87,31 @@ export function useShotNet(): ShotNet {
     })
   }, [])
 
-  const advance = (game: Game, dt: number, hands: Hands | null, paused: boolean) => {
+  const advance = (game: Game, dt: number, hands: Hands | null, paused: boolean): Advanced => {
     const net = getNet()
     const now = performance.now()
     let shot: Shot | null = null
+    /** Whether your own player was moved since the last frame - see `Advanced`. */
+    const moved = () => {
+      const mine = game.players.find((p) => p.mine)
+      const was = respawns.current
+      respawns.current = mine?.respawns ?? 0
+      return respawns.current !== was
+    }
 
     // A pause is shared: whoever pressed it stopped the round for everybody,
     // so this stops dead - the host's own simulation included. A round that
     // carried on behind the card would make the card a lie. See
     // `15-minigames/internal/pause.ts`.
-    if (paused) return { changed: false, shot }
+    if (paused) return { changed: false, shot, respawned: false }
 
     if (net.host) {
-      if (game.players.length === 0) return { changed: false, shot }
+      if (game.players.length === 0) return { changed: false, shot, respawned: false }
       tick(game, dt)
       const me = game.players.findIndex((p) => p.mine)
-      if (me >= 0 && hands && !paused) {
+      // Moved since last frame - eliminated between frames: this frame's look is from before that.
+      let respawned = moved()
+      if (me >= 0 && hands && !paused && !respawned) {
         look(game, me, hands.yaw, hands.pitch)
         walk(game, me, hands, dt)
         if (hands.fire) shot = fire(game, me, true)
@@ -105,9 +131,11 @@ export function useShotNet(): ShotNet {
         }
         const key = `${game.id}:${said.from}`
         const last = heardAt.current.get(key) ?? ROUND.countdown
-        report(game, player, said, said.yaw, said.pitch, game.elapsed - last)
+        report(game, player, said, said.yaw, said.pitch, game.elapsed - last, said.y)
         if (clock(game) >= 0) heardAt.current.set(key, game.elapsed)
       }
+      // Shields walked through, this frame.
+      collect(game)
       if (net.status === 'joined') {
         const here = new Set(getPeers().map((p) => p.id))
         game.players.forEach((p, index) => {
@@ -119,7 +147,9 @@ export function useShotNet(): ShotNet {
         sentAt.current = now
         sendToRoom(encodeSnapshot(game))
       }
-      return { changed: true, shot }
+      // Or eliminated this frame, by a stand-in or a guest's shot.
+      respawned = moved() || respawned
+      return { changed: true, shot, respawned }
     }
 
     // A guest. The host's word first, then the clock, then our own hands.
@@ -129,7 +159,9 @@ export function useShotNet(): ShotNet {
       applied.current = heardFrom.snap
       applySnapshot(game, heardFrom.snap, myId())
     }
-    if (game.players.length === 0) return { changed: false, shot }
+    if (game.players.length === 0) return { changed: false, shot, respawned: false }
+    // Told this frame that we were eliminated and moved: this frame's look is from before that.
+    const respawned = moved()
 
     tick(game, dt)
     if (heardFrom && !game.over) {
@@ -141,14 +173,14 @@ export function useShotNet(): ShotNet {
 
     const me = game.players.findIndex((p) => p.mine)
     const mine = game.players[me]
-    if (mine && hands && !paused) {
+    if (mine && hands && !paused && !respawned) {
       look(game, me, hands.yaw, hands.pitch)
       walk(game, me, hands, dt)
       if (hands.fire) {
         shot = fire(game, me, false)
         if (shot) {
           const victim = shot.hit >= 0 ? game.players[shot.hit].id : null
-          sendToRoom(encodeShot(game.id, { x: mine.x, z: mine.z, yaw: mine.yaw, pitch: mine.pitch, victim }))
+          sendToRoom(encodeShot(game.id, { x: mine.x, z: mine.z, y: mine.y, yaw: mine.yaw, pitch: mine.pitch, victim }))
         }
       }
     }
@@ -156,7 +188,7 @@ export function useShotNet(): ShotNet {
       reportedAt.current = now
       sendToRoom(encodeMove(game.id, mine))
     }
-    return { changed: true, shot }
+    return { changed: true, shot, respawned }
   }
 
   return { advance }

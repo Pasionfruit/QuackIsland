@@ -1519,7 +1519,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T05:12:49.117Z"
+          "at": "2026-09-20T16:36:59.430Z"
         },
         "human": {
           "status": "pending"
@@ -2844,7 +2844,7 @@
     {
       "id": "32-hes-one-shot",
       "phase": "P6",
-      "title": "Minigame 14, He's One Shot: first person, everybody against everybody, one shot eliminates, the eliminated keep hunting, the last to go wins, a minute and fifteen",
+      "title": "Minigame 14, He's One Shot: first person in a 48 m arena, one shot eliminates, the eliminated start again beside whoever got them and hunt for them - their shots go through that side - you can jump, and shields lying about take the next hit; the last to go wins, a minute and a half",
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
@@ -2896,6 +2896,11 @@
           "status": "done"
         },
         {
+          "id": "32.9",
+          "title": "A 48 m arena, jumping, shield power-ups, and hunters who hunt for whoever eliminated them and start beside them",
+          "status": "done"
+        },
+        {
           "id": "32.8",
           "title": "The assets: models, sprites and sound in place of primitives",
           "status": "planned"
@@ -2904,7 +2909,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-19T22:59:50.544Z"
+          "at": "2026-09-20T16:36:20.554Z"
         },
         "human": {
           "status": "pending"
@@ -2914,8 +2919,9 @@
       "freeze": null,
       "nonGoals": [
         "No models: players are the island capsule, cover is boxes",
-        "No health, ammo, reloading, jumping or crouching",
-        "No sound, no score kept between games"
+        "No health, ammo, reloading or crouching; a jump is a hop, with no air control",
+        "No power-ups but shields",
+        "No sound but the cues, no score kept between games"
       ],
       "budgets": {
         "drawCallsMax": 0,

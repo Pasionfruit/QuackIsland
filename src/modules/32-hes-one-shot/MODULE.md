@@ -6,25 +6,38 @@ Minigame 14, free-for-all. **First person, everybody against everybody, and one
 shot eliminates.** The gun needs a second and a half between shots. Being
 eliminated does not take you out: you become a **hunter** - you still walk and
 still shoot anybody left standing, but nobody can shoot you. **The game ends
-when one player is left standing, and they win.** At a minute and fifteen,
+when one player is left standing, and they win.** At a minute and a half,
 anybody still standing shares first.
+
+Four things make it what it is now:
+
+- **A hunter hunts for whoever eliminated them.** You start again beside them, and
+  your shots pass straight through them, so the one who got you is safe from you
+  and everybody else is not.
+- **You can jump**, nearly a metre.
+- **Shield power-ups** lie about the arena. Walk through one and the next shot
+  that hits you breaks the shield instead of eliminating you.
+- **The arena is 48 m across**, over twice the area, with 56 pieces of cover.
 
 **Spawn guard.** For the first two seconds (`ROUND.guard`) everybody is hidden
 from everybody else and cannot be shot - a shot passes straight through - so
 nobody is picked off where they spawned. The HUD shows a `hidden` count while it
 lasts, and the stand-ins do not aim at anybody until it is over.
 
-**WASD to move, the mouse to aim, left click to shoot.**
+**WASD to move, Space to jump, the mouse to aim, left click to shoot.**
 
 It plugs into `15-minigames` with `registerMinigame('hes-one-shot', ...)` and one
 import line in `src/App.tsx`. Nothing else in the build knows it exists.
 
 ## The arena
 
-**A 30 m walled square of sand, with up to 22 pieces of cover.** Cover is crates
-(1.2-2.4 m square) and lengths of wall (3-5.5 m by 0.6 m), square to the world,
-grown from the seed. Every piece is **2.4 m tall, above anybody's eyes (1.7 m)**,
-so nobody shoots over cover: a shot reaches you or it does not.
+**A 48 m walled square of sand, with up to 56 pieces of cover** - the same crowding
+as the 30 m arena had, over a larger floor. Cover is crates (1.2-2.4 m square) and
+lengths of wall (3-5.5 m by 0.6 m), square to the world, grown from the seed. Every
+piece is **2.8 m tall, above anybody's eyes - even at the top of a jump**: eyes are
+1.7 m, a jump takes them under 0.95 m higher, and 2.65 is under 2.8. So nobody
+shoots over cover, in the air or on the ground: a shot reaches you or it does not.
+The outer wall is 3.6 m.
 
 There is at least 1.8 m between any two pieces, and between cover and the outer
 wall, so the arena is always one open space with things in it. Nobody can be
@@ -34,13 +47,24 @@ cornered in a dead end.
 a ring round the middle. That left an open band where everybody starts, and
 everybody could see their neighbours from the first second; see *Tuning*.
 
-Everybody starts on a ring 12.5 m out, evenly spaced, turned by the seed, facing
+Everybody starts on a ring 20 m out, evenly spaced, turned by the seed, facing
 the middle. If cover sits on a start, it is nudged along the ring to the nearest
 clear spot.
+
+### Shield spots
+
+**Up to ten places** where a shield power-up appears (`arena.pickups`), from a
+stream of the seed of their own, so the cover is exactly what it was for a seed
+without them. Each is in the open (1.4 m clear of every piece of cover), at least
+10 m from every other, and **inside the ring everybody starts on, 4 m in** - so
+nobody starts on one, which an early version allowed: a player who spawned on a
+spot was shielded from the first frame, and a test noticed. The spots are the same
+all game; whether there is a shield on one is `game.pickups`.
 
 Bodies do not collide with each other, only with cover and the wall. A body
 walking into a box slides along it, a few centimetres at a time, so nothing can
 be walked through at any speed or frame rate.
+
 
 ## The gun
 
@@ -49,20 +73,60 @@ meets a body, a box or the floor, up to 60 m. A body is the island's capsule, a
 standing cylinder 0.4 m round and 1.8 m tall. Shooting over a head or at the
 floor in front of somebody misses.
 
-- **One hit eliminates.** Your place is fixed by when, to the hundredth.
+- **One hit eliminates** - unless the one hit has a shield, which it breaks
+  instead (see *Shields*). Your place is fixed by when, to the hundredth.
 - **A second and a half between shots.** A click during the cooldown does
   nothing and is not saved up for later. The ring round the crosshair fills as
   the gun gets ready.
 - **Shots go through hunters.** A hunter cannot be shot, so a shot passes through
   one to whoever is behind.
-- **Hunters shoot as well as anybody.** Nothing about the gun changes when you
-  are out.
+- **Hunters shoot as well as anybody**, at anybody but the one they hunt for: a
+  shot goes straight through them and on. Nothing else about the gun changes when
+  you are out.
+- **A body in the air is a body in the air.** A shot at the floor under somebody
+  mid-jump passes under them; a shooter mid-jump shoots from higher up, eyes and
+  all.
 - **Nothing happens in the countdown.** No walking and no shooting for three
   seconds; you can look around.
 
+## Hunters hunt for whoever got them
+
+When somebody is eliminated (`eliminate`) three things happen:
+
+1. **They are moved.** They start hunting again **2.6-5.6 m behind the one who got
+   them**, on the way away from where that player looks, at the nearest spot in the
+   clear (`respawnSpot`), **looking the way that player looks**, on the floor, with
+   nothing in their hands but the gun they had. It is deterministic: the same
+   killer in the same place is the same spot, and it is never in cover or outside
+   the wall.
+2. **They hunt for the one who got them.** `crewOf(game, i)` follows who got whom -
+   a hunter's master is whoever eliminated them, and if that player has been
+   eliminated too, whoever eliminated *them*, on to somebody standing. That is the
+   side a hunter is on. `allied(a, b)` is being on the same side.
+3. **Their shots go through that side.** A hunter's shot passes straight through
+   the one it hunts for, and through anybody else on the same side - hunters that
+   player has made, or their master's other hunters. It is the same rule as shots
+   going through hunters, and the same in `trace`, in a guest's `claim`, and in the
+   stand-ins' eyes.
+
+So **the one who got you is invincible from you**, and so is everybody they have
+got. Everybody else is fair game: a hunter kills like anybody, its kills are its
+own and count in the feed, and whoever it gets hunts for **its** side in turn - so
+all of them are on the first killer's. **When a master is eliminated, everybody
+hunting for them goes with them** to whoever got them, with no bookkeeping: the
+chain just ends somewhere else.
+
+A hunter with **nobody to hunt for** - the master left, or a mutual elimination, in
+which each was the other's - hunts for nobody: everybody standing is a target.
+
+**A crossfire no longer eliminates both.** Two shoot each other at once: the host
+takes the first to arrive, and eliminates its target, who is now the shooter's
+hunter - so the second shot goes straight through the shooter. One is eliminated
+and one is not, and it is whoever the host heard first.
+
 ## The end
 
-The game ends when **one player or nobody is left standing, at 1:15, or when
+The game ends when **one player or nobody is left standing, at 1:30, or when
 there is nobody left who could shoot the last one standing** (everybody else has left). The host
 decides.
 
@@ -74,11 +138,51 @@ Placings:
 3. Then anybody who **left** while still standing, the last to leave first.
    Somebody eliminated before they left keeps the place they were eliminated in.
 
-**A crossfire eliminates both.** If you and somebody else shoot each other at
-once, the host takes the first shot to arrive and eliminates its target, who is
-now a hunter. Hunters shoot, so the second shot counts as well, and both go at
-the same moment and share a place. This is not special-cased; it falls out of
-the rules. Tested.
+**A crossfire eliminates one.** See *Hunters hunt for whoever got them*: the one
+shot first is a hunter for the one who shot them, and cannot hurt them. This is
+not special-cased; it falls out of the rules. Tested.
+
+## Jumping
+
+**Space jumps**, held for another as you land. Up is straight up at 6 m/s under
+20 m/s² of gravity: **0.85 m at sixty frames a second** (0.9 in the limit), about
+0.6 s in the air, the same whatever the frame rate to within a hand's breadth
+(gravity is applied before the move, so a jump never goes higher than the sums say).
+You cannot jump again in the air, and you cannot jump before the start or after the
+end. **Everybody can jump, hunters too**, and the stand-ins do now and then.
+
+The rest of the world follows the body up:
+
+- **A shooter's eyes go up with them** (`eyeOf`), and the camera does, so you look
+  over things a little at the top of a jump - just not over cover, which is taller
+  than the eyes of the highest jump.
+- **A body is a cylinder from its feet to 1.8 m above them** (`bodyHit`), so a body
+  in the air can be shot under.
+- **The host takes a guest's height as it says it, up to `JUMP.max`** (0.95 m), and
+  no higher: in its move reports, and on its shots, and in the trail the host
+  rewinds over - every step of it carries a height, so a hit is checked against
+  where the victim's body actually was, not just where it stood.
+- A stand-in aims at a chest that may be off the floor, from eyes that may be.
+
+## Shields
+
+**Walk through a shield and you have it** (`collect`): anybody standing without one,
+within 1.1 m of a spot that has one, takes it and the spot is empty for 20 s
+(`PICKUP`). Two arriving together, the lower player number has it. Hunters get
+nothing: a hunter cannot be hurt, and a shield is not for them.
+
+**A shield takes the next hit**, from anybody, and nothing else: the shot meets
+you - it stops at your body, the puff is in your colour, it counts as a hit on the
+shooter's screen - and your shield breaks and nobody is eliminated, and the shooter
+has no kill. There is no timer on it: it is there until it takes a hit. The
+shooter's own next shot is 1.5 s away, as ever. It does not move you, since nobody
+was eliminated.
+
+You see it as **a pale blue bubble round a player**, a glow round the edge of your
+own screen, a *SHIELD* tag under the crosshair and 🛡 by your name in the pills; and
+it pops with *Your shield broke!* Spots show as **a floating pale blue bubble with a
+bright core over a ring on the sand**, gone while the shield is - the ring stays,
+dim, so you know where to look.
 
 ## Controls, and the pointer lock
 
@@ -102,41 +206,65 @@ make every shot a click-and-drag.
 - **Paused, or the game over:** the lock and the keys are let go of, so the
   pause card and the results can be clicked.
 - **Keys are read by `KeyboardEvent.code`**, so WASD sits in the same place on
-  any keyboard layout. The arrow keys work too.
+  any keyboard layout. The arrow keys work too, and **Space jumps** - and does not
+  scroll the page or press a focused button.
+- **Being eliminated turns you.** You are moved beside whoever got you, looking the
+  way they look, and the mouse is what turns you - so the screen sets your look to
+  the way you now face, the moment it happens, on the host and on a guest. (The
+  frame it happens in, your own look from before is not applied over it.)
 
 ## On the screen
 
 - **Your view:** the arena at eye height, and your gun at the bottom right in
   your colour. It kicks and flashes when it fires, and is drawn over everything,
   so it never sinks into a wall you stand against.
-- **Everybody standing** is the island's capsule in their colour.
+- **Everybody standing** is the island's capsule in their colour, off the floor when
+  they are in a jump.
 - **A hunter is a see-through grey ghost with a ring of their colour over their
-  head.** You can tell at a glance who can still be shot from who is only there
-  to shoot you.
+  head, and a smaller ring inside it in the colour of whoever they hunt for.** You
+  can tell at a glance who can still be shot from who is only there to shoot you,
+  and whose side each hunter is on.
+- **The sun follows you**, so the shadows stay sharp over the whole of a 48 m arena
+  rather than one coarse shadow map stretched over all of it.
 - **Every shot** is a streak in the shooter's colour from their gun to wherever
   it stopped, gone in a fifth of a second, with a puff where it landed. When
   somebody goes, a burst in their colour.
 - **The HUD:** time left, how many are standing, a pill per player (filled while
   standing, hollow once out, with their hits), the crosshair with its cooldown
   ring, a red X when your shot lands, and a feed of who got whom.
-- **Banners:** the countdown, *You got …* when you land one, and *You're a hunter
-  now - … got you* when you are shot, with a red flash.
+- **Banners:** the countdown, *You got … - … hunts for you now* when you land one,
+  *You're a hunter now - … got you - you hunt for …, and cannot hurt them* when you
+  are shot (with a red flash, and naming the side you are actually on, if whoever
+  got you has been got since), *Shield!* when you take one and *Your shield broke!*
+  when one takes a hit. Under the crosshair, *HUNTER FOR …* once you are a hunter
+  and *SHIELD* while you have one.
 - **The results:** everybody by place, with their hits and when they went, and
   **again** for the host.
 
 ## One arena across the lobby
 
-**The host runs the game**: the clock, its own player, the stand-ins, every hit
-and the end. It sends a snapshot fifteen times a second with every player's
-position, look, when they went and who got them, their hits, whether they left,
-and the last half second of shots. The arena is not sent; the seed makes it.
-Eight players and a full screen of shots fit well under the relay's 4 KB.
+**The host runs the game**: the clock, its own player, the stand-ins, every hit,
+every shield and the end. It sends a snapshot fifteen times a second with every
+player's position and height, look, when they went and who got them, their hits,
+whether they have a shield or have left, **which shield spots have a shield on
+them** (one bit each) and the last half second of shots. The arena is not sent; the
+seed makes it - the shield spots included - and **so is who hunts for whom**, which
+is only who got whom and is already in there. Eight players and a full screen of
+shots fit well under the relay's 4 KB.
 
-**A guest walks, aims and judges its own shots on its own screen.** Whether you
-had somebody in your crosshair is a matter of pixels and milliseconds, and cannot
-wait for a round trip. A guest reports where it is and where it looks twenty
-times a second. It sends each shot the moment it fires: where from, which way,
-and who its own screen saw the shot meet.
+**A guest walks, jumps, aims and judges its own shots on its own screen.** Whether
+you had somebody in your crosshair is a matter of pixels and milliseconds, and
+cannot wait for a round trip. A guest reports where it is, how high, and where it
+looks twenty times a second. It sends each shot the moment it fires: where from and
+how high, which way, and who its own screen saw the shot meet.
+
+**Nobody's shield is taken or broken, and nobody is moved, until the host says so.**
+A guest picks a shield up when the host has seen it walk through one - a snapshot
+later - and its own screen learns which spots are empty from the host's bits. And a
+guest that is eliminated **takes the host's word for where it now is, once**, at the
+moment it is told (`respawns` goes up on its copy, which is how the screen knows to
+turn it): until then it owns its own position, as ever. A guest whose shield merely
+broke is not moved.
 
 **The host checks every claim** (`claim` in `rules.ts`):
 
@@ -202,7 +330,13 @@ lurks at each for 1-3.5 s, looking about.
   its sights. Getting out of its sights matters: whoever comes back out is a
   stranger again.
 - **Aiming slows it** to a third of its walk. Eliminated, it hunts exactly the
-  same way.
+  same way - **for whoever got it**, so it never sees, and never aims at, anybody on
+  that side.
+- **It jumps** now and then: about every two and a half seconds walking, and less
+  when it has somebody in its sights.
+- **It goes for shields.** When it picks somewhere new to head, nearly half the
+  time - if it has no shield and there is one lying about - that is the nearest
+  shield.
 
 All of it comes from the seed, so the same game plays out the same way. Tested.
 
@@ -222,10 +356,13 @@ half a second. Measured over 40 seeds, the causes were, in order of weight:
    shot back, so the last few standing are swarmed. **That is the rules as
    given**, not a bug, and no stand-in setting changes it much.
 
-Five stand-ins now play a game of about **20 seconds** (median over 40 seeds,
-the middle half 15-31), and an average one of them is out at about 10. The 1:15
-limit is a cap that a game with five in it will seldom reach. **Whether that is
-the game you want is a design question**; see *Known limitations*.
+Five stand-ins in the 30 m arena played a game of about **20 seconds** (median
+over 40 seeds, the middle half 15-31). **In the 48 m arena, with shields, jumping
+and hunters who cannot turn on their killers, the same measurement is about 40
+seconds** (median over 40 seeds; the middle half 28-65 s, from 14 s to the limit),
+the first elimination at about 7 s, and **five games in forty reach the limit**,
+which was set to 1:30 for it. The bigger floor is most of it: it takes real time to
+find anybody, and a stand-in has to walk to a shield to have one.
 
 ## Public contract
 
@@ -234,14 +371,16 @@ testing, not because anybody else needs them.
 
 | Export | What it is |
 | --- | --- |
-| `ARENA`, `arenaFor`, `Arena`, `Block`, `Point`, `Vec3` | The arena for a seed. Cached; the same seed, the same arena. |
+| `ARENA`, `arenaFor`, `Arena`, `Block`, `Point`, `Vec3` | The arena for a seed, shield spots included. Cached; the same seed, the same arena. |
 | `blocked`, `collide`, `slide` | A body against the arena: overlapping, pushed out, walked. All pure. |
 | `rayHit`, `lineClear`, `slab` | A ray against the arena and the floor. All pure. |
-| `spawnPoint`, `SPAWN_ROOM`, `openPoint` | Where everybody starts, and somewhere open for a stand-in to head for. |
-| `BODY`, `GUN`, `ROUND`, `CLAIM`, `PITCH_LIMIT`, `SHOT_LIFE`, `COLOURS` | Body size and speed; the gun; the clock; what the host gives a guest's shot; how far you can look; eight colours. |
+| `spawnPoint`, `SPAWN_ROOM`, `openPoint`, `respawnSpot` | Where everybody starts, somewhere open for a stand-in to head for, and where somebody eliminated starts hunting again. |
+| `BODY`, `GUN`, `JUMP`, `PICKUP`, `ROUND`, `CLAIM`, `PITCH_LIMIT`, `SHOT_LIFE`, `COLOURS` | Body size and speed; the gun; a jump; a shield spot; the clock; what the host gives a guest's shot; how far you can look; eight colours. |
 | `createGame`, `Game`, `Player`, `Shot`, `Entrant` | A game at its start. |
-| `walk`, `look`, `aimDirection`, `eyeOf`, `wrapAngle` | Moving and looking. All pure. |
-| `fire`, `trace`, `bodyHit`, `canShoot`, `cooldownLeft`, `eliminate` | The gun. All pure. |
+| `walk`, `look`, `aimDirection`, `eyeOf`, `wrapAngle` | Moving - jumping included - and looking. All pure. |
+| `crewOf`, `allied` | Whose side a player is on, and whether two are on the same one. All pure. |
+| `collect`, `pickupReady` | Shields walked through, and whether a spot has one. |
+| `fire`, `trace`, `bodyHit`, `canShoot`, `cooldownLeft`, `eliminate` | The gun, and what a hit does: eliminate, or break a shield; move the eliminated to their master. All pure. |
 | `claim`, `Claim`, `report` | A guest's shot and a guest's walk, checked by the host. All pure. |
 | `tick`, `judgeEnd`, `stepGame`, `clock`, `canAct`, `isStanding`, `isHunter`, `leave`, `placings` | The clock, the end, leaving, and who placed where. |
 | `botSteer`, `sightedBy`, `yawTowards`, `BOT` | The stand-ins. |
@@ -262,6 +401,23 @@ testing, not because anybody else needs them.
 - **Walking goes where a camera turned the same way looks**, right goes to its
   right, and diagonals are no faster. Tested against a real `PerspectiveCamera`.
 - **One shot eliminates, cover stops it, and it passes through hunters.** Tested.
+- **A shield takes exactly one hit and no more, eliminates nobody, and gives the
+  shooter no kill; the next hit eliminates.** Tested, for `fire` and for `claim`.
+- **Shields are picked up by walking within 1.1 m, one to a player, none by a
+  hunter, first player wins a tie, and come back after 20 s, not before.** Tested.
+- **Shield spots are in the open, 10 m apart, inside the ring everybody starts on,
+  and the same for a seed.** Tested over four seeds.
+- **Somebody eliminated starts again 2.6-5.6 m behind whoever got them, in the
+  clear, facing their way, on the floor.** Tested over four seeds and against cover.
+- **A hunter cannot hurt who it hunts for, or anybody on that side; it can hurt
+  everybody else; whoever it gets is on the same side; and when a master is
+  eliminated everybody hunting for them goes to whoever got them.** Tested, for
+  `fire`, for `claim` and for the stand-ins.
+- **A jump goes up 0.8-0.95 m in about 0.6 s, does not chain in the air, does not
+  depend on the frame rate, and never puts anybody's eyes over the cover.** Tested.
+- **A shot under a body in the air misses and one at it hits; a shot from the top of
+  a jump still meets the crate in front of it; a guest cannot say it is higher than a
+  jump goes.** Tested.
 - **No shot sooner than the cooldown**, from anybody, however it arrives.
   Tested.
 - **A guest's claim counts only if it could be true**, and never where the guest
@@ -270,32 +426,53 @@ testing, not because anybody else needs them.
 - **A shot counts on where the victim was while the shooter's screen was behind**,
   up to 0.45 s back, and no further. Tested, including that no amount of rewind
   shoots anybody through cover and that the trail never grows past the window.
-- **A crossfire eliminates both, sharing a place.** Tested.
+- **A crossfire eliminates one: the one shot first hunts for the shooter and cannot
+  hurt them.** Tested.
 - **Standing at the end shares first; then the last to go.** Tested, both at the
   limit and when nobody is left.
 - **Eight players end with every screen agreeing** on who is out, by whom, and
   the kills, with a fifth of the snapshots and a quarter of the reports lost, and
   every elimination one the shooter's own screen saw. Tested in Node, and with
-  eight real browsers.
+  real browsers.
+- **A guest is moved once, when it is eliminated, and its shield and how high
+  anybody is come from the host.** Tested.
 - **The stand-ins play the same way every time.** Tested.
 
 ## Deliberate non-goals
 
 - No models: players are the island's capsule, cover is boxes, the gun is five
   more.
-- No health, ammo, reloading, jumping, crouching, running or aiming down sights.
-- No sound. No score kept between games.
+- No health, ammo, reloading, crouching, running or aiming down sights.
+- No other power-ups, though `collect` and the spots are ready for more: shields
+  are the one.
+- No air control to speak of and no double jump: a jump is a hop.
+- No team scores: a hunter's kills are its own, and a side is not ranked, only the
+  players in it.
+- No sound but the cues. No score kept between games.
 - No lag compensation beyond the 0.9 m of slack on a claim. The host does not
   rewind.
 
 ## Known limitations
 
-- **Games with stand-ins are short, about 20 seconds.** One shot to eliminate,
-  plus hunters who cannot be shot and keep shooting, snowballs. The 1:15 limit
-  will seldom be reached with five players; with people it depends how well they
-  aim. Longer games need a rules change, not stand-in tuning. Options that would
-  work: a longer cooldown, a short grace period after the start, or hunters
-  waiting a moment before they can shoot. See *Tuning*.
+- **Games with stand-ins are about 40 seconds now, and snowball still.** One shot to
+  eliminate, plus hunters who cannot be shot and keep shooting, though not at the
+  one they hunt for. The 1:30 limit is reached in about one game in eight with five
+  players; with people it depends how well they aim. See *Tuning*.
+- **Going after somebody's killer is the whole game for a hunter, and it is
+  entirely up to them.** Nothing tells a hunter who the killer's enemies are, so
+  what a hunter does is shoot whoever it sees.
+- **A shield is a coin toss you can see.** Everybody knows who has one - the bubble
+  is visible from across the arena - and so who to shoot second. That is deliberate
+  enough to leave, but it does make a shielded player a target for nobody until
+  the second shot.
+- **A guest that is eliminated is moved by the host a snapshot after it happened on
+  its own screen**: for a moment - a tenth of a second and the trip - it is a hunter
+  still where it died, and then it is not. Its own look is turned the moment it
+  hears.
+- **A guest is trusted with how high it says it is**, up to 0.95 m, and that is the
+  height its shots come from and the height it is shot at. A modified client could
+  hold itself at the top of a jump all the time, which makes it a harder target and
+  a taller shooter, though not one that can shoot over cover.
 - **A guest is trusted with what its screen saw.** The host refuses shots that
   could not be true, but a modified client could claim every shot that passes
   within 0.9 m of somebody's body.
@@ -307,8 +484,11 @@ testing, not because anybody else needs them.
 - **Pointer lock cannot be tested headless.** The run-localrot skill stands in
   for the lock itself; everything after it is the real code path. The escape
   key, the lock prompt and the drag fallback have only been read, not driven.
-- **Every hunter is the same grey**; only the ring over the head tells one
-  hunter from another.
+- **Every hunter is the same grey**; only the rings over the head tell one hunter
+  from another, and whose side they are on.
+- **Shields are drawn as a bubble, but a shot at somebody's feet passes under a
+  bubble that is a metre and a half across** - it is the body's cylinder that is
+  shot at, not the bubble.
 
 ## How to review
 
@@ -321,12 +501,29 @@ Shot** and press play.
 - **Click the arena.** The cursor should vanish and *Click to take aim* should
   go. Nothing should fire. Move the mouse: the view should turn, up and down as
   well, and stop short of straight up or down.
+- **Jump with Space.** Your view should go up a little and come back in about half
+  a second, and holding it should bounce you along. Try it next to a crate: you
+  should not be able to see over the top. Watch a stand-in: it should hop now and
+  then, and a shot at its feet as it does should pass under it.
+- **Find a shield**: a pale blue bubble over a ring on the sand, somewhere inside
+  the middle of the arena. Walk through it: it should vanish, the ring dim, a pale
+  blue glow come up round the screen, *Shield!*, a *SHIELD* tag under the crosshair
+  and a 🛡 by your pill. It should be back after twenty seconds.
+- **Get shot with a shield on**: *Your shield broke!*, and you should still be
+  standing. Get shot again and you are out.
+- **Get eliminated.** You should be moved to a few metres behind whoever got you,
+  turned to look the way they look, with *You're a hunter now* and *HUNTER FOR …*
+  under the crosshair. Their shots' streaks should go straight through them when you
+  shoot at them: they should not go out.
+- **Have a hunter hunt for you**: get somebody, and the banner should say they
+  hunt for you now. They should stand near you, and never hurt you.
 - **Walk with WASD.** W should go the way you look and D to your right; turning
   while walking should steer, and a diagonal should not be faster. Walk into a
   crate: you should slide along it, never into it.
 - **Shoot a stand-in.** One shot: a streak from your gun, a red X on the
   crosshair, a burst in their colour, *You got …*, and they should turn into a
-  grey ghost with a ring of their colour over them. Your pill should count the
+  grey ghost with a ring of their colour over them and a smaller one in yours -
+  and appear beside you. Your pill should count the
   hit, and the feed should say who got whom.
 - **Click twice quickly.** The second click should do nothing. The ring round the
   crosshair should fill over a second and a half.
