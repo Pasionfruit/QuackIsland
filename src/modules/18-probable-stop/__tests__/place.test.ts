@@ -17,6 +17,7 @@ import {
   bridgeCondition,
   bridgeDrop,
   deckHeight,
+  greyness,
   onGround,
   revealProgress,
   spotFor,
@@ -253,5 +254,69 @@ describe('the fixed camera', () => {
 
   it('survives a window with no width', () => {
     expect(Number.isFinite(frameScene(0).distance)).toBe(true)
+  })
+})
+
+describe('turning grey', () => {
+  /** Everybody on path 0 or 1 in a game whose safe paths are known, at the reveal. */
+  function revealed(): { g: Game; doomed: Game['players'][number]; safe: Game['players'][number] } {
+    const g = eight()
+    const safe = decideSafe(SEED, 0)
+    const holds = safe[0]
+    const gone = [0, 1, 2].find((l) => !safe.includes(l))!
+    g.players.forEach((p, i) => choose(g, p.id, i % 2 === 0 ? holds : gone))
+    toReveal(g)
+    const doomed = g.players.find((p) => !p.alive)!
+    const held = g.players.find((p) => p.alive)!
+    return { g, doomed, safe: held }
+  }
+  const at = (g: Game, progress: number) => {
+    g.clock = GAME.revealTime * (1 - progress)
+  }
+
+  it('is not there at the start of the reveal: whose bridge will go is not given away by a colour at the first step', () => {
+    const { g, doomed } = revealed()
+    at(g, 0.02)
+    expect(greyness(g, doomed)).toBe(0)
+    at(g, BEATS.grey[0])
+    expect(greyness(g, doomed)).toBe(0)
+  })
+
+  it('comes on gradually over the shiver, and is complete before the bridge breaks', () => {
+    const { g, doomed } = revealed()
+    let last = 0
+    for (let p = BEATS.grey[0]; p <= BEATS.grey[1]; p += 0.01) {
+      at(g, p)
+      const now = greyness(g, doomed)
+      expect(now).toBeGreaterThanOrEqual(last - 1e-9)
+      last = now
+    }
+    at(g, BEATS.grey[0] + (BEATS.grey[1] - BEATS.grey[0]) / 2)
+    expect(greyness(g, doomed)).toBeGreaterThan(0.2)
+    expect(greyness(g, doomed)).toBeLessThan(0.8)
+    // Fully grey a little before the bridge gives way.
+    expect(BEATS.grey[1]).toBeLessThan(BEATS.drop[0])
+    at(g, BEATS.grey[1])
+    expect(greyness(g, doomed)).toBeCloseTo(1, 9)
+    at(g, BEATS.drop[0])
+    expect(greyness(g, doomed)).toBe(1)
+    expect(bridgeDrop(g, doomed.pick)).toBe(0)
+  })
+
+  it('never happens to somebody whose bridge holds', () => {
+    const { g, safe } = revealed()
+    for (let p = 0; p <= 1; p += 0.05) {
+      at(g, p)
+      expect(greyness(g, safe)).toBe(0)
+    }
+  })
+
+  it('is complete for anybody who fell in an earlier round, and once it is all over', () => {
+    const { g, doomed } = revealed()
+    g.phase = 'choosing'
+    g.round += 1
+    expect(greyness(g, doomed)).toBe(1)
+    g.phase = 'over'
+    expect(greyness(g, doomed)).toBe(1)
   })
 })

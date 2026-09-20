@@ -136,6 +136,7 @@ export function applySnapshot(game: Game, snap: Snapshot, me: string): Game {
         by: null,
         kills: 0,
         shield: false,
+        shieldReadyAt: 0,
         respawns: 0,
         shotAt: -Infinity,
         trail: [],

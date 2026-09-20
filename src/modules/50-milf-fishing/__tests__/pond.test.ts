@@ -12,7 +12,7 @@ describe('the bites', () => {
     expect(JSON.stringify(bitesFor(SEED, 1))).not.toBe(JSON.stringify(bitesFor(SEED, 0)))
   })
 
-  it('come one at a time through the round, each a fish of one of the four sizes and its weight', () => {
+  it('come one at a time through the round, each a fish of one of the five sizes and its weight', () => {
     for (let player = 0; player < 8; player++) {
       const bites = bitesFor(SEED, player)
       expect(bites.length).toBeGreaterThan(3)
@@ -29,21 +29,22 @@ describe('the bites', () => {
   })
 
   it('are mostly small fish, sometimes big, and do not promise the biggest', () => {
-    const counts = [0, 0, 0, 0]
+    const counts = [0, 0, 0, 0, 0]
     let without = 0
     for (let seed = 1; seed <= 60; seed++) {
       const bites = bitesFor(seed, 0)
       bites.forEach((b) => counts[b.size]++)
-      if (!bites.some((b) => b.size === 3)) without++
+      if (!bites.some((b) => b.size === 4)) without++
     }
     expect(counts[0]).toBeGreaterThan(counts[1])
     expect(counts[1]).toBeGreaterThan(counts[2])
     expect(counts[2]).toBeGreaterThan(counts[3])
-    expect(counts[3]).toBeGreaterThan(0)
+    expect(counts[3]).toBeGreaterThan(counts[4])
+    expect(counts[4]).toBeGreaterThan(0)
     expect(without).toBeGreaterThan(10)
     expect(ODDS.reduce((a, b) => a + b, 0)).toBeCloseTo(1, 9)
     expect(fishFor(0)).toBe(0)
-    expect(fishFor(0.999)).toBe(3)
+    expect(fishFor(0.999)).toBe(4)
   })
 
   it('weigh more the bigger the fish, and bend the rod further', () => {

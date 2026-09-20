@@ -1,5 +1,5 @@
 /**
- * The lake and what bites: the four fish, every player's bites for the round,
+ * The lake and what bites: the five fish, every player's bites for the round,
  * how far each rod bends when, and what a set of pulls lands.
  *
  * **Everything is arithmetic on the seed, the player and the clock.** Each
@@ -18,18 +18,20 @@ import { createRng, hashSeed } from '../../00-core'
 export const LENGTH = 25
 
 /**
- * The four fish, smallest first: what they are called, what they weigh, how far
- * they bend the rod (0 straight, 1 bent double), and how they are drawn.
+ * The five fish, smallest first: what they are called, what they weigh, how far
+ * they bend the rod (0 straight, 1 bent double), and how they are drawn. **Your mom
+ * is the heaviest** - and bends the rod double.
  */
 export const FISH = [
-  { name: 'perch', weight: [0.3, 0.8], bend: 0.22, colour: '#a8b84a', length: 0.35 },
-  { name: 'bass', weight: [1.5, 3], bend: 0.45, colour: '#4f7f3a', length: 0.6 },
-  { name: 'pike', weight: [4, 7], bend: 0.7, colour: '#708a5c', length: 0.95 },
-  { name: 'catfish', weight: [10, 18], bend: 1, colour: '#4a4038', length: 1.4 },
+  { name: 'perch', weight: [0.3, 0.8], bend: 0.18, colour: '#a8b84a', length: 0.35 },
+  { name: 'bass', weight: [1.5, 3], bend: 0.36, colour: '#4f7f3a', length: 0.6 },
+  { name: 'pike', weight: [4, 7], bend: 0.55, colour: '#708a5c', length: 0.95 },
+  { name: 'catfish', weight: [10, 18], bend: 0.76, colour: '#4a4038', length: 1.4 },
+  { name: 'your mom', weight: [25, 40], bend: 1, colour: '#c0619a', length: 1.9 },
 ] as const
 
-/** How likely each fish is to be the one biting: the small ones often, the big one rarely - and maybe never. */
-export const ODDS = [0.42, 0.3, 0.19, 0.09] as const
+/** How likely each fish is to be the one biting: the small ones often, the big ones rarely - and maybe never. */
+export const ODDS = [0.4, 0.29, 0.18, 0.09, 0.04] as const
 
 export const BITE = {
   /** When the first bite comes, soonest and latest. */
@@ -54,7 +56,7 @@ export interface Bite {
   start: number
   /** When the fish lets go. */
   end: number
-  /** Which fish, 0 to 3. */
+  /** Which fish, 0 to 4. */
   size: number
   /** Kilograms, if landed. */
   weight: number

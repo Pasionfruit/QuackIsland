@@ -53,6 +53,13 @@ export const JUMP = { speed: 6, gravity: 20, max: 0.95 } as const
 /** A shield power-up: how close you have to walk to it, and how long it is gone once taken, seconds. */
 export const PICKUP = { reach: 1.1, respawn: 20 } as const
 
+/**
+ * A player's shield has a cooldown: **once one has broken, they cannot pick up
+ * another for this many seconds**, however many are lying about. It is the host's
+ * to enforce, and the player's own HUD counts it down.
+ */
+export const SHIELD = { cooldown: 10 } as const
+
 export const GUN = {
   /** Seconds between shots. */
   cooldown: 1.5,
@@ -137,6 +144,8 @@ export interface Player {
   kills: number
   /** Whether the next hit on them is absorbed. */
   shield: boolean
+  /** When they can pick up a shield again, in `elapsed`: 0 until one has broken on them. The host's; not sent. */
+  shieldReadyAt: number
   /** How many times they have been moved to a new spot by being eliminated. Only ever counted where it is looked at: not sent. */
   respawns: number
   /** When they last shot, in `elapsed`. */
@@ -217,6 +226,7 @@ export function createGame(seed: number, entrants: readonly Entrant[], id = 1): 
         by: null,
         kills: 0,
         shield: false,
+        shieldReadyAt: 0,
         respawns: 0,
         shotAt: -GUN.cooldown,
         trail: [],
@@ -422,6 +432,8 @@ export function eliminate(game: Game, player: number, by: number | null): boolea
   if (!p || !isStanding(p) || game.over) return false
   if (p.shield) {
     p.shield = false
+    // Spent: no other until the cooldown is over.
+    p.shieldReadyAt = game.elapsed + SHIELD.cooldown
     return false
   }
   p.out = round2(Math.max(0, clock(game)))
@@ -580,6 +592,11 @@ export function judgeEnd(game: Game): boolean {
   return game.over
 }
 
+/** Seconds until a player can pick up a shield again, or 0: the cooldown after one broke on them. */
+export function shieldCooldown(game: Pick<Game, 'elapsed'>, p: Pick<Player, 'shieldReadyAt'>): number {
+  return Math.max(0, p.shieldReadyAt - game.elapsed)
+}
+
 /** Whether the shield at spot `k` is there to be taken. */
 export function pickupReady(game: Game, k: number): boolean {
   return game.elapsed >= (game.pickups[k] ?? Infinity)
@@ -587,7 +604,8 @@ export function pickupReady(game: Game, k: number): boolean {
 
 /**
  * Shields are picked up by walking through them: anybody standing, without one
- * already, within `PICKUP.reach` of a spot that has one, takes it - and the spot is
+ * already and not cooling down from one that broke (`SHIELD.cooldown`), within
+ * `PICKUP.reach` of a spot that has one, takes it - and the spot is
  * empty for `PICKUP.respawn` seconds. In player order, so two on the same spot at
  * the same moment have it come out the same way everywhere. Only the host, or alone.
  */
@@ -595,7 +613,7 @@ export function collect(game: Game): void {
   if (game.over) return
   const spots = arenaFor(game.seed).pickups
   game.players.forEach((p) => {
-    if (!isStanding(p) || !canAct(game, p) || p.shield) return
+    if (!isStanding(p) || !canAct(game, p) || p.shield || shieldCooldown(game, p) > 0) return
     spots.forEach((at, k) => {
       if (p.shield || !pickupReady(game, k) || Math.hypot(p.x - at.x, p.z - at.z) > PICKUP.reach) return
       p.shield = true

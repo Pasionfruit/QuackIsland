@@ -174,8 +174,12 @@ nothing: a hunter cannot be hurt, and a shield is not for them.
 **A shield takes the next hit**, from anybody, and nothing else: the shot meets
 you - it stops at your body, the puff is in your colour, it counts as a hit on the
 shooter's screen - and your shield breaks and nobody is eliminated, and the shooter
-has no kill. There is no timer on it: it is there until it takes a hit. The
-shooter's own next shot is 1.5 s away, as ever. It does not move you, since nobody
+has no kill. There is no timer on it while you have it: it is there until it takes a hit.
+**Once it has broken there is a cooldown** (`SHIELD.cooldown`, 10 s): you cannot pick
+up another until it is over, however many are lying about (`shieldCooldown`; the
+stand-ins do not head for one either). The host enforces it - it is not sent - and your
+own HUD counts it down, under the crosshair, in place of the *SHIELD* tag: *SHIELD 7s*.
+The shooter's own next shot is 1.5 s away, as ever. It does not move you, since nobody
 was eliminated.
 
 You see it as **a pale blue bubble round a player**, a glow round the edge of your

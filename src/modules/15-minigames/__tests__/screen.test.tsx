@@ -234,10 +234,11 @@ describe('a game briefing', () => {
   it('opens when a tile is picked, showing the title', () => {
     const where = mount()
     act(() => openDashboard())
-    click(where.querySelector('[data-minigame="zombie-tag"]'))
+    // First in the alphabet, so on the first page.
+    click(where.querySelector('[data-minigame="binary-bs"]'))
 
     expect(getMinigameScreen().at).toBe('game')
-    expect(where.textContent).toContain('Zombie Tag')
+    expect(where.textContent).toContain('Binary BS')
   })
 
   it('exists for every game in the catalogue, built or not', () => {
@@ -305,8 +306,8 @@ describe('a game briefing', () => {
 
   it('opens a free slot like any other, and says a number is waiting', () => {
     const where = mount()
-    act(() => openMinigame('reserved-36'))
-    expect(where.textContent).toContain('36')
+    act(() => openMinigame('reserved-41'))
+    expect(where.textContent).toContain('41')
     expect(where.textContent).toContain('waiting for a game')
     expect(where.querySelector('[data-play]')).not.toBeNull()
   })

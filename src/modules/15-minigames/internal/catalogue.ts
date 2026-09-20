@@ -1,13 +1,20 @@
 /**
  * Every minigame Volcano Island is going to have, as data.
  *
- * Forty-six slots: thirty-eight free-for-all - every game named so far is one,
- * the turn-taking ones included - and eight one-vs-all, all of them still free
- * slots. The numbers are the ones the games were written down with and they do
- * not move - somebody says "let us do fourteen next" and fourteen has to still
- * be `He's One Shot` a month later. That is why a slot nobody has named yet is
- * a **reserved** entry with a number rather than a gap: the count is the plan,
- * and the dashboard draws the plan rather than only the part of it that exists.
+ * Forty-six slots: forty free-for-all - every game named so far is one, the
+ * turn-taking ones included, and two of the free slots are too - and six
+ * one-vs-all, all of them still free slots.
+ *
+ * **They are numbered alphabetically by title**: the thirty-eight named games in
+ * order of name, then the two free-for-all slots, so the first forty are all
+ * free-for-all, then the six one-vs-all. A game named later takes one of the free
+ * slots and is put in its alphabetical place - which moves the numbers after it,
+ * so **a number is a place in the list and an id is the name of a game**; ids never
+ * move. A slot nobody has named yet is a **reserved** entry with a number rather
+ * than a gap: the count is the plan, and the dashboard draws the plan rather than
+ * only the part of it that exists. (The `Added as the Nth slot` notes below, and
+ * the `Minigame N` in the modules' own docs, are the order the games were written
+ * down and built in, which is not the order they are numbered in now.)
  *
  * Pure, and nothing in here plays anything. A minigame becomes playable by
  * registering a build against its id - see `registry.ts` - and until it does,
@@ -97,68 +104,66 @@ export interface Minigame {
  * test should catch. There is one that does.
  */
 export const MINIGAME_TARGET: Readonly<Record<MinigameKind, number>> = Object.freeze({
-  'free-for-all': 38,
-  'one-vs-all': 8,
+  'free-for-all': 40,
+  'one-vs-all': 6,
 })
 
 const ENTRIES = [
   {
-    id: 'zombie-tag',
+    id: 'binary-bs',
     number: 1,
-    title: 'Zombie Tag',
+    title: 'Binary BS',
     kind: 'free-for-all',
     description: [
-      'Six zombies chase everybody round a walled arena full of crates. You all start in the middle, and everything is solid - bodies included.',
-      'Get caught and you turn into a zombie and join the chase. Every fifteen seconds three more climb in over the wall, so the room only ever gets busier.',
-      'You move twice as fast as a zombie. Space shoves whoever is next to you and knocks them down for a second - handy for leaving somebody behind - and then needs three seconds before it works again.',
-      'Last one still running wins. The camera never moves: the whole arena is in front of you all round.',
+      'Players spawn on different sides of a giant gear - as many sides as players - with one side marked to be removed. A random number appears in the center, and players have 5 seconds to vote 0 or 1, in secret.',
+      'When the countdown ends the gear turns by the number, one side less for every 0, and removes the side that lands on the mark along with everyone standing on it. If everyone votes 1, the marked side goes. A new number and a new gear come each round until only one player remains.',
     ],
     controls: [
-      { input: 'WASD / Arrow keys', does: 'Move' },
-      { input: 'Space', does: 'Push whoever is next to you (3 second cooldown)' },
+      { input: '0', does: 'Vote 0' },
+      { input: '1', does: 'Vote 1' },
+      { input: 'WASD', does: 'Move around your side of the gear' },
     ],
     reserved: false,
-    // Built: see `16-zombie-tag`. The assets stage is still to do - every body
-    // is a coloured circle and every crate a brown rectangle.
+    // Built: see `45-binary-bs`. The assets stage is still to do - the gear is
+    // flat wedges and boxes and the players are the island's capsule.
     done: { environment: true, controls: true, assets: false },
   },
   {
-    id: 'messy-maze',
+    id: 'chef-caricature',
     number: 2,
-    title: 'Messy Maze',
+    title: 'Chef Caricature',
     kind: 'free-for-all',
     description: [
-      'Everybody starts in a different corner of a maze and races for the middle.',
-      'Spinning platforms sit along the way, and stepping on one spins you and swaps your four movement keys for random letters - the new ones are shown on screen. The middle only counts once you have been spun by two different platforms.',
-      'You place in the order you reach the middle. The race ends when three are in, thirty seconds after the first gets there, or at four minutes.',
+      'One at a time, each player gets thirty seconds at the easel while everybody else watches. The outline of an ingredient or a dish is on the board: hold the button down and trace it without letting go.',
+      'Once your ink has gone all the way round and closed the shape, the duck eats the drawing for a point and the next outline is up. Scribbling off the line does not count. There is no rubbing out, and letting go before the shape is closed wipes the attempt.',
+      'Most dishes after everybody\'s turn wins.',
     ],
     controls: [
-      { input: 'WASD', does: 'Move, until a platform changes your keys' },
-      { input: 'Letters on screen', does: 'Your new up, left, down and right after a spin' },
+      { input: 'Hold left click + drag', does: 'Trace the outline' },
     ],
     reserved: false,
-    // Built: see `17-messy-maze`. The assets stage is still to do - every
-    // racer is the island's capsule and every wall a box.
+    // Built: see `35-chef-caricature`. The assets stage is still to do - the duck
+    // and the chef are primitives and the outlines are drawn paths.
     done: { environment: true, controls: true, assets: false },
   },
   {
-    id: 'probable-stop',
+    id: 'color-coded',
     number: 3,
-    title: 'Probable Stop',
+    title: 'Color Coded',
     kind: 'free-for-all',
     description: [
-      'Six rounds, three bridges each. You have five seconds to stand on one, and you can change your mind as often as you like until the time runs out.',
-      'Then everybody walks across. In the first four rounds two of the three bridges hold; in the last two only one does. A bridge that does not hold snaps and drops whoever is on it.',
-      'Survive all six rounds, or be the last one left, to win.',
+      'Spawn on floating color panels as a giant wheel spins to select a color. Once the color is revealed, players have 2 seconds to get onto a panel matching the spinner’s color. The panels are very slippery ice: nobody stops when they let go or turns on the spot, and running is fast and hard to steer.',
+      'You can push whoever is in front of you, and bodies collide too, and a collision keeps its speed - run into somebody and they go, and you nearly stop. When the timer ends, every panel of a different color disappears, and anyone standing on one falls and is eliminated. The dropped panels rise back and become solid only once they are all the way up, but fewer matching panels remain as the rounds go on. Last player standing wins - and you get to watch the last one fall.',
     ],
     controls: [
-      { input: 'A / D or Arrow keys', does: 'Move to the bridge on the left or right' },
-      { input: 'Left click', does: 'Step onto a bridge - click it again to confirm' },
-      { input: 'Space', does: 'Confirm - the wait ends early once everybody has' },
+      { input: 'WASD', does: 'Move - it is ice, so you slide' },
+      { input: 'Left click / Space / E', does: 'Push whoever is in front of you' },
+      { input: 'Shift', does: 'Run: nearly twice as fast, and much harder to turn or stop' },
+      { input: 'Mouse', does: 'Camera' },
     ],
     reserved: false,
-    // Built: see `18-probable-stop`. The assets stage is still to do - the
-    // players are the island's capsule and the bridges are planks.
+    // Built: see `44-color-coded`. The assets stage is still to do - the panels
+    // and the wheel are flat colour and the players are the island's capsule.
     done: { environment: true, controls: true, assets: false },
   },
   {
@@ -180,28 +185,8 @@ const ENTRIES = [
     done: { environment: true, controls: true, assets: false },
   },
   {
-    id: 'pet-race',
-    number: 5,
-    title: 'Pet Race',
-    kind: 'free-for-all',
-    description: [
-      'Ten seconds to read the table and pick a pet - dog, cat, rabbit, hamster or fish. Each has its own speed, grip, boost and stamina, and none of them is simply the best. Pick nothing and you get the fish, which flops on the line for the whole race.',
-      'Then three, two, one, and thirty seconds to race down a course of hedges, puddles and treats. Hold the button to boost: it drains your stamina, and letting go lets it fill again. Treats top it up.',
-      'The race ends when three are home, everybody is, or the thirty seconds run out. Finishers place by time, everybody else by how far they got.',
-    ],
-    controls: [
-      { input: 'Left click / 1-5', does: 'Choose a pet from the table' },
-      { input: 'WASD / Arrow keys', does: 'Steer' },
-      { input: 'Hold left click', does: 'Boost - burns stamina' },
-    ],
-    reserved: false,
-    // Built: see `38-pet-race`. The assets stage is still to do - the five
-    // animals are boxes, balls and cones, and the hedges are bushes.
-    done: { environment: true, controls: true, assets: false },
-  },
-  {
     id: 'feeding-time',
-    number: 6,
+    number: 5,
     title: 'Feeding Time',
     kind: 'free-for-all',
     description: [
@@ -218,102 +203,8 @@ const ENTRIES = [
     done: { environment: true, controls: true, assets: false },
   },
   {
-    id: 'sprint-triathlon',
-    number: 7,
-    title: 'Sprint Triathlon',
-    kind: 'free-for-all',
-    description: [
-      'Three legs, back to back. Swim by clicking - sixty strokes. Bike by pressing space - eighty turns of the pedals. Then run by typing the sentence on the screen, like this one:',
-      'Duck walked up to a lemonade stand, and he said to the man running the stand, hey! Got any grapes?',
-      'Every right key is a stride; a wrong one trips you up for a moment. The race ends when three have finished, or at two and a half minutes. Fastest time wins.',
-    ],
-    controls: [
-      { input: 'Left click', does: 'Swim' },
-      { input: 'Space', does: 'Bike' },
-      { input: 'Keyboard', does: 'Type the sentence to run' },
-    ],
-    reserved: false,
-    // Built: see `26-sprint-triathlon`. The assets stage is still to do - the
-    // racers are the island's capsule and the bikes are primitives.
-    done: { environment: true, controls: true, assets: false },
-  },
-  {
-    id: 'punch-buggy',
-    number: 8,
-    title: 'Punch Buggy',
-    kind: 'free-for-all',
-    description: [
-      'A round platform over the sea, and a fist that comes off. Face the pointer, click to shoot your punch out, and click again to pull it back.',
-      'A fist that hits somebody in the side or back knocks them out. One that meets their front, where their own fist is, is blocked and only shoves them - but a shove off the edge is out too. After ten seconds the platform starts to shrink.',
-      'Last one standing wins. Thirty seconds on the clock.',
-    ],
-    controls: [
-      { input: 'WASD', does: 'Move' },
-      { input: 'Mouse', does: 'Aim' },
-      { input: 'Left click', does: 'Punch, then click again to pull it back' },
-    ],
-    reserved: false,
-    // Built: see `20-punch-buggy`. The assets stage is still to do - the
-    // fighters are the island's capsule and the fists are spheres.
-    done: { environment: true, controls: true, assets: false },
-  },
-  {
-    id: 'time-it',
-    number: 9,
-    title: 'Time It',
-    kind: 'free-for-all',
-    description: [
-      'You are given a target time, never under six and a half seconds. The stopwatch starts on Start!, and everybody can watch it for the first two and a half seconds - then it is covered and you are counting in your head.',
-      'Click to stop your timer. The round ends when everybody has stopped, or at thirty seconds. Closest to the target wins; anybody who never stopped comes last.',
-    ],
-    controls: [
-      { input: 'Left click', does: 'Stop your stopwatch' },
-    ],
-    reserved: false,
-    // Built: see `29-time-it`. The assets stage is still to do - the players are
-    // the island's capsule and the stopwatch is primitives.
-    done: { environment: true, controls: true, assets: false },
-  },
-  {
-    id: 'wack-attack',
-    number: 10,
-    title: 'Wack-Attack',
-    kind: 'free-for-all',
-    description: [
-      'Walk about a field with a hammer while moles pop out of sixteen holes. Stand over one and swing - the hammer comes down in front of you, the way you are facing - before it goes back down.',
-      'An ordinary mole is a point. The golden mole is three, is rarer, and ducks back down much sooner. First hit on a mole takes it. Bring the hammer down on somebody\'s head instead and they are stunned for a moment.',
-      'Most points after forty-five seconds wins.',
-    ],
-    controls: [
-      { input: 'WASD', does: 'Move' },
-      { input: 'Left click', does: 'Swing the hammer' },
-    ],
-    reserved: false,
-    // Built: see `25-wack-attack`. The assets stage is still to do - the
-    // players are the island's capsule and the moles are primitives.
-    done: { environment: true, controls: true, assets: false },
-  },
-  {
-    id: 'lady-luck',
-    number: 11,
-    title: 'Lady Luck',
-    kind: 'free-for-all',
-    description: [
-      'A field of three-leaf clovers with three four-leaf clovers hidden in it at any time. Find one and click it: it is ringed in your colour, nobody else can have it, and a new one grows somewhere else.',
-      'Clicking anything else - a three-leaf clover, a claimed one, bare grass - costs you a point and a second before you can click again, and every click in that second costs another. Scores can go below zero. Most points after forty-five seconds wins.',
-    ],
-    controls: [
-      { input: 'Mouse', does: 'Aim' },
-      { input: 'Left click', does: 'Claim a clover' },
-    ],
-    reserved: false,
-    // Built: see `23-lady-luck`. The assets stage is still to do - the clovers
-    // are flat instanced leaves.
-    done: { environment: true, controls: true, assets: false },
-  },
-  {
     id: 'find-yourself',
-    number: 12,
+    number: 6,
     title: 'Find Yourself',
     kind: 'free-for-all',
     description: [
@@ -330,27 +221,27 @@ const ENTRIES = [
     done: { environment: true, controls: true, assets: false },
   },
   {
-    id: 'make-the-cut',
-    number: 13,
-    title: 'Make The Cut',
+    id: 'helping-dad',
+    number: 7,
+    title: 'Helping Dad',
     kind: 'free-for-all',
     description: [
-      'Everybody stands on a tower in a web of strings: three for every player, and one fewer eliminating strings than there are players. Nobody can tell them apart. A random player cuts first, and the turn passes round.',
-      'On your turn you have twelve seconds to walk up to a string and cut it - run out and the nearest one is cut for you. A normal string: nothing happens. An eliminating one: you are launched off the tower. Last one standing wins.',
+      'A maze of narrow corridors in the dark, and a torch in your own colour. Put the mouse on your torch to pick it up, and it follows the mouse - no faster than a careful walk.',
+      'The whole maze turns slowly under you, so a mouse left where it was is a torch walking into a wall, and Dad\'s junk slides up and down the corridors: go into a piece and it is a bump like any other, though one that slides onto a torch holding still is not. Hold still and let it pass.',
+      'Touch a wall and Dad yells: you drop the torch and stand stunned for a second and a half, then have to pick it up again where it fell. You place in the order you reach the finish; at two minutes, anybody still in is placed by how far they had left.',
     ],
     controls: [
-      { input: 'WASD', does: 'Move' },
-      { input: 'Mouse', does: 'Aim at a string' },
-      { input: 'Left click', does: 'Cut the string (on your turn, within reach)' },
+      { input: 'Mouse', does: 'Pick up the torch and guide it through the turning maze' },
     ],
     reserved: false,
-    // Built: see `24-make-the-cut`. The assets stage is still to do - the
-    // cutters are the island's capsule and the strings are cylinders.
+    // Built: see `31-helping-dad`. The assets stage is still to do - the torches
+    // are rings and glows, Dad is the island's capsule, and the walls and his
+    // junk are boxes and cylinders.
     done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'hes-one-shot',
-    number: 14,
+    number: 8,
     title: "He's One Shot",
     kind: 'free-for-all',
     description: [
@@ -370,299 +261,23 @@ const ENTRIES = [
     done: { environment: true, controls: true, assets: false },
   },
   {
-    id: 'wheres-midnight',
-    number: 15,
-    title: "Where's Midnight?",
+    id: 'highest-in-the-room',
+    number: 9,
+    title: 'Highest In The Room',
     kind: 'free-for-all',
     description: [
-      'A junkyard at night, and an all-black cat called Midnight somewhere in it. Everybody searches the same yard with their own camera.',
-      'Eighteen other cats are hiding in it too, and in the dark every one of them is just a pair of glowing eyes. Get your torch on one and its colour tells you whether you have found him.',
-      'Click him and you have found him. A click on anything else costs a second and a half before you can click again. You place in the order you find him; the round ends when three have, everybody has, or at ninety seconds.',
+      'Race upward by pressing the key for the arrow shown on screen - W for up, S for down, A for left, D for right - with a small preview of the next arrow beside it. Every correct input builds another block beneath you, while the camera follows the player currently in the lead.',
+      'Make a mistake and you are knocked down 4 blocks. If you fall 10 blocks behind the leader, you are eliminated. The last player remaining wins.',
     ],
-    controls: [
-      { input: 'WASD', does: 'Pan the view' },
-      { input: 'Wheel', does: 'Zoom towards the pointer' },
-      { input: 'F', does: 'Torch on or off - closest zoom only, and it locks the camera' },
-      { input: 'Left click', does: 'Say that is him - a wrong one costs a second and a half' },
-    ],
+    controls: [{ input: 'W A S D', does: 'Press the key for the displayed arrow: W up, S down, A left, D right' }],
     reserved: false,
-    // Built: see `37-wheres-midnight`. The assets stage is still to do - the
-    // junkyard is primitives and the cat is three spheres and a tail.
-    done: { environment: true, controls: true, assets: false },
-  },
-  {
-    id: 'let-him-cook',
-    number: 16,
-    title: 'Let Him Cook',
-    kind: 'free-for-all',
-    description: [
-      'Six baskets of ingredients, three of each. Watch the chef take between six and ten of them into the pot, and remember what went in - and in what order.',
-      'Then take turns, in a random order, putting the recipe back together from the start: the first cook owes the chef\'s first ingredient, the next his second, and so on. Ten seconds a turn. Anything but the one due - never in the recipe, or in it but later - or running out of time, and you are out. Get it right and you go to the back of the line.',
-      'If the whole recipe is back in the pot and more than one cook is left, the chef cooks again, faster. Last cook standing wins.',
-    ],
-    controls: [
-      { input: 'Mouse', does: 'Aim' },
-      { input: 'Left click', does: 'Pick an ingredient on your turn' },
-    ],
-    reserved: false,
-    // Built: see `22-let-him-cook`. The assets stage is still to do - the chef
-    // is the island's capsule in a hat and the ingredients are primitives.
-    done: { environment: true, controls: true, assets: false },
-  },
-  {
-    id: 'i-see-the-light',
-    number: 17,
-    title: 'I See The Light',
-    kind: 'free-for-all',
-    description: [
-      'Red light, green light. On green, every press of space is a step towards the finish - seventy of them. A three-two-one warns you the light is about to change.',
-      'On red, hold your cursor inside a circle that wanders about the screen, swelling and shrinking as it goes. Let it slip out, or press space on red, and you are out. The race ends when three are over the line, or at two minutes.',
-    ],
-    controls: [
-      { input: 'Space', does: 'Step forward on green' },
-      { input: 'Mouse', does: 'Keep the cursor inside the circle on red' },
-    ],
-    reserved: false,
-    // Built: see `21-i-see-the-light`. The assets stage is still to do - the
-    // racers are the island's capsule and the light is two discs.
-    done: { environment: true, controls: true, assets: false },
-  },
-  {
-    id: 'helping-dad',
-    number: 18,
-    title: 'Helping Dad',
-    kind: 'free-for-all',
-    description: [
-      'A maze of narrow corridors in the dark, and a torch in your own colour. Put the mouse on your torch to pick it up, and it follows the mouse - no faster than a careful walk.',
-      'The whole maze turns slowly under you, so a mouse left where it was is a torch walking into a wall, and Dad\'s junk slides up and down the corridors: go into a piece and it is a bump like any other, though one that slides onto a torch holding still is not. Hold still and let it pass.',
-      'Touch a wall and Dad yells: you drop the torch and stand stunned for a second and a half, then have to pick it up again where it fell. You place in the order you reach the finish; at two minutes, anybody still in is placed by how far they had left.',
-    ],
-    controls: [
-      { input: 'Mouse', does: 'Pick up the torch and guide it through the turning maze' },
-    ],
-    reserved: false,
-    // Built: see `31-helping-dad`. The assets stage is still to do - the torches
-    // are rings and glows, Dad is the island's capsule, and the walls and his
-    // junk are boxes and cylinders.
-    done: { environment: true, controls: true, assets: false },
-  },
-  {
-    id: 'synchronize-steps',
-    number: 19,
-    title: 'Synchronize Steps',
-    kind: 'free-for-all',
-    description: [
-      'Everybody starts at the top of a tower twenty steps high, and the higher you stay the better. Every two seconds you pick how far to go down: 1, 4 or 6.',
-      'Alone on a number, you stay where you are. Exactly two on the same number, you both go down that many - except a pair on 1, which drops eight. Three or more on the same number all drop eight. Pick nothing and one is picked for you.',
-      'Reach the bottom and you are out, and that ends the game. Highest up at the end wins.',
-    ],
-    controls: [
-      { input: '1 / 4 / 6', does: 'Choose how many steps' },
-      { input: 'Left click', does: 'Choose an option on screen' },
-    ],
-    reserved: false,
-    // Built: see `30-synchronize-steps`. The assets stage is still to do - the
-    // players are the island's capsule and the tower is primitives.
-    done: { environment: true, controls: true, assets: false },
-  },
-  {
-    id: 'sharing-is-caring',
-    number: 20,
-    title: 'Sharing Is Caring',
-    kind: 'free-for-all',
-    description: [
-      'Tag, backwards. A crown sits in the middle of a walled arena: walk into it and it is yours, and you score a point for every second you wear it.',
-      'Bump into whoever is wearing it to take it - they are knocked back and dazed for a moment. The wearer is a little faster than everybody else, so use the rocks, the wall and your boost. Most points after a minute wins.',
-    ],
-    controls: [
-      { input: 'WASD', does: 'Move' },
-      { input: 'Space', does: 'Boost - a burst of speed that recharges (not while wearing the crown)' },
-    ],
-    reserved: false,
-    // Built: see `34-sharing-is-caring`. The assets stage is still to do - the
-    // players are the island's capsule and the crown is primitives.
-    done: { environment: true, controls: true, assets: false },
-  },
-  {
-    id: 'keyboard-warrior',
-    number: 21,
-    title: 'Keyboard Warrior',
-    kind: 'free-for-all',
-    description: [
-      'Fifteen letters float into the arena one at a time, after a pause that is different every time.',
-      'The first letter key you press after one appears is your only answer, right or wrong. Of everybody who got it right, the quickest gets the point. Each letter stays up four seconds at most. Most points wins.',
-    ],
-    controls: [
-      { input: 'Keyboard', does: 'Type the letter on screen - one try each' },
-    ],
-    reserved: false,
-    // Built: see `33-keyboard-warrior`. The assets stage is still to do - the
-    // players are the island's capsule and the letters are tiles.
-    done: { environment: true, controls: true, assets: false },
-  },
-  {
-    id: 'tetris-master',
-    number: 22,
-    title: 'Tetris Master',
-    kind: 'free-for-all',
-    description: [
-      'Blocks of awkward shapes, one tower each. Build it high and build it stable.',
-      'Earthquakes and worse are coming for it. The best tower still standing at the end wins.',
-    ],
-    controls: [],
-    reserved: false,
-    done: { environment: false, controls: false, assets: false },
-  },
-  {
-    id: 'musical-mayhem',
-    number: 23,
-    title: 'Musical Mayhem',
-    kind: 'free-for-all',
-    description: [
-      'Musical chairs, with shoving. A ring of chairs, one fewer than the players still in, and a tune that plays for a time nobody can know.',
-      'While it plays, keep running round - stand about or get too close to the chairs and you are thrown to the edge, and trying to sit early gets you thrown there too. When it stops, sit in an empty chair. Push whoever is in front of you to knock them back, and off their chair if they have not been sitting a whole second.',
-      'Whoever is left standing is out and a chair goes, until one player is left.',
-    ],
-    controls: [
-      { input: 'WASD / Arrow keys', does: 'Run' },
-      { input: 'Space', does: 'Sit in the chair you are next to' },
-      { input: 'Left click', does: 'Push whoever is in front of you' },
-    ],
-    reserved: false,
-    // Built: see `36-musical-mayhem`. The assets stage is still to do - the
-    // players are the island's capsule and the chairs are boxes.
-    done: { environment: true, controls: true, assets: false },
-  },
-  {
-    id: 'ill-just-wait',
-    number: 24,
-    title: "I'll Just Wait",
-    kind: 'free-for-all',
-    description: [
-      'A race through three clock-reading targets. Each goes up at the top in awkward words - "Quarter till 4:05" - and each is harder than the last. Your clock starts at 12:00: wind it to the target and confirm.',
-      'Right, and you are on to the next target. Wrong, and your clock goes back to 12:00 to try again. Everybody can see everybody else\'s clock - so you could always just wait for somebody to show you. The first to get all three wins; otherwise the game ends at two and a half minutes.',
-    ],
-    controls: [
-      { input: 'Left click / hold', does: 'Wind the clock forward - hold to speed up' },
-      { input: 'Right click / hold', does: 'Wind the clock back - hold to speed up' },
-      { input: 'Space', does: 'Confirm the time' },
-    ],
-    reserved: false,
-    // Built: see `39-ill-just-wait`. The assets stage is still to do - the
-    // clocks are primitives on a painted face and the players are the island's capsule.
-    done: { environment: true, controls: true, assets: false },
-  },
-  {
-    id: 'one-piece',
-    number: 25,
-    title: 'One Piece?!',
-    kind: 'free-for-all',
-    description: [
-      'Each player receives a 6-piece square puzzle featuring their own face. Players must drag, rotate, and place each piece correctly to complete their square.',
-      'Players are ranked by the order in which they successfully solve their puzzle, with the first player to complete it taking first place.',
-    ],
-    controls: [
-      { input: 'Mouse Drag', does: 'Move puzzle pieces' },
-      { input: 'Left Click', does: 'Select piece' },
-      { input: 'Right Click / Scroll', does: 'Rotate piece' },
-    ],
-    reserved: false,
-    // Built: see `41-one-piece`. The assets stage is still to do - the faces
-    // are the island's pill drawn flat, and there is no sound of its own.
-    done: { environment: true, controls: true, assets: false },
-  },
-  {
-    id: 'make-some-noise',
-    number: 26,
-    title: 'Make Some Noise',
-    kind: 'free-for-all',
-    description: [
-      'You are a duck on a floating island with one minute to wreck as much of it as you possibly can.',
-      'Different parts of the island are worth different amounts. Fall off the edge and your turn ends that instant.',
-    ],
-    controls: [],
-    reserved: false,
-    done: { environment: false, controls: false, assets: false },
-  },
-  {
-    id: 'perfect-game',
-    number: 27,
-    title: 'Perfect Game',
-    kind: 'free-for-all',
-    description: [
-      'A bent column of 30 crabs moves from left to right across the beach - the same column for everybody, every turn. One turn each, while everybody else watches.',
-      'You have 10 seconds to choose your position behind the line and the angle of your coconut throw - and when to let it go. When time runs out it rolls anyway.',
-      'The coconut rolls along the chosen path, bouncing off the walls down either side of the beach, hitting as many crabs as possible. 1 point for every crab hit; the player with the most points wins. Hit all 30 for a perfect game.',
-    ],
-    controls: [
-      { input: 'WASD', does: 'Adjust position' },
-      { input: 'Mouse', does: 'Aim / adjust throw angle' },
-      { input: 'Left Click', does: 'Roll coconut' },
-    ],
-    reserved: false,
-    // Built: see `51-perfect-game`. The assets stage is still to do - the beach, the
-    // crabs and the coconut are primitives and the players are the island's capsule.
-    done: { environment: true, controls: true, assets: false },
-  },
-  {
-    id: 'chef-caricature',
-    number: 28,
-    title: 'Chef Caricature',
-    kind: 'free-for-all',
-    description: [
-      'One at a time, each player gets thirty seconds at the easel while everybody else watches. The outline of an ingredient or a dish is on the board: hold the button down and trace it without letting go.',
-      'Once your ink has gone all the way round and closed the shape, the duck eats the drawing for a point and the next outline is up. Scribbling off the line does not count. There is no rubbing out, and letting go before the shape is closed wipes the attempt.',
-      'Most dishes after everybody\'s turn wins.',
-    ],
-    controls: [
-      { input: 'Hold left click + drag', does: 'Trace the outline' },
-    ],
-    reserved: false,
-    // Built: see `35-chef-caricature`. The assets stage is still to do - the duck
-    // and the chef are primitives and the outlines are drawn paths.
-    done: { environment: true, controls: true, assets: false },
-  },
-  {
-    id: 'reserved-29',
-    number: 29,
-    title: 'Free slot',
-    kind: 'one-vs-all',
-    description: [],
-    controls: [],
-    reserved: true,
-    done: { environment: false, controls: false, assets: false },
-  },
-  {
-    id: 'reserved-30',
-    number: 30,
-    title: 'Free slot',
-    kind: 'one-vs-all',
-    description: [],
-    controls: [],
-    reserved: true,
-    done: { environment: false, controls: false, assets: false },
-  },
-  {
-    id: 'whats-your-rpm',
-    number: 31,
-    title: "What's Your RPM?",
-    kind: 'free-for-all',
-    description: [
-      'Race down a feed of sixty reels on your mini phone by scrolling the mouse wheel as fast as you can. First to the end wins.',
-      'Every so often an ad takes over and the feed stops dead until you click its Skip Ad button - somewhere different every time, and smaller the further you get. Miss it and a popup opens that has to be closed, by a small button in a different corner every time, before you can try again. The game ends at two minutes; everybody else places by how far down the feed they got.',
-    ],
-    controls: [
-      { input: 'Mouse wheel', does: 'Scroll through the reels' },
-      { input: 'Left click', does: 'Skip ads - and close the popup a miss opens' },
-    ],
-    reserved: false,
-    // Built: see `40-whats-your-rpm`. The assets stage is still to do - the
-    // phone and its reels are drawn on the page and the players are the island's capsule.
+    // Built: see `43-highest-in-the-room`. The assets stage is still to do - the
+    // towers are boxes and the players are the island's capsule.
     done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'i-just-work-here',
-    number: 32,
+    number: 10,
     title: 'I Just Work Here',
     kind: 'free-for-all',
     description: [
@@ -682,182 +297,187 @@ const ENTRIES = [
     done: { environment: true, controls: true, assets: false },
   },
   {
-    id: 'highest-in-the-room',
-    number: 33,
-    title: 'Highest In The Room',
+    id: 'ill-just-wait',
+    number: 11,
+    title: "I'll Just Wait",
     kind: 'free-for-all',
     description: [
-      'Race upward by pressing the key for the arrow shown on screen - W for up, S for down, A for left, D for right - with a small preview of the next arrow beside it. Every correct input builds another block beneath you, while the camera follows the player currently in the lead.',
-      'Make a mistake and you are knocked down 4 blocks. If you fall 10 blocks behind the leader, you are eliminated. The last player remaining wins.',
-    ],
-    controls: [{ input: 'W A S D', does: 'Press the key for the displayed arrow: W up, S down, A left, D right' }],
-    reserved: false,
-    // Built: see `43-highest-in-the-room`. The assets stage is still to do - the
-    // towers are boxes and the players are the island's capsule.
-    done: { environment: true, controls: true, assets: false },
-  },
-  {
-    id: 'color-coded',
-    number: 34,
-    title: 'Color Coded',
-    kind: 'free-for-all',
-    description: [
-      'Spawn on floating color panels as a giant wheel spins to select a color. Once the color is revealed, players have 2 seconds to get onto a panel matching the spinner’s color. The panels are very slippery ice: nobody stops when they let go or turns on the spot, and running is fast and hard to steer.',
-      'You can push whoever is in front of you, and bodies collide too, and a collision keeps its speed - run into somebody and they go, and you nearly stop. When the timer ends, every panel of a different color disappears, and anyone standing on one falls and is eliminated. The dropped panels rise back and become solid only once they are all the way up, but fewer matching panels remain as the rounds go on. Last player standing wins - and you get to watch the last one fall.',
+      'A race through three clock-reading targets. Each goes up at the top in awkward words - "Quarter till 4:05" - and each is harder than the last. Your clock starts at 12:00: wind it to the target and confirm.',
+      'Right, and you are on to the next target. Wrong, and your clock goes back to 12:00 to try again. Everybody can see everybody else\'s clock - so you could always just wait for somebody to show you. The first to get all three wins; otherwise the game ends at two and a half minutes.',
     ],
     controls: [
-      { input: 'WASD', does: 'Move - it is ice, so you slide' },
-      { input: 'Left click / Space / E', does: 'Push whoever is in front of you' },
-      { input: 'Shift', does: 'Run: nearly twice as fast, and much harder to turn or stop' },
-      { input: 'Mouse', does: 'Camera' },
+      { input: 'Left click / hold', does: 'Wind the clock forward - hold to speed up' },
+      { input: 'Right click / hold', does: 'Wind the clock back - hold to speed up' },
+      { input: 'Space', does: 'Confirm the time' },
     ],
     reserved: false,
-    // Built: see `44-color-coded`. The assets stage is still to do - the panels
-    // and the wheel are flat colour and the players are the island's capsule.
+    // Built: see `39-ill-just-wait`. The assets stage is still to do - the
+    // clocks are primitives on a painted face and the players are the island's capsule.
     done: { environment: true, controls: true, assets: false },
   },
   {
-    id: 'binary-bs',
-    number: 35,
-    title: 'Binary BS',
+    id: 'i-see-the-light',
+    number: 12,
+    title: 'I See The Light',
     kind: 'free-for-all',
     description: [
-      'Players spawn on different sides of a giant gear - as many sides as players - with one side marked to be removed. A random number appears in the center, and players have 5 seconds to vote 0 or 1, in secret.',
-      'When the countdown ends the gear turns by the number, one side less for every 0, and removes the side that lands on the mark along with everyone standing on it. If everyone votes 1, the marked side goes. A new number and a new gear come each round until only one player remains.',
+      'Red light, green light. On green, every press of space is a step towards the finish - seventy of them. A three-two-one warns you the light is about to change.',
+      'On red, hold your cursor inside a circle that wanders about the screen, swelling and shrinking as it goes. Let it slip out, or press space on red, and you are out. The race ends when three are over the line, or at two minutes.',
     ],
     controls: [
-      { input: '0', does: 'Vote 0' },
-      { input: '1', does: 'Vote 1' },
-      { input: 'WASD', does: 'Move around your side of the gear' },
+      { input: 'Space', does: 'Step forward on green' },
+      { input: 'Mouse', does: 'Keep the cursor inside the circle on red' },
     ],
     reserved: false,
-    // Built: see `45-binary-bs`. The assets stage is still to do - the gear is
-    // flat wedges and boxes and the players are the island's capsule.
+    // Built: see `21-i-see-the-light`. The assets stage is still to do - the
+    // racers are the island's capsule and the light is two discs.
     done: { environment: true, controls: true, assets: false },
   },
   {
-    id: 'reserved-36',
-    number: 36,
-    title: 'Free slot',
-    kind: 'one-vs-all',
-    description: [],
-    controls: [],
-    reserved: true,
-    done: { environment: false, controls: false, assets: false },
-  },
-  {
-    id: 'reserved-37',
-    number: 37,
-    title: 'Free slot',
-    kind: 'one-vs-all',
-    description: [],
-    controls: [],
-    reserved: true,
-    done: { environment: false, controls: false, assets: false },
-  },
-  {
-    id: 'reserved-38',
-    number: 38,
-    title: 'Free slot',
-    kind: 'one-vs-all',
-    description: [],
-    controls: [],
-    reserved: true,
-    done: { environment: false, controls: false, assets: false },
-  },
-  {
-    id: 'reserved-39',
-    number: 39,
-    title: 'Free slot',
-    kind: 'one-vs-all',
-    description: [],
-    controls: [],
-    reserved: true,
-    done: { environment: false, controls: false, assets: false },
-  },
-  {
-    id: 'reserved-40',
-    number: 40,
-    title: 'Free slot',
-    kind: 'one-vs-all',
-    description: [],
-    controls: [],
-    reserved: true,
-    done: { environment: false, controls: false, assets: false },
-  },
-  {
-    id: 'reserved-41',
-    number: 41,
-    title: 'Free slot',
-    kind: 'one-vs-all',
-    description: [],
-    controls: [],
-    reserved: true,
-    done: { environment: false, controls: false, assets: false },
-  },
-  {
-    id: 'youre-the-bomb',
-    number: 42,
-    title: "You're The Bomb",
+    id: 'keyboard-warrior',
+    number: 13,
+    title: 'Keyboard Warrior',
     kind: 'free-for-all',
     description: [
-      'Escape a dangerous room before a giant rolling pin crushes everyone. Press Space to scan and reveal the bombs surrounding you, then carefully navigate around them while pushing other players out of your way.',
-      'You have 45 seconds before the rolling pin reaches the room. Players who survive can escape through the hole at the end - the first out of it wins.',
+      'Fifteen letters float into the arena one at a time, after a pause that is different every time.',
+      'The first letter key you press after one appears is your only answer, right or wrong. Of everybody who got it right, the quickest gets the point. Each letter stays up four seconds at most. Most points wins.',
+    ],
+    controls: [
+      { input: 'Keyboard', does: 'Type the letter on screen - one try each' },
+    ],
+    reserved: false,
+    // Built: see `33-keyboard-warrior`. The assets stage is still to do - the
+    // players are the island's capsule and the letters are tiles.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'lady-luck',
+    number: 14,
+    title: 'Lady Luck',
+    kind: 'free-for-all',
+    description: [
+      'A field of three-leaf clovers with three four-leaf clovers hidden in it at any time. Find one and click it: it is ringed in your colour, nobody else can have it, and a new one grows somewhere else.',
+      'Clicking anything else - a three-leaf clover, a claimed one, bare grass - costs you a point and a second before you can click again, and every click in that second costs another. Scores can go below zero. Most points after forty-five seconds wins.',
+    ],
+    controls: [
+      { input: 'Mouse', does: 'Aim' },
+      { input: 'Left click', does: 'Claim a clover' },
+    ],
+    reserved: false,
+    // Built: see `23-lady-luck`. The assets stage is still to do - the clovers
+    // are flat instanced leaves.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'let-him-cook',
+    number: 15,
+    title: 'Let Him Cook',
+    kind: 'free-for-all',
+    description: [
+      'Six baskets of ingredients, three of each. Watch the chef take between six and ten of them into the pot, and remember what went in - and in what order.',
+      'Then take turns, in a random order, putting the recipe back together from the start: the first cook owes the chef\'s first ingredient, the next his second, and so on. Ten seconds a turn. Anything but the one due - never in the recipe, or in it but later - or running out of time, and you are out. Get it right and you go to the back of the line.',
+      'If the whole recipe is back in the pot and more than one cook is left, the chef cooks again, faster. Last cook standing wins.',
+    ],
+    controls: [
+      { input: 'Mouse', does: 'Aim' },
+      { input: 'Left click', does: 'Pick an ingredient on your turn' },
+    ],
+    reserved: false,
+    // Built: see `22-let-him-cook`. The assets stage is still to do - the chef
+    // is the island's capsule in a hat and the ingredients are primitives.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'make-some-noise',
+    number: 16,
+    title: 'Make Some Noise',
+    kind: 'free-for-all',
+    description: [
+      'You are a duck on a floating island with one minute to wreck as much of it as you possibly can.',
+      'Different parts of the island are worth different amounts. Fall off the edge and your turn ends that instant.',
+    ],
+    controls: [],
+    reserved: false,
+    done: { environment: false, controls: false, assets: false },
+  },
+  {
+    id: 'make-the-cut',
+    number: 17,
+    title: 'Make The Cut',
+    kind: 'free-for-all',
+    description: [
+      'Everybody stands on a tower in a web of strings: three for every player, and one fewer eliminating strings than there are players. Nobody can tell them apart. A random player cuts first, and the turn passes round.',
+      'On your turn you have twelve seconds to walk up to a string and cut it - run out and the nearest one is cut for you. A normal string: nothing happens. An eliminating one: you are launched off the tower. Last one standing wins.',
     ],
     controls: [
       { input: 'WASD', does: 'Move' },
-      { input: 'Space', does: 'Scan for nearby bombs' },
-      { input: 'Left Click', does: 'Push' },
+      { input: 'Mouse', does: 'Aim at a string' },
+      { input: 'Left click', does: 'Cut the string (on your turn, within reach)' },
     ],
     reserved: false,
-    // Built: see `46-youre-the-bomb`. The assets stage is still to do - the room,
-    // the bombs and the pin are primitives and the players are the island's capsule.
-    // Added as a forty-second slot when every free-for-all one was taken.
+    // Built: see `24-make-the-cut`. The assets stage is still to do - the
+    // cutters are the island's capsule and the strings are cylinders.
     done: { environment: true, controls: true, assets: false },
   },
   {
-    id: 'shanty-matrix',
-    number: 43,
-    title: 'Shanty Matrix',
+    id: 'messy-maze',
+    number: 18,
+    title: 'Messy Maze',
     kind: 'free-for-all',
     description: [
-      'Survive as long as you can on the deck of a pirate ship while giant cannonballs fly across it from every direction, at every speed.',
-      "A red lane lights up across the deck the moment a ball is fired, a second before it arrives. Dodge out of its way - and push the other players into it. Anybody a cannonball hits goes overboard and is out.",
-      'The barrage gets faster and fiercer the longer it goes. The last player standing wins.',
+      'Everybody starts in a different corner of a maze and races for the middle.',
+      'Spinning platforms sit along the way, and stepping on one spins you and swaps your four movement keys for random letters - the new ones are shown on screen. The middle only counts once you have been spun by two different platforms.',
+      'You place in the order you reach the middle. The race ends when three are in, thirty seconds after the first gets there, or at four minutes.',
     ],
     controls: [
-      { input: 'WASD', does: 'Move' },
-      { input: 'Left Click / Space', does: 'Push whoever is in front of you' },
+      { input: 'WASD', does: 'Move, until a platform changes your keys' },
+      { input: 'Letters on screen', does: 'Your new up, left, down and right after a spin' },
     ],
     reserved: false,
-    // Built: see `47-shanty-matrix`. The assets stage is still to do - the ship
-    // and the cannonballs are primitives and the players are the island's capsule.
-    // Added as a forty-third slot, the same way as 42.
+    // Built: see `17-messy-maze`. The assets stage is still to do - every
+    // racer is the island's capsule and every wall a box.
     done: { environment: true, controls: true, assets: false },
   },
   {
-    id: 'spidey-senses',
-    number: 44,
-    title: 'Spidey Senses',
+    id: 'milf-fishing',
+    number: 19,
+    title: 'M.I.L.F (fishing)',
     kind: 'free-for-all',
     description: [
-      "Play a game of chicken as everyone slowly inches toward a trapdoor hiding a spider's nest. Decide when to stop - a click stops you where you stand.",
-      'The trapdoor thuds once or twice as a false alarm, then on the 2nd, 3rd or 4th thud - always before anybody can reach it - it becomes dangerous: it rattles and red eyes glint under the lid. Click too late and a spider jumps out at you, and you are out. If nobody is too late, the spider takes whoever stopped furthest from the trapdoor - the chicken - with the same jump scare.',
-      'Somebody goes every round. The last player remaining wins.',
+      'Fish for 25 seconds and decide when to pull based on how much your fishing rod bends. A slight bend means a smaller fish, while a dramatic bend means a much bigger fish.',
+      'Five different fish sizes can bite at unpredictable times for each player - the heaviest is called your mom - and there is no guarantee the biggest fish will appear. Every pull - fish or not - takes a moment to cast again, and anything that bites meanwhile is missed.',
+      'Pull when you think the fish is ready - but if the rod is not bent, you get nothing. The player with the biggest total catch wins.',
+    ],
+    controls: [{ input: 'Left Click', does: 'Pull the rod / reel in fish' }],
+    reserved: false,
+    // Built: see `50-milf-fishing`. The assets stage is still to do - the lake, the rods
+    // and the fish are primitives and the players are the island's capsule.
+    // Added as a forty-sixth slot, the same way as 42 to 45.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'musical-mayhem',
+    number: 20,
+    title: 'Musical Mayhem',
+    kind: 'free-for-all',
+    description: [
+      'Musical chairs, with shoving. A ring of chairs, one fewer than the players still in, and a tune that plays for a time nobody can know.',
+      'While it plays, keep running round - stand about or get too close to the chairs and you are thrown to the edge, and trying to sit early gets you thrown there too. When it stops, sit in an empty chair. Push whoever is in front of you to knock them back, and off their chair if they have not been sitting a whole second.',
+      'Whoever is left standing is out and a chair goes, until one player is left.',
     ],
     controls: [
-      { input: 'WASD', does: 'Slowly move toward or away from the trapdoor' },
-      { input: 'Left Click', does: 'Stop / react to the trapdoor' },
+      { input: 'WASD / Arrow keys', does: 'Run' },
+      { input: 'Space', does: 'Sit in the chair you are next to' },
+      { input: 'Left click', does: 'Push whoever is in front of you' },
     ],
     reserved: false,
-    // Built: see `48-spidey-senses`. The assets stage is still to do - the cellar,
-    // the trapdoor and the spider are primitives and the players are the island's capsule.
-    // Added as a forty-fourth slot, the same way as 42 and 43.
+    // Built: see `36-musical-mayhem`. The assets stage is still to do - the
+    // players are the island's capsule and the chairs are boxes.
     done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'needs-a-walmart',
-    number: 45,
+    number: 21,
     title: 'OG Black Friday',
     kind: 'free-for-all',
     description: [
@@ -877,21 +497,408 @@ const ENTRIES = [
     done: { environment: true, controls: true, assets: false },
   },
   {
-    id: 'milf-fishing',
-    number: 46,
-    title: 'M.I.L.F (fishing)',
+    id: 'one-piece',
+    number: 22,
+    title: 'One Piece?!',
     kind: 'free-for-all',
     description: [
-      'Fish for 25 seconds and decide when to pull based on how much your fishing rod bends. A slight bend means a smaller fish, while a dramatic bend means a much bigger fish.',
-      'Four different fish sizes can bite at unpredictable times for each player, and there is no guarantee the biggest fish will appear. Every pull - fish or not - takes a moment to cast again, and anything that bites meanwhile is missed.',
-      'Pull when you think the fish is ready - but if the rod is not bent, you get nothing. The player with the biggest total catch wins.',
+      'Each player receives a 6-piece square puzzle featuring their own face. Players must drag, rotate, and place each piece correctly to complete their square.',
+      'Players are ranked by the order in which they successfully solve their puzzle, with the first player to complete it taking first place.',
     ],
-    controls: [{ input: 'Left Click', does: 'Pull the rod / reel in fish' }],
+    controls: [
+      { input: 'Mouse Drag', does: 'Move puzzle pieces' },
+      { input: 'Left Click', does: 'Select piece' },
+      { input: 'Right Click / Scroll', does: 'Rotate piece' },
+    ],
     reserved: false,
-    // Built: see `50-milf-fishing`. The assets stage is still to do - the lake, the rods
-    // and the fish are primitives and the players are the island's capsule.
-    // Added as a forty-sixth slot, the same way as 42 to 45.
+    // Built: see `41-one-piece`. The assets stage is still to do - the faces
+    // are the island's pill drawn flat, and there is no sound of its own.
     done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'perfect-game',
+    number: 23,
+    title: 'Perfect Game',
+    kind: 'free-for-all',
+    description: [
+      'A bent column of 30 crabs moves from left to right across the beach - the same column for everybody, every turn. One turn each, while everybody else watches.',
+      'You have 10 seconds to choose your position behind the line and the angle of your coconut throw - and when to let it go. When time runs out it rolls anyway.',
+      'The coconut rolls along the chosen path, bouncing off the walls down either side of the beach, hitting as many crabs as possible. 1 point for every crab hit; the player with the most points wins. Hit all 30 for a perfect game.',
+    ],
+    controls: [
+      { input: 'WASD', does: 'Adjust position' },
+      { input: 'Mouse', does: 'Aim / adjust throw angle' },
+      { input: 'Left Click', does: 'Roll coconut' },
+    ],
+    reserved: false,
+    // Built: see `51-perfect-game`. The assets stage is still to do - the beach, the
+    // crabs and the coconut are primitives and the players are the island's capsule.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'pet-race',
+    number: 24,
+    title: 'Pet Race',
+    kind: 'free-for-all',
+    description: [
+      'Ten seconds to read the table and pick a pet - dog, cat, rabbit, hamster or fish. Each has its own speed, grip, boost and stamina, and none of them is simply the best. Pick nothing and you get the fish, which flops on the line for the whole race.',
+      'Then three, two, one, and thirty seconds to race down a course of hedges, puddles and treats. Hold the button to boost: it drains your stamina, and letting go lets it fill again. Treats top it up.',
+      'The race ends when three are home, everybody is, or the thirty seconds run out. Finishers place by time, everybody else by how far they got.',
+    ],
+    controls: [
+      { input: 'Left click / 1-5', does: 'Choose a pet from the table' },
+      { input: 'WASD / Arrow keys', does: 'Steer' },
+      { input: 'Hold left click', does: 'Boost - burns stamina' },
+    ],
+    reserved: false,
+    // Built: see `38-pet-race`. The assets stage is still to do - the five
+    // animals are boxes, balls and cones, and the hedges are bushes.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'probable-stop',
+    number: 25,
+    title: 'Probable Stop',
+    kind: 'free-for-all',
+    description: [
+      'Six rounds, three bridges each. You have five seconds to stand on one, and you can change your mind as often as you like until the time runs out.',
+      'Then everybody walks across. In the first four rounds two of the three bridges hold; in the last two only one does. A bridge that does not hold snaps and drops whoever is on it.',
+      'Survive all six rounds, or be the last one left, to win.',
+    ],
+    controls: [
+      { input: 'A / D or Arrow keys', does: 'Move to the bridge on the left or right' },
+      { input: 'Left click', does: 'Step onto a bridge - click it again to confirm' },
+      { input: 'Space', does: 'Confirm - the wait ends early once everybody has' },
+    ],
+    reserved: false,
+    // Built: see `18-probable-stop`. The assets stage is still to do - the
+    // players are the island's capsule and the bridges are planks.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'punch-buggy',
+    number: 26,
+    title: 'Punch Buggy',
+    kind: 'free-for-all',
+    description: [
+      'A round platform over the sea, and a fist that comes off. Face the pointer, click to shoot your punch out, and click again to pull it back.',
+      'A fist that hits somebody in the side or back knocks them out. One that meets their front, where their own fist is, is blocked and only shoves them - but a shove off the edge is out too. After ten seconds the platform starts to shrink.',
+      'Last one standing wins. Thirty seconds on the clock.',
+    ],
+    controls: [
+      { input: 'WASD', does: 'Move' },
+      { input: 'Mouse', does: 'Aim' },
+      { input: 'Left click', does: 'Punch, then click again to pull it back' },
+    ],
+    reserved: false,
+    // Built: see `20-punch-buggy`. The assets stage is still to do - the
+    // fighters are the island's capsule and the fists are spheres.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'shanty-matrix',
+    number: 27,
+    title: 'Shanty Matrix',
+    kind: 'free-for-all',
+    description: [
+      'Survive as long as you can on the deck of a pirate ship while giant cannonballs fly across it from every direction, at every speed.',
+      "A red lane lights up across the deck the moment a ball is fired, a second before it arrives. Dodge out of its way - and push the other players into it. Anybody a cannonball hits goes overboard and is out.",
+      'The barrage gets faster and fiercer the longer it goes. The last player standing wins.',
+    ],
+    controls: [
+      { input: 'WASD', does: 'Move' },
+      { input: 'Left Click / Space', does: 'Push whoever is in front of you' },
+    ],
+    reserved: false,
+    // Built: see `47-shanty-matrix`. The assets stage is still to do - the ship
+    // and the cannonballs are primitives and the players are the island's capsule.
+    // Added as a forty-third slot, the same way as 42.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'sharing-is-caring',
+    number: 28,
+    title: 'Sharing Is Caring',
+    kind: 'free-for-all',
+    description: [
+      'Tag, backwards. A crown sits in the middle of a walled arena: walk into it and it is yours, and you score a point for every second you wear it.',
+      'Bump into whoever is wearing it to take it - they are knocked back and dazed for a moment. The wearer is a little faster than everybody else, so use the rocks, the wall and your boost. Most points after a minute wins.',
+    ],
+    controls: [
+      { input: 'WASD', does: 'Move' },
+      { input: 'Space', does: 'Boost - a burst of speed that recharges (not while wearing the crown)' },
+    ],
+    reserved: false,
+    // Built: see `34-sharing-is-caring`. The assets stage is still to do - the
+    // players are the island's capsule and the crown is primitives.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'spidey-senses',
+    number: 29,
+    title: 'Spidey Senses',
+    kind: 'free-for-all',
+    description: [
+      "Play a game of chicken as everyone slowly inches toward a trapdoor hiding a spider's nest. Decide when to stop - a click stops you where you stand.",
+      'The trapdoor thuds once or twice as a false alarm, then on the 2nd, 3rd or 4th thud - always before anybody can reach it - it becomes dangerous: it rattles and red eyes glint under the lid. Click too late and a spider jumps out at you, and you are out. If nobody is too late, the spider takes whoever stopped furthest from the trapdoor - the chicken - with the same jump scare.',
+      'Somebody goes every round. The last player remaining wins.',
+    ],
+    controls: [
+      { input: 'WASD', does: 'Slowly move toward or away from the trapdoor' },
+      { input: 'Left Click', does: 'Stop / react to the trapdoor' },
+    ],
+    reserved: false,
+    // Built: see `48-spidey-senses`. The assets stage is still to do - the cellar,
+    // the trapdoor and the spider are primitives and the players are the island's capsule.
+    // Added as a forty-fourth slot, the same way as 42 and 43.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'sprint-triathlon',
+    number: 30,
+    title: 'Sprint Triathlon',
+    kind: 'free-for-all',
+    description: [
+      'Three legs, back to back. Swim by clicking - sixty strokes. Bike by pressing space - eighty turns of the pedals. Then run by typing the sentence on the screen, like this one:',
+      'Duck walked up to a lemonade stand, and he said to the man running the stand, hey! Got any grapes?',
+      'Every right key is a stride; a wrong one trips you up for a moment. The race ends when three have finished, or at two and a half minutes. Fastest time wins.',
+    ],
+    controls: [
+      { input: 'Left click', does: 'Swim' },
+      { input: 'Space', does: 'Bike' },
+      { input: 'Keyboard', does: 'Type the sentence to run' },
+    ],
+    reserved: false,
+    // Built: see `26-sprint-triathlon`. The assets stage is still to do - the
+    // racers are the island's capsule and the bikes are primitives.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'synchronize-steps',
+    number: 31,
+    title: 'Synchronize Steps',
+    kind: 'free-for-all',
+    description: [
+      'Everybody starts at the top of a tower twenty steps high, and the higher you stay the better. Every two seconds you pick how far to go down: 1, 4 or 6.',
+      'Alone on a number, you stay where you are. Exactly two on the same number, you both go down that many - except a pair on 1, which drops eight. Three or more on the same number all drop eight. Pick nothing and one is picked for you.',
+      'Reach the bottom and you are out, and that ends the game. Highest up at the end wins.',
+    ],
+    controls: [
+      { input: '1 / 4 / 6', does: 'Choose how many steps' },
+      { input: 'Left click', does: 'Choose an option on screen' },
+    ],
+    reserved: false,
+    // Built: see `30-synchronize-steps`. The assets stage is still to do - the
+    // players are the island's capsule and the tower is primitives.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'tetris-master',
+    number: 32,
+    title: 'Tetris Master',
+    kind: 'free-for-all',
+    description: [
+      'Blocks of awkward shapes, one tower each. Build it high and build it stable.',
+      'Earthquakes and worse are coming for it. The best tower still standing at the end wins.',
+    ],
+    controls: [],
+    reserved: false,
+    done: { environment: false, controls: false, assets: false },
+  },
+  {
+    id: 'time-it',
+    number: 33,
+    title: 'Time It',
+    kind: 'free-for-all',
+    description: [
+      'You are given a target time, never under six and a half seconds. The stopwatch starts on Start!, and everybody can watch it for the first two and a half seconds - then it is covered and you are counting in your head.',
+      'Click to stop your timer. The round ends when everybody has stopped, or at thirty seconds. Closest to the target wins; anybody who never stopped comes last.',
+    ],
+    controls: [
+      { input: 'Left click', does: 'Stop your stopwatch' },
+    ],
+    reserved: false,
+    // Built: see `29-time-it`. The assets stage is still to do - the players are
+    // the island's capsule and the stopwatch is primitives.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'wack-attack',
+    number: 34,
+    title: 'Wack-Attack',
+    kind: 'free-for-all',
+    description: [
+      'Walk about a field with a hammer while moles pop out of sixteen holes. Stand over one and swing - the hammer comes down in front of you, the way you are facing - before it goes back down.',
+      'An ordinary mole is a point. The golden mole is three, is rarer, and ducks back down much sooner. First hit on a mole takes it. Bring the hammer down on somebody\'s head instead and they are stunned for a moment.',
+      'Most points after forty-five seconds wins.',
+    ],
+    controls: [
+      { input: 'WASD', does: 'Move' },
+      { input: 'Left click', does: 'Swing the hammer' },
+    ],
+    reserved: false,
+    // Built: see `25-wack-attack`. The assets stage is still to do - the
+    // players are the island's capsule and the moles are primitives.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'whats-your-rpm',
+    number: 35,
+    title: "What's Your RPM?",
+    kind: 'free-for-all',
+    description: [
+      'Race down a feed of sixty reels on your mini phone by scrolling the mouse wheel as fast as you can. First to the end wins.',
+      'Every so often an ad takes over and the feed stops dead until you click its Skip Ad button - somewhere different every time, and smaller the further you get. Miss it and a popup opens that has to be closed, by a small button in a different corner every time, before you can try again. The game ends at two minutes; everybody else places by how far down the feed they got.',
+    ],
+    controls: [
+      { input: 'Mouse wheel', does: 'Scroll through the reels' },
+      { input: 'Left click', does: 'Skip ads - and close the popup a miss opens' },
+    ],
+    reserved: false,
+    // Built: see `40-whats-your-rpm`. The assets stage is still to do - the
+    // phone and its reels are drawn on the page and the players are the island's capsule.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'wheres-midnight',
+    number: 36,
+    title: "Where's Midnight?",
+    kind: 'free-for-all',
+    description: [
+      'A junkyard at night, and an all-black cat called Midnight somewhere in it. Everybody searches the same yard with their own camera.',
+      'Eighteen other cats are hiding in it too, and in the dark every one of them is just a pair of glowing eyes. Get your torch on one and its colour tells you whether you have found him.',
+      'Click him and you have found him. A click on anything else costs a second and a half before you can click again. You place in the order you find him; the round ends when three have, everybody has, or at ninety seconds.',
+    ],
+    controls: [
+      { input: 'WASD', does: 'Pan the view' },
+      { input: 'Wheel', does: 'Zoom towards the pointer' },
+      { input: 'F', does: 'Torch on or off - closest zoom only, and it locks the camera' },
+      { input: 'Left click', does: 'Say that is him - a wrong one costs a second and a half' },
+    ],
+    reserved: false,
+    // Built: see `37-wheres-midnight`. The assets stage is still to do - the
+    // junkyard is primitives and the cat is three spheres and a tail.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'youre-the-bomb',
+    number: 37,
+    title: "You're The Bomb",
+    kind: 'free-for-all',
+    description: [
+      'Escape a dangerous room before a giant rolling pin crushes everyone. Press Space to scan and reveal the bombs surrounding you, then carefully navigate around them while pushing other players out of your way.',
+      'You have 45 seconds before the rolling pin reaches the room. Players who survive can escape through the hole at the end - the first out of it wins.',
+    ],
+    controls: [
+      { input: 'WASD', does: 'Move' },
+      { input: 'Space', does: 'Scan for nearby bombs' },
+      { input: 'Left Click', does: 'Push' },
+    ],
+    reserved: false,
+    // Built: see `46-youre-the-bomb`. The assets stage is still to do - the room,
+    // the bombs and the pin are primitives and the players are the island's capsule.
+    // Added as a forty-second slot when every free-for-all one was taken.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'zombie-tag',
+    number: 38,
+    title: 'Zombie Tag',
+    kind: 'free-for-all',
+    description: [
+      'Six zombies chase everybody round a walled arena full of crates. You all start in the middle, and everything is solid - bodies included.',
+      'Get caught and you turn into a zombie and join the chase. Every fifteen seconds three more climb in over the wall, so the room only ever gets busier.',
+      'You move twice as fast as a zombie. Space shoves whoever is next to you and knocks them down for a second - handy for leaving somebody behind - and then needs three seconds before it works again.',
+      'Last one still running wins. The camera never moves: the whole arena is in front of you all round.',
+    ],
+    controls: [
+      { input: 'WASD / Arrow keys', does: 'Move' },
+      { input: 'Space', does: 'Push whoever is next to you (3 second cooldown)' },
+    ],
+    reserved: false,
+    // Built: see `16-zombie-tag`. The assets stage is still to do - every body
+    // is a coloured circle and every crate a brown rectangle.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'reserved-39',
+    number: 39,
+    title: 'Free slot',
+    kind: 'free-for-all',
+    description: [],
+    controls: [],
+    reserved: true,
+    done: { environment: false, controls: false, assets: false },
+  },
+  {
+    id: 'reserved-40',
+    number: 40,
+    title: 'Free slot',
+    kind: 'free-for-all',
+    description: [],
+    controls: [],
+    reserved: true,
+    done: { environment: false, controls: false, assets: false },
+  },
+  {
+    id: 'reserved-41',
+    number: 41,
+    title: 'Free slot',
+    kind: 'one-vs-all',
+    description: [],
+    controls: [],
+    reserved: true,
+    done: { environment: false, controls: false, assets: false },
+  },
+  {
+    id: 'reserved-42',
+    number: 42,
+    title: 'Free slot',
+    kind: 'one-vs-all',
+    description: [],
+    controls: [],
+    reserved: true,
+    done: { environment: false, controls: false, assets: false },
+  },
+  {
+    id: 'reserved-43',
+    number: 43,
+    title: 'Free slot',
+    kind: 'one-vs-all',
+    description: [],
+    controls: [],
+    reserved: true,
+    done: { environment: false, controls: false, assets: false },
+  },
+  {
+    id: 'reserved-44',
+    number: 44,
+    title: 'Free slot',
+    kind: 'one-vs-all',
+    description: [],
+    controls: [],
+    reserved: true,
+    done: { environment: false, controls: false, assets: false },
+  },
+  {
+    id: 'reserved-45',
+    number: 45,
+    title: 'Free slot',
+    kind: 'one-vs-all',
+    description: [],
+    controls: [],
+    reserved: true,
+    done: { environment: false, controls: false, assets: false },
+  },
+  {
+    id: 'reserved-46',
+    number: 46,
+    title: 'Free slot',
+    kind: 'one-vs-all',
+    description: [],
+    controls: [],
+    reserved: true,
+    done: { environment: false, controls: false, assets: false },
   },
 ] as const
 

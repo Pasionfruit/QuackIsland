@@ -65,6 +65,7 @@ export {
   bridgeDrop,
   deckHeight,
   fallTime,
+  greyness,
   onGround,
   revealProgress,
   spotFor,

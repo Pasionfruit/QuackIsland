@@ -52,6 +52,22 @@ describe('the catalogue', () => {
     expect(MINIGAMES).toHaveLength(total)
   })
 
+  it('numbers the named games alphabetically by title, with the free slots after them', () => {
+    const named = MINIGAMES.filter((game) => !game.reserved)
+    const key = (title: string) => title.toLowerCase().replace(/[^a-z0-9]/g, '')
+    const sorted = [...named].sort((a, b) => (key(a.title) < key(b.title) ? -1 : key(a.title) > key(b.title) ? 1 : 0))
+    expect(named.map((game) => game.id)).toEqual(sorted.map((game) => game.id))
+    // The list is in number order, the named games are 1 to 38 and the free slots take the rest.
+    expect(named.map((game) => game.number)).toEqual(named.map((_, i) => i + 1))
+    expect(MINIGAMES.slice(named.length).every((game) => game.reserved)).toBe(true)
+  })
+
+  it('makes the first forty games free-for-all, and the six after them one-vs-all', () => {
+    expect(MINIGAMES.slice(0, 40).every((game) => game.kind === 'free-for-all')).toBe(true)
+    expect(MINIGAMES.slice(40).every((game) => game.kind === 'one-vs-all')).toBe(true)
+    expect(MINIGAMES.slice(40)).toHaveLength(6)
+  })
+
   it('gives every game its own id', () => {
     const ids = MINIGAMES.map((game) => game.id)
     expect(new Set(ids).size).toBe(ids.length)
@@ -127,12 +143,14 @@ describe('the catalogue', () => {
     }
 
     const started = MINIGAMES.filter((game) => stepsDone(game) > 0).map((game) => game.id)
-    expect(started).toEqual(['zombie-tag', 'messy-maze', 'probable-stop', 'duck-hunt', 'pet-race', 'feeding-time', 'sprint-triathlon', 'punch-buggy', 'time-it', 'wack-attack', 'lady-luck', 'find-yourself', 'make-the-cut', 'hes-one-shot', 'wheres-midnight', 'let-him-cook', 'i-see-the-light', 'helping-dad', 'synchronize-steps', 'sharing-is-caring', 'keyboard-warrior', 'musical-mayhem', 'ill-just-wait', 'one-piece', 'perfect-game', 'chef-caricature', 'whats-your-rpm', 'i-just-work-here', 'highest-in-the-room', 'color-coded', 'binary-bs', 'youre-the-bomb', 'shanty-matrix', 'spidey-senses', 'needs-a-walmart', 'milf-fishing'])
+    // In alphabetical order now, so compared as a set: which games have started, and no others.
+    expect([...started].sort()).toEqual(['zombie-tag', 'messy-maze', 'probable-stop', 'duck-hunt', 'pet-race', 'feeding-time', 'sprint-triathlon', 'punch-buggy', 'time-it', 'wack-attack', 'lady-luck', 'find-yourself', 'make-the-cut', 'hes-one-shot', 'wheres-midnight', 'let-him-cook', 'i-see-the-light', 'helping-dad', 'synchronize-steps', 'sharing-is-caring', 'keyboard-warrior', 'musical-mayhem', 'ill-just-wait', 'one-piece', 'perfect-game', 'chef-caricature', 'whats-your-rpm', 'i-just-work-here', 'highest-in-the-room', 'color-coded', 'binary-bs', 'youre-the-bomb', 'shanty-matrix', 'spidey-senses', 'needs-a-walmart', 'milf-fishing'].sort())
     expect(progress().playable).toBe(0)
   })
 
   it('finds a game by its id, and knows an id it has never heard of', () => {
-    expect(minigameById('zombie-tag').number).toBe(1)
+    expect(minigameById('binary-bs').number).toBe(1)
+    expect(minigameById('zombie-tag').number).toBe(38)
     expect(isMinigameId('zombie-tag')).toBe(true)
     expect(isMinigameId('no-such-game')).toBe(false)
     expect(isMinigameId(7)).toBe(false)

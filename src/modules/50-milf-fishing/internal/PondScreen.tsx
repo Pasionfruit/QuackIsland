@@ -98,7 +98,7 @@ export function PondScreen({ run }: { run: MinigameRun }) {
   if (ready && !game.over && mineIndex >= 0) {
     if (last && t - last.at < 1.6) {
       banner = last.what
-        ? { text: `Caught a ${FISH[last.what.size].name}!`, sub: kg(last.what.weight), tone: 'good' }
+        ? { text: `Caught ${FISH[last.what.size].name === 'your mom' ? '' : 'a '}${FISH[last.what.size].name}!`, sub: kg(last.what.weight), tone: 'good' }
         : { text: 'Nothing!', sub: "the rod wasn't bent", tone: 'bad' }
     } else if (casting > 0) banner = { text: 'Casting…', tone: 'hint' }
     else if (t < 4 && mine.length === 0) banner = { text: 'Watch your rod - click to pull when it bends', sub: 'a little bend is a small fish, bent right over is a big one', tone: 'hint' }

@@ -200,6 +200,9 @@ export function ProbableStopScreen({ run }: { run: MinigameRun }) {
 function Status({ game }: { game: Game }) {
   const mine = game.players.find((p) => p.mine)
   if (!mine) return <span style={{ color: LOOK.faded }}>watching</span>
+  // Somebody whose bridge is about to go is not told until it does: the colour draining out of them is the warning.
+  const waiting = !mine.alive && mine.outIn === game.round && game.phase === 'reveal' && revealProgress(game) < BEATS.drop[0]
+  if (waiting) return <span style={{ color: LOOK.faded }}>…</span>
   if (!mine.alive) {
     return (
       <span style={{ color: LOOK.faded }} data-status="out">

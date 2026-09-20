@@ -92,6 +92,23 @@ export const BEATS = {
   walk: [0.03, 0.97] as const,
   shiver: [0.24, 0.4] as const,
   drop: [0.4, 0.8] as const,
+  /** Somebody whose bridge will not hold **turns grey** over this, finishing just as it gives way. */
+  grey: [0.14, 0.38] as const,
+}
+
+/**
+ * How grey somebody is, 0 to 1. Nobody is until it is time: **a player whose
+ * bridge is about to go turns grey over the shiver, finishing before it snaps** - so
+ * the colour draining out of them is the warning, and not the first moment of the reveal
+ * that gives it away. Anybody who fell in an earlier round, or once the game is over,
+ * is grey all the way; anybody still in, not at all.
+ */
+export function greyness(game: Game, player: Player): number {
+  if (player.alive) return 0
+  const fellEarlier = player.outIn !== null && (player.outIn < game.round || game.phase === 'over')
+  if (fellEarlier || game.phase === 'choosing') return 1
+  const [from, to] = BEATS.grey
+  return ease((revealProgress(game) - from) / (to - from))
 }
 
 /** How far a bridge has dropped, 0 to 1, for a lane. */

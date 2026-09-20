@@ -7,7 +7,7 @@
  *
  * **The rod is the whole game.** It is jointed, and bends from the butt to the
  * tip by exactly as much as the fish on it pulls - a little for a perch, right
- * over for a catfish - tugging while the fish is on. The bobber dips under with
+ * over for your mom - tugging while the fish is on. The bobber dips under with
  * it. A pull whips the rod up; if there was a fish, it comes flying out of the
  * water over your head into your bucket, as big as it is. Then the line is cast
  * back out.

@@ -31,6 +31,7 @@ import {
   IcosahedronGeometry,
   InstancedMesh,
   MathUtils,
+  Mesh,
   MeshStandardMaterial,
   Object3D,
   RepeatWrapping,
@@ -38,7 +39,6 @@ import {
   Vector3,
   type DirectionalLight,
   type Fog,
-  type Mesh,
 } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { CONVENTIONS, createRng, hashSeed } from '../../00-core'
@@ -52,6 +52,7 @@ import {
   deckHeight,
   fallTime,
   revealProgress,
+  greyness,
   spotFor,
   type Condition,
   type Rect,
@@ -775,8 +776,17 @@ function PlayerPill({ game, player }: { game: Game; player: Player }) {
   const ring = useRef<Mesh>(null)
   const placed = useRef(false)
   const stride = useRef(0)
-  const colour = !player.alive ? PALETTE.fallen : player.mine ? PALETTE.you : PALETTE.player
-  const avatar = useMemo(() => createAvatar(colour), [colour])
+  const colour = player.mine ? PALETTE.you : PALETTE.player
+  // Its own skin, so that this body can go grey without every other one that is the same colour going with it.
+  const skin = useMemo(() => new MeshStandardMaterial({ color: colour, roughness: 0.55 }), [colour])
+  const avatar = useMemo(() => {
+    const made = createAvatar(colour)
+    const pill = made.children[0]
+    if (pill instanceof Mesh) pill.material = skin
+    return made
+  }, [colour, skin])
+  const base = useMemo(() => new Color(colour), [colour])
+  const grey = useMemo(() => new Color(PALETTE.fallen), [])
 
   useFrame((_state, delta) => {
     const group = holder.current
@@ -821,7 +831,9 @@ function PlayerPill({ game, player }: { game: Game; player: Player }) {
       }
     }
 
-    if (ring.current) ring.current.visible = player.mine && player.alive
+    if (ring.current) ring.current.visible = player.mine && greyness(game, player) === 0
+    // The colour draining out of somebody whose bridge is about to go.
+    skin.color.copy(base).lerp(grey, greyness(game, player))
   })
 
   return (

@@ -2,14 +2,16 @@
 
 ## What this is
 
-The minigames Volcano Island is made of: **forty-six of them**, thirty-eight
-free-for-all and eight one-vs-all, as a catalogue you can browse - twenty tiles
+The minigames Volcano Island is made of: **forty-six of them**, forty
+free-for-all and six one-vs-all, as a catalogue you can browse - twenty tiles
 to a page - and a seam each one plugs into when somebody builds it.
 
-**Every game named so far is free-for-all**, the turn-taking ones included: the
-kind says who is in the arena, and a game where everybody takes a turn at the
-same thing is still everybody's game. The eight one-vs-all slots are all still
-free.
+**They are numbered alphabetically by title, and the first forty are all
+free-for-all.** Every game named so far is free-for-all, the turn-taking ones
+included: the kind says who is in the arena, and a game where everybody takes a
+turn at the same thing is still everybody's game. The thirty-eight named games
+are 1 to 38, in order of name; the two free-for-all slots that are still waiting
+for a game are 39 and 40; and the six one-vs-all slots, all still free, are 41 to 46.
 
 It plays none of them. What it owns is the part that has to be right *before*
 forty-six of anything can be built:
@@ -25,43 +27,34 @@ in this module changes, and nothing in it ever learns which game it was.
 
 ## Forty-six slots, and why the empty ones are in the list
 
-The numbers are the ones the games were written down with, and they do not
-move. Somebody says "let us do fourteen next" and fourteen has to still be
-*He's One Shot* a month later, so a number is a permanent handle rather than a
-position in an array.
+**A number is a place in the alphabetical list; an id is the name of a game.**
+Games are numbered by title - *Binary BS* is 1 and *Zombie Tag* is 38 - ignoring
+case and punctuation, so *M.I.L.F (fishing)* sorts as *milf*. A game named later
+takes one of the free slots and goes in its alphabetical place, which moves the
+numbers after it: so the id is what a build registers against and what never
+changes, and the number is only where the game is in the list today.
 
-That is also why a slot nobody has named is a **reserved entry with a number**
-rather than a gap. The catalogue is the plan, the dashboard draws the plan, and
-the distance between what is planned and what exists is the single most useful
-thing a dashboard of templates can show you. Thirty-eight of the forty-six are
-named; eight are free slots waiting for one, all of them one-vs-all.
+A slot nobody has named is a **reserved entry with a number** rather than a gap.
+The catalogue is the plan, the dashboard draws the plan, and the distance between
+what is planned and what exists is the single most useful thing a dashboard of
+templates can show you. Thirty-eight of the forty-six are named; eight are free
+slots waiting for one - two free-for-all, at 39 and 40, and six one-vs-all.
 
 | | free-for-all | one-vs-all | total |
 | --- | --- | --- | --- |
 | Named | 38 | 0 | 38 |
-| Free slots | 0 | 8 | 8 |
-| **Target** | **38** | **8** | **46** |
+| Free slots | 2 | 6 | 8 |
+| **Target** | **40** | **6** | **46** |
 
-**Slot 42 was added, not dealt.** When *You're The Bomb* arrived every
-free-for-all slot was taken, so the free-for-all target went from 30 to 31 and
-the new game took the next number, 42, rather than one of the free one-vs-all
-slots - those are kept for one-vs-all games. *Shanty Matrix* arrived the same
-way and took 43, *Spidey Senses* 44, *OG Black Friday* 45 and *M.I.L.F (fishing)* 46.
+**The first forty are free-for-all.** The kinds have moved twice: *Make Some Noise*,
+*Perfect Game* and *Chef Caricature* were written down as one-vs-all and are
+free-for-all now, and two more of the free slots were made free-for-all so that
+the first forty in the list are. Nothing about the games changed: Perfect Game and
+Chef Caricature still go turn by turn, and their own modules run those turns.
 
-**The kinds moved once, deliberately.** *Make Some Noise* (26), *Perfect Game*
-(27) and *Chef Caricature* (28) were written down as one-vs-all and are
-free-for-all now, so the targets are 38 and 8 rather than 35 and 11. Nothing
-about the games changed: Perfect Game and Chef Caricature still go turn by turn,
-and their own modules run those turns.
-
-Twelve of the twenty-six arrived with their controls already written down;
-the other fourteen did not, and their templates say so.
-
-**The numbering has a seam in it, and it is deliberate.** Numbers 1–30 are the
-ones the games arrived with, 31–41 were added to make the plan's count up, and
-42–46 are the games that arrived after every slot was taken. The free one-vs-all
-slots are scattered through 29–41 rather than in a run, which is the price of
-never renumbering a game somebody has already learned the number of.
+The numbers in the modules' own docs (*Minigame 34*, and the like) and the
+*added as the forty-fourth slot* notes in the catalogue are the order the games were
+written down and built in, which is not the order they are numbered in now.
 
 ## The three stages every game is built in
 

@@ -105,7 +105,12 @@ Six seconds, in beats (`BEATS`):
 - **walk** - everybody sets off across their bridge together, following its sag
   (`deckHeight`), with a step in their stride. Nobody knows yet: the cards and
   the banner wait for the snap.
-- **shiver** - the bridges that will not hold start to shake.
+- **shiver** - the bridges that will not hold start to shake. **The people on them turn
+  grey** (`greyness`, `BEATS.grey`): the colour drains out of them over the run-up to
+  the shiver, finishing a moment before the bridge snaps, so it is the warning - and
+  nobody is grey at the first step of the reveal, so the colour does not give it away
+  before there is any doubt. Your own ring goes with it, and the *you fell* line waits
+  for the snap.
 - **drop** - they snap in the middle. Each half swings down against its own
   cliff and settles; planks near the break, and some others, come away and
   tumble. Everybody on it stops where they were and falls head over heels into
@@ -244,6 +249,10 @@ panel, and open **3 · Probable Stop**. Read it, then press **play**.
   banner say whether yours held, and the cards say *held* or *dropped*.
 - **Watch the conditions over a game.** Rickety bridges hold about as often as
   sturdy ones.
+- **Grey before the fall.** In a reveal where yours is one of the bridges that will go,
+  everybody on it should turn grey a little before it shakes and be fully grey before it
+  snaps; nobody on a bridge that holds should change colour, and nobody should be grey
+  at the very first step.
 - **Fall.** You reappear grey on the cloud, and the HUD says which round you
   fell in. Your keys do nothing now.
 - **Reach round five.** The HUD turns red: only one of three paths holds.

@@ -20,7 +20,7 @@ import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, playCue, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { HesOneShotScene, type LookRef } from './HesOneShotScene'
-import { COLOURS, GUN, PITCH_LIMIT, ROUND, clock, cooldownLeft, crewOf, guarded, isStanding, placings, type Game } from './rules'
+import { COLOURS, GUN, PITCH_LIMIT, ROUND, SHIELD, clock, cooldownLeft, crewOf, guarded, isStanding, placings, type Game } from './rules'
 import { myId, newGame, waitingGame } from './setup'
 import { useShotNet } from './useShotNet'
 
@@ -88,6 +88,8 @@ export function HesOneShotScreen({ run }: { run: MinigameRun }) {
   /** When you picked a shield up, and when yours broke, by the page clock. */
   const [shieldAt, setShieldAt] = useState(-Infinity)
   const [brokeAt, setBrokeAt] = useState(-Infinity)
+  /** When yours broke by the game's clock, which is what its cooldown counts on: a pause holds it. */
+  const [brokeGame, setBrokeGame] = useState(-Infinity)
   const hadShield = useRef(false)
 
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
@@ -122,7 +124,10 @@ export function HesOneShotScreen({ run }: { run: MinigameRun }) {
       if (result.respawned && after) look.current = { yaw: after.yaw, pitch: 0 }
       // A shield picked up, and one broken by a hit - which is a shield going with you still standing.
       if (after && !hadShield.current && after.shield) setShieldAt(now)
-      if (after && hadShield.current && !after.shield && after.out === null) setBrokeAt(now)
+      if (after && hadShield.current && !after.shield && after.out === null) {
+        setBrokeAt(now)
+        setBrokeGame(current.elapsed)
+      }
       hadShield.current = !!after?.shield
       if (result.changed) setGame({ ...current })
       frame = requestAnimationFrame(tick)
@@ -208,6 +213,9 @@ export function HesOneShotScreen({ run }: { run: MinigameRun }) {
   const standing = game.players.filter(isStanding).length
   const cooling = mine ? cooldownLeft(game, mine) / GUN.cooldown : 0
   const sinceHit = (performance.now() - hitAt) / 1000
+  // The cooldown after a shield broke on you, counting down: only while it is one from this game.
+  const sinceBroke = game.elapsed - brokeGame
+  const shieldLeft = sinceBroke >= 0 && sinceBroke < SHIELD.cooldown ? SHIELD.cooldown - sinceBroke : 0
 
   let banner: { text: string; sub?: string; tone: 'count' | 'out' | 'hint' | 'got' } | null = null
   if (ready && !game.over && mine) {
@@ -314,6 +322,11 @@ export function HesOneShotScreen({ run }: { run: MinigameRun }) {
               </div>
             ) : null}
             {mine.shield && mine.out === null ? <div style={{ ...hunterTag, background: 'rgba(40,150,210,0.85)' }}>SHIELD</div> : null}
+            {!mine.shield && mine.out === null && shieldLeft > 0 ? (
+              <div style={{ ...hunterTag, background: 'rgba(42,34,51,0.75)', color: '#9fdcf5' }} data-shield-cooldown={Math.ceil(shieldLeft)}>
+                SHIELD {Math.ceil(shieldLeft)}s
+              </div>
+            ) : null}
           </div>
         ) : null}
 

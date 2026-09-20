@@ -6,9 +6,9 @@ Minigame 46, free-for-all: **M.I.L.F (fishing).** Everybody fishes off one dock 
 **25 seconds**. **Watch your rod**: when a fish bites it bends - **a slight bend
 is a small fish, a dramatic bend a much bigger one** - tugs for a second or two,
 and lets go. **Click to pull.** Pull while a fish is on and you land it; **pull
-when the rod is not bent and you get nothing.** Four sizes of fish bite at
+when the rod is not bent and you get nothing.** Five sizes of fish bite at
 unpredictable times, each player their own, and **there is no guarantee the
-biggest ever appears**. The biggest total catch wins.
+biggest - *your mom* - ever appears**. The biggest total catch wins.
 
 **Left click pulls the rod.**
 
@@ -20,10 +20,11 @@ slot taken, so the free-for-all target went from 34 to 35 and it took 46.
 
 | Fish | Weight | Bends the rod | How often it is the one biting |
 | --- | --- | --- | --- |
-| perch | 0.3-0.8 kg | a little (0.22) | 42% |
-| bass | 1.5-3 kg | a fair way (0.45) | 30% |
-| pike | 4-7 kg | a long way (0.7) | 19% |
-| catfish | 10-18 kg | right over (1.0) | 9% |
+| perch | 0.3-0.8 kg | a little (0.18) | 40% |
+| bass | 1.5-3 kg | a fair way (0.36) | 29% |
+| pike | 4-7 kg | a long way (0.55) | 18% |
+| catfish | 10-18 kg | nearly over (0.76) | 9% |
+| **your mom** | **25-40 kg - the heaviest** | right over (1.0) | 4% |
 
 Every fish bends the rod further than any smaller one can, even at the top of its
 tugging, so the bend always tells the fish.
@@ -34,7 +35,7 @@ tugging, so the bend always tells the fish.
 (`bitesFor`): the first between 0.8 and 2.5 s in, each fish on for 1.1-2.2 s (a
 little longer the bigger it is), then a quiet 0.6-3 s before the next. That is
 about six or seven bites a round. Over many rounds **more than half of players
-never get a catfish bite at all.**
+never get a your-mom bite at all.**
 
 A bite (`bendAt`): the rod **bends over in 0.35 s** to its fish's bend, **tugs**
 while the fish is on, and **straightens in 0.25 s** as it lets go.
@@ -69,7 +70,7 @@ each landed. That is the whole of what a player is.
 - **The camera** sits between you and whoever is on your left, looking past your
   right shoulder, so your rod stands out against the water.
 - **The rod** is jointed and bends from butt to tip by exactly as much as the
-  fish on it - a gentle arc for a perch, the tip down to the water for a catfish -
+  fish on it - a gentle arc for a perch, the tip down to the water for your mom -
   and tugs. **The bobber** is dragged under.
 - **A pull** whips the rod up; **a fish** comes flying out of the water over your
   head into your bucket, as big as it is; the bobber flies back out on the cast.
@@ -106,7 +107,7 @@ ends; somebody who leaves the lobby is out; a pause stops the round for everybod
 **Only when you are alone**: you and five stand-ins.
 
 - **Each has its own greed**: the smallest fish it will take early on - a bass, a
-  pike, or holding out for a catfish - and it gives that up as the clock runs
+  pike, a catfish, or holding out for your mom - and it gives that up as the clock runs
   down, taking anything in the last five seconds (`wantsAt`).
 - **It sizes each fish up from the bend, not always right**: 15% of the time it
   takes a fish for one size bigger or smaller.

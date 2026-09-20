@@ -31,7 +31,7 @@ describe('the stand-ins', () => {
     }
     expect(landed).toBeGreaterThan(100)
     expect(empty).toBeGreaterThan(5)
-    expect(sizes.size).toBe(4)
+    expect(sizes.size).toBe(5)
   }, 30000)
 
   it('are choosier early and take anything at the end', () => {

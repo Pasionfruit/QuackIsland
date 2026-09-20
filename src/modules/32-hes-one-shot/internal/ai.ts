@@ -20,7 +20,7 @@
  */
 import { createRng, hashSeed } from '../../00-core'
 import { arenaFor, lineClear, openPoint, type Arena, type Point } from './arena'
-import { BODY, aimDirection, allied, canAct, canShoot, eyeOf, fire, isStanding, isTarget, pickupReady, walk, wrapAngle, type Game, type Player } from './rules'
+import { BODY, aimDirection, allied, canAct, canShoot, eyeOf, fire, isStanding, isTarget, pickupReady, shieldCooldown, walk, wrapAngle, type Game, type Player } from './rules'
 
 export const BOT = {
   /** How far a stand-in sees, metres. */
@@ -92,7 +92,7 @@ function mindFor(game: Game, bot: Player): Mind {
 
 /** Where a stand-in heads next: now and then a shield that is there, if it has none; otherwise somewhere open. */
 function nextGoal(game: Game, bot: Player, mind: Mind, arena: Arena): Point {
-  if (isStanding(bot) && !bot.shield && mind.random() < BOT.shieldSeek) {
+  if (isStanding(bot) && !bot.shield && shieldCooldown(game, bot) <= 0 && mind.random() < BOT.shieldSeek) {
     let best: Point | null = null
     let bestDistance = Infinity
     arena.pickups.forEach((at, k) => {

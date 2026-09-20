@@ -43,7 +43,7 @@ function mindFor(game: Game, index: number): Mind {
   let mind = minds.get(key)
   if (!mind || game.elapsed < mind.at) {
     const random = createRng(hashSeed(game.seed, `milf-fishing:bot:${bot.id}`))
-    mind = { random, greed: 1 + Math.floor(random() * 3), bites: new Map(), quietAt: 0, at: game.elapsed }
+    mind = { random, greed: 1 + Math.floor(random() * 4), bites: new Map(), quietAt: 0, at: game.elapsed }
     minds.set(key, mind)
     if (minds.size > 64) minds.delete(minds.keys().next().value!)
   }

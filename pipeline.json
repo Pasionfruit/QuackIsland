@@ -1506,20 +1506,25 @@
           "status": "done"
         },
         {
-          "id": "15.7",
-          "title": "The games themselves, one build at a time, three stages each",
-          "status": "planned"
-        },
-        {
           "id": "15.9",
           "title": "Guests go where the host goes, and escape pauses a round rather than leaving it",
           "status": "done"
+        },
+        {
+          "id": "15.10",
+          "title": "The catalogue numbered alphabetically by title, the first forty free-for-all",
+          "status": "done"
+        },
+        {
+          "id": "15.7",
+          "title": "The games themselves, one build at a time, three stages each",
+          "status": "planned"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T17:58:41.980Z"
+          "at": "2026-09-20T18:09:42.631Z"
         },
         "human": {
           "status": "pending"
@@ -1756,6 +1761,11 @@
           "status": "done"
         },
         {
+          "id": "18.7",
+          "title": "A player turns grey before their bridge breaks",
+          "status": "done"
+        },
+        {
           "id": "18.6",
           "title": "The assets: models, sprites and sound in place of capsules and planks",
           "status": "planned"
@@ -1764,7 +1774,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-18T23:57:33.543Z"
+          "at": "2026-09-20T18:10:18.202Z"
         },
         "human": {
           "status": "pending"
@@ -2916,6 +2926,11 @@
           "status": "done"
         },
         {
+          "id": "32.10",
+          "title": "A shield cooldown: after one breaks, ten seconds before another can be picked up, counted down on the HUD",
+          "status": "done"
+        },
+        {
           "id": "32.8",
           "title": "The assets: models, sprites and sound in place of primitives",
           "status": "planned"
@@ -2924,7 +2939,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T16:36:20.554Z"
+          "at": "2026-09-20T18:10:53.597Z"
         },
         "human": {
           "status": "pending"
@@ -4483,6 +4498,11 @@
           "status": "done"
         },
         {
+          "id": "50.9",
+          "title": "A fifth fish, your mom, heaviest of all (25-40 kg) and bending the rod double; the bends re-spaced to fit",
+          "status": "done"
+        },
+        {
           "id": "50.8",
           "title": "The assets: models, sprites and sound in place of primitives",
           "status": "planned"
@@ -4491,7 +4511,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-19T16:50:10.083Z"
+          "at": "2026-09-20T18:11:29.079Z"
         },
         "human": {
           "status": "pending"
