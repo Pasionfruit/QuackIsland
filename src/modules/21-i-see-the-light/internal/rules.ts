@@ -63,6 +63,18 @@ export const LIGHT = {
    */
   breath: 0.26,
   breathPace: [0.7, 1.35] as readonly [number, number],
+  /**
+   * How its speed varies: the circle does not wander at one pace. Its clock runs
+   * fast and slow - a slow swell and a quicker flutter on top of it - so it
+   * dawdles, then darts, then dawdles again, differently every red.
+   *
+   * Each is a share of its usual speed that it gains and loses, how fast that
+   * comes and goes (radians a second), least and most. The two together stay under
+   * one, so it never stops and never turns back: at its slowest it is about a
+   * seventh of its usual pace and at its quickest nearly twice.
+   */
+  surge: { depth: [0.35, 0.55] as readonly [number, number], pace: [0.5, 1.2] as readonly [number, number] },
+  flutter: { depth: [0.15, 0.3] as readonly [number, number], pace: [1.4, 2.6] as readonly [number, number] },
 
   /** The fastest anybody can honestly press, a second, for checking what a browser claims. */
   maxPressRate: 16,
@@ -152,7 +164,8 @@ export interface Circle {
  *
  * In the middle and still for the pointer grace, then easing out into a
  * wandering loop - two sines at different speeds, so it never quite repeats
- * and cannot be learned - swelling and shrinking as it goes. Each red has its
+ * and cannot be learned - swelling and shrinking as it goes, **and at a pace that
+ * keeps changing**: it dawdles and darts (`LIGHT.surge`, `LIGHT.flutter`). Each red has its
  * own loop, its own breath, and a smaller circle.
  */
 export function circleAt(seed: number, red: number, since: number): Circle {
@@ -164,13 +177,22 @@ export function circleAt(seed: number, red: number, since: number): Circle {
   // Drawn after the wander, so a red's path is the path it always was.
   const rateBreath = between(random, LIGHT.breathPace)
   const phaseBreath = random() * Math.PI * 2
+  // Drawn after the breath, so the wander and the breath are what they always were: only the pace is new.
+  const surge = { depth: between(random, LIGHT.surge.depth), rate: between(random, LIGHT.surge.pace), phase: random() * Math.PI * 2 }
+  const flutter = { depth: between(random, LIGHT.flutter.depth), rate: between(random, LIGHT.flutter.pace), phase: random() * Math.PI * 2 }
   const moving = Math.max(0, since - LIGHT.pointerGrace)
   // Eased out of the middle over a second, so it does not jump from still.
   const ramp = Math.min(1, moving)
   const s = moving
+  // The circle's own clock: it runs at 1 + surge cos + flutter cos of the time, so it goes at its usual speed on average
+  // and now dawdles and now darts. What is drawn here is that clock's reading, worked out exactly, from the start.
+  const own =
+    s +
+    (surge.depth * (Math.sin(surge.rate * s + surge.phase) - Math.sin(surge.phase))) / surge.rate +
+    (flutter.depth * (Math.sin(flutter.rate * s + flutter.phase) - Math.sin(flutter.phase))) / flutter.rate
   return {
-    x: 0.5 + (Math.sin(rateX * s + phaseX) - Math.sin(phaseX)) * LIGHT.wander.x * ramp * 0.5,
-    y: 0.5 + (Math.sin(rateY * s + phaseY) - Math.sin(phaseY)) * LIGHT.wander.y * ramp * 0.5,
+    x: 0.5 + (Math.sin(rateX * own + phaseX) - Math.sin(phaseX)) * LIGHT.wander.x * ramp * 0.5,
+    y: 0.5 + (Math.sin(rateY * own + phaseY) - Math.sin(phaseY)) * LIGHT.wander.y * ramp * 0.5,
     // Breathing on the same ramp as the wander: the circle you are given a
     // moment to find is exactly the size it looks, and it starts to close in
     // only once it starts to move.

@@ -1060,8 +1060,8 @@ export function cookPick(choose = 'safe', { hoverOnly = false } = {}) {
     const used = [0, 0, 0, 0, 0, 0]
     for (const s of g.picks) used[g.counter[s]] += 1
     const order = g.picks.map((s) => g.counter[s])
-    const at = g.claimed.filter((c) => c !== null).length
-    const due = at < order.length ? order[at] : -1
+    const upTo = g.claimed.filter((c) => c !== null).length
+    const due = upTo < order.length ? order[upTo] : -1
     const open = g.served.map((_, s) => s).filter((s) => g.claimed[s] === null)
     const lists = {
       safe: open.filter((s) => g.served[s] === due),

@@ -18,7 +18,7 @@ import { getNet, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, useLoopCue, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { LetHimCookScene, myTurn, type SceneHands } from './LetHimCookScene'
-import { COLOURS, INGREDIENTS, KITCHEN, cookTime, dueIndex, fastForwarding, placings, stillIn, turnTime, whoseTurn, type Cook, type Game, type Pick } from './rules'
+import { COLOURS, INGREDIENTS, KITCHEN, cookTime, dueIndex, fastForwarding, placings, recipeOrder, stillIn, turnTime, whoseTurn, type Cook, type Game, type Pick } from './rules'
 import { myId, newGame, waitingGame } from './setup'
 import { useKitchenNet } from './useKitchenNet'
 
@@ -37,8 +37,12 @@ const FONT =
 export function LetHimCookScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the game from here.
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
-  // Held back through the two seconds of Finish; see `useFinish`.
-  const results = useFinish(game.phase === 'over', () =>
+  /** Whether the recipe has been up long enough after the end for Finish to come down: this screen's own hold, see `KITCHEN.reveal`. */
+  const [settled, setSettled] = useState(false)
+  /** Seconds the recipe has been up since the game ended. */
+  const overFor = useRef(0)
+  // Held back through the two seconds of Finish; see `useFinish`. Told the game is over only once the whole recipe has been shown.
+  const results = useFinish(game.phase === 'over' && settled, () =>
     placings(game).map((e) => ({ id: e.cook.id, place: e.place, name: nameOf(e.cook.id), colour: COLOURS[e.index % COLOURS.length], mine: e.cook.id === me })),
   )
   const paused = useRef(run.paused)
@@ -73,6 +77,11 @@ export function LetHimCookScreen({ run }: { run: MinigameRun }) {
       const dt = (now - last) / 1000
       last = now
       const current = live.current
+      // The recipe's own clock: runs from the moment the game is over, and not while paused. With no recipe to show there is nothing to wait for.
+      if (current.phase !== 'over') overFor.current = 0
+      else if (!paused.current) overFor.current += Math.min(Math.max(dt, 0), 0.25)
+      const held = current.phase === 'over' && (overFor.current >= KITCHEN.reveal || recipeOrder(current).length === 0)
+      setSettled((was) => (was === held ? was : held))
       const choice = clicked.current
       clicked.current = null
       if (wire.advance(current, dt, choice, paused.current)) setGame({ ...current })
@@ -112,6 +121,7 @@ export function LetHimCookScreen({ run }: { run: MinigameRun }) {
           </span>
         ) : null}
       </div>
+      {ready ? <RecipeBar game={game} /> : null}
       {ready ? <Line game={game} nameOf={nameOf} /> : null}
 
       <div style={boardStyle} onContextMenu={(e) => e.preventDefault()} data-board>
@@ -138,6 +148,7 @@ export function LetHimCookScreen({ run }: { run: MinigameRun }) {
         ) : null}
         {game.phase === 'result' && game.last ? <Result last={game.last} game={game} nameOf={nameOf} /> : null}
         {game.phase === 'order' ? <Order game={game} nameOf={nameOf} /> : null}
+        {game.phase === 'over' && !results ? <Recipe game={game} /> : null}
       </div>
 
       {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
@@ -185,6 +196,68 @@ function Status({ game, nameOf }: { game: Game; nameOf: (id: string) => string }
         </span></TopTimer>
       ) : null}
     </>
+  )
+}
+
+/**
+ * The recipe as a row of circles along the top, one for each ingredient the chef put
+ * in: **dark silhouettes, with the one the chef is looking for lit up** - so you know
+ * which number you are being asked for. The ones already back in the pot are dimmed. Once
+ * the game is over they are all uncovered.
+ */
+function RecipeBar({ game }: { game: Game }) {
+  const order = recipeOrder(game)
+  const showing = game.phase === 'turns' || game.phase === 'result' || game.phase === 'order' || game.phase === 'over'
+  if (!showing || order.length === 0) return null
+  const over = game.phase === 'over'
+  const at = over ? -1 : dueIndex(game)
+  return (
+    <div style={recipeBar} data-recipe-bar data-due={at} data-count={order.length}>
+      <span style={recipeCaption}>{over ? 'The recipe' : at < order.length ? `The chef wants ingredient ${at + 1} of ${order.length}` : 'The recipe is back in the pot'}</span>
+      <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+        {order.map((kind, i) => {
+          const due = i === at
+          const done = i < at
+          return (
+            <span
+              key={i}
+              data-circle={over ? INGREDIENTS[kind].id : due ? 'due' : done ? 'done' : 'waiting'}
+              style={{
+                ...circle,
+                background: over ? LOOK.sand : due ? LOOK.sun : done ? 'rgba(74,53,36,0.18)' : LOOK.ink,
+                color: due ? LOOK.ink : done ? LOOK.faded : '#fff',
+                boxShadow: due ? `0 0 0 3px ${LOOK.ink}, 0 0 14px 4px rgba(255,201,77,0.9)` : over ? `inset 0 0 0 2px ${LOOK.ink}` : 'none',
+                transform: due ? 'scale(1.25)' : 'none',
+              }}
+            >
+              {over ? INGREDIENTS[kind].icon : i + 1}
+            </span>
+          )
+        })}
+      </span>
+    </div>
+  )
+}
+
+/** The whole recipe of the last round, in the order it went in, once the game is over. */
+function Recipe({ game }: { game: Game }) {
+  const order = recipeOrder(game)
+  if (order.length === 0) return null
+  return (
+    <div style={orderWrap}>
+      <div style={{ ...orderCard, width: 'auto', minWidth: 260 }} data-recipe={order.map((k) => INGREDIENTS[k].id).join(',')}>
+        <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>What the chef put in the pot</div>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+          {order.map((kind, i) => (
+            <div key={i} style={recipeItem}>
+              <span style={{ opacity: 0.5, fontSize: 12 }}>{i + 1}</span>
+              <span style={{ fontSize: 34, lineHeight: 1.1 }}>{INGREDIENTS[kind].icon}</span>
+              <span style={{ fontSize: 12, fontWeight: 600 }}>{INGREDIENTS[kind].one}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -402,6 +475,31 @@ const chip: React.CSSProperties = {
   gap: 6,
   padding: '2px 10px',
 }
+
+const recipeBar: React.CSSProperties = {
+  flex: '0 0 auto',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 12,
+  padding: '8px 16px',
+  background: 'rgba(246, 228, 191, 0.9)',
+  flexWrap: 'wrap',
+}
+
+const recipeCaption: React.CSSProperties = { font: `700 13px/1.4 ${FONT}`, color: LOOK.ink }
+
+const circle: React.CSSProperties = {
+  width: 30,
+  height: 30,
+  borderRadius: 999,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  font: `800 14px/1 ${FONT}`,
+  transition: 'transform 0.2s, background 0.2s',
+}
+
+const recipeItem: React.CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, minWidth: 54, color: LOOK.ink }
 
 const nameStyle: React.CSSProperties = { maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis' }
 

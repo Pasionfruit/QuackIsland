@@ -159,7 +159,21 @@ twentieth worse each recipe as the chef speeds up.
   words: "cook 3 picked the fish - it was not in the recipe. Out!" / "cook 2
   picked the egg - not what went in second. Out!" - which says a pick was out of
   order without saying what was right.
-- **The line** under the HUD: everybody still in, in turn order, whoever is up
+- **The recipe bar** at the top, under the HUD (`RecipeBar`): **a row of circles, one for
+  each ingredient the chef put in - dark silhouettes numbered from 1, and the one the
+  chef is looking for lit up and larger** (*The chef wants ingredient 4 of 8*), so you
+  always know which number you are being asked for. The ones already back in the pot
+  are dimmed. It is there from the turn order on, and it is the count and the place
+  only - it never says what the ingredients are.
+- **The reveal at the end** (`Recipe`): when the game is over the whole recipe of the last
+  round is uncovered - the circles at the top turn into the ingredients, and a card in
+  the middle lists them all, numbered, in the order the chef put them in, with their
+  names. It is **left up for `KITCHEN.reveal` (4.5 s)** before Finish comes down and then
+  the podium: the screen holds the game open on its own clock, from when it saw it
+  end, and a pause stops it; nothing about it is on the wire. On a guest it is what
+  that browser saw the chef put in, the same as the person at it saw; with nothing
+  to show there is no wait.
+- **The line** under the recipe bar: everybody still in, in turn order, whoever is up
   outlined; everybody out after them, struck through.
 - **The HUD.** What is happening, the time left to cook or to pick (red for the
   last three seconds), and how many items you have claimed.
@@ -242,6 +256,11 @@ Open a lobby, leave the game on Volcano Island, press **minigames**, open
   basket at a time, each item arcing into the pot, the soup rising. Count what
   goes in.
 - **The turn order.** A card with everybody's place in the line.
+- **The recipe bar.** From the turn order on, a row of dark numbered circles at the
+  top, the chef's next one lit up and bigger. Pick right: it moves to the next.
+  Pick wrong and go out; when the game is over **the circles turn into the
+  ingredients and a card lists the whole recipe, in order**, for four and a half
+  seconds before Finish.
 - **The baskets rotate.** Once everything is in, the baskets slide round the
   counter one to five places.
 - **The baskets fill again**, and the first cook walks in, in their colour.

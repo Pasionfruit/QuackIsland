@@ -8,15 +8,16 @@
  * over the face.
  *
  * Your own button goes down when you stop. Everybody else's - and the answer -
- * wait for the end: then the cover lifts, a green hand points at the target, and
- * a mark in every player's colour sits round the dial where they stopped.
+ * wait for the end: then the cover lifts, a green hand points at the target, a
+ * mark in every player's colour sits round the dial where they stopped, and
+ * **everybody's time is up on the front of their button's stand**.
  *
  * **Drawn from a ref, redrawn every frame from inside the canvas.** The canvas
  * itself is rendered once by the screen; see Duck Hunt's notes.
  */
 import { useFrame } from '@react-three/fiber'
 import { memo, useLayoutEffect, useMemo, useReducer, useRef, type RefObject } from 'react'
-import { Color, Group, type DirectionalLight } from 'three'
+import { CanvasTexture, Color, Group, SRGBColorSpace, type DirectionalLight } from 'three'
 import { createAvatar } from '../../02-player'
 import { STAGE, frameScene, standX } from './camera'
 import { COLOURS, WATCH, showing, stopwatch, targetFor, type Game } from './rules'
@@ -42,6 +43,36 @@ export const PALETTE = {
 
 /** A full turn of the hand, in seconds. */
 const TURN = 10
+
+const FONT = "ui-rounded, 'Segoe UI', system-ui, -apple-system, sans-serif"
+const labels = new Map<string, CanvasTexture>()
+
+/** A plate with a time on it, in the player's colour: `12.34s`, or a dash for nobody who stopped. */
+function timeLabel(text: string, colour: string): CanvasTexture {
+  const key = `${text}:${colour}`
+  const known = labels.get(key)
+  if (known) return known
+  const canvas = document.createElement('canvas')
+  canvas.width = 512
+  canvas.height = 160
+  const c = canvas.getContext('2d')!
+  c.fillStyle = '#2a2233'
+  c.beginPath()
+  c.roundRect(6, 6, 500, 148, 34)
+  c.fill()
+  c.lineWidth = 10
+  c.strokeStyle = colour
+  c.stroke()
+  c.fillStyle = '#ffffff'
+  c.textAlign = 'center'
+  c.textBaseline = 'middle'
+  c.font = `800 96px ${FONT}`
+  c.fillText(text, 256, 86)
+  const texture = new CanvasTexture(canvas)
+  texture.colorSpace = SRGBColorSpace
+  labels.set(key, texture)
+  return texture
+}
 
 function FixedCamera() {
   useFrame(({ camera, size }) => {
@@ -225,6 +256,10 @@ function Player({ index, count, live }: { index: number; count: number; live: Re
     const known = timer.stopped !== null && (timer.mine || g.over)
     cap.current.position.y = 1.06 - (known ? 0.12 : 0)
   })
+  // At the end, everybody's time on the front of their stand - the moment it is no longer a secret.
+  const g = live.current
+  const timer = g.players[index]
+  const said = g.over && timer ? (timer.stopped !== null ? `${timer.stopped.toFixed(2)}s` : '-') : null
   return (
     <group>
       <group position={[x, 0, STAGE.rowZ - 0.6]}>
@@ -235,6 +270,12 @@ function Player({ index, count, live }: { index: number; count: number; live: Re
           <cylinderGeometry args={[0.32, 0.4, 1, 16]} />
           <meshStandardMaterial color={PALETTE.pedestal} roughness={0.6} />
         </mesh>
+        {said !== null ? (
+          <mesh position={[0, 0.55, 0.45]}>
+            <planeGeometry args={[1.7, 0.53]} />
+            <meshBasicMaterial map={timeLabel(said, colour)} transparent toneMapped={false} />
+          </mesh>
+        ) : null}
         <group ref={cap} position={[0, 1.06, 0]}>
           <mesh castShadow>
             <cylinderGeometry args={[0.26, 0.28, 0.16, 16]} />

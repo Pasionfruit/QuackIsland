@@ -67,6 +67,14 @@ The breath rides the same ramp as the wander, so the circle you are given 0.8 s
 to find is exactly the size it looks, and it only starts closing in once it
 starts to move.
 
+**It does not go at one pace: it dawdles and darts** (`LIGHT.surge`, `LIGHT.flutter`).
+The circle has a clock of its own that runs fast and slow - a slow swell of 35-55%
+of its usual speed, coming and going every three to twelve seconds, and a quicker
+flutter of 15-30% on top - so at its slowest it is about a seventh of its usual
+pace and at its quickest nearly twice. The two together stay under one, so it
+never stops and never turns back, and it is still a smooth path with no jumps.
+Its own per red, worked out from the seed like the rest, so every screen sees the
+same dawdles and darts at the same moment.
 The pointer is judged against **the board** - the view under the HUD - in its own
 pixels. A pointer that has left the window, or a window that has lost focus, is
 outside the circle. So is a pointer that has never moved: the page cannot know
@@ -173,6 +181,9 @@ Exported because it is worth testing, not because anything else needs it.
 - **It swells and shrinks as it wanders**, both ways, never past the breath, never
   in a jump, and never while it is still holding still. Tested, and the rhythm is
   its own per red.
+- **It goes at a varying pace**: in nearly every red the quickest it goes is at least
+  twice the slowest, the pace is different from red to red, it never jumps or leaves
+  its range, and it is the same on every screen. Tested.
 - **Accounts only go forward, and nobody is believed past what the green so far
   allows.** Tested.
 - **Places are in arrival order; the race ends when three are over the line, nobody is racing, or at two
@@ -213,7 +224,8 @@ Open a lobby, leave the game on Volcano Island, press **minigames**, open
   the HUD, and the light turns red as it ends.
 - **Watch the circle on a red.** As well as wandering it should be swelling and
   shrinking, smoothly and by an obvious amount - and sitting near its edge should
-  start to feel like a bad idea.
+  start to feel like a bad idea. **It should also speed up and slow down**: creeping,
+  then darting, then creeping again, never standing still and never jerking.
 - **Wait for red.** The lamp goes red, the edge of the view goes red, a circle
   appears in the middle saying "in here!". Put the pointer in it and follow it.
   Stay in until green: still racing.

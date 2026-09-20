@@ -25,7 +25,7 @@ import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
 import { getNet, useNet, usePeers } from '../../09-net'
-import { TopTimer, isHeld, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
+import { TopTimer, isHeld, muteRoundMusic, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { TimeItScene } from './TimeItScene'
 import { COLOURS, WATCH, offBy, placings, showing, stopwatch, targetFor, type Game } from './rules'
@@ -100,6 +100,10 @@ export function TimeItScreen({ run }: { run: MinigameRun }) {
   }
 
   const ready = game.players.length > 0
+  // The music is what you count against, and it is cut the moment everybody has pressed their button.
+  const allStopped = ready && game.over
+  useEffect(() => muteRoundMusic(allStopped), [allStopped])
+  useEffect(() => () => muteRoundMusic(false), [])
   const mine = game.players.find((p) => p.mine)
   const t = stopwatch(game)
   const target = ready ? targetFor(game.seed) : 0

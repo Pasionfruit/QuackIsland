@@ -1519,7 +1519,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T17:41:44.412Z"
+          "at": "2026-09-20T17:58:41.980Z"
         },
         "human": {
           "status": "pending"
@@ -1999,6 +1999,11 @@
           "status": "done"
         },
         {
+          "id": "21.8",
+          "title": "The circle varies its pace: it dawdles and darts, never stopping or turning back",
+          "status": "done"
+        },
+        {
           "id": "21.7",
           "title": "The assets: models, sprites and sound in place of capsules and discs",
           "status": "planned"
@@ -2007,7 +2012,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T04:22:29.246Z"
+          "at": "2026-09-20T17:56:12.335Z"
         },
         "human": {
           "status": "pending"
@@ -2083,6 +2088,11 @@
           "status": "done"
         },
         {
+          "id": "22.9",
+          "title": "A recipe bar of numbered circles at the top lighting the ingredient the chef wants, and the whole recipe revealed for 4.5 s before Finish at the end",
+          "status": "done"
+        },
+        {
           "id": "22.7",
           "title": "The assets: models, sprites and sound in place of primitives",
           "status": "planned"
@@ -2091,7 +2101,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T04:23:05.159Z"
+          "at": "2026-09-20T17:56:50.756Z"
         },
         "human": {
           "status": "pending"
@@ -2644,6 +2654,11 @@
           "status": "done"
         },
         {
+          "id": "29.9",
+          "title": "The music is cut when everybody has pressed, and everybody’s time is shown in front of their button at the end",
+          "status": "done"
+        },
+        {
           "id": "29.7",
           "title": "The assets: models, sprites and sound in place of primitives",
           "status": "planned"
@@ -2652,7 +2667,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T16:04:09.598Z"
+          "at": "2026-09-20T17:57:27.860Z"
         },
         "human": {
           "status": "pending"
@@ -3962,7 +3977,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T17:40:29.404Z"
+          "at": "2026-09-20T17:58:04.236Z"
         },
         "human": {
           "status": "pending"

@@ -97,7 +97,13 @@ counting.
   minigame screen the round is over: the cover lifts, the hand and the marks are
   there to look at, and only then does Finish come down, and then the podium. The
   hold is each screen's own clock, from when it saw the round end, and a pause
-  stops it; nothing about it is on the wire. The round music plays through it.
+  stops it; nothing about it is on the wire. **The round music is cut the moment
+  the last player has pressed their button** (`muteRoundMusic` from the screen, on
+  the round being over) - it is what you count against, and the reveal is silent.
+- **Everybody's time is up in front of their button** once the round is over: a plate
+  in their colour on the front of each player's stand, `7.43s` or a dash for
+  nobody who stopped. It is when the marks appear, so nobody's time is a secret
+  before then.
 - **Your own actual time is spelled out through it** (`Answer`): *Your time*, what
   you stopped at to the hundredth in big digits - green within half a second of the
   target, red beyond it - and *0.12s over the 9.75s target* (or *under*, or *Right
@@ -174,8 +180,10 @@ Open a lobby, leave the game on Volcano Island, press **minigames**, open
 - **The end.** The cover lifts, a green hand points at the target, and coloured
   marks show where everybody stopped - and **stays up for two and a half seconds**
   with *Your time* over it, your stop to the hundredth and how far over or under
-  the target it was - before Finish comes down and the podium follows. Pause
-  during it: the two and a half seconds should stop where they are.
+  the target it was - before Finish comes down and the podium follows. **The music
+  should stop as the last button goes down**, and **every player's time should be on
+  a plate in front of their stand**, in their colour. Pause during it: the two and a
+  half seconds should stop where they are.
 - **Wait out thirty seconds without clicking.** The round ends, "You never
   stopped", and you are last.
 

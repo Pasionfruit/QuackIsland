@@ -80,6 +80,12 @@ export const KITCHEN = {
   result: 2.5,
   /** How much faster the kitchen runs once only stand-ins are left in. */
   fastForward: 4,
+  /**
+   * How long the whole recipe of the last round is left up once the game is over -
+   * every ingredient, in the order it went in - before **Finish** comes down over it,
+   * seconds. Each screen's own: nothing about it goes on the wire.
+   */
+  reveal: 4.5,
 } as const
 
 export type Phase = 'cooking' | 'order' | 'turns' | 'result' | 'over'
