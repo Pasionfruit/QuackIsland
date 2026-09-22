@@ -16,7 +16,8 @@
 import { useFrame } from '@react-three/fiber'
 import { memo, useLayoutEffect, useMemo, useReducer, useRef, type RefObject } from 'react'
 import { Color, Group, type DirectionalLight, type MeshBasicMaterial } from 'three'
-import { PLAYER, createAvatar } from '../../02-player'
+import { PLAYER, createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { frameScene } from './camera'
 import { COLOURS, FIELD, HOLES, holeAt, isStunned, molesFor, strikePoint, whackOf, type Game, type Mole, type Whacker } from './rules'
 
@@ -143,7 +144,7 @@ const Field = memo(function Field() {
 })
 
 /** One mole: up out of its hole, down again, or flattened by a hammer. */
-function MoleBody({ mole, live }: { mole: Mole; live: RefObject<Game> }) {
+function MoleBody({ mole, live, colours }: { mole: Mole; live: RefObject<Game>; colours: readonly string[] }) {
   const body = useRef<Group>(null)
   const burst = useRef<Group>(null)
   const burstMaterial = useRef<MeshBasicMaterial>(null)
@@ -177,7 +178,7 @@ function MoleBody({ mole, live }: { mole: Mole; live: RefObject<Game> }) {
       if (ring.visible && whack) {
         ring.scale.setScalar(0.6 + t * 4)
         burstMaterial.current.opacity = 1 - t / 0.5
-        burstMaterial.current.color.set(COLOURS[whack.player % COLOURS.length])
+        burstMaterial.current.color.set(colours[whack.player])
       }
     }
   })
@@ -250,11 +251,10 @@ function headingToYaw(heading: number): number {
 const STARS = 5
 
 /** One player, with a hammer that comes down in front of them on a swing. */
-function WhackerBody({ whacker, index, live }: { whacker: Whacker; index: number; live: RefObject<Game> }) {
+function WhackerBody({ whacker, colour, live }: { whacker: Whacker; colour: string; live: RefObject<Game> }) {
   const holder = useRef<Group>(null)
   const hammer = useRef<Group>(null)
   const stars = useRef<Group>(null)
-  const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
 
   useFrame(({ clock }) => {
@@ -310,7 +310,7 @@ function WhackerBody({ whacker, index, live }: { whacker: Whacker; index: number
 }
 
 /** Where your own hammer will land, marked on the grass. */
-function YourSpot({ live }: { live: RefObject<Game> }) {
+function YourSpot({ live, colours }: { live: RefObject<Game>; colours: readonly string[] }) {
   const spot = useRef<Group>(null)
   const material = useRef<MeshBasicMaterial>(null)
   useFrame(() => {
@@ -322,7 +322,7 @@ function YourSpot({ live }: { live: RefObject<Game> }) {
     if (index < 0) return
     const at = strikePoint(g.players[index])
     box.position.set(at.x, 0.03, at.y)
-    material.current?.color.set(COLOURS[index % COLOURS.length])
+    material.current?.color.set(colours[index])
   })
   return (
     <group ref={spot} visible={false}>
@@ -352,6 +352,12 @@ export function WackAttackScene({ live }: { live: RefObject<Game> }) {
   })
   const game = live.current
   const background = useMemo(() => new Color(PALETTE.background), [])
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   const now = game.elapsed
   const up = game.players.length > 0 ? showing(molesFor(game.seed), now) : { first: -1, last: -2 }
   const moles = molesFor(game.seed).slice(Math.max(0, up.first), up.last + 1)
@@ -363,12 +369,12 @@ export function WackAttackScene({ live }: { live: RefObject<Game> }) {
       <Daylight />
       <Field />
       {moles.map((mole) => (
-        <MoleBody key={`${game.id}:${mole.id}`} mole={mole} live={live} />
+        <MoleBody key={`${game.id}:${mole.id}`} mole={mole} live={live} colours={colours} />
       ))}
       {game.players.map((whacker, index) => (
-        <WhackerBody key={`${game.id}:${whacker.id}`} whacker={whacker} index={index} live={live} />
+        <WhackerBody key={`${game.id}:${whacker.id}`} whacker={whacker} colour={colours[index]} live={live} />
       ))}
-      <YourSpot live={live} />
+      <YourSpot live={live} colours={colours} />
     </>
   )
 }

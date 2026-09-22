@@ -10,9 +10,10 @@
  * goes where you were aiming when you threw it.
  */
 import { Canvas } from '@react-three/fiber'
-import { memo, useEffect, useRef, useState, type RefObject } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
-import { getNet, useNet, usePeers } from '../../09-net'
+import { usePlayerColour } from '../../02-player'
+import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, playCue, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { PunchBuggyScene } from './PunchBuggyScene'
@@ -34,16 +35,21 @@ const FONT =
 export function PunchBuggyScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the round from here.
   const [round, setRound] = useState<Round>(() => (getNet().host ? newRound() : waitingRound()))
-  // Held back through the two seconds of Finish; see `useFinish`.
-  const results = useFinish(round.over, () =>
-    placings(round).map((e) => ({ id: e.fighter.id, place: e.place, name: nameOf(e.fighter.id), colour: COLOURS[e.index % COLOURS.length], mine: e.fighter.id === me })),
-  )
   const paused = useRef(run.paused)
   paused.current = run.paused
 
   const net = useNet()
   const peers = usePeers()
+  const myColour = usePlayerColour()
   const me = net.id ?? myId()
+  const colours = useMemo(
+    () => round.fighters.map((fighter, index) => rosterColour(fighter, index, COLOURS, myColour, peers)),
+    [round.fighters, myColour, peers],
+  )
+  // Held back through the two seconds of Finish; see `useFinish`.
+  const results = useFinish(round.over, () =>
+    placings(round).map((e) => ({ id: e.fighter.id, place: e.place, name: nameOf(e.fighter.id), colour: colours[e.index], mine: e.fighter.id === me })),
+  )
   const wire = useRoundNet()
   const live = useRef(round)
   live.current = round
@@ -152,14 +158,14 @@ export function PunchBuggyScreen({ run }: { run: MinigameRun }) {
           <span style={{ color: LOOK.faded }}>waiting for the host…</span>
         )}
         <span style={{ flex: 1 }} />
-        {mine ? <PunchPill fighter={mine} colour={COLOURS[mineIndex]} /> : null}
+        {mine ? <PunchPill fighter={mine} colour={colours[mineIndex]} /> : null}
       </div>
 
       <div style={board} onPointerDown={onPointerDown} onContextMenu={(e) => e.preventDefault()} data-board>
         <Stage live={live} aim={aimAt} />
       </div>
 
-      {results && ready ? <Over round={round} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
+      {results && ready ? <Over round={round} me={me} nameOf={nameOf} colours={colours} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }
@@ -210,11 +216,13 @@ function Over({
   round,
   me,
   nameOf,
+  colours,
   onAgain,
 }: {
   round: Round
   me: string
   nameOf: (id: string) => string
+  colours: readonly string[]
   onAgain: (() => void) | null
 }) {
   const order = placings(round)
@@ -247,7 +255,7 @@ function Over({
           {order.map((entry) => (
             <div key={entry.fighter.id} style={scoreRow} data-place={entry.place}>
               <span style={{ opacity: 0.5, minWidth: 18 }}>{entry.place}</span>
-              <span style={{ width: 12, height: 12, borderRadius: 999, background: COLOURS[entry.index % COLOURS.length] }} />
+              <span style={{ width: 12, height: 12, borderRadius: 999, background: colours[entry.index] }} />
               <span style={{ flex: 1, fontWeight: entry.fighter.id === me ? 700 : 400 }}>{nameOf(entry.fighter.id)}</span>
               <span style={{ opacity: 0.6, fontSize: 12 }}>{how(entry)}</span>
             </div>

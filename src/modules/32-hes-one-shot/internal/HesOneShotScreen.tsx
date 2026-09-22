@@ -15,9 +15,10 @@
  * and the mouse is what turns you, so the screen turns you the way you now face.
  */
 import { Canvas } from '@react-three/fiber'
-import { memo, useEffect, useRef, useState, type RefObject } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
-import { getNet, useNet, usePeers } from '../../09-net'
+import { usePlayerColour } from '../../02-player'
+import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, playCue, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { HesOneShotScene, type LookRef } from './HesOneShotScene'
 import { COLOURS, GUN, PITCH_LIMIT, ROUND, SHIELD, clock, cooldownLeft, crewOf, guarded, isStanding, placings, type Game } from './rules'
@@ -61,14 +62,19 @@ export function HesOneShotScreen({ run }: { run: MinigameRun }) {
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
   // Held back through the two seconds of Finish; see `useFinish`.
   const results = useFinish(game.over, () =>
-    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: COLOURS[e.index % COLOURS.length], mine: e.player.id === me })),
+    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: colours[e.index], mine: e.player.id === me })),
   )
   const paused = useRef(run.paused)
   paused.current = run.paused
 
   const net = useNet()
   const peers = usePeers()
+  const myColour = usePlayerColour()
   const me = net.id ?? myId()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   const wire = useShotNet()
   const live = useRef(game)
   live.current = game
@@ -271,9 +277,9 @@ export function HesOneShotScreen({ run }: { run: MinigameRun }) {
             key={p.id}
             style={{
               ...pill,
-              background: p.out === null ? COLOURS[index % COLOURS.length] : 'rgba(255,255,255,0.85)',
+              background: p.out === null ? colours[index] : 'rgba(255,255,255,0.85)',
               color: p.out === null ? '#fff' : LOOK.faded,
-              boxShadow: p.out === null ? 'none' : `inset 0 0 0 2px ${COLOURS[index % COLOURS.length]}`,
+              boxShadow: p.out === null ? 'none' : `inset 0 0 0 2px ${colours[index]}`,
               opacity: p.left ? 0.45 : 1,
               outline: p.mine ? `2px solid ${LOOK.ink}` : 'none',
               outlineOffset: 1,
@@ -336,12 +342,12 @@ export function HesOneShotScreen({ run }: { run: MinigameRun }) {
               <div key={p.id} style={feedRow}>
                 {p.by !== null && game.players[p.by] ? (
                   <>
-                    <span style={{ ...dot, background: COLOURS[p.by % COLOURS.length] }} />
+                    <span style={{ ...dot, background: colours[p.by] }} />
                     <span>{nameOf(game.players[p.by].id)}</span>
                     <span style={{ opacity: 0.6 }}>➜</span>
                   </>
                 ) : null}
-                <span style={{ ...dot, background: COLOURS[index % COLOURS.length] }} />
+                <span style={{ ...dot, background: colours[index] }} />
                 <span>{nameOf(p.id)}</span>
               </div>
             ))}
@@ -358,7 +364,7 @@ export function HesOneShotScreen({ run }: { run: MinigameRun }) {
         ) : null}
       </div>
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} colours={colours} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }
@@ -387,7 +393,19 @@ const CAMERA = { fov: 75, near: 0.05, far: 250, position: [0, 26, 20] as [number
 const GL = { antialias: true, powerPreference: 'high-performance' as const }
 
 /** The results: anybody standing first, then the last to go, back to the first. */
-function Over({ game, me, nameOf, onAgain }: { game: Game; me: string; nameOf: (id: string) => string; onAgain: (() => void) | null }) {
+function Over({
+  game,
+  me,
+  nameOf,
+  colours,
+  onAgain,
+}: {
+  game: Game
+  me: string
+  nameOf: (id: string) => string
+  colours: readonly string[]
+  onAgain: (() => void) | null
+}) {
   const order = placings(game)
   const mine = order.find((entry) => entry.player.id === me)
   const headline = !mine
@@ -410,7 +428,7 @@ function Over({ game, me, nameOf, onAgain }: { game: Game; me: string; nameOf: (
           {order.map((entry) => (
             <div key={entry.player.id} style={scoreRow} data-place={entry.place}>
               <span style={{ opacity: 0.5, minWidth: 18 }}>{entry.place}</span>
-              <span style={{ ...dot, background: COLOURS[entry.index % COLOURS.length] }} />
+              <span style={{ ...dot, background: colours[entry.index] }} />
               <span style={{ flex: 1, fontWeight: entry.player.id === me ? 700 : 400 }}>{nameOf(entry.player.id)}</span>
               <span style={{ font: `600 12px/1.4 ${FONT}`, color: LOOK.faded }}>{entry.player.kills === 1 ? '1 hit' : `${entry.player.kills} hits`}</span>
               <span style={{ minWidth: 92, textAlign: 'right', font: `600 13px/1.4 ${FONT}`, color: entry.player.out === null && !entry.player.left ? LOOK.green : LOOK.faded }}>

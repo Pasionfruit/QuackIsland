@@ -18,7 +18,8 @@
 import { useFrame } from '@react-three/fiber'
 import { memo, useLayoutEffect, useMemo, useReducer, useRef, type RefObject } from 'react'
 import { CanvasTexture, Color, Group, SRGBColorSpace, type DirectionalLight, type MeshStandardMaterial } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { STAGE, frameScene, standX } from './camera'
 import { COLOURS, handAngles, type Game, type Hand } from './rules'
 import { TARGETS } from './wording'
@@ -176,8 +177,19 @@ const Room = memo(function Room() {
 })
 
 /** One player: the pill, their small clock, and a pip for each target. */
-function Player({ index, count, live, hand }: { index: number; count: number; live: RefObject<Game>; hand: RefObject<Hand> }) {
-  const colour = COLOURS[index % COLOURS.length]
+function Player({
+  index,
+  count,
+  live,
+  hand,
+  colour,
+}: {
+  index: number
+  count: number
+  live: RefObject<Game>
+  hand: RefObject<Hand>
+  colour: string
+}) {
   const avatar = useMemo(() => createAvatar(colour), [colour])
   const pips = useRef<(MeshStandardMaterial | null)[]>([])
   const root = useRef<Group>(null)
@@ -233,6 +245,12 @@ export function IllJustWaitScene({ live, hand }: { live: RefObject<Game>; hand: 
   const game = live.current
   const background = useMemo(() => new Color(PALETTE.background), [])
   const mine = () => hand.current.minutes
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
@@ -243,7 +261,7 @@ export function IllJustWaitScene({ live, hand }: { live: RefObject<Game>; hand: 
         <Clock radius={STAGE.clockRadius} rim={PALETTE.rim} read={mine} />
       </group>
       {game.players.map((p, index) => (
-        <Player key={`${game.id}:${p.id}`} index={index} count={game.players.length} live={live} hand={hand} />
+        <Player key={`${game.id}:${p.id}`} index={index} count={game.players.length} live={live} hand={hand} colour={colours[index]} />
       ))}
     </>
   )

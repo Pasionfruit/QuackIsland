@@ -22,9 +22,10 @@
  * the middle of the top of the stage, and how far it was from the target.
  */
 import { Canvas } from '@react-three/fiber'
-import { memo, useEffect, useRef, useState, type RefObject } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
-import { getNet, useNet, usePeers } from '../../09-net'
+import { usePlayerColour } from '../../02-player'
+import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { TopTimer, isHeld, muteRoundMusic, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { TimeItScene } from './TimeItScene'
@@ -50,16 +51,21 @@ export function TimeItScreen({ run }: { run: MinigameRun }) {
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
   /** Whether the answer has been up long enough for Finish to come down: this screen's own hold, see `WATCH.reveal`. */
   const [settled, setSettled] = useState(false)
+  const net = useNet()
+  const peers = usePeers()
+  const me = net.id ?? myId()
+  const myColour = usePlayerColour()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   // Held back through the two seconds of Finish; see `useFinish`. Told the round is over only once the answer has been shown.
   const results = useFinish(game.over && settled, () =>
-    placings(game).map((e) => ({ id: e.timer.id, place: e.place, name: nameOf(e.timer.id), colour: COLOURS[e.index % COLOURS.length], mine: e.timer.id === me })),
+    placings(game).map((e) => ({ id: e.timer.id, place: e.place, name: nameOf(e.timer.id), colour: colours[e.index], mine: e.timer.id === me })),
   )
   const paused = useRef(run.paused)
   paused.current = run.paused
 
-  const net = useNet()
-  const peers = usePeers()
-  const me = net.id ?? myId()
   const wire = useWatchNet()
   const live = useRef(game)
   live.current = game
@@ -144,9 +150,9 @@ export function TimeItScreen({ run }: { run: MinigameRun }) {
             key={timer.id}
             style={{
               ...pill,
-              background: timer.mine ? COLOURS[index % COLOURS.length] : 'rgba(255,255,255,0.85)',
+              background: timer.mine ? colours[index] : 'rgba(255,255,255,0.85)',
               color: timer.mine ? '#fff' : LOOK.ink,
-              boxShadow: timer.mine ? 'none' : `inset 0 0 0 2px ${COLOURS[index % COLOURS.length]}`,
+              boxShadow: timer.mine ? 'none' : `inset 0 0 0 2px ${colours[index]}`,
               opacity: timer.left ? 0.5 : 1,
             }}
           >
@@ -175,7 +181,7 @@ export function TimeItScreen({ run }: { run: MinigameRun }) {
         ) : null}
       </div>
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} colours={colours} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }
@@ -238,11 +244,13 @@ function Over({
   game,
   me,
   nameOf,
+  colours,
   onAgain,
 }: {
   game: Game
   me: string
   nameOf: (id: string) => string
+  colours: readonly string[]
   onAgain: (() => void) | null
 }) {
   const order = placings(game)
@@ -260,7 +268,7 @@ function Over({
             return (
               <div key={entry.timer.id} style={scoreRow} data-place={entry.place}>
                 <span style={{ opacity: 0.5, minWidth: 18 }}>{entry.place}</span>
-                <span style={{ width: 12, height: 12, borderRadius: 999, background: COLOURS[entry.index % COLOURS.length] }} />
+                <span style={{ width: 12, height: 12, borderRadius: 999, background: colours[entry.index] }} />
                 <span style={{ flex: 1, fontWeight: entry.timer.id === me ? 700 : 400 }}>{nameOf(entry.timer.id)}</span>
                 <span style={{ font: `600 13px/1.4 ${MONO}` }}>{entry.timer.stopped !== null && entry.timer.stopped >= 0 ? `${entry.timer.stopped.toFixed(2)}s` : '-'}</span>
                 <span style={{ minWidth: 64, textAlign: 'right', font: `600 12px/1.4 ${MONO}`, color: off === null ? LOOK.faded : Math.abs(off) < 0.5 ? LOOK.green : LOOK.red }}>

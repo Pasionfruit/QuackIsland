@@ -14,9 +14,10 @@
  * anything with Ctrl, Alt or Cmd, are ignored.
  */
 import { Canvas } from '@react-three/fiber'
-import { memo, useEffect, useRef, useState, type RefObject } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
-import { getNet, useNet, usePeers } from '../../09-net'
+import { usePlayerColour } from '../../02-player'
+import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { CUES, replayMinigame, useCueOnChange, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { KeyboardWarriorScene } from './KeyboardWarriorScene'
@@ -41,16 +42,21 @@ const seconds = (s: number) => `${s.toFixed(2)} s`
 export function KeyboardWarriorScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the game from here.
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
-  // Held back through the two seconds of Finish; see `useFinish`.
-  const results = useFinish(game.over, () =>
-    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: COLOURS[e.index % COLOURS.length], mine: e.player.id === me })),
-  )
   const paused = useRef(run.paused)
   paused.current = run.paused
 
   const net = useNet()
   const peers = usePeers()
+  const myColour = usePlayerColour()
   const me = net.id ?? myId()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
+  // Held back through the two seconds of Finish; see `useFinish`.
+  const results = useFinish(game.over, () =>
+    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: colours[e.index], mine: e.player.id === me })),
+  )
   const wire = useLetterNet()
   const live = useRef(game)
   live.current = game
@@ -141,7 +147,7 @@ export function KeyboardWarriorScreen({ run }: { run: MinigameRun }) {
             key={p.id}
             style={{
               ...pill,
-              background: COLOURS[index % COLOURS.length],
+              background: colours[index],
               color: '#fff',
               opacity: p.left ? 0.45 : 1,
               outline: p.mine ? `2px solid ${LOOK.ink}` : 'none',
@@ -166,7 +172,7 @@ export function KeyboardWarriorScreen({ run }: { run: MinigameRun }) {
         ) : null}
       </div>
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} colours={colours} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }
@@ -195,7 +201,19 @@ const CAMERA = { fov: FOV, near: 0.1, far: 200, position: [0, 4, 14] as [number,
 const GL = { antialias: true, powerPreference: 'high-performance' as const }
 
 /** The results: most points first, with each player's quickest winning letter. */
-function Over({ game, me, nameOf, onAgain }: { game: Game; me: string; nameOf: (id: string) => string; onAgain: (() => void) | null }) {
+function Over({
+  game,
+  me,
+  nameOf,
+  colours,
+  onAgain,
+}: {
+  game: Game
+  me: string
+  nameOf: (id: string) => string
+  colours: readonly string[]
+  onAgain: (() => void) | null
+}) {
   const order = placings(game)
   const mine = order.find((entry) => entry.player.id === me)
   const shared = mine ? order.filter((e) => e.place === mine.place).length > 1 : false
@@ -209,7 +227,7 @@ function Over({ game, me, nameOf, onAgain }: { game: Game; me: string; nameOf: (
           {order.map((entry) => (
             <div key={entry.player.id} style={scoreRow} data-place={entry.place}>
               <span style={{ opacity: 0.5, minWidth: 18 }}>{entry.place}</span>
-              <span style={{ width: 12, height: 12, borderRadius: 999, background: COLOURS[entry.index % COLOURS.length] }} />
+              <span style={{ width: 12, height: 12, borderRadius: 999, background: colours[entry.index] }} />
               <span style={{ flex: 1, fontWeight: entry.player.id === me ? 700 : 400 }}>{nameOf(entry.player.id)}</span>
               <span style={{ font: `600 12px/1.4 ${FONT}`, color: LOOK.faded }}>
                 {entry.player.left ? 'left' : entry.player.best !== null ? `quickest ${seconds(entry.player.best)}` : ''}

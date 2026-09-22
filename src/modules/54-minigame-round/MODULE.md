@@ -1,0 +1,146 @@
+# 54-minigame-round
+
+## What this is
+
+The third playable rule in Volcano Island. When every player has taken a board
+turn, the host deterministically selects one registered free-for-all minigame.
+Every party member receives the same briefing, can read its description and
+controls, and follows the host into any number of practice attempts. The host
+then starts one locked final attempt and publishes its placements for the next
+reward-dice module.
+
+This module coordinates the round; it does not duplicate the minigame system.
+`15-minigames` continues to own briefings, countdowns, gameplay, pausing,
+standings, and podiums. Existing minigame modules continue to own their own
+simulation and controls.
+
+## Public contract
+
+| Export | Meaning |
+| --- | --- |
+| `MinigameRound` | Scene-safe coordinator and host-control overlay |
+| `MINIGAME_ROUND` | Player, practice, action-history, and message bounds |
+| `eligibleFreeForAll(available)` | Catalogue-ordered intersection of built and free-for-all games |
+| `createMinigameRound(board, available)` | Selects one seeded game for an exact completed board round |
+| `beginMinigameAttempt(snapshot, kind, action)` | Starts a practice or locks the one final attempt |
+| `finishFinalMinigame(snapshot, standings, action)` | Normalizes host standings into final roster placements |
+| `getMinigameRound` / `useMinigameRound` | Current revisioned coordinator snapshot |
+| `startMinigamePractice` / `startFinalMinigame` | Host-only runtime controls |
+| `acknowledgeMinigameRound(session)` | Stable downstream handoff after placements are consumed |
+| `isMinigameRoundAcknowledged` / `useMinigameRoundAcknowledged` | Plain and React-safe handoff state |
+| `encodeMinigameRoundMessage` / `decodeMinigameRoundMessage` | Bounded room protocol |
+
+The completed snapshot contains the board session and round, selected game,
+locked two-to-eight-player roster, practice count, normalized placements, and
+bounded action history.
+
+## Selection and authority
+
+Only ids that are both registered in `15-minigames` and catalogued as
+`free-for-all` are eligible. Registry order does not affect selection: eligible
+ids are restored to catalogue order, then one index is derived from the board
+seed, board session, and round using `00-core`'s seeded RNG. Replaying the same
+input therefore selects the same game without `Math.random`.
+
+The elected browser host creates and advances the coordinator snapshot. Guests
+accept snapshots only from the elected host, revisions only move forward, and
+late subscribers request the current full snapshot. The selected roster is
+copied from board movement and never admits a later relay id.
+
+`53-board-movement` is acknowledged only after this module has adopted the
+matching round. That hides the board-round panel without discarding positions.
+The board is deliberately not resumed here.
+
+## Practice and final attempts
+
+The first screen is the selected game's existing description and controls
+page. A host-only footer provides two choices:
+
+- **Practice** starts a fresh ordinary minigame run whose result is ignored.
+  Once it ends, the host may practice again or begin the final.
+- **Start final** changes the revisioned coordinator to `final` before the
+  minigame starts. No later practice or second final command is accepted, and
+  Escape cannot open the restart/leave controls during that attempt.
+
+The minigame's existing finish flow supplies standings. The host ranks those
+through the existing podium rules and broadcasts the resulting placements.
+Ties share ranks and skip following ranks. If everybody ties, every placement
+uses rank zero so the reward module can correctly give no podium bonus.
+A disconnected roster member omitted by the result is placed after the
+submitted field instead of blocking the party forever.
+
+## Handoff to rewards
+
+`complete` remains visible until a downstream module consumes the exact
+session with `acknowledgeMinigameRound`. That module can map rank 1 to a golden
+d6, rank 2 to a silver d4, rank 3 to a bronze d2, give every player their base
+d6, install the board dice provider, and resume the preserved board round.
+
+## Render and server footprint
+
+The module adds no three.js draw calls or triangles. Its UI is a small DOM
+overlay above the already-mounted minigame screen. It reuses the existing room
+socket and sends one small snapshot for selection, each attempt, final results,
+and late-subscriber recovery. There is no server tick, polling loop, database,
+or additional Render service.
+
+## Workflow
+
+- `npm run brief:minigame-round`
+- `npm run test:minigame-round`
+- `npm run gate:minigame-round`
+- `npm run dev:multi` for a build plus the existing relay
+
+## Known limitations
+
+- Authority remains the elected browser host. A modified host can falsify a
+  selection or standings; authoritative competition would require a separate
+  relay contract.
+- The minigame runtime shares the host's open/play call, while each individual
+  game still owns its own networking or deterministic simulation.
+- A game must hand standings to the shared minigame finish flow before this
+  coordinator can publish placements.
+- A reconnect receives a new relay id and is not admitted to the locked board
+  or minigame roster.
+- Random selection can choose the same game in consecutive board rounds.
+- Reward dice and board resumption are intentionally the next module.
+
+## How to review
+
+Run `npm run dev:multi`, then use a normal and private browser window.
+
+1. Create and join a two-player Volcano Island party, ready both players, and
+   start as host.
+2. Complete turn order and one full board round. The board panel should be
+   replaced by the same randomly selected free-for-all briefing in both
+   browsers.
+3. Switch between the description and controls tabs in both browsers. The
+   guest should see `Waiting for the host`; only the host has Practice and
+   Start final buttons.
+4. Press Practice. Both browsers should enter the same game through its normal
+   countdown and show a Practice badge stating that results do not count.
+5. Finish the practice. The host should be offered Practice and Start final
+   again, and the displayed practice count should increase. Run a second
+   practice to confirm each attempt starts fresh.
+6. Press Start final. Both browsers should show Final attempt. Escape must not
+   expose restart or leave controls, and no practice control should return.
+7. Finish the game. Both browsers should retain the ordinary podium and show
+   the same final placement list with `Reward dice are next`.
+8. Confirm the board does not begin another round yet and that ordinary world
+   movement remains blocked behind the minigame screen.
+9. Refresh neither browser during the test; reconnect identity preservation is
+   outside the current network contract.
+
+Seeded selection, two-player and eight-player rosters, repeat practices,
+irreversible final state, ties, omitted players, duplicate actions, malformed
+messages, host-only controls, and result handoff are covered by automated
+tests.
+
+## Gate record
+
+Pending human review.
+
+## Measured
+
+DOM and state only: zero three.js draw calls and zero triangles.
+

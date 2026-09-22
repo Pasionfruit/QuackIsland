@@ -17,7 +17,8 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { memo, useEffect, useLayoutEffect, useMemo, useReducer, useRef, type RefObject } from 'react'
 import { Color, Group, Vector2, Vector3, type DirectionalLight, type MeshBasicMaterial } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { CUP_HEIGHT, LIFT, LIFT_BACK, TOP, frameScene, pickSlot } from './camera'
 import { COLOURS, TABLE, cupCount, cupsAt, currentStage, facesBySlot, slotX, type Game } from './rules'
 
@@ -101,9 +102,9 @@ const Table = memo(function Table({ cups }: { cups: number }) {
 })
 
 /** A face: the player's own pill, small, looking at the camera. */
-function Face({ player, live, cup }: { player: number; live: RefObject<Game>; cup: number }) {
+function Face({ live, cup, colour }: { live: RefObject<Game>; cup: number; colour: string }) {
   const holder = useRef<Group>(null)
-  const avatar = useMemo(() => createAvatar(COLOURS[player % COLOURS.length]), [player])
+  const avatar = useMemo(() => createAvatar(colour), [colour])
   useFrame(() => {
     const group = holder.current
     if (!group) return
@@ -151,7 +152,17 @@ function Cup({ cup, live }: { cup: number; live: RefObject<Game> }) {
 }
 
 /** A ring on the table under a slot: the cup under the pointer, or your own pick. */
-function SlotRing({ live, which, hovered }: { live: RefObject<Game>; which: 'hover' | 'mine'; hovered: { current: number | null } }) {
+function SlotRing({
+  live,
+  which,
+  hovered,
+  colours,
+}: {
+  live: RefObject<Game>
+  which: 'hover' | 'mine'
+  hovered: { current: number | null }
+  colours: readonly string[]
+}) {
   const ring = useRef<Group>(null)
   const material = useRef<MeshBasicMaterial>(null)
   useFrame(() => {
@@ -170,7 +181,7 @@ function SlotRing({ live, which, hovered }: { live: RefObject<Game>; which: 'hov
     box.visible = slot !== null
     if (slot === null) return
     box.position.set(slotX(slot, cups), TOP + 0.02, 0)
-    material.current?.color.set(which === 'hover' ? PALETTE.hover : COLOURS[mineIndex % COLOURS.length])
+    material.current?.color.set(which === 'hover' ? PALETTE.hover : colours[mineIndex])
   })
   return (
     <group ref={ring} visible={false}>
@@ -183,7 +194,7 @@ function SlotRing({ live, which, hovered }: { live: RefObject<Game>; which: 'hov
 }
 
 /** After the cups come up: a marker in each picker's colour in front of the cup they chose. */
-function PickMarkers({ live }: { live: RefObject<Game> }) {
+function PickMarkers({ live, colours }: { live: RefObject<Game>; colours: readonly string[] }) {
   const g = live.current
   if (g.phase !== 'result' && g.phase !== 'over') return null
   const cups = cupCount(g.players.length)
@@ -200,7 +211,7 @@ function PickMarkers({ live }: { live: RefObject<Game> }) {
         return (
           <mesh key={finder.id} position={[slotX(slot, cups) - 0.5 + (n % 4) * 0.33, TOP + 0.12, 1.25 + Math.floor(n / 4) * 0.33]} castShadow>
             <sphereGeometry args={[right ? 0.16 : 0.12, 14, 10]} />
-            <meshStandardMaterial color={COLOURS[player % COLOURS.length]} emissive={COLOURS[player % COLOURS.length]} emissiveIntensity={right ? 0.6 : 0} />
+            <meshStandardMaterial color={colours[player]} emissive={colours[player]} emissiveIntensity={right ? 0.6 : 0} />
           </mesh>
         )
       })}
@@ -264,6 +275,12 @@ export function FindYourselfScene({ live, hands }: { live: RefObject<Game>; hand
   const ready = game.players.length > 0
   const cups = cupCount(Math.max(1, game.players.length))
   const stage = ready ? currentStage(game) : null
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
@@ -274,13 +291,13 @@ export function FindYourselfScene({ live, hands }: { live: RefObject<Game>; hand
         ? stage.faces.map((player, cup) => (
             <group key={`${game.id}:${game.stage}:${cup}`}>
               <Cup cup={cup} live={live} />
-              {player >= 0 ? <Face player={player} live={live} cup={cup} /> : null}
+              {player >= 0 ? <Face live={live} cup={cup} colour={colours[player]} /> : null}
             </group>
           ))
         : null}
-      <SlotRing live={live} which="hover" hovered={hovered} />
-      <SlotRing live={live} which="mine" hovered={hovered} />
-      <PickMarkers live={live} />
+      <SlotRing live={live} which="hover" hovered={hovered} colours={colours} />
+      <SlotRing live={live} which="mine" hovered={hovered} colours={colours} />
+      <PickMarkers live={live} colours={colours} />
       <Pointer live={live} hands={hands} hovered={hovered} />
     </>
   )

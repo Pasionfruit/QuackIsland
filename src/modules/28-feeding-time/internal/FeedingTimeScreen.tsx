@@ -14,7 +14,8 @@
 import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
-import { getNet, useNet, usePeers } from '../../09-net'
+import { usePlayerColour } from '../../02-player'
+import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, useLoopCue, type MinigameRun } from '../../15-minigames'
 import { FOV, groundAt } from './camera'
 import { FeedingTimeScene, type SceneHands } from './FeedingTimeScene'
@@ -55,16 +56,21 @@ function aimOf(pointer: Pointer | null, game: Game, now: number): { from: Point;
 export function FeedingTimeScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the round from here.
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
-  // Held back through the two seconds of Finish; see `useFinish`.
-  const results = useFinish(game.over, () =>
-    placings(game).map((e) => ({ id: e.feeder.id, place: e.place, name: nameOf(e.feeder.id), colour: COLOURS[e.index % COLOURS.length], mine: e.feeder.id === me })),
-  )
   const paused = useRef(run.paused)
   paused.current = run.paused
 
   const net = useNet()
   const peers = usePeers()
+  const myColour = usePlayerColour()
   const me = net.id ?? myId()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
+  // Held back through the two seconds of Finish; see `useFinish`.
+  const results = useFinish(game.over, () =>
+    placings(game).map((e) => ({ id: e.feeder.id, place: e.place, name: nameOf(e.feeder.id), colour: colours[e.index], mine: e.feeder.id === me })),
+  )
   const wire = useFeedNet()
   const live = useRef(game)
   live.current = game
@@ -170,7 +176,6 @@ export function FeedingTimeScreen({ run }: { run: MinigameRun }) {
   useCueOnChange(CUES.throwingBread, `${game.id}:${myThrows}`, myThrows > 0)
   useCueOnChange(CUES.throwingBread, `${game.id}:${theirThrows}`, theirThrows > 0, 0.2)
   const showFlash = ready && !game.over && flash !== null && game.elapsed - flash < 0.8
-  const myColour = COLOURS[Math.max(0, game.players.findIndex((p) => p.mine)) % COLOURS.length]
 
   return (
     <div style={page}>
@@ -193,9 +198,9 @@ export function FeedingTimeScreen({ run }: { run: MinigameRun }) {
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
-              background: feeder.mine ? COLOURS[index % COLOURS.length] : 'rgba(255,255,255,0.8)',
+              background: feeder.mine ? colours[index] : 'rgba(255,255,255,0.8)',
               color: feeder.mine ? '#fff' : LOOK.ink,
-              boxShadow: feeder.mine ? 'none' : `inset 0 0 0 2px ${COLOURS[index % COLOURS.length]}`,
+              boxShadow: feeder.mine ? 'none' : `inset 0 0 0 2px ${colours[index]}`,
             }}
           >
             <span style={{ maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis' }}>{nameOf(feeder.id)}</span>
@@ -234,7 +239,7 @@ export function FeedingTimeScreen({ run }: { run: MinigameRun }) {
         ) : null}
       </div>
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} colours={colours} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }
@@ -267,11 +272,13 @@ function Over({
   game,
   me,
   nameOf,
+  colours,
   onAgain,
 }: {
   game: Game
   me: string
   nameOf: (id: string) => string
+  colours: readonly string[]
   onAgain: (() => void) | null
 }) {
   const order = placings(game)
@@ -286,7 +293,7 @@ function Over({
           {order.map((entry) => (
             <div key={entry.feeder.id} style={scoreRow} data-place={entry.place}>
               <span style={{ opacity: 0.5, minWidth: 18 }}>{entry.place}</span>
-              <span style={{ width: 12, height: 12, borderRadius: 999, background: COLOURS[entry.index % COLOURS.length] }} />
+              <span style={{ width: 12, height: 12, borderRadius: 999, background: colours[entry.index] }} />
               <span style={{ flex: 1, fontWeight: entry.feeder.id === me ? 700 : 400 }}>{nameOf(entry.feeder.id)}</span>
               <span style={{ opacity: 0.6, fontSize: 12 }}>
                 {entry.feeder.throws} thrown · {entry.feeder.throws > 0 ? Math.round((100 * entry.feeder.score) / entry.feeder.throws) : 0}% fed

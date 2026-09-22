@@ -11,9 +11,10 @@
  * faster than everybody else, so a boost is how a wearer gets caught.
  */
 import { Canvas } from '@react-three/fiber'
-import { memo, useEffect, useRef, useState, type RefObject } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
-import { getNet, useNet, usePeers } from '../../09-net'
+import { usePlayerColour } from '../../02-player'
+import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { SharingIsCaringScene } from './SharingIsCaringScene'
@@ -38,16 +39,21 @@ const FONT =
 export function SharingIsCaringScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the round from here.
   const [round, setRound] = useState<Round>(() => (getNet().host ? newRound() : waitingRound()))
+  const net = useNet()
+  const peers = usePeers()
+  const myColour = usePlayerColour()
+  const colours = useMemo(
+    () => round.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [round.players, myColour, peers],
+  )
+  const me = net.id ?? myId()
   // Held back through the two seconds of Finish; see `useFinish`.
   const results = useFinish(round.over, () =>
-    placings(round).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: COLOURS[e.index % COLOURS.length], mine: e.player.id === me })),
+    placings(round).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: colours[e.index], mine: e.player.id === me })),
   )
   const paused = useRef(run.paused)
   paused.current = run.paused
 
-  const net = useNet()
-  const peers = usePeers()
-  const me = net.id ?? myId()
   const wire = useRoundNet()
   const live = useRef(round)
   live.current = round
@@ -155,7 +161,7 @@ export function SharingIsCaringScreen({ run }: { run: MinigameRun }) {
             <span
               style={{
                 ...pill,
-                background: holderIndex >= 0 ? COLOURS[holderIndex % COLOURS.length] : LOOK.gold,
+                background: holderIndex >= 0 ? colours[holderIndex] : LOOK.gold,
                 color: '#fff',
               }}
               data-holder={round.holder ?? ''}
@@ -169,7 +175,7 @@ export function SharingIsCaringScreen({ run }: { run: MinigameRun }) {
         <span style={{ flex: 1 }} />
         {mine ? <BoostMeter round={round} /> : null}
         {mine ? (
-          <span style={{ ...pill, background: COLOURS[mineIndex % COLOURS.length], color: '#fff' }} data-points={points(mine.score)}>
+          <span style={{ ...pill, background: colours[mineIndex], color: '#fff' }} data-points={points(mine.score)}>
             {points(mine.score)} {points(mine.score) === 1 ? 'point' : 'points'}
           </span>
         ) : null}
@@ -177,10 +183,10 @@ export function SharingIsCaringScreen({ run }: { run: MinigameRun }) {
 
       <div style={board} data-board>
         <Stage live={live} />
-        {ready ? <Standings round={round} me={me} nameOf={nameOf} /> : null}
+        {ready ? <Standings round={round} me={me} nameOf={nameOf} colours={colours} /> : null}
       </div>
 
-      {results && ready ? <Over round={round} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
+      {results && ready ? <Over round={round} me={me} nameOf={nameOf} colours={colours} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }
@@ -205,12 +211,12 @@ function BoostMeter({ round }: { round: Round }) {
 }
 
 /** Everybody's points as they stand, best first, with the crown against its wearer. */
-function Standings({ round, me, nameOf }: { round: Round; me: string; nameOf: (id: string) => string }) {
+function Standings({ round, me, nameOf, colours }: { round: Round; me: string; nameOf: (id: string) => string; colours: readonly string[] }) {
   return (
     <div style={standings} data-standings>
       {placings(round).map((entry) => (
         <div key={entry.player.id} style={scoreRow}>
-          <span style={{ width: 10, height: 10, borderRadius: 999, background: COLOURS[entry.index % COLOURS.length] }} />
+          <span style={{ width: 10, height: 10, borderRadius: 999, background: colours[entry.index] }} />
           <span style={{ flex: 1, fontWeight: entry.player.id === me ? 700 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {nameOf(entry.player.id)}
           </span>
@@ -252,11 +258,13 @@ function Over({
   round,
   me,
   nameOf,
+  colours,
   onAgain,
 }: {
   round: Round
   me: string
   nameOf: (id: string) => string
+  colours: readonly string[]
   onAgain: (() => void) | null
 }) {
   const order = placings(round)
@@ -282,7 +290,7 @@ function Over({
           {order.map((entry) => (
             <div key={entry.player.id} style={scoreRow} data-place={entry.place}>
               <span style={{ opacity: 0.5, minWidth: 18 }}>{entry.place}</span>
-              <span style={{ width: 12, height: 12, borderRadius: 999, background: COLOURS[entry.index % COLOURS.length] }} />
+              <span style={{ width: 12, height: 12, borderRadius: 999, background: colours[entry.index] }} />
               <span style={{ flex: 1, fontWeight: entry.player.id === me ? 700 : 400 }}>{nameOf(entry.player.id)}</span>
               <span style={{ opacity: 0.6, fontSize: 12 }}>
                 took it {entry.player.takes} {entry.player.takes === 1 ? 'time' : 'times'}

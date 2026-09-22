@@ -30,7 +30,10 @@
     "gate:turn-order": "node scripts/gate.mjs 52-turn-order",
     "brief:board-movement": "node scripts/brief.mjs 53-board-movement",
     "test:board-movement": "vitest run src/modules/53-board-movement",
-    "gate:board-movement": "node scripts/gate.mjs 53-board-movement"
+    "gate:board-movement": "node scripts/gate.mjs 53-board-movement",
+    "brief:minigame-round": "node scripts/brief.mjs 54-minigame-round",
+    "test:minigame-round": "vitest run src/modules/54-minigame-round",
+    "gate:minigame-round": "node scripts/gate.mjs 54-minigame-round"
   },
   "dependencies": {
     "@react-three/fiber": "^9.7.0",

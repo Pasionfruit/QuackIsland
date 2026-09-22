@@ -34,7 +34,8 @@ import {
   type BufferGeometry,
 } from 'three'
 import { CONVENTIONS, createRng, hashSeed } from '../../00-core'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { botAim } from './ai'
 import { ARENA, BOUNDS, COLOURS, EMBLEMS, aimAt, balloonAt, pickBalloon, type Balloon, type Emblem, type Point } from './arena'
 import { frameScene } from './camera'
@@ -144,9 +145,9 @@ function emblemParts(emblem: Emblem): BufferGeometry[] {
 const white = new MeshStandardMaterial({ color: PALETTE.emblem, roughness: 0.5 })
 
 /** One balloon: a sphere in its owner's colour, their shape on the front, a string. */
-function BalloonBody({ balloon, game }: { balloon: Balloon; game: Game }) {
+function BalloonBody({ balloon, game, colours }: { balloon: Balloon; game: Game; colours: readonly string[] }) {
   const holder = useRef<Group>(null)
-  const colour = COLOURS[balloon.owner % COLOURS.length]
+  const colour = colours[balloon.owner]
   const emblem = EMBLEMS[balloon.owner % EMBLEMS.length]
   useFrame(() => {
     const at = balloonAt(balloon, game.elapsed)
@@ -178,7 +179,7 @@ interface Burst {
 }
 
 /** Bits of balloon flying out, for a moment, wherever something popped. */
-function Bursts({ game }: { game: Game }) {
+function Bursts({ game, colours }: { game: Game; colours: readonly string[] }) {
   const seen = useRef(new Set<number>())
   const bursts = useRef<Burst[]>([])
   const holder = useRef<Group>(null)
@@ -189,7 +190,7 @@ function Bursts({ game }: { game: Game }) {
     seen.current.add(id)
     const balloon = game.balloons[id]
     const at = balloon && balloonAt(balloon, game.elapsed)
-    if (at) bursts.current.push({ key: id, at, colour: COLOURS[balloon.owner % COLOURS.length], born: performance.now() })
+    if (at) bursts.current.push({ key: id, at, colour: colours[balloon.owner], born: performance.now() })
   }
   // A new game starts the list again.
   if (game.popped.size === 0 && seen.current.size > 0) seen.current.clear()
@@ -225,7 +226,7 @@ function Bursts({ game }: { game: Game }) {
 }
 
 /** Where each player's last shot landed, as a flash in their colour. Misses too. */
-function ShotFlashes({ game }: { game: Game }) {
+function ShotFlashes({ game, colours }: { game: Game; colours: readonly string[] }) {
   return (
     <>
       {game.players.map((player, index) => {
@@ -236,7 +237,7 @@ function ShotFlashes({ game }: { game: Game }) {
         return (
           <mesh key={player.id} position={[shot.x, shot.y, shot.z + 0.05]} scale={0.4 + t * 0.8}>
             <ringGeometry args={[0.35, 0.5, 24]} />
-            <meshBasicMaterial color={COLOURS[index % COLOURS.length]} transparent opacity={1 - t} />
+            <meshBasicMaterial color={colours[index]} transparent opacity={1 - t} />
           </mesh>
         )
       })}
@@ -412,11 +413,13 @@ const Field = memo(function Field() {
  * Drawn over everything and the same size on screen however far off it is. Dim
  * while that player is cooling down, like your own.
  */
-function OtherCrosshairs({ game, aims }: { game: Game; aims: Aims }) {
+function OtherCrosshairs({ game, aims, colours }: { game: Game; aims: Aims; colours: readonly string[] }) {
   return (
     <>
       {game.players.map((player, index) =>
-        player.mine ? null : <OtherCrosshair key={`${game.id}:${player.id}`} game={game} index={index} aims={aims} />,
+        player.mine ? null : (
+          <OtherCrosshair key={`${game.id}:${player.id}`} game={game} index={index} aims={aims} colour={colours[index]} />
+        ),
       )}
     </>
   )
@@ -425,11 +428,10 @@ function OtherCrosshairs({ game, aims }: { game: Game; aims: Aims }) {
 const CROSSHAIR_SIZE = 0.022
 const ON_TOP = { depthTest: false, depthWrite: false, transparent: true } as const
 
-function OtherCrosshair({ game, index, aims }: { game: Game; index: number; aims: Aims }) {
+function OtherCrosshair({ game, index, aims, colour }: { game: Game; index: number; aims: Aims; colour: string }) {
   const holder = useRef<Group>(null)
   const materials = useRef<MeshBasicMaterial[]>([])
   const at = useRef<Vector3 | null>(null)
-  const colour = COLOURS[index % COLOURS.length]
   const emblem = EMBLEMS[index % EMBLEMS.length]
 
   useFrame(({ camera }, delta) => {
@@ -488,19 +490,18 @@ function OtherCrosshair({ game, index, aims }: { game: Game; index: number; aims
 }
 
 /** The players, lined up along the near edge in their colours, watching. */
-function Shooters({ game }: { game: Game }) {
+function Shooters({ game, colours }: { game: Game; colours: readonly string[] }) {
   const count = game.players.length
   return (
     <>
       {game.players.map((player, index) => (
-        <ShooterPill key={player.id} index={index} count={count} mine={player.mine} />
+        <ShooterPill key={player.id} index={index} count={count} mine={player.mine} colour={colours[index]} />
       ))}
     </>
   )
 }
 
-function ShooterPill({ index, count, mine }: { index: number; count: number; mine: boolean }) {
-  const colour = COLOURS[index % COLOURS.length]
+function ShooterPill({ index, count, mine, colour }: { index: number; count: number; mine: boolean; colour: string }) {
   const avatar = useMemo(() => createAvatar(colour), [colour])
   const spacing = 2.2
   const x = (index - (count - 1) / 2) * spacing
@@ -602,6 +603,12 @@ export function DuckHuntScene({
   useFrame(() => redraw())
   const game = live.current
   const background = useMemo(() => new Color(PALETTE.background), [])
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   const up = game.balloons.filter((b) => !game.popped.has(b.id) && balloonAt(b, game.elapsed) !== null)
   return (
     <>
@@ -611,12 +618,12 @@ export function DuckHuntScene({
       <Daylight />
       <Field />
       {up.map((balloon) => (
-        <BalloonBody key={`${game.id}:${balloon.id}`} balloon={balloon} game={game} />
+        <BalloonBody key={`${game.id}:${balloon.id}`} balloon={balloon} game={game} colours={colours} />
       ))}
-      <Bursts game={game} />
-      <ShotFlashes game={game} />
-      <Shooters game={game} />
-      <OtherCrosshairs game={game} aims={aims} />
+      <Bursts game={game} colours={colours} />
+      <ShotFlashes game={game} colours={colours} />
+      <Shooters game={game} colours={colours} />
+      <OtherCrosshairs game={game} aims={aims} colours={colours} />
       <Trigger game={game} onShoot={onShoot} aim={aim} />
     </>
   )

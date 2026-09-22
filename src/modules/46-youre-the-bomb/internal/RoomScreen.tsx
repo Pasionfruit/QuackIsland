@@ -11,9 +11,10 @@
  * last walked.
  */
 import { Canvas } from '@react-three/fiber'
-import { memo, useEffect, useRef, useState, type RefObject } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
-import { getNet, useNet, usePeers } from '../../09-net'
+import { usePlayerColour } from '../../02-player'
+import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, playCue, useFinish, type MinigameRun } from '../../15-minigames'
 import { RoomScene, type ScanRef } from './RoomScene'
 import { COLOURS, PIN, PUSH, SCAN, clock, cooldownLeft, inRoom, placings, type Game } from './rules'
@@ -51,11 +52,16 @@ export function RoomScreen({ run }: { run: MinigameRun }) {
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
   const net = useNet()
   const peers = usePeers()
+  const myColour = usePlayerColour()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   const me = net.id ?? myId()
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
   // The podium does the results; see `useFinish`.
   useFinish(game.over, () =>
-    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: COLOURS[e.index % COLOURS.length], mine: e.player.id === me })),
+    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: colours[e.index], mine: e.player.id === me })),
   )
   const paused = useRef(run.paused)
   paused.current = run.paused
@@ -191,7 +197,7 @@ export function RoomScreen({ run }: { run: MinigameRun }) {
         )}
         <span style={{ flex: 1 }} />
         {game.players.map((p, index) => {
-          const colour = COLOURS[index % COLOURS.length]
+          const colour = colours[index]
           const gone = !inRoom(p)
           return (
             <span

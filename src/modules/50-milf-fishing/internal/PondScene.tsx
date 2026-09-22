@@ -20,7 +20,8 @@
 import { useFrame } from '@react-three/fiber'
 import { useMemo, useReducer, useRef, type RefObject } from 'react'
 import { BufferAttribute, BufferGeometry, CanvasTexture, Color, ConeGeometry, CylinderGeometry, DoubleSide, Group, Line, LineBasicMaterial, Mesh, MeshStandardMaterial, RepeatWrapping, SphereGeometry, SRGBColorSpace, Vector3 } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { FISH, RECAST, bendAt, playBack } from './pond'
 import { COLOURS, bitesOf, type Game } from './rules'
 
@@ -237,8 +238,7 @@ const FLY = 0.9
  * One angler: themselves, their rod bending for whatever is on it, the line out
  * to the bobber, their bucket, and the fish they land flying into it.
  */
-function Angler({ index, live }: { index: number; live: RefObject<Game> }) {
-  const colour = COLOURS[index % COLOURS.length]
+function Angler({ index, live, colour }: { index: number; live: RefObject<Game>; colour: string }) {
   const avatar = useMemo(() => createAvatar(colour), [colour])
   const rod = useRef<Group>(null)
   const bobber = useRef<Mesh>(null)
@@ -363,6 +363,12 @@ export function PondScene({ live }: { live: RefObject<Game> }) {
   })
   const game = live.current
   const background = useMemo(() => new Color(PALETTE.sky), [])
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
@@ -385,7 +391,7 @@ export function PondScene({ live }: { live: RefObject<Game> }) {
       <Lake />
       <Dock count={Math.max(1, game.players.length)} />
       {game.players.map((p, index) => (
-        <Angler key={`${game.id}:${p.id}`} index={index} live={live} />
+        <Angler key={`${game.id}:${p.id}`} index={index} live={live} colour={colours[index]} />
       ))}
     </>
   )

@@ -23,9 +23,10 @@
 import { useFrame } from '@react-three/fiber'
 import { useMemo, useReducer, useRef, type RefObject } from 'react'
 import { Color, DoubleSide, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, Vector3 } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { GRID, HALF, PANEL_COLOURS, dealFor, panelCentre, panelColour, panelLift, when, wheelAngle } from './arena'
-import { COLOURS, PUSH, ROUND, clock, decided, isStanding, type Game } from './rules'
+import { PUSH, ROUND, clock, decided, isStanding, COLOURS, type Game } from './rules'
 
 export const PALETTE = {
   sky: '#8fd0f2',
@@ -162,13 +163,12 @@ function Wheel({ live }: { live: RefObject<Game> }) {
 }
 
 /** Somebody: in their colour, leaning into the way they slide, tumbling when they fall. */
-function Body({ index, live }: { index: number; live: RefObject<Game> }) {
+function Body({ index, live, colour }: { index: number; live: RefObject<Game>; colour: string }) {
   const group = useRef<Group>(null)
   const lean = useRef<Group>(null)
   const ring = useRef<Mesh>(null)
   const wave = useRef<Mesh>(null)
   const waveLook = useRef<MeshBasicMaterial>(null)
-  const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
   const shown = useRef<{ x: number; z: number } | null>(null)
   useFrame((_, delta) => {
@@ -238,6 +238,12 @@ export function ColorScene({ live, look }: { live: RefObject<Game>; look: RefObj
   })
   const game = live.current
   const background = useMemo(() => new Color(PALETTE.sky), [])
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
@@ -264,7 +270,7 @@ export function ColorScene({ live, look }: { live: RefObject<Game>; look: RefObj
       {game.players.length > 0 ? <Panels live={live} /> : null}
       <Wheel live={live} />
       {game.players.map((p, index) => (
-        <Body key={`${game.id}:${p.id}`} index={index} live={live} />
+        <Body key={`${game.id}:${p.id}`} index={index} live={live} colour={colours[index]} />
       ))}
     </>
   )

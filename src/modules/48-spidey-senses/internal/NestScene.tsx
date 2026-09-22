@@ -26,7 +26,8 @@
 import { useFrame } from '@react-three/fiber'
 import { useMemo, useReducer, useRef, type RefObject } from 'react'
 import { CanvasTexture, Color, CylinderGeometry, DoubleSide, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, PointLight, RepeatWrapping, SphereGeometry, SRGBColorSpace, Vector3 } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { CELLAR, rattle, when } from './nest'
 import { COLOURS, distance, isStanding, type Game, type Player } from './rules'
 
@@ -362,12 +363,11 @@ function Spider({ live }: { live: RefObject<Game> }) {
 }
 
 /** Somebody: creeping, stopped, or webbed up and dragged into the nest. */
-function Body({ index, live }: { index: number; live: RefObject<Game> }) {
+function Body({ index, live, colour }: { index: number; live: RefObject<Game>; colour: string }) {
   const group = useRef<Group>(null)
   const ring = useRef<Mesh>(null)
   const dot = useRef<Mesh>(null)
   const web = useRef<Mesh>(null)
-  const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
   const shown = useRef<{ x: number; z: number } | null>(null)
   useFrame((_, delta) => {
@@ -449,6 +449,12 @@ export function NestScene({ live }: { live: RefObject<Game> }) {
   })
   const game = live.current
   const background = useMemo(() => new Color(PALETTE.dark), [])
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
@@ -460,7 +466,7 @@ export function NestScene({ live }: { live: RefObject<Game> }) {
       <Trapdoor live={live} />
       <Spider live={live} />
       {game.players.map((p, index) => (
-        <Body key={`${game.id}:${p.id}`} index={index} live={live} />
+        <Body key={`${game.id}:${p.id}`} index={index} live={live} colour={colours[index]} />
       ))}
     </>
   )

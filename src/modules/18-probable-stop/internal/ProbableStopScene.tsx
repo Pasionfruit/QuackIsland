@@ -42,11 +42,13 @@ import {
 } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { CONVENTIONS, createRng, hashSeed } from '../../00-core'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { frameScene } from './camera'
 import type { Game, Player } from './game'
 import {
   BEATS,
+  COLOURS,
   PLACE,
   bridgeCondition,
   deckHeight,
@@ -73,8 +75,6 @@ export const PALETTE = {
   lanes: ['#e8735a', '#f2b33d', '#6fc2dd'] as readonly string[],
   safe: '#7bd96b',
 
-  you: '#3f8fd0',
-  player: '#5eb85b',
   fallen: '#9a948a',
   confirmed: '#ffd24d',
 
@@ -770,13 +770,12 @@ const WAIST = 0.85
  * One player: the island's avatar, walking to wherever `spotFor` says - with a
  * step in it when it is going somewhere, and head over heels when it falls.
  */
-function PlayerPill({ game, player }: { game: Game; player: Player }) {
+function PlayerPill({ game, player, colour }: { game: Game; player: Player; colour: string }) {
   const holder = useRef<Group>(null)
   const body = useRef<Group>(null)
   const ring = useRef<Mesh>(null)
   const placed = useRef(false)
   const stride = useRef(0)
-  const colour = player.mine ? PALETTE.you : PALETTE.player
   // Its own skin, so that this body can go grey without every other one that is the same colour going with it.
   const skin = useMemo(() => new MeshStandardMaterial({ color: colour, roughness: 0.55 }), [colour])
   const avatar = useMemo(() => {
@@ -843,7 +842,7 @@ function PlayerPill({ game, player }: { game: Game; player: Player }) {
       </group>
       <mesh ref={ring} position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.5, 0.72, 28]} />
-        <meshBasicMaterial color={player.confirmed ? PALETTE.confirmed : PALETTE.you} transparent opacity={0.95} />
+        <meshBasicMaterial color={player.confirmed ? PALETTE.confirmed : colour} transparent opacity={0.95} />
       </mesh>
     </group>
   )
@@ -863,6 +862,12 @@ export function ProbableStopScene({
   const background = useMemo(() => new Color(PALETTE.mist), [])
   const me = game.players.find((p) => p.mine) ?? null
   const choosing = game.phase === 'choosing' && me !== null && me.alive
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
 
   return (
     <>
@@ -883,8 +888,8 @@ export function ProbableStopScene({
           onHover={onHover}
         />
       ))}
-      {game.players.map((player) => (
-        <PlayerPill key={player.id} game={game} player={player} />
+      {game.players.map((player, index) => (
+        <PlayerPill key={player.id} game={game} player={player} colour={colours[index]} />
       ))}
     </>
   )

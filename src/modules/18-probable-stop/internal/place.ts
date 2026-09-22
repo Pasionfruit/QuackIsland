@@ -22,6 +22,13 @@ export interface Rect {
   depth: number
 }
 
+/**
+ * Eight colours that do not look alike, for whoever has not picked their own -
+ * a bot, or a peer whose first packet has not arrived yet. See `rosterColour`
+ * in `09-net`: everybody who has picked a colour walks in it instead.
+ */
+export const COLOURS = ['#e8505b', '#3f8fd0', '#f2b33d', '#4fb35a', '#9c4bb0', '#f08a3c', '#35bdbd', '#ef7fb4'] as const
+
 export interface Spot {
   x: number
   y: number

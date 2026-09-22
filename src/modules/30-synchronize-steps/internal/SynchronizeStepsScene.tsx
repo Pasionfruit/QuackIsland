@@ -18,7 +18,8 @@
 import { useFrame } from '@react-three/fiber'
 import { memo, useLayoutEffect, useMemo, useReducer, useRef, type RefObject } from 'react'
 import { CanvasTexture, Color, Group, InstancedMesh, Matrix4, SRGBColorSpace, type DirectionalLight, type Sprite } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { STAIRS, frameScene, hopAt, laneZ, stepX, stepY, walkAt } from './camera'
 import { COLOURS, TOWER, moveFor, type Game, type Stepper } from './rules'
 
@@ -110,7 +111,7 @@ function Lights() {
 }
 
 /** The ground, the steps as solid blocks, a tread in each lane's colour, and the step numbers down the front. */
-const Staircase = memo(function Staircase({ lanes }: { lanes: number }) {
+const Staircase = memo(function Staircase({ lanes, colours }: { lanes: number; colours: readonly string[] }) {
   const treads = useRef<InstancedMesh>(null)
   const width = Math.max(1, lanes) * STAIRS.lane
   const front = laneZ(0, lanes) + STAIRS.lane / 2
@@ -125,14 +126,14 @@ const Staircase = memo(function Staircase({ lanes }: { lanes: number }) {
       for (let lane = 0; lane < lanes; lane++) {
         matrix.makeTranslation(stepX(step), stepY(step) + 0.015, laneZ(lane, lanes))
         mesh.setMatrixAt(i, matrix)
-        colour.set(COLOURS[lane % COLOURS.length]).lerp(stone, step % 2 === 0 ? 0.45 : 0.55)
+        colour.set(colours[lane] ?? COLOURS[lane % COLOURS.length]).lerp(stone, step % 2 === 0 ? 0.45 : 0.55)
         mesh.setColorAt(i, colour)
         i++
       }
     }
     mesh.instanceMatrix.needsUpdate = true
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
-  }, [lanes])
+  }, [lanes, colours])
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
@@ -178,10 +179,9 @@ function placeOf(game: Game, stepper: Stepper): { x: number; y: number } {
 }
 
 /** One player on their lane, and the bubble over their head. */
-function Player({ index, count, live }: { index: number; count: number; live: RefObject<Game> }) {
+function Player({ index, count, live, colour }: { index: number; count: number; live: RefObject<Game>; colour: string }) {
   const body = useRef<Group>(null)
   const bubble = useRef<Sprite>(null)
-  const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
   const z = laneZ(index, count)
   useFrame(() => {
@@ -224,14 +224,20 @@ export function SynchronizeStepsScene({ live }: { live: RefObject<Game> }) {
   const game = live.current
   const background = useMemo(() => new Color(PALETTE.background), [])
   const count = game.players.length
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
       <FixedCamera lanes={Math.max(1, count)} />
       <Lights />
-      <Staircase lanes={Math.max(1, count)} />
+      <Staircase lanes={Math.max(1, count)} colours={colours} />
       {game.players.map((stepper, index) => (
-        <Player key={`${game.id}:${stepper.id}`} index={index} count={count} live={live} />
+        <Player key={`${game.id}:${stepper.id}`} index={index} count={count} live={live} colour={colours[index]} />
       ))}
     </>
   )

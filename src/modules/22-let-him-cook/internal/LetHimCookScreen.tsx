@@ -14,7 +14,8 @@
 import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
-import { getNet, useNet, usePeers } from '../../09-net'
+import { usePlayerColour } from '../../02-player'
+import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, useLoopCue, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { LetHimCookScene, myTurn, type SceneHands } from './LetHimCookScene'
@@ -41,16 +42,21 @@ export function LetHimCookScreen({ run }: { run: MinigameRun }) {
   const [settled, setSettled] = useState(false)
   /** Seconds the recipe has been up since the game ended. */
   const overFor = useRef(0)
-  // Held back through the two seconds of Finish; see `useFinish`. Told the game is over only once the whole recipe has been shown.
-  const results = useFinish(game.phase === 'over' && settled, () =>
-    placings(game).map((e) => ({ id: e.cook.id, place: e.place, name: nameOf(e.cook.id), colour: COLOURS[e.index % COLOURS.length], mine: e.cook.id === me })),
-  )
   const paused = useRef(run.paused)
   paused.current = run.paused
 
   const net = useNet()
   const peers = usePeers()
+  const myColour = usePlayerColour()
   const me = net.id ?? myId()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
+  // Held back through the two seconds of Finish; see `useFinish`. Told the game is over only once the whole recipe has been shown.
+  const results = useFinish(game.phase === 'over' && settled, () =>
+    placings(game).map((e) => ({ id: e.cook.id, place: e.place, name: nameOf(e.cook.id), colour: colours[e.index], mine: e.cook.id === me })),
+  )
   const wire = useKitchenNet()
   const live = useRef(game)
   live.current = game
@@ -116,13 +122,13 @@ export function LetHimCookScreen({ run }: { run: MinigameRun }) {
         ) : null}
         <span style={{ flex: 1 }} />
         {mine ? (
-          <span style={{ ...pill, background: mine.out ? LOOK.faded : COLOURS[mineIndex % COLOURS.length], color: '#fff' }} data-claims={mine.claims}>
+          <span style={{ ...pill, background: mine.out ? LOOK.faded : colours[mineIndex], color: '#fff' }} data-claims={mine.claims}>
             {mine.out ? 'out' : `${mine.claims} claimed`}
           </span>
         ) : null}
       </div>
       {ready ? <RecipeBar game={game} /> : null}
-      {ready ? <Line game={game} nameOf={nameOf} /> : null}
+      {ready ? <Line game={game} nameOf={nameOf} colours={colours} /> : null}
 
       <div style={boardStyle} onContextMenu={(e) => e.preventDefault()} data-board>
         <Stage live={live} hands={hands} />
@@ -141,17 +147,17 @@ export function LetHimCookScreen({ run }: { run: MinigameRun }) {
         ) : null}
         {isMine && game.phase === 'turns' ? (
           <Banner
-            colour={COLOURS[mineIndex % COLOURS.length]}
+            colour={colours[mineIndex]}
             text={`Your turn - take what the chef put in ${nth(dueIndex(game))}`}
             data="your-turn"
           />
         ) : null}
         {game.phase === 'result' && game.last ? <Result last={game.last} game={game} nameOf={nameOf} /> : null}
-        {game.phase === 'order' ? <Order game={game} nameOf={nameOf} /> : null}
+        {game.phase === 'order' ? <Order game={game} nameOf={nameOf} colours={colours} /> : null}
         {game.phase === 'over' && !results ? <Recipe game={game} /> : null}
       </div>
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} colours={colours} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }
@@ -262,7 +268,7 @@ function Recipe({ game }: { game: Game }) {
 }
 
 /** Everybody in the line, in turn order, whoever is up first; then everybody out. */
-function Line({ game, nameOf }: { game: Game; nameOf: (id: string) => string }) {
+function Line({ game, nameOf, colours }: { game: Game; nameOf: (id: string) => string; colours: readonly string[] }) {
   const out = game.players.map((cook, index) => ({ cook, index })).filter((e) => e.cook.out)
   out.sort((a, b) => (a.cook.out?.order ?? 0) - (b.cook.out?.order ?? 0))
   return (
@@ -275,7 +281,7 @@ function Line({ game, nameOf }: { game: Game; nameOf: (id: string) => string }) 
             key={cook.id}
             style={{
               ...chip,
-              background: COLOURS[index % COLOURS.length],
+              background: colours[index],
               color: '#fff',
               outline: up ? `3px solid ${LOOK.ink}` : 'none',
               transform: up ? 'scale(1.08)' : 'none',
@@ -288,7 +294,7 @@ function Line({ game, nameOf }: { game: Game; nameOf: (id: string) => string }) 
       })}
       {out.map(({ cook, index }) => (
         <span key={cook.id} style={{ ...chip, background: 'rgba(74,53,36,0.14)', color: LOOK.faded, textDecoration: 'line-through' }}>
-          <span style={{ width: 8, height: 8, borderRadius: 999, background: COLOURS[index % COLOURS.length] }} />
+          <span style={{ width: 8, height: 8, borderRadius: 999, background: colours[index] }} />
           <span style={nameStyle}>{nameOf(cook.id)}</span>
         </span>
       ))}
@@ -335,7 +341,7 @@ function Banner({ text, colour, data }: { text: string; colour: string; data?: s
 }
 
 /** The turn order, dealt at random, before the first turn. */
-function Order({ game, nameOf }: { game: Game; nameOf: (id: string) => string }) {
+function Order({ game, nameOf, colours }: { game: Game; nameOf: (id: string) => string; colours: readonly string[] }) {
   return (
     <div style={orderWrap}>
       <div style={orderCard} data-order={game.queue.join(',')}>
@@ -343,7 +349,7 @@ function Order({ game, nameOf }: { game: Game; nameOf: (id: string) => string })
         {game.queue.map((index, position) => (
           <div key={index} style={scoreRow}>
             <span style={{ opacity: 0.5, minWidth: 18 }}>{position + 1}</span>
-            <span style={{ width: 12, height: 12, borderRadius: 999, background: COLOURS[index % COLOURS.length] }} />
+            <span style={{ width: 12, height: 12, borderRadius: 999, background: colours[index] }} />
             <span style={{ fontWeight: game.players[index].mine ? 700 : 400 }}>{nameOf(game.players[index].id)}</span>
           </div>
         ))}
@@ -380,11 +386,13 @@ function Over({
   game,
   me,
   nameOf,
+  colours,
   onAgain,
 }: {
   game: Game
   me: string
   nameOf: (id: string) => string
+  colours: readonly string[]
   onAgain: (() => void) | null
 }) {
   const order = placings(game)
@@ -409,7 +417,7 @@ function Over({
           {order.map((entry) => (
             <div key={entry.cook.id} style={scoreRow} data-place={entry.place}>
               <span style={{ opacity: 0.5, minWidth: 18 }}>{entry.place}</span>
-              <span style={{ width: 12, height: 12, borderRadius: 999, background: COLOURS[entry.index % COLOURS.length] }} />
+              <span style={{ width: 12, height: 12, borderRadius: 999, background: colours[entry.index] }} />
               <span style={{ flex: 1, fontWeight: entry.cook.id === me ? 700 : 400 }}>{nameOf(entry.cook.id)}</span>
               <span style={{ opacity: 0.6, fontSize: 12 }}>{how(entry.cook)}</span>
             </div>

@@ -247,6 +247,8 @@ export function connectorDots(count: number = BOARD.tiles): ConnectorDot[] {
   const gaps = Math.max(1, count - 1)
   const step = total / gaps
   const clear = BOARD.tileRadius + BOARD.dotMargin
+  const clearSquared = clear * clear
+  const tiles = buildBoard(count)
   const dots: ConnectorDot[] = []
 
   for (let i = 0; i < gaps; i++) {
@@ -256,7 +258,16 @@ export function connectorDots(count: number = BOARD.tiles): ConnectorDot[] {
     const n = Math.max(1, Math.round((to - from) / BOARD.dotSpacing))
     for (let k = 0; k < n; k++) {
       const point = trackPointAt(angleAtLength(table, from + ((k + 0.5) * (to - from)) / n))
-      dots.push({ x: point.x, y: point.y, z: point.z })
+      // Arc distance is not physical clearance on a tight bend. Check every
+      // tile in world axes so a connector cannot cut through a tile on this
+      // gap or through a neighbouring turn of the spiral.
+      const clearOfTiles = tiles.every((tile) => {
+        const dx = point.x - tile.x
+        const dy = point.y - tile.y
+        const dz = point.z - tile.z
+        return dx * dx + dy * dy + dz * dz > clearSquared
+      })
+      if (clearOfTiles) dots.push({ x: point.x, y: point.y, z: point.z })
     }
   }
   return dots

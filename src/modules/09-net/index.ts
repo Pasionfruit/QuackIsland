@@ -54,6 +54,7 @@ export {
   relayProblem,
   relayUrl,
   renameSelf,
+  rosterColour,
   sendToRoom,
   statusAfterClose,
   subscribeRoom,
@@ -63,6 +64,7 @@ export {
   type NetInfo,
   type NetStatus,
   type PeerInfo,
+  type RosterEntry,
 } from './internal/client'
 
 export { NetPlayers } from './internal/NetPlayers'

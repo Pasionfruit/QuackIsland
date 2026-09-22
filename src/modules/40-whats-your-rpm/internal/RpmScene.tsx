@@ -13,7 +13,8 @@
 import { useFrame } from '@react-three/fiber'
 import { memo, useLayoutEffect, useMemo, useReducer, useRef, type RefObject } from 'react'
 import { Color, Group, type DirectionalLight, type MeshBasicMaterial } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { TRACK, frameScene, laneZ, trackX } from './camera'
 import { reelAt } from './reels'
 import { COLOURS, FEED, blocked, type Game } from './rules'
@@ -62,7 +63,7 @@ function Lights() {
 }
 
 /** The ground, the lanes, a line every ten reels, and a chequered finish. */
-const Track = memo(function Track({ count }: { count: number }) {
+const Track = memo(function Track({ count, colours }: { count: number; colours: readonly string[] }) {
   const lanes = Math.max(1, count)
   const depth = lanes * TRACK.lane
   const length = TRACK.half * 2
@@ -76,7 +77,7 @@ const Track = memo(function Track({ count }: { count: number }) {
       {Array.from({ length: lanes }, (_, i) => (
         <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, laneZ(i, lanes)]} receiveShadow>
           <planeGeometry args={[length, TRACK.lane * 0.9]} />
-          <meshStandardMaterial color={new Color(PALETTE.track).lerp(new Color(COLOURS[i % COLOURS.length]), 0.22)} roughness={0.9} />
+          <meshStandardMaterial color={new Color(PALETTE.track).lerp(new Color(colours[i] ?? COLOURS[i % COLOURS.length]), 0.22)} roughness={0.9} />
         </mesh>
       ))}
       {Array.from({ length: Math.floor(FEED.reels / 10) }, (_, i) => (
@@ -100,8 +101,7 @@ const Track = memo(function Track({ count }: { count: number }) {
 })
 
 /** One player: the pill in their colour, walking their lane, with their phone up. */
-function Runner({ index, count, live }: { index: number; count: number; live: RefObject<Game> }) {
-  const colour = COLOURS[index % COLOURS.length]
+function Runner({ index, count, live, colour }: { index: number; count: number; live: RefObject<Game>; colour: string }) {
   const avatar = useMemo(() => createAvatar(colour), [colour])
   const root = useRef<Group>(null)
   const body = useRef<Group>(null)
@@ -176,14 +176,20 @@ export function RpmScene({ live }: { live: RefObject<Game> }) {
   const game = live.current
   const background = useMemo(() => new Color(PALETTE.background), [])
   const count = game.players.length
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
       <FixedCamera />
       <Lights />
-      <Track count={Math.max(1, count)} />
+      <Track count={Math.max(1, count)} colours={colours} />
       {game.players.map((p, index) => (
-        <Runner key={`${game.id}:${p.id}`} index={index} count={count} live={live} />
+        <Runner key={`${game.id}:${p.id}`} index={index} count={count} live={live} colour={colours[index]} />
       ))}
     </>
   )

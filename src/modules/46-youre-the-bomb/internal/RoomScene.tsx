@@ -32,7 +32,8 @@ import {
   SRGBColorSpace,
   Vector3,
 } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { ROOM, roomFor } from './room'
 import { BOMB, COLOURS, PIN, PUSH, SCAN, clock, inRoom, pinZ, type Game } from './rules'
 
@@ -321,11 +322,10 @@ function Pin({ live }: { live: RefObject<Game> }) {
 }
 
 /** Somebody: walking, sinking through the hole, blown up, or flattened. */
-function Body({ index, live }: { index: number; live: RefObject<Game> }) {
+function Body({ index, live, colour }: { index: number; live: RefObject<Game>; colour: string }) {
   const group = useRef<Group>(null)
   const ring = useRef<Mesh>(null)
   const arc = useRef<Mesh>(null)
-  const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
   const shown = useRef<{ x: number; z: number } | null>(null)
   useFrame((_, delta) => {
@@ -381,6 +381,12 @@ export function RoomScene({ live, scans }: { live: RefObject<Game>; scans: RefOb
   })
   const game = live.current
   const background = useMemo(() => new Color(PALETTE.dark), [])
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
@@ -403,7 +409,7 @@ export function RoomScene({ live, scans }: { live: RefObject<Game>; scans: RefOb
       {game.players.length > 0 ? <Bombs key={`${game.id}:${game.seed}`} live={live} scans={scans} /> : null}
       <Pin live={live} />
       {game.players.map((p, index) => (
-        <Body key={`${game.id}:${p.id}`} index={index} live={live} />
+        <Body key={`${game.id}:${p.id}`} index={index} live={live} colour={colours[index]} />
       ))}
     </>
   )

@@ -38,7 +38,8 @@ import {
   Vector3,
   type Material,
 } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { ARENA, arenaFor } from './arena'
 import { BODY, COLOURS, crewOf, guarded, pickupReady, type Game, type Shot } from './rules'
 
@@ -170,14 +171,14 @@ function ghostly(avatar: Group): Group {
 const PUFF_GEOMETRY = new SphereGeometry(0.5, 12, 8)
 
 /** Somebody else: standing in their colour, or hunting as a ghost; a burst when they go. */
-function BodyView({ index, live }: { index: number; live: RefObject<Game> }) {
+function BodyView({ index, live, colours }: { index: number; live: RefObject<Game>; colours: readonly string[] }) {
   const group = useRef<Group>(null)
   const turn = useRef<Group>(null)
   const halo = useRef<Mesh>(null)
   const side = useRef<Mesh>(null)
   const bubble = useRef<Mesh>(null)
   const burst = useRef<Mesh>(null)
-  const colour = COLOURS[index % COLOURS.length]
+  const colour = colours[index]
   const standing = useMemo(() => createAvatar(colour), [colour])
   const hunter = useMemo(() => ghostly(createAvatar(PALETTE.hunter)), [])
   const shown = useRef<{ x: number; z: number } | null>(null)
@@ -211,7 +212,7 @@ function BodyView({ index, live }: { index: number; live: RefObject<Game> }) {
       // A smaller ring in the colour of whoever they hunt for; nothing for a hunter with nobody to hunt for.
       const master = p.out !== null ? crewOf(g, index) : null
       side.current.visible = master !== null
-      if (master !== null) (side.current.material as MeshBasicMaterial).color.set(COLOURS[master % COLOURS.length])
+      if (master !== null) (side.current.material as MeshBasicMaterial).color.set(colours[master])
       side.current.rotation.z = -clock.elapsedTime * 2
     }
     if (bubble.current) {
@@ -343,7 +344,7 @@ const UP = new Vector3(0, 1, 0)
 const MUZZLE = new Vector3(GUN_AT.x, GUN_AT.y + 0.03 * GUN_SCALE, GUN_AT.z - 0.36 * GUN_SCALE)
 
 /** The streaks and the puffs, from a small pool. */
-function Tracers({ live }: { live: RefObject<Game> }) {
+function Tracers({ live, colours }: { live: RefObject<Game>; colours: readonly string[] }) {
   const camera = useThree((s) => s.camera)
   const streaks = useMemo(
     () =>
@@ -389,14 +390,14 @@ function Tracers({ live }: { live: RefObject<Game> }) {
         streak.quaternion.setFromUnitVectors(UP, to.clone().sub(from).normalize())
         streak.scale.set(shooter?.mine ? 1 : 1.6, length, shooter?.mine ? 1 : 1.6)
         const m = streak.material as MeshBasicMaterial
-        m.color.set(shooter?.mine ? PALETTE.flash : COLOURS[shot.by % COLOURS.length])
+        m.color.set(shooter?.mine ? PALETTE.flash : colours[shot.by])
         m.opacity = 1 - age / TRACER_FADE
       }
       puff.visible = true
       puff.position.copy(to)
       puff.scale.setScalar(0.08 + (age / PUFF_FADE) * 0.35)
       const pm = puff.material as MeshBasicMaterial
-      pm.color.set(shot.hit >= 0 ? COLOURS[shot.hit % COLOURS.length] : '#fffaf0')
+      pm.color.set(shot.hit >= 0 ? colours[shot.hit] : '#fffaf0')
       pm.opacity = 0.9 * (1 - age / PUFF_FADE)
     }
     for (let i = used; i < streaks.length; i++) {
@@ -418,14 +419,14 @@ function Tracers({ live }: { live: RefObject<Game> }) {
 }
 
 /** Your gun, held in front of the camera, in your colour. It kicks when it fires. */
-function Gun({ live }: { live: RefObject<Game> }) {
+function Gun({ live, colours }: { live: RefObject<Game>; colours: readonly string[] }) {
   const camera = useThree((s) => s.camera)
   const rig = useRef<Group>(null)
   const kick = useRef<Group>(null)
   const flash = useRef<Mesh>(null)
   const game = live.current
   const index = game.players.findIndex((p) => p.mine)
-  const colour = index >= 0 ? COLOURS[index % COLOURS.length] : '#ffffff'
+  const colour = index >= 0 ? colours[index] : '#ffffff'
 
   useFrame(() => {
     if (!rig.current || !kick.current) return
@@ -485,6 +486,12 @@ export function HesOneShotScene({ live, look }: { live: RefObject<Game>; look: R
   })
   const game = live.current
   const background = useMemo(() => new Color(PALETTE.sky), [])
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
@@ -494,9 +501,9 @@ export function HesOneShotScene({ live, look }: { live: RefObject<Game>; look: R
       <FirstPersonCamera live={live} look={look} />
       {game.players.length > 0 ? <ArenaView seed={game.seed} /> : null}
       {game.players.length > 0 ? <Pickups key={`${game.id}:pickups`} live={live} seed={game.seed} /> : null}
-      {game.players.map((p, index) => (p.mine ? null : <BodyView key={`${game.id}:${p.id}`} index={index} live={live} />))}
-      <Tracers live={live} />
-      {game.players.length > 0 ? <Gun key={`${game.id}:gun`} live={live} /> : null}
+      {game.players.map((p, index) => (p.mine ? null : <BodyView key={`${game.id}:${p.id}`} index={index} live={live} colours={colours} />))}
+      <Tracers live={live} colours={colours} />
+      {game.players.length > 0 ? <Gun key={`${game.id}:gun`} live={live} colours={colours} /> : null}
     </>
   )
 }

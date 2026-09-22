@@ -26,7 +26,9 @@ if (!mod) {
 const steps = [
   ['typecheck', 'npm run typecheck'],
   ['build', 'npm run build'],
-  ['test', 'npm run test'],
+  // Relay simulations can exceed Vitest's 5s default when the full suite runs
+  // concurrently on constrained local or free-tier hardware.
+  ['test', 'npm run test -- --testTimeout=30000'],
   ['boundaries', 'node scripts/check-boundaries.mjs'],
   ['frozen', 'node scripts/check-frozen.mjs'],
   ['contracts', 'node scripts/check-contracts.mjs'],

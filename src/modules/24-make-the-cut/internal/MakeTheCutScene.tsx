@@ -22,7 +22,8 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { memo, useEffect, useLayoutEffect, useMemo, useReducer, useRef, type RefObject } from 'react'
 import { Color, Group, Quaternion, Vector2, Vector3, type DirectionalLight, type Mesh, type MeshStandardMaterial } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { frameScene } from './camera'
 import { COLOURS, TOWER, aimAt, inReach, webFor, whoseTurn, type Cutter, type Game, type Strand } from './rules'
 
@@ -244,10 +245,9 @@ function headingToYaw(heading: number): number {
  * One cutter: on the tower top, or - out on an eliminating string - launched
  * outward and up, spinning, and down into the grass beyond the web.
  */
-function CutterBody({ cutter, index, live }: { cutter: Cutter; index: number; live: RefObject<Game> }) {
+function CutterBody({ cutter, index, live, colour }: { cutter: Cutter; index: number; live: RefObject<Game>; colour: string }) {
   const holder = useRef<Group>(null)
   const marker = useRef<Group>(null)
-  const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
 
   useFrame(({ clock }) => {
@@ -368,6 +368,12 @@ export function MakeTheCutScene({ live, hands }: { live: RefObject<Game>; hands:
   const game = live.current
   const background = useMemo(() => new Color(PALETTE.background), [])
   const web = game.players.length > 0 ? webFor(game.seed, game.count) : []
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
@@ -379,7 +385,7 @@ export function MakeTheCutScene({ live, hands }: { live: RefObject<Game>; hands:
         <StringView key={`${game.id}:${game.seed}:${index}`} strand={strand} index={index} live={live} hands={hands} />
       ))}
       {game.players.map((cutter, index) => (
-        <CutterBody key={`${game.id}:${cutter.id}`} cutter={cutter} index={index} live={live} />
+        <CutterBody key={`${game.id}:${cutter.id}`} cutter={cutter} index={index} live={live} colour={colours[index]} />
       ))}
       <ReachRing live={live} hands={hands} />
       <Aim live={live} hands={hands} />

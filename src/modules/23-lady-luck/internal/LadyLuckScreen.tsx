@@ -16,7 +16,8 @@
 import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
-import { getNet, useNet, usePeers } from '../../09-net'
+import { usePlayerColour } from '../../02-player'
+import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { LadyLuckScene, type SceneHands } from './LadyLuckScene'
@@ -39,16 +40,21 @@ const FONT =
 export function LadyLuckScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the round from here.
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
-  // Held back through the two seconds of Finish; see `useFinish`.
-  const results = useFinish(game.over, () =>
-    placings(game).map((e) => ({ id: e.hunter.id, place: e.place, name: nameOf(e.hunter.id), colour: COLOURS[e.index % COLOURS.length], mine: e.hunter.id === me })),
-  )
   const paused = useRef(run.paused)
   paused.current = run.paused
 
   const net = useNet()
   const peers = usePeers()
+  const myColour = usePlayerColour()
   const me = net.id ?? myId()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
+  // Held back through the two seconds of Finish; see `useFinish`.
+  const results = useFinish(game.over, () =>
+    placings(game).map((e) => ({ id: e.hunter.id, place: e.place, name: nameOf(e.hunter.id), colour: colours[e.index], mine: e.hunter.id === me })),
+  )
   const wire = useFieldNet()
   const live = useRef(game)
   live.current = game
@@ -137,9 +143,9 @@ export function LadyLuckScreen({ run }: { run: MinigameRun }) {
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
-              background: hunter.mine ? COLOURS[index % COLOURS.length] : 'rgba(255,255,255,0.75)',
+              background: hunter.mine ? colours[index] : 'rgba(255,255,255,0.75)',
               color: hunter.mine ? '#fff' : LOOK.ink,
-              boxShadow: hunter.mine ? 'none' : `inset 0 0 0 2px ${COLOURS[index % COLOURS.length]}`,
+              boxShadow: hunter.mine ? 'none' : `inset 0 0 0 2px ${colours[index]}`,
             }}
           >
             <span style={{ maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis' }}>{nameOf(hunter.id)}</span>
@@ -158,7 +164,7 @@ export function LadyLuckScreen({ run }: { run: MinigameRun }) {
         <Stage live={live} hands={hands} />
         {ready && !game.over ? (
           <div ref={crosshair} style={crosshairBox} data-cooldown={mine ? mine.cooldown.toFixed(2) : '0'}>
-            <Crosshair colour={mine ? COLOURS[mineIndex % COLOURS.length] : '#fff'} cooling={cooling} />
+            <Crosshair colour={mine ? colours[mineIndex] : '#fff'} cooling={cooling} />
           </div>
         ) : null}
         {ready && !game.over && game.elapsed - foundAt < 1.1 ? (
@@ -177,7 +183,7 @@ export function LadyLuckScreen({ run }: { run: MinigameRun }) {
         ) : null}
       </div>
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} colours={colours} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }
@@ -248,11 +254,13 @@ function Over({
   game,
   me,
   nameOf,
+  colours,
   onAgain,
 }: {
   game: Game
   me: string
   nameOf: (id: string) => string
+  colours: readonly string[]
   onAgain: (() => void) | null
 }) {
   const order = placings(game)
@@ -273,7 +281,7 @@ function Over({
                   width: 12,
                   height: 12,
                   borderRadius: 999,
-                  background: COLOURS[entry.index % COLOURS.length],
+                  background: colours[entry.index],
                   boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.25)',
                 }}
               />

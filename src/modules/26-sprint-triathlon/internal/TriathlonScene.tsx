@@ -14,7 +14,8 @@
 import { useFrame } from '@react-three/fiber'
 import { memo, useLayoutEffect, useMemo, useReducer, useRef, type RefObject } from 'react'
 import { Color, Group, Quaternion, Vector3, type DirectionalLight } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { FINISH_X, START_X, TRACK, courseX, frameScene, laneZ } from './camera'
 import { COLOURS, legOf, progressOf, raceClock, sentenceFor, type Race, type Racer } from './rules'
 
@@ -229,12 +230,11 @@ const Bike = memo(function Bike({ wheels }: { wheels: RefObject<Group | null> })
 })
 
 /** One racer, in their lane, swimming, biking or running. */
-function RacerBody({ racer, index, count, live }: { racer: Racer; index: number; count: number; live: RefObject<Race> }) {
+function RacerBody({ racer, index, count, live, colour }: { racer: Racer; index: number; count: number; live: RefObject<Race>; colour: string }) {
   const holder = useRef<Group>(null)
   const body = useRef<Group>(null)
   const bike = useRef<Group>(null)
   const wheels = useRef<Group>(null)
-  const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
   const x = useRef(START_X)
   const lastTyped = useRef(0)
@@ -290,11 +290,11 @@ function RacerBody({ racer, index, count, live }: { racer: Racer; index: number;
 }
 
 /** A strip of your own colour down your lane, so you can find yourself among eight. */
-function YourLane({ index, count }: { index: number; count: number }) {
+function YourLane({ index, count, colour }: { index: number; count: number; colour: string }) {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, laneZ(index, count)]}>
       <planeGeometry args={[FINISH_X - START_X, TRACK.lane - 0.2]} />
-      <meshBasicMaterial color={COLOURS[index % COLOURS.length]} transparent opacity={0.22} />
+      <meshBasicMaterial color={colour} transparent opacity={0.22} />
     </mesh>
   )
 }
@@ -306,6 +306,12 @@ export function TriathlonScene({ live }: { live: RefObject<Race> }) {
   const background = useMemo(() => new Color(PALETTE.background), [])
   const count = Math.max(1, race.racers.length)
   const mine = race.racers.findIndex((r) => r.mine)
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => race.racers.map((racer, index) => rosterColour(racer, index, COLOURS, myColour, peers)),
+    [race.racers, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
@@ -313,9 +319,9 @@ export function TriathlonScene({ live }: { live: RefObject<Race> }) {
       <FixedCamera />
       <Daylight />
       <Course lanes={count} />
-      {mine >= 0 ? <YourLane index={mine} count={count} /> : null}
+      {mine >= 0 ? <YourLane index={mine} count={count} colour={colours[mine]} /> : null}
       {race.racers.map((racer, index) => (
-        <RacerBody key={`${race.id}:${racer.id}`} racer={racer} index={index} count={count} live={live} />
+        <RacerBody key={`${race.id}:${racer.id}`} racer={racer} index={index} count={count} live={live} colour={colours[index]} />
       ))}
     </>
   )

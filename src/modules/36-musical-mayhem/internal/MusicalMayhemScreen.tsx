@@ -17,9 +17,10 @@
  * ahead, and never left running under a pause card.
  */
 import { Canvas } from '@react-three/fiber'
-import { memo, useEffect, useRef, useState, type RefObject } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
-import { getNet, useNet, usePeers } from '../../09-net'
+import { usePlayerColour } from '../../02-player'
+import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { CUES, playCue, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { MusicalMayhemScene } from './MusicalMayhemScene'
@@ -50,16 +51,21 @@ function ordinal(n: number): string {
 export function MusicalMayhemScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the game from here.
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
-  // Held back through the two seconds of Finish; see `useFinish`.
-  const results = useFinish(game.over, () =>
-    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: COLOURS[e.index % COLOURS.length], mine: e.player.id === me })),
-  )
   const paused = useRef(run.paused)
   paused.current = run.paused
 
   const net = useNet()
   const peers = usePeers()
+  const myColour = usePlayerColour()
   const me = net.id ?? myId()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
+  // Held back through the two seconds of Finish; see `useFinish`.
+  const results = useFinish(game.over, () =>
+    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: colours[e.index], mine: e.player.id === me })),
+  )
   const wire = useMayhemNet()
   const live = useRef(game)
   live.current = game
@@ -222,23 +228,23 @@ export function MusicalMayhemScreen({ run }: { run: MinigameRun }) {
         }}
       >
         <Stage live={live} />
-        {ready ? <Standings game={game} me={me} nameOf={nameOf} /> : null}
+        {ready ? <Standings game={game} me={me} nameOf={nameOf} colours={colours} /> : null}
         {ready && !game.over ? <Keys /> : null}
       </div>
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} colours={colours} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }
 
 /** Who is still in, and who went out when. */
-function Standings({ game, me, nameOf }: { game: Game; me: string; nameOf: (id: string) => string }) {
+function Standings({ game, me, nameOf, colours }: { game: Game; me: string; nameOf: (id: string) => string; colours: readonly string[] }) {
   const seat = (p: Player) => (p.seat !== null ? '🪑' : '')
   return (
     <div style={standings} data-standings>
       {placings(game).map((entry) => (
         <div key={entry.player.id} style={row} data-out={entry.player.out ?? ''}>
-          <span style={{ width: 10, height: 10, borderRadius: 999, background: COLOURS[entry.index % COLOURS.length], opacity: isIn(entry.player) ? 1 : 0.35 }} />
+          <span style={{ width: 10, height: 10, borderRadius: 999, background: colours[entry.index], opacity: isIn(entry.player) ? 1 : 0.35 }} />
           <span
             style={{
               flex: 1,
@@ -300,7 +306,19 @@ const CAMERA = { fov: FOV, near: 0.1, far: 200, position: [0, 24, 16] as [number
 const GL = { antialias: true, powerPreference: 'high-performance' as const }
 
 /** The results: the last one sitting first, then whoever went out latest. */
-function Over({ game, me, nameOf, onAgain }: { game: Game; me: string; nameOf: (id: string) => string; onAgain: (() => void) | null }) {
+function Over({
+  game,
+  me,
+  nameOf,
+  colours,
+  onAgain,
+}: {
+  game: Game
+  me: string
+  nameOf: (id: string) => string
+  colours: readonly string[]
+  onAgain: (() => void) | null
+}) {
   const order = placings(game)
   const mine = order.find((entry) => entry.player.id === me)
   const winners = order.filter((entry) => entry.place === 1)
@@ -318,7 +336,7 @@ function Over({ game, me, nameOf, onAgain }: { game: Game; me: string; nameOf: (
           {order.map((entry) => (
             <div key={entry.player.id} style={row} data-place={entry.place}>
               <span style={{ opacity: 0.5, minWidth: 18 }}>{entry.place}</span>
-              <span style={{ width: 12, height: 12, borderRadius: 999, background: COLOURS[entry.index % COLOURS.length] }} />
+              <span style={{ width: 12, height: 12, borderRadius: 999, background: colours[entry.index] }} />
               <span style={{ flex: 1, fontWeight: entry.player.id === me ? 700 : 400 }}>{nameOf(entry.player.id)}</span>
               <span style={{ opacity: 0.6, fontSize: 12 }}>{entry.player.out === null ? 'last one sitting' : `out in round ${entry.player.out}`}</span>
             </div>

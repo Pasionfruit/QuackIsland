@@ -12,7 +12,8 @@
 import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
-import { getNet, useNet, usePeers } from '../../09-net'
+import { PLAYER_COLOURS, usePlayerColour } from '../../02-player'
+import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { FindYourselfScene, type SceneHands } from './FindYourselfScene'
@@ -35,16 +36,21 @@ const FONT =
 export function FindYourselfScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the game from here.
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
-  // Held back through the two seconds of Finish; see `useFinish`.
-  const results = useFinish(game.phase === 'over', () =>
-    placings(game).map((e) => ({ id: e.finder.id, place: e.place, name: nameOf(e.finder.id), colour: COLOURS[e.index % COLOURS.length], mine: e.finder.id === me })),
-  )
   const paused = useRef(run.paused)
   paused.current = run.paused
 
   const net = useNet()
   const peers = usePeers()
+  const myColour = usePlayerColour()
   const me = net.id ?? myId()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
+  // Held back through the two seconds of Finish; see `useFinish`.
+  const results = useFinish(game.phase === 'over', () =>
+    placings(game).map((e) => ({ id: e.finder.id, place: e.place, name: nameOf(e.finder.id), colour: colours[e.index], mine: e.finder.id === me })),
+  )
   const wire = useTableNet()
   const live = useRef(game)
   live.current = game
@@ -135,9 +141,9 @@ export function FindYourselfScreen({ run }: { run: MinigameRun }) {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
-                background: finder.mine ? COLOURS[index % COLOURS.length] : 'rgba(255,255,255,0.85)',
+                background: finder.mine ? colours[index] : 'rgba(255,255,255,0.85)',
                 color: finder.mine ? '#fff' : LOOK.ink,
-                boxShadow: finder.mine ? 'none' : `inset 0 0 0 2px ${COLOURS[index % COLOURS.length]}`,
+                boxShadow: finder.mine ? 'none' : `inset 0 0 0 2px ${colours[index]}`,
                 opacity: finder.left ? 0.5 : 1,
               }}
             >
@@ -152,7 +158,7 @@ export function FindYourselfScreen({ run }: { run: MinigameRun }) {
       <div style={board} onContextMenu={(e) => e.preventDefault()} data-board>
         <Stage live={live} hands={hands} />
         {ready && game.phase === 'show' && mine ? (
-          <Banner colour={COLOURS[mineIndex % COLOURS.length]} text={`Your face is the ${colourName(mineIndex)} one - watch its cup`} />
+          <Banner colour={colours[mineIndex]} text={`Your face is the ${colourName(myColour)} one - watch its cup`} />
         ) : null}
         {ready && game.phase === 'pick' && mine && (myPick === null || myPick === undefined) ? (
           <Banner colour={LOOK.ink} text="Click the cup your face is under" data="pick" />
@@ -166,15 +172,18 @@ export function FindYourselfScreen({ run }: { run: MinigameRun }) {
         ) : null}
       </div>
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} colours={colours} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }
 
-const COLOUR_NAMES = ['red', 'blue', 'yellow', 'green', 'purple', 'orange', 'teal', 'pink'] as const
-
-function colourName(index: number): string {
-  return COLOUR_NAMES[index % COLOUR_NAMES.length]
+/**
+ * The name of a colour, for a hint that has to match what is actually on
+ * screen: your face is drawn in your own lobby pick, so the word for it has to
+ * come from that pick, not from your seat.
+ */
+function colourName(hex: string): string {
+  return PLAYER_COLOURS.find((c) => c.hex.toLowerCase() === hex.toLowerCase())?.label.toLowerCase() ?? 'own'
 }
 
 function Banner({ text, colour, data }: { text: string; colour: string; data?: string }) {
@@ -215,11 +224,13 @@ function Over({
   game,
   me,
   nameOf,
+  colours,
   onAgain,
 }: {
   game: Game
   me: string
   nameOf: (id: string) => string
+  colours: readonly string[]
   onAgain: (() => void) | null
 }) {
   const order = placings(game)
@@ -245,7 +256,7 @@ function Over({
           {order.map((entry) => (
             <div key={entry.finder.id} style={scoreRow} data-place={entry.place}>
               <span style={{ opacity: 0.5, minWidth: 18 }}>{entry.place}</span>
-              <span style={{ width: 12, height: 12, borderRadius: 999, background: COLOURS[entry.index % COLOURS.length] }} />
+              <span style={{ width: 12, height: 12, borderRadius: 999, background: colours[entry.index] }} />
               <span style={{ flex: 1, fontWeight: entry.finder.id === me ? 700 : 400 }}>{nameOf(entry.finder.id)}</span>
               {TABLE.points.map((_, stage) => (
                 <span key={stage} style={{ ...stageCell, color: found(game, entry.index, stage) ? LOOK.green : LOOK.faded }}>

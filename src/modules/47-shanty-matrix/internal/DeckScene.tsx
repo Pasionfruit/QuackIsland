@@ -42,7 +42,8 @@ import {
   SRGBColorSpace,
   Vector3,
 } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { DECK, SHOT, activeShots, ballAt, barrageFor, type Shot } from './deck'
 import { COLOURS, PUSH, clock, isStanding, type Game } from './rules'
 
@@ -533,13 +534,12 @@ function Cannonballs({ live }: { live: RefObject<Game> }) {
 }
 
 /** Somebody: walking, lunging when they shove, flung tumbling overboard when a ball gets them. */
-function Body({ index, live }: { index: number; live: RefObject<Game> }) {
+function Body({ index, live, colour }: { index: number; live: RefObject<Game>; colour: string }) {
   const group = useRef<Group>(null)
   const lean = useRef<Group>(null)
   const ring = useRef<Mesh>(null)
   const arc = useRef<Mesh>(null)
   const splash = useRef<Mesh>(null)
-  const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
   const shown = useRef<{ x: number; z: number } | null>(null)
   const wet = useRef<{ x: number; z: number; at: number } | null>(null)
@@ -632,6 +632,12 @@ export function DeckScene({ live }: { live: RefObject<Game> }) {
   })
   const game = live.current
   const background = useMemo(() => new Color(PALETTE.sky), [])
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
@@ -657,7 +663,7 @@ export function DeckScene({ live }: { live: RefObject<Game> }) {
         <Ship />
         {game.players.length > 0 ? <Cannonballs key={`${game.id}:${game.seed}`} live={live} /> : null}
         {game.players.map((p, index) => (
-          <Body key={`${game.id}:${p.id}`} index={index} live={live} />
+          <Body key={`${game.id}:${p.id}`} index={index} live={live} colour={colours[index]} />
         ))}
       </Swell>
     </>

@@ -11,9 +11,10 @@
  * seen from above, the aim is wherever the mouse is.
  */
 import { Canvas } from '@react-three/fiber'
-import { memo, useEffect, useRef, useState, type RefObject } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
-import { getNet, useNet, usePeers } from '../../09-net'
+import { usePlayerColour } from '../../02-player'
+import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, playCue, useFinish, type MinigameRun } from '../../15-minigames'
 import { OfficeScene, type AimRef } from './OfficeScene'
 import {
@@ -71,11 +72,16 @@ export function OfficeScreen({ run }: { run: MinigameRun }) {
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
   const net = useNet()
   const peers = usePeers()
+  const myColour = usePlayerColour()
   const me = net.id ?? myId()
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   // The podium does the results; see `useFinish`.
   useFinish(game.over, () =>
-    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: COLOURS[e.index % COLOURS.length], mine: e.player.id === me })),
+    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: colours[e.index], mine: e.player.id === me })),
   )
   const paused = useRef(run.paused)
   paused.current = run.paused
@@ -225,14 +231,14 @@ export function OfficeScreen({ run }: { run: MinigameRun }) {
             <span style={{ ...pill, background: LOOK.ink, color: '#fff' }} data-standing={standing}>
               {standing} standing
             </span>
-            {mine ? <Parts game={game} index={mineIndex} /> : null}
+            {mine ? <Parts game={game} index={mineIndex} colour={colours[mineIndex]} /> : null}
           </>
         ) : (
           <span style={{ color: LOOK.faded }}>waiting for the host…</span>
         )}
         <span style={{ flex: 1 }} />
         {game.players.map((p, index) => {
-          const colour = COLOURS[index % COLOURS.length]
+          const colour = colours[index]
           const n = placedCount(game, index)
           return (
             <span
@@ -272,7 +278,7 @@ export function OfficeScreen({ run }: { run: MinigameRun }) {
 
         {ready && mine && armed && mine.out === null && !game.over ? (
           <div style={reload} data-cooldown={cooling.toFixed(2)}>
-            <div style={{ ...reloadFill, width: `${(1 - cooling) * 100}%`, background: cooling > 0 ? LOOK.faded : COLOURS[mineIndex % COLOURS.length] }} />
+            <div style={{ ...reloadFill, width: `${(1 - cooling) * 100}%`, background: cooling > 0 ? LOOK.faded : colours[mineIndex] }} />
             <span style={reloadText}>{cooling > 0 ? 'reloading' : 'ready'}</span>
           </div>
         ) : null}
@@ -283,14 +289,14 @@ export function OfficeScreen({ run }: { run: MinigameRun }) {
               <div key={p.id} style={feedRow}>
                 {p.by !== null && p.by !== index && game.players[p.by] ? (
                   <>
-                    <span style={{ ...dot, background: COLOURS[p.by % COLOURS.length] }} />
+                    <span style={{ ...dot, background: colours[p.by] }} />
                     <span>{nameOf(game.players[p.by].id)}</span>
                     <span style={{ opacity: 0.6 }}>💥</span>
                   </>
                 ) : (
                   <span style={{ opacity: 0.75 }}>self 💥</span>
                 )}
-                <span style={{ ...dot, background: COLOURS[index % COLOURS.length] }} />
+                <span style={{ ...dot, background: colours[index] }} />
                 <span>{nameOf(p.id)}</span>
               </div>
             ))}
@@ -324,8 +330,7 @@ function armedSince(game: Game, index: number): number | null {
 }
 
 /** Your bazooka, part by part: filled in on your desk, outlined in your arms, faint while it is still out there. */
-function Parts({ game, index }: { game: Game; index: number }) {
-  const colour = COLOURS[index % COLOURS.length]
+function Parts({ game, index, colour }: { game: Game; index: number; colour: string }) {
   const p = game.players[index]
   return (
     <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }} data-parts={placedCount(game, index)}>

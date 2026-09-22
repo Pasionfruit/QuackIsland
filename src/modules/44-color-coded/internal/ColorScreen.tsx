@@ -13,9 +13,10 @@
  * it back. A browser that will not lock gets drag-to-turn instead, and Space or E to push.
  */
 import { Canvas } from '@react-three/fiber'
-import { memo, useEffect, useRef, useState, type RefObject } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
-import { getNet, useNet, usePeers } from '../../09-net'
+import { usePlayerColour } from '../../02-player'
+import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, playCue, useFinish, type MinigameRun } from '../../15-minigames'
 import { PANEL_COLOURS, PANEL_NAMES, dealFor, wheelAngle, when } from './arena'
 import { ColorScene, PITCH, type LookRef } from './ColorScene'
@@ -73,11 +74,16 @@ export function ColorScreen({ run }: { run: MinigameRun }) {
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
   const net = useNet()
   const peers = usePeers()
+  const myColour = usePlayerColour()
   const me = net.id ?? myId()
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   // The podium does the results; see `useFinish`.
   useFinish(game.over, () =>
-    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: COLOURS[e.index % COLOURS.length], mine: e.player.id === me })),
+    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: colours[e.index], mine: e.player.id === me })),
   )
   const paused = useRef(run.paused)
   paused.current = run.paused
@@ -271,7 +277,7 @@ export function ColorScreen({ run }: { run: MinigameRun }) {
         )}
         <span style={{ flex: 1 }} />
         {game.players.map((p, index) => {
-          const colour = COLOURS[index % COLOURS.length]
+          const colour = colours[index]
           return (
             <span
               key={p.id}

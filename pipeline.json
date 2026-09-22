@@ -203,7 +203,8 @@
         "50-milf-fishing",
         "51-perfect-game",
         "52-turn-order",
-        "53-board-movement"
+        "53-board-movement",
+        "54-minigame-round"
       ],
       "generation": 1,
       "contract": {
@@ -382,6 +383,7 @@
         "20-punch-buggy",
         "21-i-see-the-light",
         "22-let-him-cook",
+        "23-lady-luck",
         "24-make-the-cut",
         "25-wack-attack",
         "26-sprint-triathlon",
@@ -395,8 +397,11 @@
         "34-sharing-is-caring",
         "35-chef-caricature",
         "36-musical-mayhem",
+        "37-wheres-midnight",
+        "38-pet-race",
         "39-ill-just-wait",
         "40-whats-your-rpm",
+        "41-one-piece",
         "42-i-just-work-here",
         "43-highest-in-the-room",
         "44-color-coded",
@@ -939,7 +944,8 @@
         "50-milf-fishing",
         "51-perfect-game",
         "52-turn-order",
-        "53-board-movement"
+        "53-board-movement",
+        "54-minigame-round"
       ],
       "generation": 1,
       "contract": {
@@ -1025,7 +1031,8 @@
       "dependents": [
         "14-garden",
         "52-turn-order",
-        "53-board-movement"
+        "53-board-movement",
+        "54-minigame-round"
       ],
       "generation": 1,
       "contract": {
@@ -1249,7 +1256,8 @@
         "14-garden",
         "15-minigames",
         "52-turn-order",
-        "53-board-movement"
+        "53-board-movement",
+        "54-minigame-round"
       ],
       "generation": 1,
       "contract": {
@@ -1472,7 +1480,8 @@
         "48-spidey-senses",
         "49-needs-a-walmart",
         "50-milf-fishing",
-        "51-perfect-game"
+        "51-perfect-game",
+        "54-minigame-round"
       ],
       "generation": 1,
       "contract": {
@@ -1667,7 +1676,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/17-messy-maze/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -1715,7 +1724,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-18T23:56:59.676Z"
+          "at": "2026-09-22T01:35:49.479Z"
         },
         "human": {
           "status": "pending"
@@ -1794,8 +1803,9 @@
       ],
       "gate": {
         "machine": {
-          "status": "green",
-          "at": "2026-09-20T18:10:18.202Z"
+          "status": "red",
+          "at": "2026-09-22T01:25:05.830Z",
+          "failed": "typecheck"
         },
         "human": {
           "status": "pending"
@@ -1832,7 +1842,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/19-duck-hunt/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -1874,8 +1884,9 @@
       ],
       "gate": {
         "machine": {
-          "status": "green",
-          "at": "2026-09-19T23:01:17.493Z"
+          "status": "red",
+          "at": "2026-09-22T01:14:10.412Z",
+          "failed": "test"
         },
         "human": {
           "status": "pending"
@@ -1995,7 +2006,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/21-i-see-the-light/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -2043,7 +2054,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T17:56:12.335Z"
+          "at": "2026-09-22T01:29:09.488Z"
         },
         "human": {
           "status": "pending"
@@ -2079,7 +2090,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/22-let-him-cook/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -2132,7 +2143,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T17:56:50.756Z"
+          "at": "2026-09-22T01:28:32.946Z"
         },
         "human": {
           "status": "pending"
@@ -2160,6 +2171,7 @@
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
+        "02-player",
         "09-net",
         "15-minigames"
       ],
@@ -2167,7 +2179,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/23-lady-luck/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -2210,7 +2222,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-19T23:01:54.010Z"
+          "at": "2026-09-22T01:49:19.794Z"
         },
         "human": {
           "status": "pending"
@@ -2288,8 +2300,9 @@
       ],
       "gate": {
         "machine": {
-          "status": "green",
-          "at": "2026-09-18T19:15:03.449Z"
+          "status": "red",
+          "at": "2026-09-22T01:25:02.614Z",
+          "failed": "build"
         },
         "human": {
           "status": "pending"
@@ -2367,8 +2380,9 @@
       ],
       "gate": {
         "machine": {
-          "status": "green",
-          "at": "2026-09-20T04:23:40.635Z"
+          "status": "red",
+          "at": "2026-09-22T01:25:53.399Z",
+          "failed": "typecheck"
         },
         "human": {
           "status": "pending"
@@ -2445,8 +2459,9 @@
       ],
       "gate": {
         "machine": {
-          "status": "green",
-          "at": "2026-09-18T23:58:33.800Z"
+          "status": "red",
+          "at": "2026-09-22T01:38:14.902Z",
+          "failed": "typecheck"
         },
         "human": {
           "status": "pending"
@@ -2482,7 +2497,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/27-find-yourself/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -2525,7 +2540,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-18T22:45:20.529Z"
+          "at": "2026-09-22T01:33:46.540Z"
         },
         "human": {
           "status": "pending"
@@ -2561,7 +2576,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/28-feeding-time/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -2609,7 +2624,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T16:03:28.447Z"
+          "at": "2026-09-22T01:29:38.997Z"
         },
         "human": {
           "status": "pending"
@@ -2697,8 +2712,9 @@
       ],
       "gate": {
         "machine": {
-          "status": "green",
-          "at": "2026-09-20T17:57:27.860Z"
+          "status": "red",
+          "at": "2026-09-22T01:21:20.545Z",
+          "failed": "typecheck"
         },
         "human": {
           "status": "pending"
@@ -2734,7 +2750,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/30-synchronize-steps/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -2782,7 +2798,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-18T22:56:44.634Z"
+          "at": "2026-09-22T01:41:50.774Z"
         },
         "human": {
           "status": "pending"
@@ -2818,7 +2834,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/31-helping-dad/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -2866,7 +2882,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T04:52:44.275Z"
+          "at": "2026-09-22T01:34:08.331Z"
         },
         "human": {
           "status": "pending"
@@ -2902,7 +2918,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/32-hes-one-shot/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -2960,7 +2976,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T18:10:53.597Z"
+          "at": "2026-09-22T01:30:56.689Z"
         },
         "human": {
           "status": "pending"
@@ -2996,7 +3012,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/33-keyboard-warrior/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -3044,7 +3060,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-17T16:45:30.311Z"
+          "at": "2026-09-22T01:32:53.906Z"
         },
         "human": {
           "status": "pending"
@@ -3080,7 +3096,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/34-sharing-is-caring/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -3143,7 +3159,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-18T22:56:15.967Z"
+          "at": "2026-09-22T01:40:45.418Z"
         },
         "human": {
           "status": "pending"
@@ -3180,7 +3196,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/35-chef-caricature/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -3228,7 +3244,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-18T23:50:50.717Z"
+          "at": "2026-09-22T01:31:38.552Z"
         },
         "human": {
           "status": "pending"
@@ -3316,8 +3332,9 @@
       ],
       "gate": {
         "machine": {
-          "status": "green",
-          "at": "2026-09-18T23:02:34.626Z"
+          "status": "red",
+          "at": "2026-09-22T01:39:24.580Z",
+          "failed": "typecheck"
         },
         "human": {
           "status": "pending"
@@ -3345,6 +3362,7 @@
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
+        "02-player",
         "09-net",
         "15-minigames"
       ],
@@ -3433,6 +3451,7 @@
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
+        "02-player",
         "09-net",
         "15-minigames"
       ],
@@ -3534,7 +3553,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/39-ill-just-wait/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -3577,7 +3596,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-18T23:33:17.968Z"
+          "at": "2026-09-22T01:32:16.010Z"
         },
         "human": {
           "status": "pending"
@@ -3612,7 +3631,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/40-whats-your-rpm/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -3660,7 +3679,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T04:51:31.609Z"
+          "at": "2026-09-22T01:31:10.498Z"
         },
         "human": {
           "status": "pending"
@@ -3687,6 +3706,7 @@
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
+        "02-player",
         "09-net",
         "15-minigames"
       ],
@@ -3773,7 +3793,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/42-i-just-work-here/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -3826,7 +3846,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-19T04:01:57.793Z"
+          "at": "2026-09-22T01:28:14.899Z"
         },
         "human": {
           "status": "pending"
@@ -3862,7 +3882,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/43-highest-in-the-room/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -3915,7 +3935,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T05:10:53.803Z"
+          "at": "2026-09-22T01:41:09.291Z"
         },
         "human": {
           "status": "pending"
@@ -4012,8 +4032,9 @@
       ],
       "gate": {
         "machine": {
-          "status": "green",
-          "at": "2026-09-20T17:58:04.236Z"
+          "status": "red",
+          "at": "2026-09-22T01:18:36.729Z",
+          "failed": "typecheck"
         },
         "human": {
           "status": "pending"
@@ -4101,8 +4122,9 @@
       ],
       "gate": {
         "machine": {
-          "status": "green",
-          "at": "2026-09-20T18:36:08.750Z"
+          "status": "red",
+          "at": "2026-09-22T01:24:10.764Z",
+          "failed": "typecheck"
         },
         "human": {
           "status": "pending"
@@ -4137,7 +4159,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/46-youre-the-bomb/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -4190,7 +4212,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-19T04:45:22.495Z"
+          "at": "2026-09-22T01:42:17.595Z"
         },
         "human": {
           "status": "pending"
@@ -4225,7 +4247,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/47-shanty-matrix/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -4273,7 +4295,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-19T15:32:09.847Z"
+          "at": "2026-09-22T01:29:48.280Z"
         },
         "human": {
           "status": "pending"
@@ -4308,7 +4330,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/48-spidey-senses/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -4361,7 +4383,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T17:41:06.370Z"
+          "at": "2026-09-22T01:35:13.145Z"
         },
         "human": {
           "status": "pending"
@@ -4448,8 +4470,9 @@
       ],
       "gate": {
         "machine": {
-          "status": "green",
-          "at": "2026-09-19T16:50:46.597Z"
+          "status": "red",
+          "at": "2026-09-22T01:18:17.062Z",
+          "failed": "typecheck"
         },
         "human": {
           "status": "pending"
@@ -4536,8 +4559,9 @@
       ],
       "gate": {
         "machine": {
-          "status": "green",
-          "at": "2026-09-20T18:11:29.079Z"
+          "status": "red",
+          "at": "2026-09-22T01:21:35.642Z",
+          "failed": "typecheck"
         },
         "human": {
           "status": "pending"
@@ -4572,7 +4596,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/51-perfect-game/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -4625,7 +4649,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T05:11:28.863Z"
+          "at": "2026-09-22T01:31:05.336Z"
         },
         "human": {
           "status": "pending"
@@ -4782,11 +4806,13 @@
         "13-modes",
         "52-turn-order"
       ],
-      "dependents": [],
-      "generation": 1,
+      "dependents": [
+        "54-minigame-round"
+      ],
+      "generation": 2,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/53-board-movement/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -4823,14 +4849,18 @@
       ],
       "gate": {
         "machine": {
-          "status": "red",
-          "at": "2026-09-20T22:41:50.436Z",
-          "failed": "test"
+          "status": "unknown"
         },
         "human": {
           "status": "pending"
         },
-        "history": []
+        "history": [
+          {
+            "at": "2026-09-22T00:40:32.166Z",
+            "result": "pass",
+            "note": "Two-browser board movement approved"
+          }
+        ]
       },
       "freeze": null,
       "nonGoals": [
@@ -4844,9 +4874,91 @@
         "trianglesMax": 0
       },
       "measured": null,
-      "blockers": [
-        "Full gate is blocked by a reproducible failure in dependency 10-party's board.test.ts: BOARD.tileRadius is mutated during that dependency's own test process, causing either the eight-duck tile-size assertion or dotted-line clearance assertion to fail. Module 53 only reads the public BOARD contract, its focused 11 tests pass, and project boundaries prohibit repairing dependency internals from this module."
+      "blockers": [],
+      "unfreezes": [
+        {
+          "at": "2026-09-22T01:49:00.231Z",
+          "reason": "Slow tile traversal and add mouse-boosted dice spinning",
+          "priorSha256": "1a358f170d35bf5ae5c3ef17a237ade3bbd45523d16c968bce8e8ec855bacb45",
+          "generation": 1
+        }
       ]
+    },
+    {
+      "id": "54-minigame-round",
+      "phase": "P7",
+      "title": "Volcano minigame round: after every completed board round, select one free-for-all minigame, brief every player, allow host-run practice attempts, run one final attempt, and publish final placements",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "09-net",
+        "10-party",
+        "13-modes",
+        "15-minigames",
+        "53-board-movement"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": "src/modules/54-minigame-round/contract.snapshot.d.ts",
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "54.1",
+          "title": "Pure seeded minigame-round lifecycle, free-for-all catalogue selection, commands, snapshots and validation",
+          "status": "done"
+        },
+        {
+          "id": "54.2",
+          "title": "Host-authoritative revisioned room synchronization, idempotency and late-subscriber recovery",
+          "status": "done"
+        },
+        {
+          "id": "54.3",
+          "title": "Shared description and controls briefing with host-only practice and final-attempt controls",
+          "status": "done"
+        },
+        {
+          "id": "54.4",
+          "title": "Launch the selected existing minigame for every player in practice or final mode and capture final placements",
+          "status": "done"
+        },
+        {
+          "id": "54.5",
+          "title": "Consume board round completion exactly once and expose a stable handoff for reward dice",
+          "status": "done"
+        },
+        {
+          "id": "54.6",
+          "title": "Two-player and eight-player verification, workflow scripts, contract and MODULE.md",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-22T01:42:56.186Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No golden, silver or bronze reward dice; a downstream module consumes final placements",
+        "No board-round resume before rewards are applied",
+        "No new minigame implementation or modification of the existing minigame catalogue",
+        "No durable database or server-authoritative simulation"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
     }
   ]
 }

@@ -38,7 +38,8 @@ import {
   type MeshBasicMaterial,
   type PointLight,
 } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { DAD, HOLD, frameScene } from './camera'
 import { GRID, JUNK, junkAt, mazeFor, type Point } from './maze'
 import { COLOURS, TORCH, angleOf, finishPoint, startPoint, type Game } from './rules'
@@ -235,13 +236,12 @@ function Dad({ live }: { live: RefObject<Game> }) {
 }
 
 /** One player's torch: its ring and glow, and - your own - the light it casts and where the mouse is. */
-function TorchView({ index, live, aim }: { index: number; live: RefObject<Game>; aim: RefObject<Point | null> }) {
+function TorchView({ index, live, aim, colour }: { index: number; live: RefObject<Game>; aim: RefObject<Point | null>; colour: string }) {
   const group = useRef<Group>(null)
   const ring = useRef<Mesh>(null)
   const pool = useRef<Mesh>(null)
   const lamp = useRef<PointLight>(null)
   const cursor = useRef<Mesh>(null)
-  const colour = COLOURS[index % COLOURS.length]
   const lampColour = useMemo(() => new Color('#ffffff').lerp(new Color(colour), 0.35), [colour])
   useFrame(({ clock }) => {
     const g = live.current
@@ -311,6 +311,12 @@ export function HelpingDadScene({ live, aim }: { live: RefObject<Game>; aim: Ref
   useFrame(() => redraw())
   const game = live.current
   const background = useMemo(() => new Color(PALETTE.background), [])
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
@@ -326,7 +332,7 @@ export function HelpingDadScene({ live, aim }: { live: RefObject<Game>; aim: Ref
           <Maze seed={game.seed} />
           <Junk live={live} />
           {game.players.map((torch, index) => (
-            <TorchView key={`${game.id}:${torch.id}`} index={index} live={live} aim={aim} />
+            <TorchView key={`${game.id}:${torch.id}`} index={index} live={live} aim={aim} colour={colours[index]} />
           ))}
         </Turning>
       ) : null}

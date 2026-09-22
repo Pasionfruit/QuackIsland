@@ -18,7 +18,8 @@
 import { useFrame } from '@react-three/fiber'
 import { memo, useLayoutEffect, useMemo, useReducer, useRef, type RefObject } from 'react'
 import { CanvasTexture, Color, Group, SRGBColorSpace, type DirectionalLight } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { STAGE, frameScene, standX } from './camera'
 import { COLOURS, WATCH, showing, stopwatch, targetFor, type Game } from './rules'
 
@@ -159,7 +160,7 @@ const Stage = memo(function Stage() {
 })
 
 /** The hand, the cover over the face while it is hidden, and at the end the answer. */
-function Dial({ live }: { live: RefObject<Game> }) {
+function Dial({ live, colours }: { live: RefObject<Game>; colours: readonly string[] }) {
   const hand = useRef<Group>(null)
   const cover = useRef<Group>(null)
   const answer = useRef<Group>(null)
@@ -210,7 +211,7 @@ function Dial({ live }: { live: RefObject<Game> }) {
             return (
               <mesh key={timer.id} position={[-Math.sin(a) * r, Math.cos(a) * r, 0.06]}>
                 <sphereGeometry args={[0.15, 12, 10]} />
-                <meshStandardMaterial color={COLOURS[index % COLOURS.length]} roughness={0.4} />
+                <meshStandardMaterial color={colours[index]} roughness={0.4} />
               </mesh>
             )
           })
@@ -244,9 +245,8 @@ function Dial({ live }: { live: RefObject<Game> }) {
 }
 
 /** One player at their button; the button goes down once they are known to have stopped. */
-function Player({ index, count, live }: { index: number; count: number; live: RefObject<Game> }) {
+function Player({ index, count, live, colour }: { index: number; count: number; live: RefObject<Game>; colour: string }) {
   const cap = useRef<Group>(null)
-  const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
   const x = standX(index, count)
   useFrame(() => {
@@ -292,15 +292,21 @@ export function TimeItScene({ live }: { live: RefObject<Game> }) {
   useFrame(() => redraw())
   const game = live.current
   const background = useMemo(() => new Color(PALETTE.background), [])
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
       <FixedCamera />
       <Lights />
       <Stage />
-      <Dial live={live} />
+      <Dial live={live} colours={colours} />
       {game.players.map((timer, index) => (
-        <Player key={`${game.id}:${timer.id}`} index={index} count={game.players.length} live={live} />
+        <Player key={`${game.id}:${timer.id}`} index={index} count={game.players.length} live={live} colour={colours[index]} />
       ))}
     </>
   )

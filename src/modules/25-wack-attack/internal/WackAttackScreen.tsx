@@ -12,9 +12,10 @@
  * stunned for a moment.
  */
 import { Canvas } from '@react-three/fiber'
-import { memo, useEffect, useRef, useState, type RefObject } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
-import { getNet, useNet, usePeers } from '../../09-net'
+import { usePlayerColour } from '../../02-player'
+import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { WackAttackScene } from './WackAttackScene'
@@ -39,16 +40,21 @@ const FONT =
 export function WackAttackScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the round from here.
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
-  // Held back through the two seconds of Finish; see `useFinish`.
-  const results = useFinish(game.over, () =>
-    placings(game).map((e) => ({ id: e.whacker.id, place: e.place, name: nameOf(e.whacker.id), colour: COLOURS[e.index % COLOURS.length], mine: e.whacker.id === me })),
-  )
   const paused = useRef(run.paused)
   paused.current = run.paused
 
   const net = useNet()
   const peers = usePeers()
+  const myColour = usePlayerColour()
   const me = net.id ?? myId()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
+  // Held back through the two seconds of Finish; see `useFinish`.
+  const results = useFinish(game.over, () =>
+    placings(game).map((e) => ({ id: e.whacker.id, place: e.place, name: nameOf(e.whacker.id), colour: colours[e.index], mine: e.whacker.id === me })),
+  )
   const wire = useFieldNet()
   const live = useRef(game)
   live.current = game
@@ -188,9 +194,9 @@ export function WackAttackScreen({ run }: { run: MinigameRun }) {
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
-              background: whacker.mine ? COLOURS[index % COLOURS.length] : 'rgba(255,255,255,0.75)',
+              background: whacker.mine ? colours[index] : 'rgba(255,255,255,0.75)',
               color: whacker.mine ? '#fff' : LOOK.ink,
-              boxShadow: whacker.mine ? 'none' : `inset 0 0 0 2px ${COLOURS[index % COLOURS.length]}`,
+              boxShadow: whacker.mine ? 'none' : `inset 0 0 0 2px ${colours[index]}`,
             }}
           >
             <span style={{ maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis' }}>{nameOf(whacker.id)}</span>
@@ -210,7 +216,7 @@ export function WackAttackScreen({ run }: { run: MinigameRun }) {
         ) : null}
       </div>
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} colours={colours} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }
@@ -259,11 +265,13 @@ function Over({
   game,
   me,
   nameOf,
+  colours,
   onAgain,
 }: {
   game: Game
   me: string
   nameOf: (id: string) => string
+  colours: readonly string[]
   onAgain: (() => void) | null
 }) {
   const order = placings(game)
@@ -279,7 +287,7 @@ function Over({
           {order.map((entry) => (
             <div key={entry.whacker.id} style={scoreRow} data-place={entry.place}>
               <span style={{ opacity: 0.5, minWidth: 18 }}>{entry.place}</span>
-              <span style={{ width: 12, height: 12, borderRadius: 999, background: COLOURS[entry.index % COLOURS.length] }} />
+              <span style={{ width: 12, height: 12, borderRadius: 999, background: colours[entry.index] }} />
               <span style={{ flex: 1, fontWeight: entry.whacker.id === me ? 700 : 400 }}>{nameOf(entry.whacker.id)}</span>
               <span style={{ opacity: 0.6, fontSize: 12 }}>
                 {entry.whacker.whacks} moles{entry.whacker.golden > 0 ? ` · ${entry.whacker.golden} golden` : ''}

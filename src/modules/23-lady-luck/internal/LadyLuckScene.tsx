@@ -32,6 +32,8 @@ import {
   type MeshBasicMaterial,
 } from 'three'
 import { createRng, hashSeed } from '../../00-core'
+import { usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { HALF, frameScene, groundHit } from './camera'
 import { COLOURS, FIELD, cloverAt, fieldFor, type Game } from './rules'
 
@@ -218,10 +220,9 @@ function ClaimRing({ clover, colour, at, live, seed }: { clover: number; colour:
 }
 
 /** A click that did not claim: a ring in the clicker's colour that shrinks and fades. */
-function MissRing({ index, live }: { index: number; live: RefObject<Game> }) {
+function MissRing({ index, colour, live }: { index: number; colour: string; live: RefObject<Game> }) {
   const group = useRef<Group>(null)
   const material = useRef<MeshBasicMaterial>(null)
-  const colour = COLOURS[index % COLOURS.length]
   useFrame(() => {
     const g = live.current
     const hunter = g.players[index]
@@ -298,6 +299,12 @@ export function LadyLuckScene({ live, hands }: { live: RefObject<Game>; hands: S
   const background = useMemo(() => new Color(PALETTE.background), [])
   const ready = game.players.length > 0
   const lucky = [...game.lucky.map((l) => l.clover), ...game.claims.map((c) => c.clover)].sort((x, y) => x - y).join(',')
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
@@ -308,10 +315,10 @@ export function LadyLuckScene({ live, hands }: { live: RefObject<Game>; hands: S
       <Meadow seed={game.seed} />
       {ready ? <Clovers seed={game.seed} lucky={lucky} /> : null}
       {game.claims.map((c) => (
-        <ClaimRing key={`${game.id}:${c.clover}`} clover={c.clover} colour={COLOURS[c.player % COLOURS.length]} at={c.at} live={live} seed={game.seed} />
+        <ClaimRing key={`${game.id}:${c.clover}`} clover={c.clover} colour={colours[c.player]} at={c.at} live={live} seed={game.seed} />
       ))}
       {game.players.map((p, index) => (
-        <MissRing key={`${game.id}:${p.id}`} index={index} live={live} />
+        <MissRing key={`${game.id}:${p.id}`} index={index} colour={colours[index]} live={live} />
       ))}
       <Claiming live={live} hands={hands} />
       <Trigger live={live} hands={hands} />

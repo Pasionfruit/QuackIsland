@@ -18,7 +18,8 @@
 import { useFrame } from '@react-three/fiber'
 import { useMemo, useReducer, useRef, type RefObject } from 'react'
 import { CanvasTexture, Color, Group, SRGBColorSpace, type Mesh, type MeshBasicMaterial, type MeshStandardMaterial, type PerspectiveCamera } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { FOV, TILE, cameraFor, standPoint } from './camera'
 import { COLOURS, ROUND, type Game } from './rules'
 
@@ -112,12 +113,11 @@ function headOf(count: number, index: number) {
 }
 
 /** One player: their body in their colour, a disc under it, and the marks over their head. */
-function PlayerView({ index, live }: { index: number; live: RefObject<Game> }) {
+function PlayerView({ index, live, colour }: { index: number; live: RefObject<Game>; colour: string }) {
   const body = useRef<Group>(null)
   const cross = useRef<Mesh>(null)
   const tick = useRef<Mesh>(null)
   const plus = useRef<Mesh>(null)
-  const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
 
   useFrame(() => {
@@ -173,7 +173,7 @@ function PlayerView({ index, live }: { index: number; live: RefObject<Game> }) {
 }
 
 /** The letter: pops up where it floats, bobs, and flies to whoever got it - or drops. */
-function LetterTile({ live }: { live: RefObject<Game> }) {
+function LetterTile({ live, colours }: { live: RefObject<Game>; colours: readonly string[] }) {
   const group = useRef<Group>(null)
   const tile = useRef<Mesh>(null)
   const face = useRef<Mesh>(null)
@@ -215,7 +215,7 @@ function LetterTile({ live }: { live: RefObject<Game> }) {
       z += (head.z - z) * k
       scale *= 1 - 0.85 * k
       turn *= 1 - k
-      tint.set(PALETTE.tile).lerp(new Color(COLOURS[letter.winner % COLOURS.length]), Math.min(1, decidedFor * 6))
+      tint.set(PALETTE.tile).lerp(new Color(colours[letter.winner]), Math.min(1, decidedFor * 6))
       if (decidedFor >= FLY) group.current.visible = false
     } else if (decidedFor >= 0) {
       // Nobody: it drops out of the air and fades.
@@ -257,6 +257,12 @@ export function KeyboardWarriorScene({ live }: { live: RefObject<Game> }) {
   })
   const game = live.current
   const background = useMemo(() => new Color(PALETTE.sky), [])
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
@@ -266,9 +272,9 @@ export function KeyboardWarriorScene({ live }: { live: RefObject<Game> }) {
       <FixedCamera />
       <Arena />
       {game.players.map((p, index) => (
-        <PlayerView key={`${game.id}:${p.id}`} index={index} live={live} />
+        <PlayerView key={`${game.id}:${p.id}`} index={index} live={live} colour={colours[index]} />
       ))}
-      <LetterTile live={live} />
+      <LetterTile live={live} colours={colours} />
     </>
   )
 }

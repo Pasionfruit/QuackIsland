@@ -17,7 +17,8 @@
 import { useFrame } from '@react-three/fiber'
 import { useMemo, useReducer, useRef, type RefObject } from 'react'
 import { CanvasTexture, Color, Group, RepeatWrapping, SRGBColorSpace, type Mesh, type PerspectiveCamera } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { BOARD, CHEF, DUCK, FOV, cameraFor } from './camera'
 import { outlineFor } from './outlines'
 import { COLOURS, drawer, phase, type Game } from './rules'
@@ -94,7 +95,7 @@ const px = (u: number) => ((u + 1) / 2) * PAPER
 const py = (v: number) => ((1 - v) / 2) * PAPER
 
 /** The easel, its paper drawn from the game whenever what is on it changes. */
-function Easel({ live }: { live: RefObject<Game> }) {
+function Easel({ live, colours }: { live: RefObject<Game>; colours: readonly string[] }) {
   const canvas = useMemo(() => {
     const c = document.createElement('canvas')
     c.width = PAPER
@@ -114,7 +115,7 @@ function Easel({ live }: { live: RefObject<Game> }) {
     const now = phase(g)
     const stroke = g.stroke
     const wiped = g.erasedAt !== null && g.elapsed - g.erasedAt < 0.35
-    const key = `${g.id}:${g.turn}:${g.outline}:${now}:${stroke?.id ?? '-'}:${stroke?.points.length ?? 0}:${wiped}`
+    const key = `${g.id}:${g.turn}:${g.outline}:${now}:${stroke?.id ?? '-'}:${stroke?.points.length ?? 0}:${wiped}:${colours[drawer(g)]}`
     if (key === drawn.current) return
     drawn.current = key
     const c = canvas.getContext('2d')!
@@ -147,7 +148,7 @@ function Easel({ live }: { live: RefObject<Game> }) {
         })
         c.stroke()
         // The ink.
-        c.strokeStyle = COLOURS[drawer(g) % COLOURS.length]
+        c.strokeStyle = colours[drawer(g)]
         c.lineWidth = 12
         c.beginPath()
         for (let i = 0; i < stroke.points.length; i += 2) {
@@ -193,7 +194,7 @@ function Easel({ live }: { live: RefObject<Game> }) {
 }
 
 /** The dish that was just accepted, flying off the paper into the duck's beak. */
-function Dish({ live }: { live: RefObject<Game> }) {
+function Dish({ live, colours }: { live: RefObject<Game>; colours: readonly string[] }) {
   const mesh = useRef<Mesh>(null)
   const canvas = useMemo(() => {
     const c = document.createElement('canvas')
@@ -223,7 +224,7 @@ function Dish({ live }: { live: RefObject<Game> }) {
       c.beginPath()
       c.arc(128, 128, 124, 0, Math.PI * 2)
       c.fill()
-      c.strokeStyle = COLOURS[drawer(g) % COLOURS.length]
+      c.strokeStyle = colours[drawer(g)]
       c.lineWidth = 7
       c.lineCap = 'round'
       c.lineJoin = 'round'
@@ -344,10 +345,9 @@ function Hat() {
 }
 
 /** One player: at the easel with a hat on while it is their turn, otherwise watching from the back wall either side of it. */
-function PlayerView({ index, live }: { index: number; live: RefObject<Game> }) {
+function PlayerView({ index, live, colour }: { index: number; live: RefObject<Game>; colour: string }) {
   const group = useRef<Group>(null)
   const hat = useRef<Group>(null)
-  const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
   useFrame(({ clock }) => {
     const g = live.current
@@ -395,6 +395,12 @@ export function ChefCaricatureScene({ live }: { live: RefObject<Game> }) {
   })
   const game = live.current
   const background = useMemo(() => new Color(PALETTE.wall), [])
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
@@ -402,11 +408,11 @@ export function ChefCaricatureScene({ live }: { live: RefObject<Game> }) {
       <directionalLight position={[-5, 12, 10]} intensity={2} castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={-10} shadow-camera-right={10} shadow-camera-top={10} shadow-camera-bottom={-4} />
       <FixedCamera />
       <Kitchen />
-      <Easel live={live} />
+      <Easel live={live} colours={colours} />
       <Duck live={live} />
-      <Dish live={live} />
+      <Dish live={live} colours={colours} />
       {game.players.map((p, index) => (
-        <PlayerView key={`${game.id}:${p.id}`} index={index} live={live} />
+        <PlayerView key={`${game.id}:${p.id}`} index={index} live={live} colour={colours[index]} />
       ))}
     </>
   )

@@ -15,7 +15,8 @@
 import { useFrame } from '@react-three/fiber'
 import { memo, useLayoutEffect, useMemo, useReducer, useRef, type RefObject } from 'react'
 import { Color, DoubleSide, Group, type DirectionalLight, type Mesh, type MeshBasicMaterial } from 'three'
-import { PLAYER, createAvatar } from '../../02-player'
+import { PLAYER, createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { frameScene } from './camera'
 import { ARENA, COLOURS, canTake, holderOf, type Rock, type Round, type Wearer } from './rules'
 
@@ -129,10 +130,9 @@ function headingToYaw(heading: number): number {
 }
 
 /** One player: the pill in their colour, reeling on the spot while dazed, leaning into a boost. */
-function PlayerBody({ player, index }: { player: Wearer; index: number }) {
+function PlayerBody({ player, colour }: { player: Wearer; colour: string }) {
   const holder = useRef<Group>(null)
   const streak = useRef<Group>(null)
-  const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
   useFrame(({ clock }) => {
     const group = holder.current
@@ -290,7 +290,7 @@ function WearerRing({ live }: { live: RefObject<Round> }) {
 }
 
 /** A ring under your own body, so you can find yourself among eight. */
-function YouMarker({ player, index }: { player: Wearer; index: number }) {
+function YouMarker({ player, colour }: { player: Wearer; colour: string }) {
   const ring = useRef<Group>(null)
   useFrame(() => {
     if (!ring.current) return
@@ -300,7 +300,7 @@ function YouMarker({ player, index }: { player: Wearer; index: number }) {
     <group ref={ring}>
       <mesh rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[ARENA.body * 1.2, ARENA.body * 1.6, 28]} />
-        <meshBasicMaterial color={COLOURS[index % COLOURS.length]} />
+        <meshBasicMaterial color={colour} />
       </mesh>
     </group>
   )
@@ -311,6 +311,12 @@ export function SharingIsCaringScene({ live }: { live: RefObject<Round> }) {
   useFrame(() => redraw())
   const round = live.current
   const background = useMemo(() => new Color(PALETTE.background), [])
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => round.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [round.players, myColour, peers],
+  )
   const mineIndex = round.players.findIndex((p) => p.mine)
   return (
     <>
@@ -322,9 +328,9 @@ export function SharingIsCaringScene({ live }: { live: RefObject<Round> }) {
       <Rocks rocks={round.rocks} />
       <Pedestal live={live} />
       <WearerRing live={live} />
-      {mineIndex >= 0 ? <YouMarker player={round.players[mineIndex]} index={mineIndex} /> : null}
+      {mineIndex >= 0 ? <YouMarker player={round.players[mineIndex]} colour={colours[mineIndex]} /> : null}
       {round.players.map((player, index) => (
-        <PlayerBody key={`${round.id}:${player.id}`} player={player} index={index} />
+        <PlayerBody key={`${round.id}:${player.id}`} player={player} colour={colours[index]} />
       ))}
       {round.players.length > 0 ? <Crown key={round.id} live={live} /> : null}
     </>

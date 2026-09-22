@@ -12,7 +12,8 @@
 import { useFrame } from '@react-three/fiber'
 import { memo, useLayoutEffect, useMemo, useReducer, useRef, type RefObject } from 'react'
 import { Color, Group, Plane, Raycaster, Vector3, type DirectionalLight, type Mesh, type MeshBasicMaterial } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { frameScene } from './camera'
 import { COLOURS, RING, radiusAt, type Fighter, type Point, type Round } from './rules'
 
@@ -112,12 +113,11 @@ function headingToYaw(heading: number): number {
  * Once out they leave: off the edge they drop; punched, they are thrown back
  * away from whoever hit them, spinning. Either way they are gone in a second.
  */
-function FighterBody({ fighter, index, round }: { fighter: Fighter; index: number; round: Round }) {
+function FighterBody({ fighter, round, colour }: { fighter: Fighter; round: Round; colour: string }) {
   const holder = useRef<Group>(null)
   const arm = useRef<Mesh>(null)
   const fist = useRef<Mesh>(null)
   const burst = useRef<Mesh>(null)
-  const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
 
   useFrame(() => {
@@ -206,7 +206,7 @@ function PointerAim({ aim }: { aim: RefObject<Point | null> }) {
 }
 
 /** A ring under your own fighter, so you can find yourself among eight. */
-function YouMarker({ fighter, index }: { fighter: Fighter; index: number }) {
+function YouMarker({ fighter, colour }: { fighter: Fighter; colour: string }) {
   const ring = useRef<Group>(null)
   useFrame(() => {
     if (!ring.current) return
@@ -217,7 +217,7 @@ function YouMarker({ fighter, index }: { fighter: Fighter; index: number }) {
     <group ref={ring}>
       <mesh rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[RING.body * 1.4, RING.body * 1.8, 28]} />
-        <meshBasicMaterial color={COLOURS[index % COLOURS.length]} />
+        <meshBasicMaterial color={colour} />
       </mesh>
     </group>
   )
@@ -229,6 +229,12 @@ export function PunchBuggyScene({ live, aim }: { live: RefObject<Round>; aim: Re
   const round = live.current
   const background = useMemo(() => new Color(PALETTE.background), [])
   const mineIndex = round.fighters.findIndex((f) => f.mine)
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => round.fighters.map((fighter, index) => rosterColour(fighter, index, COLOURS, myColour, peers)),
+    [round.fighters, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
@@ -237,9 +243,9 @@ export function PunchBuggyScene({ live, aim }: { live: RefObject<Round>; aim: Re
       <Daylight />
       <PointerAim aim={aim} />
       <Platform live={live} />
-      {mineIndex >= 0 ? <YouMarker fighter={round.fighters[mineIndex]} index={mineIndex} /> : null}
+      {mineIndex >= 0 ? <YouMarker fighter={round.fighters[mineIndex]} colour={colours[mineIndex]} /> : null}
       {round.fighters.map((fighter, index) => (
-        <FighterBody key={`${round.id}:${fighter.id}`} fighter={fighter} index={index} round={round} />
+        <FighterBody key={`${round.id}:${fighter.id}`} fighter={fighter} round={round} colour={colours[index]} />
       ))}
     </>
   )

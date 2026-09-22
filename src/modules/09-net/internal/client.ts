@@ -142,6 +142,37 @@ export function getPeers(): PeerInfo[] {
   return roster.get()
 }
 
+/** A player a minigame arena is painting: enough to tell whose colour is whose. */
+export interface RosterEntry {
+  id: string
+  mine?: boolean
+  bot?: boolean
+}
+
+/**
+ * The colour to paint a roster seat with in a minigame arena.
+ *
+ * Yours is always your own live pick, wherever in the roster you sit. A
+ * peer's is theirs once they have said one. A bot has never picked anything,
+ * and neither has a peer whose first packet has not arrived yet, so both fall
+ * back to `palette[index % palette.length]` - the fixed, tell-apart-able seat
+ * colour every arena already had before a lobby could be customised.
+ */
+export function rosterColour(
+  entry: RosterEntry,
+  index: number,
+  palette: readonly string[],
+  myColour: string,
+  peers: readonly PeerInfo[],
+): string {
+  if (entry.mine) return myColour
+  if (!entry.bot) {
+    const peer = peers.find((p) => p.id === entry.id)
+    if (peer?.colour) return peer.colour
+  }
+  return palette[index % palette.length]
+}
+
 /** Rebuilt whenever the room changes, so React sees a new array. */
 function publishRoster(): void {
   const list: PeerInfo[] = []

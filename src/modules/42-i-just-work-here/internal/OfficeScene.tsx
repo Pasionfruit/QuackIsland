@@ -44,7 +44,8 @@ import {
   Vector2,
   Vector3,
 } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { OFFICE, officeFor, type Kind } from './office'
 import {
   BLAST,
@@ -255,11 +256,10 @@ const OfficeView = memo(function OfficeView({ seed }: { seed: number }) {
 })
 
 /** A desk in play: a chair and a nameplate in its owner's colour, and a beam over it while you carry something home. */
-function HomeDesk({ index, live }: { index: number; live: RefObject<Game> }) {
+function HomeDesk({ index, live, colour }: { index: number; live: RefObject<Game>; colour: string }) {
   const beam = useRef<Mesh>(null)
   const g = live.current
   const desk = deskOf(g, index)
-  const colour = COLOURS[index % COLOURS.length]
   const north = desk.spot.z > desk.block.z1
   const cx = (desk.block.x0 + desk.block.x1) / 2
   const front = north ? desk.block.z1 : desk.block.z0
@@ -321,12 +321,12 @@ function makePart(part: number, colour: string): Group {
 }
 
 /** A piece: on the floor with a ring round it, over its carrier's head, or on its owner's desk. */
-function PieceView({ index, live }: { index: number; live: RefObject<Game> }) {
+function PieceView({ index, live, colours }: { index: number; live: RefObject<Game>; colours: readonly string[] }) {
   const group = useRef<Group>(null)
   const ring = useRef<Mesh>(null)
   const g = live.current
   const piece = g.pieces[index]
-  const colour = COLOURS[piece.owner % COLOURS.length]
+  const colour = colours[piece.owner]
   const model = useMemo(() => makePart(piece.part, colour), [piece.part, colour])
   const spin = (index * 1.7) % (Math.PI * 2)
 
@@ -394,11 +394,10 @@ function makeBazooka(colour: string): Group {
 }
 
 /** Somebody: in their colour, armed or not, eased towards where the host last had them. */
-function BodyView({ index, live }: { index: number; live: RefObject<Game> }) {
+function BodyView({ index, live, colour }: { index: number; live: RefObject<Game>; colour: string }) {
   const group = useRef<Group>(null)
   const turn = useRef<Group>(null)
   const gun = useRef<Group>(null)
-  const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
   const bazooka = useMemo(() => makeBazooka(colour), [colour])
   const shown = useRef<{ x: number; z: number } | null>(null)
@@ -445,7 +444,7 @@ const ROCKET_NOSE = new ConeGeometry(ROCKET.radius * 0.7, 0.22, 10)
 const FLAME = new SphereGeometry(0.16, 10, 8)
 
 /** The rockets in the air, from a small pool. */
-function Rockets({ live }: { live: RefObject<Game> }) {
+function Rockets({ live, colours }: { live: RefObject<Game>; colours: readonly string[] }) {
   const pool = useMemo(
     () =>
       Array.from({ length: 24 }, () => {
@@ -474,7 +473,7 @@ function Rockets({ live }: { live: RefObject<Game> }) {
       m.rotation.set(0, r.yaw, 0)
       const flame = m.children[2] as Mesh
       flame.scale.setScalar(0.8 + 0.4 * Math.sin(clock.elapsedTime * 40 + used))
-      ;((m.children[1] as Mesh).material as MeshStandardMaterial).color.set(COLOURS[r.by % COLOURS.length])
+      ;((m.children[1] as Mesh).material as MeshStandardMaterial).color.set(colours[r.by])
     }
     for (let i = used; i < pool.length; i++) pool[i].visible = false
   })
@@ -555,7 +554,7 @@ const along = new Vector3()
  * Your guide. Armed: where the rocket would go and how far its blast would
  * reach - red if you are in it. Carrying: an arrow at your feet, pointing home.
  */
-function Guide({ live }: { live: RefObject<Game> }) {
+function Guide({ live, colours }: { live: RefObject<Game>; colours: readonly string[] }) {
   const line = useRef<Mesh>(null)
   const ring = useRef<Mesh>(null)
   const arrow = useRef<Mesh>(null)
@@ -597,7 +596,7 @@ function Guide({ live }: { live: RefObject<Game> }) {
       arrow.current.rotation.set(-Math.PI / 2, 0, yaw)
     }
   })
-  const colour = COLOURS[Math.max(0, live.current.players.findIndex((p) => p.mine)) % COLOURS.length]
+  const colour = colours[Math.max(0, live.current.players.findIndex((p) => p.mine))]
   return (
     <group>
       <mesh ref={line} geometry={LINE} visible={false} renderOrder={5}>
@@ -630,6 +629,12 @@ export function OfficeScene({ live, aim }: { live: RefObject<Game>; aim: RefObje
   const game = live.current
   const background = useMemo(() => new Color(PALETTE.outside), [])
   const ready = game.players.length > 0
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
@@ -648,14 +653,16 @@ export function OfficeScene({ live, aim }: { live: RefObject<Game>; aim: RefObje
       />
       <Rig live={live} aim={aim} />
       {ready ? <OfficeView seed={game.seed} /> : null}
-      {ready ? game.players.map((p, index) => <HomeDesk key={`${game.id}:desk:${p.id}`} index={index} live={live} />) : null}
-      {ready ? game.pieces.map((_, index) => <PieceView key={`${game.id}:piece:${index}`} index={index} live={live} />) : null}
+      {ready
+        ? game.players.map((p, index) => <HomeDesk key={`${game.id}:desk:${p.id}`} index={index} live={live} colour={colours[index]} />)
+        : null}
+      {ready ? game.pieces.map((_, index) => <PieceView key={`${game.id}:piece:${index}`} index={index} live={live} colours={colours} />) : null}
       {game.players.map((p, index) => (
-        <BodyView key={`${game.id}:${p.id}`} index={index} live={live} />
+        <BodyView key={`${game.id}:${p.id}`} index={index} live={live} colour={colours[index]} />
       ))}
-      <Rockets live={live} />
+      <Rockets live={live} colours={colours} />
       <Blasts live={live} />
-      {ready ? <Guide key={`${game.id}:guide`} live={live} /> : null}
+      {ready ? <Guide key={`${game.id}:guide`} live={live} colours={colours} /> : null}
     </>
   )
 }

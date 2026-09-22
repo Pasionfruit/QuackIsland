@@ -14,7 +14,8 @@
 import { Canvas } from '@react-three/fiber'
 import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
-import { getNet, useNet, usePeers } from '../../09-net'
+import { usePlayerColour } from '../../02-player'
+import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { MakeTheCutScene, type SceneHands } from './MakeTheCutScene'
@@ -37,16 +38,21 @@ const FONT =
 export function MakeTheCutScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the game from here.
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
-  // Held back through the two seconds of Finish; see `useFinish`.
-  const results = useFinish(game.phase === 'over', () =>
-    placings(game).map((e) => ({ id: e.cutter.id, place: e.place, name: nameOf(e.cutter.id), colour: COLOURS[e.index % COLOURS.length], mine: e.cutter.id === me })),
-  )
   const paused = useRef(run.paused)
   paused.current = run.paused
 
   const net = useNet()
   const peers = usePeers()
+  const myColour = usePlayerColour()
   const me = net.id ?? myId()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
+  // Held back through the two seconds of Finish; see `useFinish`.
+  const results = useFinish(game.phase === 'over', () =>
+    placings(game).map((e) => ({ id: e.cutter.id, place: e.place, name: nameOf(e.cutter.id), colour: colours[e.index], mine: e.cutter.id === me })),
+  )
   const wire = useTowerNet()
   const live = useRef(game)
   live.current = game
@@ -163,7 +169,7 @@ export function MakeTheCutScreen({ run }: { run: MinigameRun }) {
             key={cutter.id}
             style={{
               ...pill,
-              background: cutter.out ? 'rgba(61,58,54,0.12)' : COLOURS[index % COLOURS.length],
+              background: cutter.out ? 'rgba(61,58,54,0.12)' : colours[index],
               color: cutter.out ? LOOK.faded : '#fff',
               textDecoration: cutter.out ? 'line-through' : 'none',
               outline: turn === index ? `3px solid ${LOOK.ink}` : 'none',
@@ -176,12 +182,12 @@ export function MakeTheCutScreen({ run }: { run: MinigameRun }) {
 
       <div style={{ ...board, cursor: myTurn ? 'crosshair' : 'default' }} onContextMenu={(e) => e.preventDefault()} data-board>
         <Stage live={live} hands={hands} />
-        {game.phase === 'draw' && ready ? <Draw game={game} nameOf={nameOf} /> : null}
+        {game.phase === 'draw' && ready ? <Draw game={game} nameOf={nameOf} colours={colours} /> : null}
         {game.phase === 'suspense' && game.pending ? <Suspense game={game} nameOf={nameOf} /> : null}
         {game.phase === 'result' && game.last ? <Result last={game.last} game={game} nameOf={nameOf} /> : null}
         {myTurn && game.phase === 'turn' ? (
           <Banner
-            colour={tooFar ? LOOK.faded : COLOURS[mineIndex % COLOURS.length]}
+            colour={tooFar ? LOOK.faded : colours[mineIndex]}
             text={tooFar ? 'Too far - walk closer to that string' : 'Your turn - walk to a string, aim, and click to cut it'}
             data="your-turn"
           />
@@ -189,7 +195,7 @@ export function MakeTheCutScreen({ run }: { run: MinigameRun }) {
         {mine?.out && game.phase !== 'over' && game.phase !== 'result' ? <Banner colour={LOOK.faded} text="You are off the tower - watching" /> : null}
       </div>
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} colours={colours} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }
@@ -221,7 +227,7 @@ function Status({ game, nameOf }: { game: Game; nameOf: (id: string) => string }
 }
 
 /** The draw: names flicking past, slowing, landing on whoever cuts first. */
-function Draw({ game, nameOf }: { game: Game; nameOf: (id: string) => string }) {
+function Draw({ game, nameOf, colours }: { game: Game; nameOf: (id: string) => string; colours: readonly string[] }) {
   const settled = game.clock >= TOWER.draw - 0.9
   // Flicks slow down as the draw goes on.
   const flick = Math.floor((game.clock * 12) / (1 + game.clock))
@@ -230,9 +236,9 @@ function Draw({ game, nameOf }: { game: Game; nameOf: (id: string) => string }) 
   const name = cutter.mine ? 'You' : nameOf(cutter.id)
   return (
     <div style={drawWrap}>
-      <div style={{ ...drawCard, borderColor: COLOURS[shown % COLOURS.length] }} data-first={settled ? game.players[game.turn].id : ''}>
+      <div style={{ ...drawCard, borderColor: colours[shown] }} data-first={settled ? game.players[game.turn].id : ''}>
         <div style={{ color: LOOK.faded, fontSize: 13 }}>{settled ? 'First to cut' : 'Choosing who cuts first'}</div>
-        <div style={{ fontSize: 26, fontWeight: 800, color: COLOURS[shown % COLOURS.length] }}>{name}</div>
+        <div style={{ fontSize: 26, fontWeight: 800, color: colours[shown] }}>{name}</div>
       </div>
     </div>
   )
@@ -309,11 +315,13 @@ function Over({
   game,
   me,
   nameOf,
+  colours,
   onAgain,
 }: {
   game: Game
   me: string
   nameOf: (id: string) => string
+  colours: readonly string[]
   onAgain: (() => void) | null
 }) {
   const order = placings(game)
@@ -337,7 +345,7 @@ function Over({
           {order.map((entry) => (
             <div key={entry.cutter.id} style={scoreRow} data-place={entry.place}>
               <span style={{ opacity: 0.5, minWidth: 18 }}>{entry.place}</span>
-              <span style={{ width: 12, height: 12, borderRadius: 999, background: COLOURS[entry.index % COLOURS.length] }} />
+              <span style={{ width: 12, height: 12, borderRadius: 999, background: colours[entry.index] }} />
               <span style={{ flex: 1, fontWeight: entry.cutter.id === me ? 700 : 400 }}>{nameOf(entry.cutter.id)}</span>
               <span style={{ opacity: 0.6, fontSize: 12 }}>{how(entry.cutter)}</span>
             </div>

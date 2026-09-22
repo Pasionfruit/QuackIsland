@@ -17,6 +17,7 @@
 import { Canvas } from '@react-three/fiber'
 import { useEffect, useRef, useState } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
+import { usePlayerColour } from '../../02-player'
 import { getNet, useNet, usePeers } from '../../09-net'
 import { CUES, replayMinigame, useCueOnChange, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
@@ -33,7 +34,6 @@ const LOOK = {
   sun: '#ffc94d',
   danger: '#c8443c',
   safe: '#4f9e44',
-  you: PALETTE.you,
 } as const
 
 const FONT =
@@ -198,6 +198,7 @@ export function ProbableStopScreen({ run }: { run: MinigameRun }) {
 
 /** Where you stand, in words, top right. */
 function Status({ game }: { game: Game }) {
+  const myColour = usePlayerColour()
   const mine = game.players.find((p) => p.mine)
   if (!mine) return <span style={{ color: LOOK.faded }}>watching</span>
   // Somebody whose bridge is about to go is not told until it does: the colour draining out of them is the warning.
@@ -216,7 +217,7 @@ function Status({ game }: { game: Game }) {
       locked in on path {mine.pick + 1} - move to change
     </Pill>
   ) : (
-    <Pill colour={LOOK.you}>A / D to move · click a path · Space to lock in</Pill>
+    <Pill colour={myColour}>A / D to move · click a path · Space to lock in</Pill>
   )
 }
 
@@ -261,6 +262,7 @@ function PathCard({
   onPick: () => void
   onHover: (on: boolean) => void
 }) {
+  const myColour = usePlayerColour()
   const mine = game.players.find((p) => p.mine)
   const here = game.players.filter((p) => p.pick === lane && (p.alive || p.outIn === game.round))
   const yours = !!mine && mine.alive && mine.pick === lane
@@ -276,8 +278,8 @@ function PathCard({
       onMouseLeave={() => onHover(false)}
       style={{
         ...card,
-        borderColor: yours ? LOOK.you : hovered ? colour : 'transparent',
-        boxShadow: yours ? `0 0 0 3px ${LOOK.you}, 0 4px 0 rgba(0,0,0,0.15)` : card.boxShadow,
+        borderColor: yours ? myColour : hovered ? colour : 'transparent',
+        boxShadow: yours ? `0 0 0 3px ${myColour}, 0 4px 0 rgba(0,0,0,0.15)` : card.boxShadow,
         cursor: game.phase === 'choosing' ? 'pointer' : 'default',
       }}
     >
@@ -286,7 +288,7 @@ function PathCard({
       <span style={{ color: LOOK.faded, fontStyle: 'italic' }}>{bridgeCondition(game, lane)}</span>
       <span style={{ color: LOOK.faded }}>{here.length === 1 ? '1 on it' : `${here.length} on it`}</span>
       {yours ? (
-        <span style={{ fontWeight: 700, color: LOOK.you }}>{mine?.confirmed ? 'you ✓' : 'you'}</span>
+        <span style={{ fontWeight: 700, color: myColour }}>{mine?.confirmed ? 'you ✓' : 'you'}</span>
       ) : null}
       {revealed ? (
         <span style={{ ...tag, background: held ? LOOK.safe : LOOK.danger }}>{held ? 'held' : 'dropped'}</span>

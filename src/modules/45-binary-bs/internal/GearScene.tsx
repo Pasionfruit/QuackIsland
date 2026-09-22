@@ -17,7 +17,8 @@
 import { useFrame } from '@react-three/fiber'
 import { useMemo, useReducer, useRef, type RefObject } from 'react'
 import { CanvasTexture, Color, DoubleSide, Group, Mesh, MeshBasicMaterial, SRGBColorSpace, Vector3 } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { hubValue, turnAngle, viewOf } from './display'
 import { COLOURS, GEAR, clock, markedSide, numberFor, when, type Game, type Result } from './rules'
 
@@ -70,7 +71,7 @@ function resultNow(g: Game): Result | undefined {
 const spot = new Vector3()
 
 /** The gear: a wedge per side with its teeth, the hub with the number, the stripes on the marked side. */
-function Gear({ live }: { live: RefObject<Game> }) {
+function Gear({ live, colours }: { live: RefObject<Game>; colours: readonly string[] }) {
   const turn = useRef<Group>(null)
   const wedges = useRef<(Group | null)[]>([])
   const stripe = useRef<Mesh>(null)
@@ -116,7 +117,7 @@ function Gear({ live }: { live: RefObject<Game> }) {
     <group ref={turn}>
       {Array.from({ length: sides }, (_, side) => {
         const player = g.seats[side]
-        const colour = new Color(player !== undefined ? COLOURS[player % COLOURS.length] : PALETTE.steel).lerp(new Color(PALETTE.steel), 0.35)
+        const colour = new Color(player !== undefined ? colours[player] : PALETTE.steel).lerp(new Color(PALETTE.steel), 0.35)
         // Cylinder angles run from +Z; sides run clockwise from north - so side s is centred on π - s·step.
         const start = Math.PI - (side + 0.5) * step + 0.015
         return (
@@ -176,10 +177,9 @@ function Mark() {
 }
 
 /** Somebody on their side: riding the gear round, falling with their side, a badge over their head. */
-function Body({ index, live }: { index: number; live: RefObject<Game> }) {
+function Body({ index, live, colour }: { index: number; live: RefObject<Game>; colour: string }) {
   const group = useRef<Group>(null)
   const tag = useRef<Mesh>(null)
-  const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
   const shown = useRef<{ x: number; z: number } | null>(null)
   useFrame(({ camera }, delta) => {
@@ -243,6 +243,12 @@ export function GearScene({ live }: { live: RefObject<Game> }) {
   })
   const game = viewOf(live.current)
   const background = useMemo(() => new Color(PALETTE.sky), [])
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
@@ -259,10 +265,10 @@ export function GearScene({ live }: { live: RefObject<Game> }) {
         shadow-camera-near={1}
         shadow-camera-far={60}
       />
-      {game.players.length > 0 ? <Gear key={`${game.id}:${game.round}:${game.seats.join(',')}`} live={live} /> : null}
+      {game.players.length > 0 ? <Gear key={`${game.id}:${game.round}:${game.seats.join(',')}`} live={live} colours={colours} /> : null}
       <Mark />
       {game.players.map((p, index) => (
-        <Body key={`${game.id}:${p.id}`} index={index} live={live} />
+        <Body key={`${game.id}:${p.id}`} index={index} live={live} colour={colours[index]} />
       ))}
     </>
   )

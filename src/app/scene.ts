@@ -24,6 +24,7 @@ import { getGameMode } from '../modules/13-modes'
 import { getMinigameScreen } from '../modules/15-minigames'
 import { TurnOrder } from '../modules/52-turn-order'
 import { BoardMovement } from '../modules/53-board-movement'
+import { MinigameRound } from '../modules/54-minigame-round'
 import { isSettingsOpen } from './settingsOpen'
 
 /**
@@ -195,6 +196,7 @@ export const SCENE: SceneEntry[] = [
   { id: '10-party', order: 100, enabled: true, Component: PartyIfChosen },
   { id: '52-turn-order', order: 520, enabled: true, Component: TurnOrder },
   { id: '53-board-movement', order: 530, enabled: true, Component: BoardMovement },
+  { id: '54-minigame-round', order: 540, enabled: true, Component: MinigameRound },
 ]
 
 // Toggling a module on or off has to reach the canvas, which is a different

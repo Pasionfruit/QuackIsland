@@ -13,9 +13,10 @@
  * see it. Stand still and the maze walks out from under you.
  */
 import { Canvas } from '@react-three/fiber'
-import { memo, useEffect, useRef, useState, type RefObject } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
-import { getNet, useNet, usePeers } from '../../09-net'
+import { usePlayerColour } from '../../02-player'
+import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV, aimAt } from './camera'
 import { HelpingDadScene } from './HelpingDadScene'
@@ -47,16 +48,21 @@ const ordinal = (n: number) => `${n}${n % 10 === 1 && n % 100 !== 11 ? 'st' : n 
 export function HelpingDadScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the game from here.
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
+  const net = useNet()
+  const peers = usePeers()
+  const myColour = usePlayerColour()
+  const me = net.id ?? myId()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   // Held back through the two seconds of Finish; see `useFinish`.
   const results = useFinish(game.over, () =>
-    placings(game).map((e) => ({ id: e.torch.id, place: e.place, name: nameOf(e.torch.id), colour: COLOURS[e.index % COLOURS.length], mine: e.torch.id === me })),
+    placings(game).map((e) => ({ id: e.torch.id, place: e.place, name: nameOf(e.torch.id), colour: colours[e.index], mine: e.torch.id === me })),
   )
   const paused = useRef(run.paused)
   paused.current = run.paused
 
-  const net = useNet()
-  const peers = usePeers()
-  const me = net.id ?? myId()
   const wire = useTorchNet()
   const live = useRef(game)
   live.current = game
@@ -133,9 +139,9 @@ export function HelpingDadScreen({ run }: { run: MinigameRun }) {
             key={torch.id}
             style={{
               ...pill,
-              background: torch.mine ? COLOURS[index % COLOURS.length] : 'rgba(255,255,255,0.85)',
+              background: torch.mine ? colours[index] : 'rgba(255,255,255,0.85)',
               color: torch.mine ? LOOK.ink : LOOK.ink,
-              boxShadow: torch.mine ? 'none' : `inset 0 0 0 2px ${COLOURS[index % COLOURS.length]}`,
+              boxShadow: torch.mine ? 'none' : `inset 0 0 0 2px ${colours[index]}`,
               opacity: torch.left ? 0.5 : 1,
             }}
             data-hits={torch.hits}
@@ -165,7 +171,7 @@ export function HelpingDadScreen({ run }: { run: MinigameRun }) {
         ) : null}
       </div>
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} colours={colours} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }
@@ -198,11 +204,13 @@ function Over({
   game,
   me,
   nameOf,
+  colours,
   onAgain,
 }: {
   game: Game
   me: string
   nameOf: (id: string) => string
+  colours: readonly string[]
   onAgain: (() => void) | null
 }) {
   const order = placings(game)
@@ -217,7 +225,7 @@ function Over({
           {order.map((entry) => (
             <div key={entry.torch.id} style={scoreRow} data-place={entry.place}>
               <span style={{ opacity: 0.5, minWidth: 18 }}>{entry.place}</span>
-              <span style={{ width: 12, height: 12, borderRadius: 999, background: COLOURS[entry.index % COLOURS.length] }} />
+              <span style={{ width: 12, height: 12, borderRadius: 999, background: colours[entry.index] }} />
               <span style={{ flex: 1, fontWeight: entry.torch.id === me ? 700 : 400 }}>{nameOf(entry.torch.id)}</span>
               <span style={{ font: `600 12px/1.4 ${FONT}`, color: LOOK.faded }}>{entry.torch.hits === 1 ? '1 wall' : `${entry.torch.hits} walls`}</span>
               <span style={{ minWidth: 92, textAlign: 'right', font: `600 13px/1.4 ${FONT}`, color: entry.torch.finished !== null ? LOOK.green : LOOK.faded }}>

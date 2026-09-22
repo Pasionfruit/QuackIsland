@@ -11,9 +11,10 @@
  * count for nothing: a held key is one press.
  */
 import { Canvas } from '@react-three/fiber'
-import { memo, useEffect, useRef, useState, type RefObject } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
-import { getNet, useNet, usePeers } from '../../09-net'
+import { usePlayerColour } from '../../02-player'
+import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, playCue, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { TriathlonScene } from './TriathlonScene'
@@ -59,16 +60,21 @@ const LEG_ICON: Record<Leg, string> = { swim: '🏊', bike: '🚴', run: '🏃',
 export function TriathlonScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the race from here.
   const [race, setRace] = useState<Race>(() => (getNet().host ? newRace() : waitingRace()))
-  // Held back through the two seconds of Finish; see `useFinish`.
-  const results = useFinish(race.over, () =>
-    placings(race).map((e) => ({ id: e.racer.id, place: e.place, name: nameOf(e.racer.id), colour: COLOURS[e.index % COLOURS.length], mine: e.racer.id === me })),
-  )
   const paused = useRef(run.paused)
   paused.current = run.paused
 
   const net = useNet()
   const peers = usePeers()
+  const myColour = usePlayerColour()
   const me = net.id ?? myId()
+  const colours = useMemo(
+    () => race.racers.map((racer, index) => rosterColour(racer, index, COLOURS, myColour, peers)),
+    [race.racers, myColour, peers],
+  )
+  // Held back through the two seconds of Finish; see `useFinish`.
+  const results = useFinish(race.over, () =>
+    placings(race).map((e) => ({ id: e.racer.id, place: e.place, name: nameOf(e.racer.id), colour: colours[e.index], mine: e.racer.id === me })),
+  )
   const wire = useRaceNet()
   const live = useRef(race)
   live.current = race
@@ -174,9 +180,9 @@ export function TriathlonScreen({ run }: { run: MinigameRun }) {
             key={racer.id}
             style={{
               ...pill,
-              background: racer.mine ? COLOURS[index % COLOURS.length] : 'rgba(255,255,255,0.8)',
+              background: racer.mine ? colours[index] : 'rgba(255,255,255,0.8)',
               color: racer.mine ? '#fff' : LOOK.ink,
-              boxShadow: racer.mine ? 'none' : `inset 0 0 0 2px ${COLOURS[index % COLOURS.length]}`,
+              boxShadow: racer.mine ? 'none' : `inset 0 0 0 2px ${colours[index]}`,
               opacity: racer.left ? 0.5 : 1,
             }}
             data-leg={legOf(racer, sentence)}
@@ -196,7 +202,7 @@ export function TriathlonScreen({ run }: { run: MinigameRun }) {
         {ready && mine && !race.over ? <Task leg={leg} own={own} racer={mine} race={race} sentence={sentence} /> : null}
       </div>
 
-      {results && ready ? <Over race={race} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
+      {results && ready ? <Over race={race} me={me} nameOf={nameOf} colours={colours} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }
@@ -289,11 +295,13 @@ function Over({
   race,
   me,
   nameOf,
+  colours,
   onAgain,
 }: {
   race: Race
   me: string
   nameOf: (id: string) => string
+  colours: readonly string[]
   onAgain: (() => void) | null
 }) {
   const order = placings(race)
@@ -321,7 +329,7 @@ function Over({
             return (
               <div key={r.id} style={scoreRow} data-place={entry.place}>
                 <span style={{ opacity: 0.5, minWidth: 18 }}>{entry.place}</span>
-                <span style={{ width: 12, height: 12, borderRadius: 999, background: COLOURS[entry.index % COLOURS.length] }} />
+                <span style={{ width: 12, height: 12, borderRadius: 999, background: colours[entry.index] }} />
                 <span style={{ flex: 1, fontWeight: r.id === me ? 700 : 400, overflow: 'hidden', textOverflow: 'ellipsis' }}>{nameOf(r.id)}</span>
                 <span style={splitCell}>{legTime(0, r.swimAt)}</span>
                 <span style={splitCell}>{legTime(r.swimAt, r.bikeAt)}</span>

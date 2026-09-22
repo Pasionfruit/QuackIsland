@@ -10,9 +10,10 @@
  * right over is a big one; straight is nothing at all.
  */
 import { Canvas } from '@react-three/fiber'
-import { memo, useEffect, useRef, useState, type RefObject } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
-import { getNet, useNet, usePeers } from '../../09-net'
+import { usePlayerColour } from '../../02-player'
+import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, playCue, useFinish, type MinigameRun } from '../../15-minigames'
 import { FISH, LENGTH, bendAt, playBack, type Bite } from './pond'
 import { PondScene } from './PondScene'
@@ -41,9 +42,14 @@ export function PondScreen({ run }: { run: MinigameRun }) {
   const peers = usePeers()
   const me = net.id ?? myId()
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
+  const myColour = usePlayerColour()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   // The podium does the results; see `useFinish`.
   useFinish(game.over, () =>
-    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: COLOURS[e.index % COLOURS.length], mine: e.player.id === me })),
+    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: colours[e.index], mine: e.player.id === me })),
   )
   const paused = useRef(run.paused)
   paused.current = run.paused
@@ -129,7 +135,7 @@ export function PondScreen({ run }: { run: MinigameRun }) {
         {ranked.map(({ player: p, index }) => (
           <span
             key={p.id}
-            style={{ ...pill, background: p.left ? 'rgba(255,255,255,0.85)' : COLOURS[index % COLOURS.length], color: p.left ? LOOK.faded : '#fff', opacity: p.left ? 0.45 : 1, outline: p.mine ? `2px solid ${LOOK.ink}` : 'none', outlineOffset: 1 }}
+            style={{ ...pill, background: p.left ? 'rgba(255,255,255,0.85)' : colours[index], color: p.left ? LOOK.faded : '#fff', opacity: p.left ? 0.45 : 1, outline: p.mine ? `2px solid ${LOOK.ink}` : 'none', outlineOffset: 1 }}
             data-total={total(game, index)}
           >
             {nameOf(p.id)} · {kg(total(game, index))}

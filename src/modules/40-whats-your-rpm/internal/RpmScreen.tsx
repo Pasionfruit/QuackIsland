@@ -20,9 +20,10 @@
  * nobody else anything, so it is not on the wire.
  */
 import { Canvas } from '@react-three/fiber'
-import { memo, useEffect, useRef, useState, type RefObject } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
-import { getNet, useNet, usePeers } from '../../09-net'
+import { usePlayerColour } from '../../02-player'
+import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { TopTimer, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { adCopyAt, popupAt, reelAt, type PopupCopy } from './reels'
@@ -66,16 +67,21 @@ const SAMPLES = 2
 export function RpmScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the game from here.
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
-  // Held back through the two seconds of Finish; see `useFinish`.
-  const results = useFinish(game.over, () =>
-    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: COLOURS[e.index % COLOURS.length], mine: e.player.id === me })),
-  )
   const paused = useRef(run.paused)
   paused.current = run.paused
 
   const net = useNet()
   const peers = usePeers()
+  const myColour = usePlayerColour()
   const me = net.id ?? myId()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
+  // Held back through the two seconds of Finish; see `useFinish`.
+  const results = useFinish(game.over, () =>
+    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: colours[e.index], mine: e.player.id === me })),
+  )
   const wire = useFeedNet()
   const live = useRef(game)
   live.current = game
@@ -191,9 +197,9 @@ export function RpmScreen({ run }: { run: MinigameRun }) {
             key={p.id}
             style={{
               ...pill,
-              background: p.mine ? COLOURS[index % COLOURS.length] : 'rgba(255,255,255,0.85)',
+              background: p.mine ? colours[index] : 'rgba(255,255,255,0.85)',
               color: p.mine ? '#fff' : LOOK.ink,
-              boxShadow: p.mine ? 'none' : `inset 0 0 0 2px ${COLOURS[index % COLOURS.length]}`,
+              boxShadow: p.mine ? 'none' : `inset 0 0 0 2px ${colours[index]}`,
               opacity: p.left ? 0.5 : 1,
             }}
             data-progress={Math.floor(p.progress)}
@@ -233,7 +239,7 @@ export function RpmScreen({ run }: { run: MinigameRun }) {
         </div>
       </div>
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} colours={colours} onAgain={net.host ? replayMinigame : null} /> : null}
       <style>{KEYFRAMES}</style>
     </div>
   )
@@ -454,7 +460,19 @@ const CAMERA = { fov: FOV, near: 0.5, far: 200, position: [0, 12, 20] as [number
 const GL = { antialias: true, powerPreference: 'high-performance' as const }
 
 /** The results: finishers first, soonest first, then everybody by how far they got. */
-function Over({ game, me, nameOf, onAgain }: { game: Game; me: string; nameOf: (id: string) => string; onAgain: (() => void) | null }) {
+function Over({
+  game,
+  me,
+  nameOf,
+  colours,
+  onAgain,
+}: {
+  game: Game
+  me: string
+  nameOf: (id: string) => string
+  colours: readonly string[]
+  onAgain: (() => void) | null
+}) {
   const order = placings(game)
   const mine = order.find((entry) => entry.player.id === me)
   const winners = order.filter((entry) => entry.place === 1)
@@ -468,7 +486,7 @@ function Over({ game, me, nameOf, onAgain }: { game: Game; me: string; nameOf: (
           {order.map((entry) => (
             <div key={entry.player.id} style={scoreRow} data-place={entry.place}>
               <span style={{ opacity: 0.5, minWidth: 18 }}>{entry.place}</span>
-              <span style={{ width: 12, height: 12, borderRadius: 999, background: COLOURS[entry.index % COLOURS.length] }} />
+              <span style={{ width: 12, height: 12, borderRadius: 999, background: colours[entry.index] }} />
               <span style={{ flex: 1, fontWeight: entry.player.id === me ? 700 : 400 }}>{nameOf(entry.player.id)}</span>
               <span style={{ minWidth: 70, textAlign: 'right', font: `600 12px/1.4 ${MONO}`, color: entry.player.finishedAt === null ? LOOK.faded : LOOK.green }}>
                 {entry.player.finishedAt === null ? `${Math.floor(entry.player.progress)}/${FEED.reels}` : `${entry.player.finishedAt.toFixed(1)}s`}

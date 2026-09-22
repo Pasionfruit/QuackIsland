@@ -10,9 +10,10 @@
  * the round lasts; the last pick counts.
  */
 import { Canvas } from '@react-three/fiber'
-import { memo, useEffect, useRef, useState, type RefObject } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
-import { getNet, useNet, usePeers } from '../../09-net'
+import { usePlayerColour } from '../../02-player'
+import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, playCue, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { FOV } from './camera'
 import { PALETTE, SynchronizeStepsScene, outcomeColour } from './SynchronizeStepsScene'
@@ -36,16 +37,21 @@ const KEYS: Record<string, number> = { Digit1: 1, Numpad1: 1, Digit4: 4, Numpad4
 export function SynchronizeStepsScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the round from here.
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
-  // Held back through the two seconds of Finish; see `useFinish`.
-  const results = useFinish(game.phase === 'over', () =>
-    placings(game).map((e) => ({ id: e.stepper.id, place: e.place, name: nameOf(e.stepper.id), colour: COLOURS[e.index % COLOURS.length], mine: e.stepper.id === me })),
-  )
   const paused = useRef(run.paused)
   paused.current = run.paused
 
   const net = useNet()
   const peers = usePeers()
+  const myColour = usePlayerColour()
   const me = net.id ?? myId()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
+  // Held back through the two seconds of Finish; see `useFinish`.
+  const results = useFinish(game.phase === 'over', () =>
+    placings(game).map((e) => ({ id: e.stepper.id, place: e.place, name: nameOf(e.stepper.id), colour: colours[e.index], mine: e.stepper.id === me })),
+  )
   const wire = useTowerNet()
   const live = useRef(game)
   live.current = game
@@ -109,9 +115,9 @@ export function SynchronizeStepsScreen({ run }: { run: MinigameRun }) {
             key={stepper.id}
             style={{
               ...pill,
-              background: stepper.mine ? COLOURS[index % COLOURS.length] : 'rgba(255,255,255,0.85)',
+              background: stepper.mine ? colours[index] : 'rgba(255,255,255,0.85)',
               color: stepper.mine ? '#fff' : LOOK.ink,
-              boxShadow: stepper.mine ? 'none' : `inset 0 0 0 2px ${COLOURS[index % COLOURS.length]}`,
+              boxShadow: stepper.mine ? 'none' : `inset 0 0 0 2px ${colours[index]}`,
               opacity: stepper.out ? 0.5 : 1,
             }}
             data-step={stepper.step}
@@ -123,7 +129,7 @@ export function SynchronizeStepsScreen({ run }: { run: MinigameRun }) {
 
       <div style={board} onContextMenu={(e) => e.preventDefault()} data-board>
         <Stage live={live} />
-        {ready && game.phase === 'reveal' ? <Reveal game={game} nameOf={nameOf} /> : null}
+        {ready && game.phase === 'reveal' ? <Reveal game={game} nameOf={nameOf} colours={colours} /> : null}
       </div>
 
       {ready && game.phase !== 'over' ? (
@@ -178,13 +184,13 @@ export function SynchronizeStepsScreen({ run }: { run: MinigameRun }) {
         </div>
       ) : null}
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} colours={colours} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }
 
 /** What each number did this round: who picked it, and whether they stayed, moved or dropped. */
-function Reveal({ game, nameOf }: { game: Game; nameOf: (id: string) => string }) {
+function Reveal({ game, nameOf, colours }: { game: Game; nameOf: (id: string) => string; colours: readonly string[] }) {
   const groups = TOWER.options.map((option) => ({
     option,
     who: game.players
@@ -203,7 +209,7 @@ function Reveal({ game, nameOf }: { game: Game; nameOf: (id: string) => string }
               <div style={{ font: `700 13px/1.3 ${FONT}` }}>{what}</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 3 }}>
                 {who.map(({ stepper, index }) => (
-                  <span key={stepper.id} style={{ ...chip, background: COLOURS[index % COLOURS.length] }}>
+                  <span key={stepper.id} style={{ ...chip, background: colours[index] }}>
                     {nameOf(stepper.id)}
                     {stepper.last?.auto ? ' (late)' : ''}
                   </span>
@@ -245,11 +251,13 @@ function Over({
   game,
   me,
   nameOf,
+  colours,
   onAgain,
 }: {
   game: Game
   me: string
   nameOf: (id: string) => string
+  colours: readonly string[]
   onAgain: (() => void) | null
 }) {
   const order = placings(game)
@@ -267,7 +275,7 @@ function Over({
           {order.map((entry) => (
             <div key={entry.stepper.id} style={scoreRow} data-place={entry.place}>
               <span style={{ opacity: 0.5, minWidth: 18 }}>{entry.place}</span>
-              <span style={{ width: 12, height: 12, borderRadius: 999, background: COLOURS[entry.index % COLOURS.length] }} />
+              <span style={{ width: 12, height: 12, borderRadius: 999, background: colours[entry.index] }} />
               <span style={{ flex: 1, fontWeight: entry.stepper.id === me ? 700 : 400 }}>{nameOf(entry.stepper.id)}</span>
               <span style={{ font: `600 13px/1.4 ${FONT}`, color: entry.stepper.out ? LOOK.faded : LOOK.ink }}>
                 {entry.stepper.out ? `out in round ${entry.stepper.out.round + 1}, from step ${entry.stepper.out.from}` : `step ${entry.stepper.step}`}

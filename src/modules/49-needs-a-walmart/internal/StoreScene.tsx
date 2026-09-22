@@ -20,7 +20,8 @@
 import { useFrame } from '@react-three/fiber'
 import { useMemo, useReducer, useRef, type RefObject } from 'react'
 import { BoxGeometry, CanvasTexture, Color, CylinderGeometry, DoubleSide, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, RepeatWrapping, SphereGeometry, SRGBColorSpace, TorusGeometry, Vector3 } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { COUNTERS, ITEMS, LANES, SHELVES, SOLIDS, STORE } from './store'
 import { COLOURS, RAM, isShopping, reachable, stillNeeds, stunned, type Game } from './rules'
 
@@ -389,11 +390,10 @@ function makeTrolley(): Group {
 }
 
 /** Somebody: pushing their trolley, lunging as they ram, spinning when rammed, gone once through. */
-function Shopper({ index, live, carts }: { index: number; live: RefObject<Game>; carts: RefObject<Map<number, CartSpot>> }) {
+function Shopper({ index, live, carts, colour }: { index: number; live: RefObject<Game>; carts: RefObject<Map<number, CartSpot>>; colour: string }) {
   const group = useRef<Group>(null)
   const turn = useRef<Group>(null)
   const ring = useRef<Mesh>(null)
-  const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
   const trolley = useMemo(() => makeTrolley(), [])
   const shown = useRef<{ x: number; z: number } | null>(null)
@@ -458,6 +458,12 @@ export function StoreScene({ live }: { live: RefObject<Game> }) {
   })
   const game = live.current
   const background = useMemo(() => new Color('#cfd8e3'), [])
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
@@ -479,7 +485,7 @@ export function StoreScene({ live }: { live: RefObject<Game> }) {
       <Store />
       {game.players.length > 0 ? <Goods key={`${game.id}:${game.seed}`} live={live} carts={carts} /> : null}
       {game.players.map((p, index) => (
-        <Shopper key={`${game.id}:${p.id}`} index={index} live={live} carts={carts} />
+        <Shopper key={`${game.id}:${p.id}`} index={index} live={live} carts={carts} colour={colours[index]} />
       ))}
     </>
   )

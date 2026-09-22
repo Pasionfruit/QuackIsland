@@ -13,7 +13,8 @@
 import { useFrame } from '@react-three/fiber'
 import { memo, useLayoutEffect, useMemo, useReducer, useRef, type RefObject } from 'react'
 import { Color, Group, type DirectionalLight, type MeshBasicMaterial } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { TRACK, frameScene, laneX, trackZ } from './camera'
 import { COLOURS, LIGHT, lightAt, type Race, type Racer } from './rules'
 
@@ -169,9 +170,8 @@ function TrafficLight({ live }: { live: RefObject<Race> }) {
  * hop to each step; somebody out topples over where they stood; somebody over
  * the line jumps for joy.
  */
-function RacerBody({ racer, index, count, live }: { racer: Racer; index: number; count: number; live: RefObject<Race> }) {
+function RacerBody({ racer, index, count, live, colour }: { racer: Racer; index: number; count: number; live: RefObject<Race>; colour: string }) {
   const holder = useRef<Group>(null)
-  const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
   const z = useRef(trackZ(racer.steps, LIGHT.steps))
   const hop = useRef(0)
@@ -211,11 +211,11 @@ function RacerBody({ racer, index, count, live }: { racer: Racer; index: number;
 }
 
 /** A strip down your own lane, so you can find yourself among eight. */
-function YourLane({ index, count }: { index: number; count: number }) {
+function YourLane({ index, count, colour }: { index: number; count: number; colour: string }) {
   return (
     <mesh position={[laneX(index, count), 0.005, -TRACK.length / 2]} rotation={[-Math.PI / 2, 0, 0]}>
       <planeGeometry args={[TRACK.lane - 0.12, TRACK.length]} />
-      <meshBasicMaterial color={COLOURS[index % COLOURS.length]} transparent opacity={0.28} />
+      <meshBasicMaterial color={colour} transparent opacity={0.28} />
     </mesh>
   )
 }
@@ -227,6 +227,12 @@ export function ISeeTheLightScene({ live }: { live: RefObject<Race> }) {
   const background = useMemo(() => new Color(PALETTE.background), [])
   const count = Math.max(race.racers.length, 1)
   const mineIndex = race.racers.findIndex((r) => r.mine)
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => race.racers.map((racer, index) => rosterColour(racer, index, COLOURS, myColour, peers)),
+    [race.racers, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
@@ -235,9 +241,9 @@ export function ISeeTheLightScene({ live }: { live: RefObject<Race> }) {
       <Daylight />
       <Track lanes={count} />
       <TrafficLight live={live} />
-      {mineIndex >= 0 ? <YourLane index={mineIndex} count={count} /> : null}
+      {mineIndex >= 0 ? <YourLane index={mineIndex} count={count} colour={colours[mineIndex]} /> : null}
       {race.racers.map((racer, index) => (
-        <RacerBody key={`${race.id}:${racer.id}`} racer={racer} index={index} count={count} live={live} />
+        <RacerBody key={`${race.id}:${racer.id}`} racer={racer} index={index} count={count} live={live} colour={colours[index]} />
       ))}
     </>
   )

@@ -15,8 +15,9 @@
  * It is all DOM and SVG: no canvas. The table is laid out in its own units
  * (`TABLE`) and scaled to fit whatever room there is.
  */
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { getMyName, getNet, useNet, usePeers } from '../../09-net'
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { usePlayerColour } from '../../02-player'
+import { getMyName, getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, playCue, useFinish, type MinigameRun } from '../../15-minigames'
 import { Portrait } from './Portrait'
 import {
@@ -64,14 +65,19 @@ export function OnePieceScreen({ run }: { run: MinigameRun }) {
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
   const net = useNet()
   const peers = usePeers()
+  const myColour = usePlayerColour()
   const me = net.id ?? myId()
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
   /** What goes on a picture: a real name rather than "you". */
   const labelOf = (id: string) => (id === me ? getMyName() : nameOf(id))
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
 
   // Held back through the two seconds of Finish; see `useFinish`.
   useFinish(game.over, () =>
-    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: COLOURS[e.index % COLOURS.length], mine: e.player.id === me })),
+    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: colours[e.index], mine: e.player.id === me })),
   )
   const paused = useRef(run.paused)
   paused.current = run.paused
@@ -196,7 +202,7 @@ export function OnePieceScreen({ run }: { run: MinigameRun }) {
   const mine = game.players[mineIndex]
   const playing = ready && !game.over
   const left = timeLeft(game)
-  const colour = COLOURS[Math.max(0, mineIndex) % COLOURS.length]
+  const colour = colours[Math.max(0, mineIndex)]
   const inCount = countPlaced(lockedMask(board.current))
   const order = placings(game)
 
@@ -231,9 +237,9 @@ export function OnePieceScreen({ run }: { run: MinigameRun }) {
             key={p.id}
             style={{
               ...pill,
-              background: p.mine ? COLOURS[index % COLOURS.length] : 'rgba(255,255,255,0.85)',
+              background: p.mine ? colours[index] : 'rgba(255,255,255,0.85)',
               color: p.mine ? '#fff' : LOOK.ink,
-              boxShadow: p.mine ? 'none' : `inset 0 0 0 2px ${COLOURS[index % COLOURS.length]}`,
+              boxShadow: p.mine ? 'none' : `inset 0 0 0 2px ${colours[index]}`,
               opacity: p.left ? 0.5 : 1,
             }}
             data-placed={countPlaced(p.placed)}
@@ -319,7 +325,7 @@ export function OnePieceScreen({ run }: { run: MinigameRun }) {
             const placed = order.find((e) => e.index === index)
             return (
               <div key={p.id} style={{ ...racerRow, opacity: p.left ? 0.45 : 1 }} data-racer={p.id}>
-                <MiniPuzzle colour={COLOURS[index % COLOURS.length]} name={labelOf(p.id)} placed={p.placed} />
+                <MiniPuzzle colour={colours[index]} name={labelOf(p.id)} placed={p.placed} />
                 <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                   <span style={{ font: `700 13px/1.3 ${FONT}`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nameOf(p.id)}</span>
                   <span style={{ font: `600 12px/1.3 ${FONT}`, color: finished(p) ? '#8ff0ad' : '#b7c3d0' }}>

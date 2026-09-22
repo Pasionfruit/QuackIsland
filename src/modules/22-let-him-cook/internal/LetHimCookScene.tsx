@@ -21,7 +21,8 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { memo, useEffect, useLayoutEffect, useMemo, useReducer, useRef, type RefObject } from 'react'
 import { Color, Group, Vector2, Vector3, type DirectionalLight, type MeshBasicMaterial } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { LAYOUT, POT, basketAt, chipAt, frameScene, itemAt, pickBasket, type Point } from './camera'
 import { COLOURS, KINDS, KITCHEN, cookTime, pickTime, rotation, whoseTurn, type Game } from './rules'
 
@@ -315,9 +316,9 @@ const Basket = memo(function Basket({ kind, live, hovered, hands }: { kind: numb
 })
 
 /** By each basket, a chip for every item of it claimed this recipe, in the claimer's colour. */
-const Chips = memo(function Chips({ live }: { live: RefObject<Game> }) {
+const Chips = memo(function Chips({ live, colours }: { live: RefObject<Game>; colours: readonly string[] }) {
   const chips = useRef<(Group | null)[]>([])
-  const colours = useRef<(MeshBasicMaterial | null)[]>([])
+  const materials = useRef<(MeshBasicMaterial | null)[]>([])
   useFrame(() => {
     const g = live.current
     for (const chip of chips.current) if (chip) chip.visible = false
@@ -337,7 +338,7 @@ const Chips = memo(function Chips({ live }: { live: RefObject<Game> }) {
       const at = chipAt(kind, n, turned)
       chip.position.set(at.x, at.y, at.z)
       chip.visible = true
-      colours.current[i]?.color.set(COLOURS[claimer % COLOURS.length])
+      materials.current[i]?.color.set(colours[claimer])
     }
   })
   return (
@@ -355,7 +356,7 @@ const Chips = memo(function Chips({ live }: { live: RefObject<Game> }) {
               <cylinderGeometry args={[0.13, 0.13, 0.06, 18]} />
               <meshBasicMaterial
                 ref={(m) => {
-                  colours.current[i] = m
+                  materials.current[i] = m
                 }}
                 color={PALETTE.hover}
               />
@@ -458,9 +459,23 @@ function atCounter(g: Game): number | null {
  * the item into the pot. On your own turn yours follows the pointer from basket
  * to basket.
  */
-function Cook({ index, live, hovered, hands, cook }: { index: number; live: RefObject<Game>; hovered: RefObject<number | null>; hands: SceneHands; cook: RefObject<{ x: number }> }) {
+function Cook({
+  index,
+  live,
+  hovered,
+  hands,
+  cook,
+  colour,
+}: {
+  index: number
+  live: RefObject<Game>
+  hovered: RefObject<number | null>
+  hands: SceneHands
+  cook: RefObject<{ x: number }>
+  colour: string
+}) {
   const holder = useRef<Group>(null)
-  const avatar = useMemo(() => createAvatar(COLOURS[index % COLOURS.length]), [index])
+  const avatar = useMemo(() => createAvatar(colour), [colour])
   const state = useRef({ x: LAYOUT.cookEnters, facing: Math.PI / 2, here: false })
   useFrame(({ clock }, delta) => {
     const group = holder.current
@@ -646,6 +661,12 @@ export function LetHimCookScene({ live, hands }: { live: RefObject<Game>; hands:
   useFrame(() => redraw())
   const game = live.current
   const background = useMemo(() => new Color(PALETTE.background), [])
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   /** The basket under the pointer, when a click would take from it. */
   const hovered = useRef<number | null>(null)
   /** Where the cook at the counter is, across, for the item in their hands. */
@@ -665,10 +686,10 @@ export function LetHimCookScene({ live, hands }: { live: RefObject<Game>; hands:
       {Array.from({ length: KINDS }, (_, kind) => (
         <Basket key={kind} kind={kind} live={live} hovered={hovered} hands={hands} />
       ))}
-      <Chips live={live} />
+      <Chips live={live} colours={colours} />
       {ready ? Array.from({ length: KITCHEN.items }, (_, slot) => <Slot key={`${layout}:${slot}`} slot={slot} live={live} hands={hands} cook={cook} />) : null}
       {game.players.map((p, index) => (
-        <Cook key={`${game.id}:${p.id}`} index={index} live={live} hovered={hovered} hands={hands} cook={cook} />
+        <Cook key={`${game.id}:${p.id}`} index={index} live={live} hovered={hovered} hands={hands} cook={cook} colour={colours[index]} />
       ))}
       <Pointer live={live} hovered={hovered} hands={hands} />
     </>

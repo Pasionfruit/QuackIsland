@@ -19,7 +19,8 @@
 import { useFrame } from '@react-three/fiber'
 import { memo, useLayoutEffect, useMemo, useReducer, useRef, type RefObject } from 'react'
 import { Color, DoubleSide, type DirectionalLight, type Group, type Mesh, type MeshBasicMaterial, type PerspectiveCamera } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { FOV, cameraFor } from './camera'
 import { CHAIR, COLOURS, FLOOR, chairAt, isIn, isSafe, sitter, type Game, type Player } from './rules'
 
@@ -255,10 +256,9 @@ function Chair({ index, live }: { index: number; live: RefObject<Game> }) {
  * dropped into a chair when they sit, reeling on the spot while stunned, and
  * gone from the floor once they are out.
  */
-function PlayerBody({ index, live }: { index: number; live: RefObject<Game> }) {
+function PlayerBody({ index, live, colour }: { index: number; live: RefObject<Game>; colour: string }) {
   const rig = useRef<Group>(null)
   const squash = useRef<Group>(null)
-  const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
   useFrame(({ clock }) => {
     const g = rig.current
@@ -318,6 +318,12 @@ export function MusicalMayhemScene({ live }: { live: RefObject<Game> }) {
   const mineIndex = game.players.findIndex((p) => p.mine)
   // As many chairs as the first round had: the ones that go sink and stay sunk.
   const chairs = Math.max(0, game.players.length - 1)
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
@@ -331,7 +337,7 @@ export function MusicalMayhemScene({ live }: { live: RefObject<Game> }) {
       ))}
       {mineIndex >= 0 ? <YouMarker key={`${game.id}:you`} index={mineIndex} live={live} /> : null}
       {game.players.map((p, index) => (
-        <PlayerBody key={`${game.id}:${p.id}`} index={index} live={live} />
+        <PlayerBody key={`${game.id}:${p.id}`} index={index} live={live} colour={colours[index]} />
       ))}
     </>
   )

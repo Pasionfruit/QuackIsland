@@ -11,9 +11,10 @@
  * points at wherever the mouse is on the sand - and left click rolls it.**
  */
 import { Canvas } from '@react-three/fiber'
-import { memo, useEffect, useRef, useState, type RefObject } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
-import { getNet, useNet, usePeers } from '../../09-net'
+import { usePlayerColour } from '../../02-player'
+import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, playCue, useFinish, type MinigameRun } from '../../15-minigames'
 import { COLUMN } from './beach'
 import { BeachScene, type PointerRef } from './BeachScene'
@@ -53,11 +54,16 @@ export function BeachScreen({ run }: { run: MinigameRun }) {
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
   const net = useNet()
   const peers = usePeers()
+  const myColour = usePlayerColour()
   const me = net.id ?? myId()
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   // The podium does the results; see `useFinish`.
   useFinish(game.over, () =>
-    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: COLOURS[e.index % COLOURS.length], mine: e.player.id === me })),
+    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: colours[e.index], mine: e.player.id === me })),
   )
   const paused = useRef(run.paused)
   paused.current = run.paused
@@ -203,7 +209,7 @@ export function BeachScreen({ run }: { run: MinigameRun }) {
               key={p.id}
               style={{
                 ...pill,
-                background: p.left ? 'rgba(255,255,255,0.85)' : COLOURS[index % COLOURS.length],
+                background: p.left ? 'rgba(255,255,255,0.85)' : colours[index],
                 color: p.left ? LOOK.faded : '#fff',
                 opacity: p.left ? 0.45 : 1,
                 outline: index === who ? `2px solid ${LOOK.ink}` : 'none',

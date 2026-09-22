@@ -12,9 +12,10 @@
  * never lags a frame behind your hand.
  */
 import { Canvas } from '@react-three/fiber'
-import { memo, useCallback, useEffect, useRef, useState, type RefObject } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping, PCFShadowMap } from 'three'
-import { getNet, useNet, usePeers } from '../../09-net'
+import { usePlayerColour } from '../../02-player'
+import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, playCue, replayMinigame, useCueOnChange, useFinish, type MinigameRun } from '../../15-minigames'
 import { ARENA, COLOURS, EMBLEMS, type Emblem, type Point } from './arena'
 import { FOV } from './camera'
@@ -37,16 +38,21 @@ const FONT =
 export function DuckHuntScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the game from here.
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
-  // Held back through the two seconds of Finish; see `useFinish`.
-  const results = useFinish(game.over, () =>
-    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: COLOURS[e.index % COLOURS.length], mine: e.player.id === me })),
-  )
   const paused = useRef(run.paused)
   paused.current = run.paused
 
   const net = useNet()
   const peers = usePeers()
+  const myColour = usePlayerColour()
   const me = net.id ?? myId()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
+  // Held back through the two seconds of Finish; see `useFinish`.
+  const results = useFinish(game.over, () =>
+    placings(game).map((e) => ({ id: e.player.id, place: e.place, name: nameOf(e.player.id), colour: colours[e.index], mine: e.player.id === me })),
+  )
   const wire = useGameNet()
   const live = useRef(game)
   live.current = game
@@ -110,7 +116,7 @@ export function DuckHuntScreen({ run }: { run: MinigameRun }) {
         )}
         {mine ? (
           <span style={{ ...pill, background: '#fff', color: LOOK.ink, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            shoot <EmblemIcon emblem={EMBLEMS[mineIndex]} colour={COLOURS[mineIndex]} size={18} /> only
+            shoot <EmblemIcon emblem={EMBLEMS[mineIndex]} colour={colours[mineIndex]} size={18} /> only
           </span>
         ) : null}
         <span style={{ flex: 1 }} />
@@ -123,11 +129,11 @@ export function DuckHuntScreen({ run }: { run: MinigameRun }) {
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
-              background: player.mine ? COLOURS[index] : 'rgba(255,255,255,0.7)',
+              background: player.mine ? colours[index] : 'rgba(255,255,255,0.7)',
               color: player.mine ? '#fff' : LOOK.ink,
             }}
           >
-            <EmblemIcon emblem={EMBLEMS[index]} colour={player.mine ? '#fff' : COLOURS[index]} size={14} />
+            <EmblemIcon emblem={EMBLEMS[index]} colour={player.mine ? '#fff' : colours[index]} size={14} />
             <span style={{ maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis' }}>{nameOf(player.id)}</span>
             <strong>{player.score}</strong>
           </span>
@@ -143,13 +149,13 @@ export function DuckHuntScreen({ run }: { run: MinigameRun }) {
 
         {ready && !game.over ? (
           <div ref={crosshair} style={crosshairBox} data-cooldown={mine ? mine.cooldown.toFixed(2) : '0'}>
-            <Crosshair colour={mine ? COLOURS[mineIndex] : '#fff'} cooling={cooling} />
+            <Crosshair colour={mine ? colours[mineIndex] : '#fff'} cooling={cooling} />
           </div>
         ) : null}
       </div>
 
       {results && ready ? (
-        <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} />
+        <Over game={game} me={me} nameOf={nameOf} colours={colours} onAgain={net.host ? replayMinigame : null} />
       ) : null}
     </div>
   )
@@ -286,11 +292,13 @@ function Over({
   game,
   me,
   nameOf,
+  colours,
   onAgain,
 }: {
   game: Game
   me: string
   nameOf: (id: string) => string
+  colours: readonly string[]
   onAgain: (() => void) | null
 }) {
   const order = placings(game)
@@ -314,7 +322,7 @@ function Over({
           {order.map(({ player, index, place }) => (
             <div key={player.id} style={scoreRow} data-place={place}>
               <span style={{ opacity: 0.5, minWidth: 18 }}>{place}</span>
-              <EmblemIcon emblem={EMBLEMS[index]} colour={COLOURS[index]} size={16} />
+              <EmblemIcon emblem={EMBLEMS[index]} colour={colours[index]} size={16} />
               <span style={{ flex: 1, fontWeight: player.id === me ? 700 : 400 }}>{nameOf(player.id)}</span>
               <span style={{ opacity: 0.6, fontSize: 12 }}>
                 {player.shots} {player.shots === 1 ? 'shot' : 'shots'}

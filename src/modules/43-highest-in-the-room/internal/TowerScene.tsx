@@ -16,7 +16,8 @@
 import { useFrame } from '@react-three/fiber'
 import { useLayoutEffect, useMemo, useReducer, useRef, type RefObject } from 'react'
 import { Color, DoubleSide, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial } from 'three'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { CLIMB, COLOURS, isIn, leaderHeight, type Game } from './rules'
 
 export const PALETTE = {
@@ -65,7 +66,7 @@ function Rig({ live, shown }: { live: RefObject<Game>; shown: RefObject<number[]
 }
 
 /** Every tower's blocks near the top, and the stripes on the wall, instanced. */
-function Towers({ live, shown }: { live: RefObject<Game>; shown: RefObject<number[]> }) {
+function Towers({ live, shown, colours }: { live: RefObject<Game>; shown: RefObject<number[]>; colours: readonly string[] }) {
   const blocks = useRef<InstancedMesh>(null)
   const stripes = useRef<InstancedMesh>(null)
   const colour = useMemo(() => new Color(), [])
@@ -82,7 +83,7 @@ function Towers({ live, shown }: { live: RefObject<Game>; shown: RefObject<numbe
       shown.current[i] = Math.abs(now - p.height) < 0.01 ? p.height : now
       const top = Math.round(p.height)
       const x = towerX(i, count)
-      const base = isIn(p) ? COLOURS[i % COLOURS.length] : PALETTE.out
+      const base = isIn(p) ? colours[i] : PALETTE.out
       for (let b = Math.max(0, top - DRAWN); b < top && n < MAX_BLOCKS; b++) {
         // Block b sits with its top at b + 1, sunk by however far the tower is still falling.
         const y = (b + 0.5) * BLOCK + (shown.current[i] - p.height) * BLOCK
@@ -129,9 +130,8 @@ function Towers({ live, shown }: { live: RefObject<Game>; shown: RefObject<numbe
 }
 
 /** Somebody on top of their tower: a hop when they get one right, a shake when they get one wrong. */
-function Climber({ index, live, shown }: { index: number; live: RefObject<Game>; shown: RefObject<number[]> }) {
+function Climber({ index, live, shown, colour }: { index: number; live: RefObject<Game>; shown: RefObject<number[]>; colour: string }) {
   const group = useRef<Group>(null)
-  const colour = COLOURS[index % COLOURS.length]
   const avatar = useMemo(() => createAvatar(colour), [colour])
   useFrame(() => {
     const g = live.current
@@ -191,6 +191,12 @@ export function TowerScene({ live }: { live: RefObject<Game> }) {
   })
   const game = live.current
   const background = useMemo(() => new Color(PALETTE.wall), [])
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   useLayoutEffect(() => {
     shown.current = []
   }, [game.id])
@@ -210,9 +216,9 @@ export function TowerScene({ live }: { live: RefObject<Game> }) {
         <planeGeometry args={[80, 40]} />
         <meshStandardMaterial color={PALETTE.floor} roughness={1} />
       </mesh>
-      <Towers live={live} shown={shown} />
+      <Towers live={live} shown={shown} colours={colours} />
       {game.players.map((p, index) => (
-        <Climber key={`${game.id}:${p.id}`} index={index} live={live} shown={shown} />
+        <Climber key={`${game.id}:${p.id}`} index={index} live={live} shown={shown} colour={colours[index]} />
       ))}
       <Danger live={live} />
     </>

@@ -22,9 +22,10 @@
  * to drag, so a press is never anything but a guess.
  */
 import { Canvas } from '@react-three/fiber'
-import { memo, useEffect, useRef, useState, type RefObject } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ACESFilmicToneMapping } from 'three'
-import { getNet, useNet, usePeers } from '../../09-net'
+import { usePlayerColour } from '../../02-player'
+import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, replayMinigame, useCueOnChange, useFinish, type MinigameRun } from '../../15-minigames'
 import { COLOURS, SEARCH, placings, timeLeft, type Game } from './rules'
 import { myId, newGame, waitingGame } from './setup'
@@ -65,16 +66,21 @@ interface Splat {
 export function WheresMidnightScreen({ run }: { run: MinigameRun }) {
   // First hook on purpose: the run-localrot skill reads the round from here.
   const [game, setGame] = useState<Game>(() => (getNet().host ? newGame() : waitingGame()))
-  // Held back through the two seconds of Finish; see `useFinish`.
-  const results = useFinish(game.over, () =>
-    placings(game).map((e) => ({ id: e.seeker.id, place: e.place, name: nameOf(e.seeker.id), colour: COLOURS[e.index % COLOURS.length], mine: e.seeker.id === me })),
-  )
   const paused = useRef(run.paused)
   paused.current = run.paused
 
   const net = useNet()
   const peers = usePeers()
+  const myColour = usePlayerColour()
   const me = net.id ?? myId()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
+  // Held back through the two seconds of Finish; see `useFinish`.
+  const results = useFinish(game.over, () =>
+    placings(game).map((e) => ({ id: e.seeker.id, place: e.place, name: nameOf(e.seeker.id), colour: colours[e.index], mine: e.seeker.id === me })),
+  )
   const wire = useSearchNet()
   const live = useRef(game)
   live.current = game
@@ -294,22 +300,22 @@ export function WheresMidnightScreen({ run }: { run: MinigameRun }) {
             ✕
           </div>
         ) : null}
-        {ready ? <Standings game={game} me={me} nameOf={nameOf} /> : null}
+        {ready ? <Standings game={game} me={me} nameOf={nameOf} colours={colours} /> : null}
         {ready && !game.over ? <Hints /> : null}
       </div>
 
-      {results && ready ? <Over game={game} me={me} nameOf={nameOf} onAgain={net.host ? replayMinigame : null} /> : null}
+      {results && ready ? <Over game={game} me={me} nameOf={nameOf} colours={colours} onAgain={net.host ? replayMinigame : null} /> : null}
     </div>
   )
 }
 
 /** Who has found him, in the order they did. */
-function Standings({ game, me, nameOf }: { game: Game; me: string; nameOf: (id: string) => string }) {
+function Standings({ game, me, nameOf, colours }: { game: Game; me: string; nameOf: (id: string) => string; colours: readonly string[] }) {
   return (
     <div style={standings} data-standings>
       {placings(game).map((entry) => (
         <div key={entry.seeker.id} style={row}>
-          <span style={{ width: 10, height: 10, borderRadius: 999, background: COLOURS[entry.index % COLOURS.length], opacity: entry.seeker.foundAt === null ? 0.3 : 1 }} />
+          <span style={{ width: 10, height: 10, borderRadius: 999, background: colours[entry.index], opacity: entry.seeker.foundAt === null ? 0.3 : 1 }} />
           <span style={{ flex: 1, fontWeight: entry.seeker.id === me ? 700 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {nameOf(entry.seeker.id)}
           </span>
@@ -364,7 +370,19 @@ const CAMERA = { fov: VIEW.start.fov, near: 0.05, far: 300, position: [0, 5.5, 3
 const GL = { antialias: true, powerPreference: 'high-performance' as const }
 
 /** The results: first to find him first, and whoever never did sharing last. */
-function Over({ game, me, nameOf, onAgain }: { game: Game; me: string; nameOf: (id: string) => string; onAgain: (() => void) | null }) {
+function Over({
+  game,
+  me,
+  nameOf,
+  colours,
+  onAgain,
+}: {
+  game: Game
+  me: string
+  nameOf: (id: string) => string
+  colours: readonly string[]
+  onAgain: (() => void) | null
+}) {
   const order = placings(game)
   const mine = order.find((entry) => entry.seeker.id === me)
   const winners = order.filter((entry) => entry.place === 1 && entry.seeker.foundAt !== null)
@@ -383,7 +401,7 @@ function Over({ game, me, nameOf, onAgain }: { game: Game; me: string; nameOf: (
           {order.map((entry) => (
             <div key={entry.seeker.id} style={row} data-place={entry.place}>
               <span style={{ opacity: 0.5, minWidth: 18 }}>{entry.place}</span>
-              <span style={{ width: 12, height: 12, borderRadius: 999, background: COLOURS[entry.index % COLOURS.length] }} />
+              <span style={{ width: 12, height: 12, borderRadius: 999, background: colours[entry.index] }} />
               <span style={{ flex: 1, fontWeight: entry.seeker.id === me ? 700 : 400 }}>{nameOf(entry.seeker.id)}</span>
               <span style={{ opacity: 0.6, fontSize: 12 }}>
                 {entry.seeker.misses} wrong {entry.seeker.misses === 1 ? 'guess' : 'guesses'}

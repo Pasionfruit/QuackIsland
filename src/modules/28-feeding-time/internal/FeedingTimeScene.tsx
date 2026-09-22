@@ -16,7 +16,8 @@ import { useFrame } from '@react-three/fiber'
 import { memo, useLayoutEffect, useMemo, useReducer, useRef, type Ref, type RefObject } from 'react'
 import { Color, Group, type DirectionalLight, type MeshBasicMaterial } from 'three'
 import { createRng, hashSeed } from '../../00-core'
-import { createAvatar } from '../../02-player'
+import { createAvatar, usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { frameScene } from './camera'
 import { COLOURS, POND, aimThrow, duckAt, ducksFor, landing, spotOf, type Cracker, type Game, type Point } from './rules'
 
@@ -203,12 +204,12 @@ function DuckBody({ index, live }: { index: number; live: RefObject<Game> }) {
 }
 
 /** One cracker: in the air on its arc, floating where it landed, or gone into a duck. */
-function CrackerView({ cracker, live }: { cracker: Cracker; live: RefObject<Game> }) {
+function CrackerView({ cracker, live, colours }: { cracker: Cracker; live: RefObject<Game>; colours: readonly string[] }) {
   const holder = useRef<Group>(null)
   const ripple = useRef<Group>(null)
   const rippleMaterial = useRef<MeshBasicMaterial>(null)
   const rippleEdge = useRef<MeshBasicMaterial>(null)
-  const colour = COLOURS[cracker.player % COLOURS.length]
+  const colour = colours[cracker.player]
   useFrame(() => {
     const group = holder.current
     if (!group) return
@@ -262,7 +263,7 @@ function CrackerView({ cracker, live }: { cracker: Cracker; live: RefObject<Game
 const AIM_DOTS = 24
 
 /** Your aim on the ground: dots out towards the pointer, a ring at it, and where the power held would land. */
-function AimView({ live, hands }: { live: RefObject<Game>; hands: SceneHands }) {
+function AimView({ live, hands, colours }: { live: RefObject<Game>; hands: SceneHands; colours: readonly string[] }) {
   const dots = useRef<Group>(null)
   const reticle = useRef<Group>(null)
   const lands = useRef<Group>(null)
@@ -290,7 +291,7 @@ function AimView({ live, hands }: { live: RefObject<Game>; hands: SceneHands }) 
     if (aim.power !== null) {
       const at = landing(aim.from, thrown)
       lands.current.position.set(at.x, 0.06, at.z)
-      if (landsMaterial.current) landsMaterial.current.color.set(COLOURS[me % COLOURS.length])
+      if (landsMaterial.current) landsMaterial.current.color.set(colours[me])
     }
   })
   return (
@@ -317,19 +318,18 @@ function AimView({ live, hands }: { live: RefObject<Game>; hands: SceneHands }) 
 }
 
 /** Everybody on the bank, facing the water, a ring under your own spot. */
-function Feeders({ live }: { live: RefObject<Game> }) {
+function Feeders({ live, colours }: { live: RefObject<Game>; colours: readonly string[] }) {
   const g = live.current
   return (
     <>
       {g.players.map((feeder, index) => (
-        <FeederBody key={`${g.id}:${feeder.id}`} index={index} count={g.players.length} mine={feeder.mine} />
+        <FeederBody key={`${g.id}:${feeder.id}`} count={g.players.length} index={index} mine={feeder.mine} colour={colours[index]} />
       ))}
     </>
   )
 }
 
-const FeederBody = memo(function FeederBody({ index, count, mine }: { index: number; count: number; mine: boolean }) {
-  const colour = COLOURS[index % COLOURS.length]
+const FeederBody = memo(function FeederBody({ index, count, mine, colour }: { index: number; count: number; mine: boolean; colour: string }) {
   const avatar = useMemo(() => createAvatar(colour), [colour])
   const spot = spotOf(index, count)
   return (
@@ -351,6 +351,12 @@ export function FeedingTimeScene({ live, hands }: { live: RefObject<Game>; hands
   useFrame(() => redraw())
   const game = live.current
   const background = useMemo(() => new Color(PALETTE.background), [])
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers)),
+    [game.players, myColour, peers],
+  )
   const pending = hands.pending()
   const crackers = pending ? [...game.crackers, pending] : game.crackers
   return (
@@ -361,10 +367,10 @@ export function FeedingTimeScene({ live, hands }: { live: RefObject<Game>; hands
       <Daylight />
       <Pond />
       {game.players.length > 0 ? game.eating.map((_, i) => <DuckBody key={`${game.id}:${i}`} index={i} live={live} />) : null}
-      <Feeders live={live} />
-      <AimView live={live} hands={hands} />
+      <Feeders live={live} colours={colours} />
+      <AimView live={live} hands={hands} colours={colours} />
       {crackers.map((cracker) => (
-        <CrackerView key={`${game.id}:${cracker.id}`} cracker={cracker} live={live} />
+        <CrackerView key={`${game.id}:${cracker.id}`} cracker={cracker} live={live} colours={colours} />
       ))}
     </>
   )

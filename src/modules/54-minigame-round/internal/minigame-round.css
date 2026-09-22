@@ -1,0 +1,136 @@
+.minigame-round {
+  position: fixed;
+  z-index: 2147483000;
+  box-sizing: border-box;
+  color: #fff7dc;
+  font-family: ui-rounded, "Segoe UI", sans-serif;
+}
+
+.minigame-round--controls,
+.minigame-round--results,
+.minigame-round--error {
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  left: max(1rem, env(safe-area-inset-left));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 5.5rem;
+  padding: 1rem 1.25rem;
+  border: 2px solid rgba(255, 240, 188, 0.52);
+  border-radius: 1.35rem;
+  background: rgba(25, 52, 56, 0.97);
+  box-shadow: 0 0.8rem 2rem rgba(4, 20, 24, 0.38);
+}
+
+.minigame-round--controls > div:first-child,
+.minigame-round--results > div:first-child,
+.minigame-round--error {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.minigame-round strong {
+  font-size: 1.05rem;
+}
+
+.minigame-round span {
+  opacity: 0.82;
+}
+
+.minigame-round__buttons {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.65rem;
+}
+
+.minigame-round button {
+  min-height: 2.8rem;
+  padding: 0.65rem 1.1rem;
+  border: 2px solid rgba(255, 247, 220, 0.6);
+  border-radius: 999px;
+  color: #173438;
+  background: #f7dc8a;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.minigame-round button:hover,
+.minigame-round button:focus-visible {
+  transform: translateY(-1px);
+  outline: 3px solid rgba(255, 255, 255, 0.8);
+  outline-offset: 2px;
+}
+
+.minigame-round button.minigame-round__final {
+  color: white;
+  border-color: #ffcb86;
+  background: #c75032;
+}
+
+.minigame-round__waiting {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.minigame-round--badge {
+  top: max(1rem, env(safe-area-inset-top));
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.65rem 1.2rem;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
+  background: rgba(22, 48, 52, 0.9);
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.minigame-round--final {
+  border-color: rgba(255, 170, 110, 0.8);
+  background: rgba(135, 43, 28, 0.94);
+}
+
+.minigame-round--results ol {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem 0.9rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.minigame-round--error {
+  color: #fff;
+  background: rgba(116, 35, 31, 0.97);
+}
+
+@media (max-width: 680px) {
+  .minigame-round--controls,
+  .minigame-round--results {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .minigame-round__buttons,
+  .minigame-round button {
+    width: 100%;
+  }
+
+  .minigame-round--results ol {
+    justify-content: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .minigame-round button {
+    transform: none !important;
+  }
+}
+

@@ -32,6 +32,8 @@ import {
   type Mesh,
   type PerspectiveCamera,
 } from 'three'
+import { usePlayerColour } from '../../02-player'
+import { rosterColour, usePeers } from '../../09-net'
 import { FINISH_Z, HEDGE, TRACK, courseFor } from './course'
 import { FOG, FOV, chase } from './camera'
 import { buildPet, disposePet } from './models'
@@ -297,12 +299,11 @@ function Treats({ live }: { live: RefObject<Game> }) {
  * choosing - somebody flicking between the cat and the rabbit is rebuilding two
  * dozen small meshes a second, which is why `disposePet` exists.
  */
-function RacerBody({ index, live }: { index: number; live: RefObject<Game> }) {
+function RacerBody({ index, colour, live }: { index: number; colour: string; live: RefObject<Game> }) {
   const holder = useRef<Group>(null)
   const game = live.current
   const racer = game.racers[index]
   const pet = petOf(racer)
-  const colour = COLOURS[index % COLOURS.length]
   const rig = useMemo(() => buildPet(pet, colour), [pet, colour])
   useEffect(() => () => disposePet(rig), [rig])
   const stride = useRef(0)
@@ -413,6 +414,12 @@ export function PetRaceScene({ live }: { live: RefObject<Game> }) {
   })
   const game = live.current
   const background = useMemo(() => new Color(PALETTE.sky), [])
+  const myColour = usePlayerColour()
+  const peers = usePeers()
+  const colours = useMemo(
+    () => game.racers.map((racer, index) => rosterColour(racer, index, COLOURS, myColour, peers)),
+    [game.racers, myColour, peers],
+  )
   return (
     <>
       <color attach="background" args={[background]} />
@@ -425,7 +432,7 @@ export function PetRaceScene({ live }: { live: RefObject<Game> }) {
       <Treats key={`treats:${game.seed}`} live={live} />
       <YouMarker live={live} />
       {game.racers.map((racer, index) => (
-        <RacerBody key={`${game.id}:${racer.id}`} index={index} live={live} />
+        <RacerBody key={`${game.id}:${racer.id}`} index={index} colour={colours[index]} live={live} />
       ))}
     </>
   )
