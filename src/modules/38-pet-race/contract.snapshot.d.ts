@@ -1,0 +1,11 @@
+export { DEFAULT_PET, PETS, canRun, isPetId, petAt, petBars, petById, petIndex, type Pet, type PetId } from './internal/pets';
+export { BAND, FINISH_Z, HEDGE, PUDDLE, TRACK, TREAT, clearOf, courseFor, dragAt, layCourse, lineAt, progressOf, startAt, type Band, type Course, type Hedge, type Puddle, type Treat, } from './internal/course';
+export { COLOURS, NO_HANDS, RACE, advance, allChosen, allHome, choose, createGame, hasTaken, isIn, leave, petOf, phase, phaseTime, placings, progress, stepGame, tankOf, tick, timeLeft, type Entrant, type Game, type Hands, type Phase, type Racer, } from './internal/rules';
+export { BOT, botChoose, botDrive, botPet } from './internal/ai';
+export { MAX_RACERS, ME, SOLO_RACERS, gameRoster, myId, newGame, nextSeed, waitingGame, type GameSetup } from './internal/setup';
+export { HANDS_TAG, SNAPSHOT_TAG, applySnapshot, decodeHands, decodeSnapshot, encodeHands, encodeSnapshot, type HandsMessage, type Snapshot, type WireRacer, } from './internal/wire';
+export { AHEAD, BACK, BOUNDS, FOG, FOV, HEIGHT, LEAN, atTheLine, chase, type Shot } from './internal/camera';
+export { buildPet, disposePet, type PetRig } from './internal/models';
+export { useRaceNet, type Press, type RaceNet } from './internal/useRaceNet';
+export { PALETTE, PetRaceScene } from './internal/PetRaceScene';
+export { PetRaceScreen } from './internal/PetRaceScreen';

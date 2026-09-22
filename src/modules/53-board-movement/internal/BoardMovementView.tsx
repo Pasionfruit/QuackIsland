@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { PRIORITY, useGameFrame } from '../../00-core'
 import { movePlayerTo } from '../../02-player'
@@ -6,8 +6,9 @@ import { getNet, useNet, usePeers } from '../../09-net'
 import { getParty, useParty } from '../../10-party'
 import { getGameMode, useGameMode } from '../../13-modes'
 import { getTurnOrder, useTurnOrder } from '../../52-turn-order'
+import { BOARD_MOTION, boardDieSpinMs } from './motion'
 import { boardPointAt } from './position'
-import { activeBoardPlayer, boardPosition, BOARD_MOVEMENT } from './rules'
+import { activeBoardPlayer, boardPosition } from './rules'
 import {
   getBoardMovement,
   listenForBoardMovement,
@@ -15,6 +16,7 @@ import {
   syncBoardMovementLifecycle,
   useBoardMovement,
   useBoardRoundAcknowledged,
+  useBoardMovementVisualSettled,
 } from './state'
 import './board-movement.css'
 
@@ -45,7 +47,7 @@ export function BoardMovement(): null {
     }
     if (animation.current.position > target) animation.current.position = target
     if (animation.current.position < target) {
-      animation.current.position = Math.min(target, animation.current.position + delta * BOARD_MOVEMENT.tilesPerSecond)
+      animation.current.position = Math.min(target, animation.current.position + delta * BOARD_MOTION.tilesPerSecond)
     }
     const point = boardPointAt(animation.current.position)
     movePlayerTo(point.x, point.y, point.z)
@@ -73,6 +75,10 @@ function BoardMovementOverlay(): React.JSX.Element | null {
   const peers = usePeers()
   const snapshot = useBoardMovement()
   const acknowledged = useBoardRoundAcknowledged()
+  const visualSettled = useBoardMovementVisualSettled()
+  const [spinBoost, setSpinBoost] = useState(0)
+  const [rollSubmitted, setRollSubmitted] = useState(false)
+  const spinTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const peerKey = useMemo(() => peers.map((peer) => peer.id).sort().join(','), [peers])
   const active = mode === 'island' && party.phase === 'playing' && order.phase === 'complete'
   const showing = active && snapshot.phase !== 'idle' && !acknowledged
@@ -98,15 +104,53 @@ function BoardMovementOverlay(): React.JSX.Element | null {
     }
   }, [showing])
 
+  useEffect(() => {
+    if (spinTimer.current !== null) clearTimeout(spinTimer.current)
+    spinTimer.current = null
+    setSpinBoost(0)
+    setRollSubmitted(false)
+  }, [snapshot.moves.length, snapshot.sessionId])
+
+  useEffect(() => () => {
+    if (spinTimer.current !== null) clearTimeout(spinTimer.current)
+  }, [])
+
   if (!showing) return null
 
   const me = net.id
   const activeId = activeBoardPlayer(snapshot)
   const activeName = snapshot.players.find((player) => player.id === activeId)?.name ?? activeId
-  const mayRoll = Boolean(me && snapshot.phase === 'turn' && activeId === me)
+  const mayRoll = Boolean(me && snapshot.phase === 'turn' && activeId === me && visualSettled)
   const lastMove = snapshot.moves[snapshot.moves.length - 1]
   const winner = snapshot.players.find((player) => player.id === snapshot.winnerId)
   const localPlayer = snapshot.players.find((player) => player.id === me)
+  const spinStyle = {
+    '--board-die-spin-ms': `${boardDieSpinMs(Math.max(1, spinBoost))}ms`,
+  } as CSSProperties
+
+  const spinBoardDie = () => {
+    if (!mayRoll || rollSubmitted) return
+    if (spinTimer.current === null) {
+      setSpinBoost(1)
+      spinTimer.current = setTimeout(() => {
+        spinTimer.current = null
+        setRollSubmitted(true)
+        requestBoardRoll()
+      }, BOARD_MOTION.rollSpinMs)
+      return
+    }
+    setSpinBoost((boost) => Math.min(BOARD_MOTION.maxSpinBoost, boost + 1))
+  }
+
+  const rollLabel = rollSubmitted
+    ? 'Landing...'
+    : spinBoost > 0
+      ? `Click faster - spin ${spinBoost}/${BOARD_MOTION.maxSpinBoost}`
+      : activeId === me && !visualSettled
+        ? 'Waiting for movement'
+        : mayRoll
+          ? 'Roll d6'
+          : `Waiting for ${activeName ?? 'player'}`
 
   return (
     <div className="board-movement-shell" role="dialog" aria-label="Volcano board movement">
@@ -162,10 +206,18 @@ function BoardMovementOverlay(): React.JSX.Element | null {
 
         {snapshot.phase === 'turn' && localPlayer && (
           <div className="board-movement-actions">
-            <button type="button" disabled={!mayRoll} onClick={requestBoardRoll}>
-              {mayRoll ? 'Roll d6' : `Waiting for ${activeName ?? 'player'}`}
+            <button
+              type="button"
+              className={spinBoost > 0 ? 'is-spinning' : undefined}
+              disabled={!mayRoll || rollSubmitted}
+              onClick={spinBoardDie}
+            >
+              <span className="board-movement-die" style={spinStyle} aria-hidden="true">
+                {spinBoost > 0 ? '?' : '6'}
+              </span>
+              <span>{rollLabel}</span>
             </button>
-            <small>The host generates and validates every die.</small>
+            <small>{spinBoost > 0 ? 'Keep clicking to spin faster.' : 'The host generates and validates every die.'}</small>
           </div>
         )}
 

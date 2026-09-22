@@ -4,25 +4,29 @@
  * A small fixed palette rather than a free picker: every entry has been
  * checked against sand, sea and sky, and a lobby of eight ducks stays
  * tell-apart-able only while nobody can pick "slightly different beige".
+ * Eight entries, on purpose - the most players a lobby holds, so nobody
+ * can be left without one; see `09-net`'s `rosterColour` for what happens
+ * to a body that never got a colour of its own.
  *
  * Kept here rather than in the app because the body is this module's, and
- * `09-net` - which already depends on it - reads the colour to put on the wire.
+ * `09-net` - which already depends on it - reads the colour to put on the wire,
+ * and moves a newcomer off whatever colour a lobby they just joined already has.
  */
 import { createStore, useStore } from '../../00-core'
-import { AVATAR } from './avatar'
 
 export const PLAYER_COLOURS: readonly { id: string; label: string; hex: string }[] = [
-  { id: 'red', label: 'Red', hex: AVATAR.bodyColour },
-  { id: 'orange', label: 'Orange', hex: '#f08a2c' },
-  { id: 'yellow', label: 'Yellow', hex: '#f2c230' },
-  { id: 'green', label: 'Green', hex: '#4fae4c' },
-  { id: 'teal', label: 'Teal', hex: '#2fa5a0' },
-  { id: 'blue', label: 'Blue', hex: '#3f7fd6' },
-  { id: 'purple', label: 'Purple', hex: '#8a5cd0' },
-  { id: 'pink', label: 'Pink', hex: '#e46aa8' },
-  { id: 'white', label: 'White', hex: '#f1ede4' },
-  { id: 'black', label: 'Black', hex: '#3a3a40' },
+  { id: 'robin-egg', label: 'Robin Egg', hex: '#8FDDE5' },
+  { id: 'coral', label: 'Coral', hex: '#F28C82' },
+  { id: 'mango', label: 'Mango', hex: '#F6C85F' },
+  { id: 'palm', label: 'Palm', hex: '#86B95A' },
+  { id: 'ocean', label: 'Ocean', hex: '#5DA9D6' },
+  { id: 'lavender', label: 'Lavender', hex: '#A88BD4' },
+  { id: 'peach', label: 'Peach', hex: '#F3A66B' },
+  { id: 'pink', label: 'Pink', hex: '#E98FB3' },
 ]
+
+/** What a player is painted before they have ever chosen for themselves. */
+const DEFAULT_COLOUR = PLAYER_COLOURS[0].hex
 
 const KEY = 'localrot.playerColour'
 
@@ -34,13 +38,13 @@ export function isPlayerColour(value: unknown): value is string {
 function readStored(): string {
   try {
     const raw = window.localStorage.getItem(KEY)
-    return isPlayerColour(raw) ? raw : AVATAR.bodyColour
+    return isPlayerColour(raw) ? raw : DEFAULT_COLOUR
   } catch {
-    return AVATAR.bodyColour
+    return DEFAULT_COLOUR
   }
 }
 
-const colour = createStore<string>(typeof window === 'undefined' ? AVATAR.bodyColour : readStored())
+const colour = createStore<string>(typeof window === 'undefined' ? DEFAULT_COLOUR : readStored())
 
 export function getPlayerColour(): string {
   return colour.get()

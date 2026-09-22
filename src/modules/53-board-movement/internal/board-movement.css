@@ -146,6 +146,35 @@
   background: linear-gradient(#ffd17e, #f48b3d);
   box-shadow: 0 8px 25px rgba(236, 96, 39, 0.3);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+}
+
+.board-movement-die {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 2px solid rgba(65, 27, 7, 0.45);
+  border-radius: 8px;
+  color: #3b1908;
+  background: #fff5d5;
+  box-shadow: inset 0 -4px rgba(102, 49, 22, 0.18), 0 3px 8px rgba(71, 27, 7, 0.2);
+  transform-style: preserve-3d;
+}
+
+.board-movement-actions button.is-spinning .board-movement-die {
+  animation: board-die-spin var(--board-die-spin-ms, 520ms) linear infinite;
+}
+
+@keyframes board-die-spin {
+  0% { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(1); }
+  35% { transform: rotateX(145deg) rotateY(110deg) rotateZ(55deg) scale(1.12); }
+  70% { transform: rotateX(285deg) rotateY(245deg) rotateZ(170deg) scale(0.94); }
+  100% { transform: rotateX(360deg) rotateY(360deg) rotateZ(360deg) scale(1); }
 }
 
 .board-movement-actions button:disabled {
@@ -182,4 +211,16 @@
   .board-movement-shell { padding: 9px; }
   .board-movement-panel { max-height: calc(100vh - 18px); padding: 17px 14px; border-radius: 17px; }
   .board-movement-positions { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board-movement-actions button.is-spinning .board-movement-die {
+    animation-name: board-die-pulse;
+    animation-duration: 420ms;
+  }
+}
+
+@keyframes board-die-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
 }

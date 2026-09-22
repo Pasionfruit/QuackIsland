@@ -26,6 +26,7 @@ local avatar movement to a compact browser interface. It deliberately stops at
 | `boardPosition(snapshot, player)` | Current zero-based tile index |
 | `validBoardDice(dice)` | Validates one base d6 and at most one typed bonus die |
 | `getBoardMovement` / `useBoardMovement` | Current revisioned snapshot |
+| `isBoardMovementVisualSettled` / `useBoardMovementVisualSettled` | True after the latest visible tile traversal has had time to land |
 | `requestBoardRoll()` | Requests the local active player's roll |
 | `setBoardDiceProvider(provider)` | Future reward module seam; defaults to one base d6 |
 | `acknowledgeBoardRound(session, round)` | Future minigame handoff that hides presentation without discarding positions |
@@ -55,15 +56,22 @@ simulation, database, polling, or new service.
 `10-party`'s board coordinates are island-local. `tileWorldPoint` adds the
 party island centre, places the player's feet on top of the raised tile, and
 never duplicates the volcano geometry. After an accepted move, the owning
-browser advances over the intervening tiles at three tiles per second with a
-small hop between each pair. `02-player`'s existing room publishing carries
-that body movement to every other browser.
+browser advances over the intervening tiles at one and a half tiles per second
+with a small hop between each pair. `02-player`'s existing room publishing
+carries that body movement to every other browser.
 
-The board state changes immediately; animation is presentation only. This
-means the next player can roll without waiting on another browser's animation
-acknowledgement, avoiding timers and network races. The movement component runs
-at the project `world` frame priority, after ordinary player simulation, and
-holds the body to the tile while manual movement keys are captured.
+The authoritative board state still changes immediately, while a deterministic
+duration derived from the move distance keeps the next roll locked until the
+visible hop sequence lands. The public visual-settlement signal lets the
+downstream minigame coordinator preserve the final player's movement before it
+covers the board. The movement component runs at the project `world` frame
+priority, after ordinary player simulation, and holds the body to the tile
+while manual movement keys are captured.
+
+The roll button now spends 1.25 seconds spinning before it submits exactly one
+request. Every additional click during that window accelerates the CSS die up
+to a bounded ten-click boost; it never influences the seeded authoritative die
+value. Reduced-motion users receive a pulse instead of 3D rotation.
 
 ## Round and future-module handoffs
 
@@ -102,8 +110,6 @@ and one small snapshot per turn, with at most eight players.
 - Active games are not durable across a Render process or room loss.
 - Player facing is not publicly writable, so dice movement changes position
   but retains the body's last heading.
-- The board state advances before the hop animation finishes. This keeps turns
-  deterministic and responsive but two bodies can briefly animate at once.
 - There is no minigame transition yet, so the first round deliberately stops
   on its completion message.
 - There are no reward dice in ordinary play yet; only the extension contract
@@ -120,13 +126,14 @@ Run `npm run build`, keep one relay running, then open
    should automatically replace it with the compact board panel.
 3. Both panels must name the same first player. Only that browser's Roll d6
    button should be enabled.
-4. Roll. Both panels should display the same value and destination tile. The
-   owning body should hop forward along the volcano track, and the other
-   browser should see the remote body move through ordinary network sync.
-5. Try clicking twice quickly. Only one move should be recorded and the button
-   should pass to the second player.
+4. Click Roll repeatedly during its spin window. The die should visibly rotate
+   faster with each click, but exactly one authoritative move must be recorded.
+5. Both panels should display the same value and destination tile. The owning
+   body should hop at the slower pace along the volcano track, and the next
+   player must remain locked until that movement lands.
 6. Roll from the second browser. Both panels should enter `Board round
-   complete`, retain both positions, and accept no further roll.
+   complete`, retain both positions, expose visual settlement after the last
+   hop lands, and accept no further roll.
 7. Compare every player name, tile, last die, active player, round, and revision
    between the two browsers; they should agree.
 8. Hold WASD and Space while the panel is active. Manual movement must not pull

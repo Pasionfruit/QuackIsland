@@ -41,6 +41,7 @@ export { BOARD_TILES, boardPointAt, tileWorldPoint, type BoardWorldPoint } from 
 export {
   acknowledgeBoardRound,
   getBoardMovement,
+  isBoardMovementVisualSettled,
   isBoardRoundAcknowledged,
   listenForBoardMovement,
   requestBoardRoll,
@@ -49,6 +50,7 @@ export {
   setBoardDiceProvider,
   syncBoardMovementLifecycle,
   useBoardMovement,
+  useBoardMovementVisualSettled,
   useBoardRoundAcknowledged,
   type BoardDiceProvider,
 } from './internal/state'

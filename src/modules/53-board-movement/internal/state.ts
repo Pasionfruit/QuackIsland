@@ -8,6 +8,7 @@ import {
   getTurnOrder,
 } from '../../52-turn-order'
 import { decodeBoardMovementMessage, encodeBoardMovementMessage } from './protocol'
+import { boardMoveDurationMs } from './motion'
 import {
   EMPTY_BOARD_MOVEMENT,
   activeBoardPlayer,
@@ -32,6 +33,12 @@ const handoffStore = createStore<{ sessionId: string | null; round: number; ackn
   round: 0,
   acknowledged: false,
 })
+const visualStore = createStore<{ sessionId: string | null; moveCount: number; settled: boolean }>({
+  sessionId: null,
+  moveCount: 0,
+  settled: true,
+})
+let visualTimer: ReturnType<typeof setTimeout> | null = null
 let actionSerial = 0
 let diceProvider: BoardDiceProvider = () => [{ kind: 'base', sides: 6 }]
 
@@ -41,6 +48,27 @@ export function getBoardMovement(): BoardMovementSnapshot {
 
 export function useBoardMovement(): BoardMovementSnapshot {
   return useStore(store)
+}
+
+export function isBoardMovementVisualSettled(snapshot = store.get()): boolean {
+  const visual = visualStore.get()
+  return snapshot.phase === 'idle' || Boolean(
+    snapshot.sessionId &&
+      visual.sessionId === snapshot.sessionId &&
+      visual.moveCount === snapshot.moves.length &&
+      visual.settled,
+  )
+}
+
+export function useBoardMovementVisualSettled(): boolean {
+  const snapshot = useBoardMovement()
+  const visual = useStore(visualStore)
+  return snapshot.phase === 'idle' || Boolean(
+    snapshot.sessionId &&
+      visual.sessionId === snapshot.sessionId &&
+      visual.moveCount === snapshot.moves.length &&
+      visual.settled,
+  )
 }
 
 export function setBoardDiceProvider(provider: BoardDiceProvider | null): void {
@@ -77,8 +105,35 @@ export function acknowledgeBoardRound(sessionId: string, round: number): boolean
   return true
 }
 
+function trackVisualMovement(current: BoardMovementSnapshot, snapshot: BoardMovementSnapshot): void {
+  if (visualTimer !== null) {
+    clearTimeout(visualTimer)
+    visualTimer = null
+  }
+  const visual = visualStore.get()
+  const addedMove = current.sessionId === snapshot.sessionId && snapshot.moves.length > current.moves.length
+  const lastMove = snapshot.moves[snapshot.moves.length - 1]
+  if (!addedMove || !lastMove) {
+    if (visual.sessionId !== snapshot.sessionId || visual.moveCount !== snapshot.moves.length || !visual.settled) {
+      visualStore.set({ sessionId: snapshot.sessionId, moveCount: snapshot.moves.length, settled: true })
+    }
+    return
+  }
+
+  const sessionId = snapshot.sessionId
+  const moveCount = snapshot.moves.length
+  visualStore.set({ sessionId, moveCount, settled: false })
+  visualTimer = setTimeout(() => {
+    visualTimer = null
+    const latest = store.get()
+    if (latest.sessionId !== sessionId || latest.moves.length !== moveCount) return
+    visualStore.set({ sessionId, moveCount, settled: true })
+  }, boardMoveDurationMs(lastMove))
+}
+
 function adoptSnapshot(snapshot: BoardMovementSnapshot): void {
   const current = store.get()
+  trackVisualMovement(current, snapshot)
   if (current.sessionId !== snapshot.sessionId || current.round !== snapshot.round) {
     handoffStore.set({ sessionId: snapshot.sessionId, round: snapshot.round, acknowledged: false })
   }
@@ -86,7 +141,15 @@ function adoptSnapshot(snapshot: BoardMovementSnapshot): void {
 }
 
 export function resetBoardMovement(): void {
+  if (visualTimer !== null) {
+    clearTimeout(visualTimer)
+    visualTimer = null
+  }
   if (store.get().phase !== 'idle') store.set(EMPTY_BOARD_MOVEMENT)
+  const visual = visualStore.get()
+  if (visual.sessionId !== null || visual.moveCount !== 0 || !visual.settled) {
+    visualStore.set({ sessionId: null, moveCount: 0, settled: true })
+  }
   const handoff = handoffStore.get()
   if (handoff.sessionId !== null || handoff.round !== 0 || handoff.acknowledged) {
     handoffStore.set({ sessionId: null, round: 0, acknowledged: false })
@@ -154,7 +217,12 @@ function nextDice(snapshot: BoardMovementSnapshot, specs: readonly BoardDieSpec[
 
 function acceptRoll(playerId: string, sessionId: string, actionId: string): void {
   const current = ensureHostSession()
-  if (!current || current.sessionId !== sessionId || activeBoardPlayer(current) !== playerId) return
+  if (
+    !current ||
+    current.sessionId !== sessionId ||
+    activeBoardPlayer(current) !== playerId ||
+    !isBoardMovementVisualSettled(current)
+  ) return
   const specs = validSpecs(diceProvider(playerId, current))
   const next = applyBoardRoll(current, playerId, nextDice(current, specs), actionId)
   if (next === current) return
@@ -177,7 +245,7 @@ export function requestBoardRoll(): void {
   if (!active()) return
   const net = getNet()
   const current = store.get()
-  if (net.status !== 'joined' || !net.id || !current.sessionId) return
+  if (net.status !== 'joined' || !net.id || !current.sessionId || !isBoardMovementVisualSettled(current)) return
   const actionId = newActionId(net.id)
   if (net.host) acceptRoll(net.id, current.sessionId, actionId)
   else sendToRoom(encodeBoardMovementMessage({ type: 'roll', sessionId: current.sessionId, actionId }))

@@ -25,7 +25,7 @@ import {
   useStore,
   type WeatherKind,
 } from '../../00-core'
-import { getPlayerColour } from '../../02-player'
+import { PLAYER_COLOURS, getPlayerColour, setPlayerColour } from '../../02-player'
 import { createTrack, record, sampleTrack, stale, type Track } from './interpolate'
 import {
   NET,
@@ -181,6 +181,33 @@ function publishRoster(): void {
   }
   list.sort((a, b) => a.id.localeCompare(b.id, 'en', { numeric: true }))
   roster.set(list)
+}
+
+/**
+ * Moves you off a colour somebody else in the room already has.
+ *
+ * Colour is picked in Settings, before anyone knows who else is coming, so two
+ * people easily land on the same one. Whoever was in the room first keeps
+ * theirs - a lower id, since the relay hands them out in join order - and it
+ * is always the newer arrival that gives way. That means every client can work
+ * this out **on its own**, from the same roster everyone already has: nobody
+ * has to be told to move, and two people cannot both decide the other should.
+ *
+ * Called every time a peer's colour is heard, not just once on joining - a
+ * clash can only be seen once the other side's first packet arrives, and
+ * checking every time is what lets it self-heal if a `Track` briefly held a
+ * stale colour instead of adding somewhere to remember what was already fixed.
+ */
+function resolveColourClash(): void {
+  const me = info.get().id
+  if (me === null) return
+  const mine = getPlayerColour()
+  const earlier = (id: string) => id.localeCompare(me, 'en', { numeric: true }) < 0
+  const clash = [...tracks.entries()].some(([id, track]) => earlier(id) && track.colour === mine)
+  if (!clash) return
+  const taken = new Set([...tracks.values()].map((track) => track.colour).filter((c): c is string => c !== null))
+  const free = PLAYER_COLOURS.find((c) => !taken.has(c.hex))
+  if (free) setPlayerColour(free.hex)
 }
 
 const pings = new Map<string, number>()
@@ -434,7 +461,10 @@ function open(rawCode: string, rawName: string, make: boolean): void {
     track.name = duck.name
     track.colour = duck.colour
     record(track, performance.now() / 1000, duck.state)
-    if (renamed) publishRoster()
+    if (renamed) {
+      resolveColourClash()
+      publishRoster()
+    }
   }
 
   ws.onclose = () => {

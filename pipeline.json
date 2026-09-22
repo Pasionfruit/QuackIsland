@@ -417,7 +417,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/02-player/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -470,7 +470,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-16T20:52:48.025Z"
+          "at": "2026-09-22T01:58:26.859Z"
         },
         "human": {
           "status": "pending"
@@ -950,7 +950,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/09-net/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -993,7 +993,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-16T16:39:53.500Z"
+          "at": "2026-09-22T01:59:13.540Z"
         },
         "human": {
           "status": "pending"
@@ -1885,8 +1885,8 @@
       "gate": {
         "machine": {
           "status": "red",
-          "at": "2026-09-22T01:14:10.412Z",
-          "failed": "test"
+          "at": "2026-09-22T02:02:21.054Z",
+          "failed": "typecheck"
         },
         "human": {
           "status": "pending"
@@ -3370,7 +3370,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/37-wheres-midnight/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -3423,7 +3423,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T17:02:16.867Z"
+          "at": "2026-09-22T02:00:00.641Z"
         },
         "human": {
           "status": "pending"
@@ -3459,7 +3459,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/38-pet-race/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -3517,7 +3517,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-19T22:41:40.093Z"
+          "at": "2026-09-22T02:00:48.180Z"
         },
         "human": {
           "status": "pending"
@@ -3714,7 +3714,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/41-one-piece/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -3757,7 +3757,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-19T03:18:51.514Z"
+          "at": "2026-09-22T02:01:35.613Z"
         },
         "human": {
           "status": "pending"
@@ -4797,7 +4797,7 @@
       "id": "53-board-movement",
       "phase": "P7",
       "title": "Volcano board movement: consume the locked player order, roll one host-authoritative d6 per turn, move along the 120-tile track, finish the round after everyone acts, and stop when somebody reaches the summit",
-      "status": "in_progress",
+      "status": "passed",
       "dependsOn": [
         "00-core",
         "02-player",
@@ -4845,24 +4845,62 @@
           "id": "53.6",
           "title": "Two-player and eight-player verification, workflow scripts, contract and MODULE.md",
           "status": "done"
+        },
+        {
+          "id": "53.7",
+          "title": "Slower sequential tile traversal and a public visual-settlement handoff",
+          "status": "done"
+        },
+        {
+          "id": "53.8",
+          "title": "Mouse-boosted dice spin interaction and regression coverage",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
-          "status": "unknown"
+          "status": "green",
+          "at": "2026-09-22T02:06:00.973Z"
         },
         "human": {
-          "status": "pending"
+          "status": "pass",
+          "at": "2026-09-22T02:10:12.437Z",
+          "note": "Slower movement and dice spin approved"
         },
         "history": [
           {
             "at": "2026-09-22T00:40:32.166Z",
             "result": "pass",
             "note": "Two-browser board movement approved"
+          },
+          {
+            "at": "2026-09-22T02:10:12.437Z",
+            "result": "pass",
+            "note": "Slower movement and dice spin approved"
           }
         ]
       },
-      "freeze": null,
+      "freeze": {
+        "sha256": "b996772819ac3665c2bdc8f2f825a8572c6fc69294b0cc1bdcedcc4d787969e1",
+        "files": {
+          "src/modules/53-board-movement/MODULE.md": "ae928ca94593171abf150684959ad4e225064e3cb99f73a86b1f4f4b40058222",
+          "src/modules/53-board-movement/__tests__/motion.test.ts": "fa426e1cc7cc9f050e06704847e8f76994ec868258f3faf85957514aac56499d",
+          "src/modules/53-board-movement/__tests__/position.test.ts": "c78e0fc6a54786c25eb99223ef4d0141afa6c7fe5cfd68fa146d7516cc5c210e",
+          "src/modules/53-board-movement/__tests__/protocol.test.ts": "c77a0af708c98c1611adc8c5d41fd2d1aed071813d9e2cbe6d248c130e5b6c0a",
+          "src/modules/53-board-movement/__tests__/rules.test.ts": "f5160621dc5804f647cf95bc35364f1b79285401d7f8904815d726ba92753c57",
+          "src/modules/53-board-movement/contract.snapshot.d.ts": "28451b06724f372da1545259270f3cfea6506de12d25f5262eb2aaf8a6fdb1ca",
+          "src/modules/53-board-movement/index.ts": "ce9324759d3c76c6d72987f645fd8edbb612227ad3fd9a9553e833dd7ac25934",
+          "src/modules/53-board-movement/internal/BoardMovementView.tsx": "9a14453f967078c33d23f2defe209d765547cf5098ceb1946ce9442c5d6f1c3d",
+          "src/modules/53-board-movement/internal/board-movement.css": "965c372941c34ed60cd06588a5f6aba15ce4d61f4de80aefe02f02f609620b3c",
+          "src/modules/53-board-movement/internal/motion.ts": "ca75c2aef486aee7f6fbd5fd6681bfa659838872f8d9d430e51ca995fecfe5d5",
+          "src/modules/53-board-movement/internal/position.ts": "78b7bc17bf3d485a02be355b46d938580e8c57a7482b97fb4cb3918bd3e385dd",
+          "src/modules/53-board-movement/internal/protocol.ts": "d4a1f1f185cc7660369f6f4cedae96435ba56e8c1387350d96d0ea020fe1b2d9",
+          "src/modules/53-board-movement/internal/rules.ts": "fcc23131087de0f092f88a60df3eb650f09665f6b44dc6c701a60bcfdc4c9b58",
+          "src/modules/53-board-movement/internal/state.ts": "92e13192c957e2e6fa15c9241003aa41f7b6f4d12abd9199178ddf7aa3227718"
+        },
+        "at": "2026-09-22T02:10:12.437Z",
+        "commit": "87dcea0"
+      },
       "nonGoals": [
         "No minigame selection or transition after round completion",
         "No golden, silver or bronze bonus dice",
@@ -4888,7 +4926,7 @@
       "id": "54-minigame-round",
       "phase": "P7",
       "title": "Volcano minigame round: after every completed board round, select one free-for-all minigame, brief every player, allow host-run practice attempts, run one final attempt, and publish final placements",
-      "status": "ready_for_review",
+      "status": "changes_requested",
       "dependsOn": [
         "00-core",
         "09-net",
@@ -4942,9 +4980,17 @@
           "at": "2026-09-22T01:42:56.186Z"
         },
         "human": {
-          "status": "pending"
+          "status": "changes_requested",
+          "at": "2026-09-22T02:10:17.854Z",
+          "note": "Wait for final movement, improve host controls, auto-launch Island minigames, and hide replay/menu controls"
         },
-        "history": []
+        "history": [
+          {
+            "at": "2026-09-22T02:10:17.854Z",
+            "result": "changes_requested",
+            "note": "Wait for final movement, improve host controls, auto-launch Island minigames, and hide replay/menu controls"
+          }
+        ]
       },
       "freeze": null,
       "nonGoals": [

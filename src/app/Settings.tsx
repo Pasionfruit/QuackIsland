@@ -53,7 +53,7 @@ import {
 } from '../modules/02-player'
 import { MusicControls } from '../modules/05-music'
 import { AUDIO, getCueEngine, readStoredVolume, setEffectsVolume } from '../modules/08-audio'
-import { useNet } from '../modules/09-net'
+import { useNet, usePeers } from '../modules/09-net'
 import {
   CURRENCIES,
   balanceOf,
@@ -402,31 +402,61 @@ function AudioTab() {
 
 function PlayerTab() {
   const colour = usePlayerColour()
+  const peers = usePeers()
   const purse = usePurse()
+
+  // Colours other people in your lobby are already wearing - never your own,
+  // so your own swatch is never disabled out from under you.
+  const takenByOthers = new Set(
+    peers.filter((p) => p.colour && p.colour.toLowerCase() !== colour.toLowerCase()).map((p) => p.colour!.toLowerCase()),
+  )
 
   return (
     <>
       <Section title="COLOUR" first>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
           {PLAYER_COLOURS.map((c) => {
             const on = c.hex.toLowerCase() === colour.toLowerCase()
+            const taken = takenByOthers.has(c.hex.toLowerCase())
             return (
               <button
                 key={c.id}
                 type="button"
+                disabled={taken}
                 onClick={() => setPlayerColour(c.hex)}
-                title={c.label}
+                title={taken ? `${c.label} - somebody else in your lobby has this` : c.label}
                 aria-label={c.label}
                 aria-pressed={on}
+                aria-disabled={taken}
                 style={{
                   height: 36,
                   borderRadius: 8,
                   background: c.hex,
                   border: on ? '3px solid #ffcf8a' : '1px solid rgba(255,255,255,0.2)',
                   boxShadow: on ? '0 0 10px rgba(255,207,138,0.6)' : 'none',
-                  cursor: 'pointer',
+                  cursor: taken ? 'not-allowed' : 'pointer',
+                  opacity: taken ? 0.35 : 1,
+                  position: 'relative',
                 }}
-              />
+              >
+                {taken ? (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'rgba(0,0,0,0.55)',
+                      fontSize: 16,
+                      fontWeight: 700,
+                    }}
+                    aria-hidden
+                  >
+                    ✕
+                  </span>
+                ) : null}
+              </button>
             )
           })}
         </div>
