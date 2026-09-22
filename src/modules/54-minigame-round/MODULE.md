@@ -24,8 +24,10 @@ simulation and controls.
 | `createMinigameRound(board, available)` | Selects one seeded game for an exact completed board round |
 | `beginMinigameAttempt(snapshot, kind, action)` | Starts a practice or locks the one final attempt |
 | `finishFinalMinigame(snapshot, standings, action)` | Normalizes host standings into final roster placements |
+| `requestRewardHandoff(snapshot, action)` | Records the host's one synchronized Continue request after final placements |
 | `getMinigameRound` / `useMinigameRound` | Current revisioned coordinator snapshot |
 | `startMinigamePractice` / `startFinalMinigame` | Host-only runtime controls |
+| `continueToMinigameRewards` | Host-only Continue action consumed by the downstream reward module |
 | `acknowledgeMinigameRound(session)` | Stable downstream handoff after placements are consumed |
 | `isMinigameRoundAcknowledged` / `useMinigameRoundAcknowledged` | Plain and React-safe handoff state |
 | `encodeMinigameRoundMessage` / `decodeMinigameRoundMessage` | Bounded room protocol |
@@ -47,9 +49,15 @@ accept snapshots only from the elected host, revisions only move forward, and
 late subscribers request the current full snapshot. The selected roster is
 copied from board movement and never admits a later relay id.
 
-`53-board-movement` is acknowledged only after this module has adopted the
-matching round. That hides the board-round panel without discarding positions.
-The board is deliberately not resumed here.
+Adopting a host briefing snapshot also opens the selected game locally before
+the later Play call arrives. This makes every browser construct and display the
+game behind the shared countdown instead of first mounting it after 3-2-1.
+
+`53-board-movement` is acknowledged only after its public visual-settlement
+signal confirms the final player's last hop has landed and this module has
+adopted the matching round. That keeps the board visible through the complete
+move, then hides its panel without discarding positions. The board is
+deliberately not resumed here.
 
 ## Practice and final attempts
 
@@ -62,6 +70,14 @@ page. A host-only footer provides two choices:
   minigame starts. No later practice or second final command is accepted, and
   Escape cannot open the restart/leave controls during that attempt.
 
+The Island footer is the only launch surface during this flow. Its larger,
+labelled Practice and Start final cards call the shared minigame runtime
+directly, while the standalone Play button is hidden. Once an Island practice
+or final reaches its podium, the standalone Replay and Minigame dashboard
+buttons and Escape navigation are also hidden. Those controls are restored as
+soon as the Island round is no longer active, so ordinary minigame browsing is
+unchanged.
+
 The minigame's existing finish flow supplies standings. The host ranks those
 through the existing podium rules and broadcasts the resulting placements.
 Ties share ranks and skip following ranks. If everybody ties, every placement
@@ -71,10 +87,13 @@ submitted field instead of blocking the party forever.
 
 ## Handoff to rewards
 
-`complete` remains visible until a downstream module consumes the exact
-session with `acknowledgeMinigameRound`. That module can map rank 1 to a golden
-d6, rank 2 to a silver d4, rank 3 to a bronze d2, give every player their base
-d6, install the board dice provider, and resume the preserved board round.
+`complete` remains visible with a host-only Continue button. Pressing it records
+and broadcasts `continueRequested` exactly once; guests see a waiting state,
+then a preparing-rewards state after the host continues. A downstream module
+consumes that exact synchronized session with `acknowledgeMinigameRound`. It can
+map rank 1 to a golden d6, rank 2 to a silver d4, rank 3 to a bronze d2, give
+every player their base d6, install the board dice provider, and resume the
+preserved board round.
 
 ## Render and server footprint
 
@@ -111,23 +130,26 @@ Run `npm run dev:multi`, then use a normal and private browser window.
 
 1. Create and join a two-player Volcano Island party, ready both players, and
    start as host.
-2. Complete turn order and one full board round. The board panel should be
-   replaced by the same randomly selected free-for-all briefing in both
-   browsers.
+2. Complete turn order and one full board round. The last player must visibly
+   land on their destination tile before the board panel is replaced by the
+   same randomly selected free-for-all briefing in both browsers.
 3. Switch between the description and controls tabs in both browsers. The
-   guest should see `Waiting for the host`; only the host has Practice and
-   Start final buttons.
+   standalone Play button must be absent. The guest should see `Waiting for the
+   host`; only the host has the polished Practice and Start final cards.
 4. Press Practice. Both browsers should enter the same game through its normal
    countdown and show a Practice badge stating that results do not count.
-5. Finish the practice. The host should be offered Practice and Start final
-   again, and the displayed practice count should increase. Run a second
-   practice to confirm each attempt starts fresh.
+5. Finish the practice. Replay and Minigame dashboard must be absent and Escape
+   must not leave the Island flow. The host should be offered Practice and
+   Start final again, and the displayed practice count should increase. Run a
+   second practice to confirm each attempt starts fresh.
 6. Press Start final. Both browsers should show Final attempt. Escape must not
    expose restart or leave controls, and no practice control should return.
-7. Finish the game. Both browsers should retain the ordinary podium and show
-   the same final placement list with `Reward dice are next`.
-8. Confirm the board does not begin another round yet and that ordinary world
-   movement remains blocked behind the minigame screen.
+7. Finish the game. Both browsers should retain the ordinary podium without
+   Replay or Minigame dashboard controls and show the same final placement list.
+   Only the host should have Continue; the guest waits for the host.
+8. Press Continue. Both browsers should switch to `Preparing reward dice...`
+   exactly once. The board does not begin another round yet because reward dice
+   and board resumption belong to the next module.
 9. Refresh neither browser during the test; reconnect identity preservation is
    outside the current network contract.
 
@@ -138,9 +160,10 @@ tests.
 
 ## Gate record
 
-Pending human review.
+Returned twice after human review: first for board movement and Island-specific
+controls, then for guest preloading and a synchronized Continue-to-rewards
+handoff. Pending a new human review.
 
 ## Measured
 
 DOM and state only: zero three.js draw calls and zero triangles.
-

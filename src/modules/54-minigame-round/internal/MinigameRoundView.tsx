@@ -4,8 +4,9 @@ import { useNet } from '../../09-net'
 import { useParty } from '../../10-party'
 import { useGameMode } from '../../13-modes'
 import { minigameById, openMinigame, useMinigameScreen } from '../../15-minigames'
-import { useBoardMovement } from '../../53-board-movement'
+import { useBoardMovement, useBoardMovementVisualSettled } from '../../53-board-movement'
 import {
+  continueToMinigameRewards,
   listenForMinigameRound,
   recordFinalMinigame,
   startFinalMinigame,
@@ -47,6 +48,47 @@ function useDomOverlay(content: ReactNode): void {
   }, [content])
 }
 
+function controlLabel(element: HTMLButtonElement): string {
+  return (element.textContent ?? '').replace(/\s+/g, ' ').trim().toLowerCase()
+}
+
+function useIslandMinigameChrome(
+  active: boolean,
+  screenPhase: 'briefing' | 'over' | null,
+): void {
+  useEffect(() => {
+    if (!active || screenPhase === null || typeof document === 'undefined') return
+    const hidden = new Map<HTMLButtonElement, boolean>()
+    const labels = screenPhase === 'briefing'
+      ? new Set(['play'])
+      : new Set(['replay', 'minigame dashboard'])
+
+    const suppressStandaloneControls = () => {
+      for (const button of document.querySelectorAll('button')) {
+        if (button.closest('[data-minigame-round-root]') || !labels.has(controlLabel(button))) continue
+        if (!hidden.has(button)) hidden.set(button, button.hidden)
+        button.hidden = true
+      }
+    }
+    suppressStandaloneControls()
+    const observer = new MutationObserver(suppressStandaloneControls)
+    observer.observe(document.body, { childList: true, subtree: true })
+
+    const blockStandaloneMenu = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopImmediatePropagation()
+    }
+    window.addEventListener('keydown', blockStandaloneMenu, true)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('keydown', blockStandaloneMenu, true)
+      for (const [button, wasHidden] of hidden) button.hidden = wasHidden
+    }
+  }, [active, screenPhase])
+}
+
 export function MinigameRound() {
   const round = useMinigameRound()
   const board = useBoardMovement()
@@ -54,20 +96,21 @@ export function MinigameRound() {
   const mode = useGameMode()
   const net = useNet()
   const screen = useMinigameScreen()
+  const boardSettled = useBoardMovementVisualSettled()
   const acknowledged = useMinigameRoundAcknowledged(round.sessionId)
 
   useEffect(() => listenForMinigameRound(), [])
 
   useEffect(() => {
     syncMinigameRoundLifecycle()
-  }, [board.phase, board.round, board.sessionId, mode, net.host, net.id, net.room, net.status, party.phase])
+  }, [board.phase, board.round, board.sessionId, boardSettled, mode, net.host, net.id, net.room, net.status, party.phase])
 
   useEffect(() => {
-    if (!net.host || round.phase !== 'briefing' || round.minigameId === '') return
+    if (round.phase !== 'briefing' || round.minigameId === '') return
     if (screen.at !== 'game' || screen.run.id !== round.minigameId || screen.run.phase !== 'briefing') {
       openMinigame(round.minigameId)
     }
-  }, [net.host, round.minigameId, round.phase, round.sessionId, screen])
+  }, [round.minigameId, round.phase, round.sessionId, screen])
 
   useEffect(() => {
     if (
@@ -82,21 +125,18 @@ export function MinigameRound() {
     }
   }, [net.host, round.minigameId, round.phase, screen])
 
-  useEffect(() => {
-    if (round.phase !== 'final') return
-    const lockFinal = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return
-      event.preventDefault()
-      event.stopImmediatePropagation()
-    }
-    window.addEventListener('keydown', lockFinal, true)
-    return () => window.removeEventListener('keydown', lockFinal, true)
-  }, [round.phase])
-
   const game = round.minigameId === '' ? null : minigameById(round.minigameId)
   const practiceReady =
     round.phase === 'practice' &&
     (screen.at !== 'game' || screen.run.id !== round.minigameId || screen.run.phase === 'over')
+  const sharedScreenPhase = screen.at === 'game' && screen.run.id === round.minigameId
+    ? screen.run.phase === 'briefing'
+      ? 'briefing'
+      : screen.run.phase === 'over'
+        ? 'over'
+        : null
+    : null
+  useIslandMinigameChrome(round.phase !== 'idle' && !acknowledged, sharedScreenPhase)
 
   let content: ReactNode = null
   if (round.phase === 'idle' || acknowledged) {
@@ -122,12 +162,25 @@ export function MinigameRound() {
             </li>
           ))}
         </ol>
+        <div className="minigame-round__result-action">
+          {round.continueRequested ? (
+            <span className="minigame-round__waiting">Preparing reward dice...</span>
+          ) : net.host ? (
+            <button type="button" className="minigame-round__continue" onClick={continueToMinigameRewards}>
+              <span className="minigame-round__button-icon" aria-hidden="true">C</span>
+              <span><strong>Continue</strong><small>Reveal reward dice</small></span>
+            </button>
+          ) : (
+            <span className="minigame-round__waiting">Waiting for the host to continue</span>
+          )}
+        </div>
       </section>
     )
   } else if (round.phase === 'briefing' || practiceReady) {
     content = (
       <section className="minigame-round minigame-round--controls" aria-label="Volcano Island minigame controls">
-        <div>
+        <div className="minigame-round__heading">
+          <span className="minigame-round__eyebrow">Volcano Island challenge</span>
           <strong>{game?.title ?? 'Free-for-all minigame'}</strong>
           <span>
             {round.practiceAttempts === 0
@@ -137,9 +190,13 @@ export function MinigameRound() {
         </div>
         {net.host ? (
           <div className="minigame-round__buttons">
-            <button type="button" onClick={startMinigamePractice}>Practice</button>
+            <button type="button" className="minigame-round__practice" onClick={startMinigamePractice}>
+              <span className="minigame-round__button-icon" aria-hidden="true">P</span>
+              <span><strong>Practice</strong><small>Results do not count</small></span>
+            </button>
             <button type="button" className="minigame-round__final" onClick={startFinalMinigame}>
-              Start final
+              <span className="minigame-round__button-icon" aria-hidden="true">F</span>
+              <span><strong>Start final</strong><small>Lock the official result</small></span>
             </button>
           </div>
         ) : (

@@ -50,6 +50,7 @@ export interface MinigameRoundSnapshot {
   minigameId: MinigameId | ''
   players: readonly MinigameRoundPlayer[]
   practiceAttempts: number
+  continueRequested: boolean
   placements: readonly MinigamePlacement[]
   appliedActionIds: readonly string[]
   error: string
@@ -66,6 +67,7 @@ export const EMPTY_MINIGAME_ROUND: MinigameRoundSnapshot = {
   minigameId: '',
   players: [],
   practiceAttempts: 0,
+  continueRequested: false,
   placements: [],
   appliedActionIds: [],
   error: '',
@@ -152,6 +154,7 @@ export function beginMinigameAttempt(
     phase: kind,
     revision: snapshot.revision + 1,
     practiceAttempts: snapshot.practiceAttempts + (kind === 'practice' ? 1 : 0),
+    continueRequested: false,
     placements: [],
     appliedActionIds: withAction(snapshot, actionId),
     error: '',
@@ -194,8 +197,23 @@ export function finishFinalMinigame(
     phase: 'complete',
     revision: snapshot.revision + 1,
     placements,
+    continueRequested: false,
     appliedActionIds: withAction(snapshot, actionId),
     error: '',
+  }
+}
+
+export function requestRewardHandoff(
+  snapshot: MinigameRoundSnapshot,
+  actionId: string,
+): MinigameRoundSnapshot {
+  if (snapshot.phase !== 'complete' || snapshot.continueRequested) return snapshot
+  if (!validActionId(actionId) || snapshot.appliedActionIds.includes(actionId)) return snapshot
+  return {
+    ...snapshot,
+    revision: snapshot.revision + 1,
+    continueRequested: true,
+    appliedActionIds: withAction(snapshot, actionId),
   }
 }
 
@@ -218,6 +236,7 @@ export function isMinigameRoundSnapshot(value: unknown): value is MinigameRoundS
   if (!Number.isSafeInteger(snapshot.revision) || (snapshot.revision as number) < 1) return false
   if (!Number.isSafeInteger(snapshot.boardRound) || (snapshot.boardRound as number) < 1) return false
   if (!Number.isSafeInteger(snapshot.practiceAttempts) || (snapshot.practiceAttempts as number) < 0 || (snapshot.practiceAttempts as number) > MINIGAME_ROUND.maxPractices) return false
+  if (typeof snapshot.continueRequested !== 'boolean') return false
   if (!Array.isArray(snapshot.players) || !uniquePlayers(snapshot.players as MinigameRoundPlayer[])) return false
   if (!Array.isArray(snapshot.placements) || snapshot.placements.length > MINIGAME_ROUND.maxPlayers) return false
   if (!Array.isArray(snapshot.appliedActionIds) || snapshot.appliedActionIds.length > MINIGAME_ROUND.maxActions) return false
@@ -238,6 +257,7 @@ export function isMinigameRoundSnapshot(value: unknown): value is MinigameRoundS
   const placements = snapshot.placements as unknown[]
   if (phase === 'complete' && placements.length !== players.length) return false
   if (phase !== 'complete' && placements.length !== 0) return false
+  if (phase !== 'complete' && snapshot.continueRequested) return false
   const placementIds = new Set<string>()
   for (const value of placements) {
     if (!value || typeof value !== 'object') return false

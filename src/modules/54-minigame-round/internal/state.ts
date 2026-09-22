@@ -15,7 +15,11 @@ import {
   playMinigame,
   type Standing,
 } from '../../15-minigames'
-import { acknowledgeBoardRound, getBoardMovement } from '../../53-board-movement'
+import {
+  acknowledgeBoardRound,
+  getBoardMovement,
+  isBoardMovementVisualSettled,
+} from '../../53-board-movement'
 import { decodeMinigameRoundMessage, encodeMinigameRoundMessage } from './protocol'
 import {
   EMPTY_MINIGAME_ROUND,
@@ -23,6 +27,7 @@ import {
   canAcknowledgeMinigameRound,
   createMinigameRound,
   finishFinalMinigame,
+  requestRewardHandoff,
   type MinigameRoundSnapshot,
 } from './rules'
 
@@ -71,13 +76,24 @@ function accept(snapshot: MinigameRoundSnapshot): void {
   acknowledgeBoardRound(snapshot.boardSessionId, snapshot.boardRound)
 }
 
+function preloadRoundGame(snapshot: MinigameRoundSnapshot): void {
+  if (snapshot.minigameId === '' || snapshot.phase === 'idle' || snapshot.phase === 'invalid' || snapshot.phase === 'complete') return
+  const screen = getMinigameScreen()
+  const needsBriefing =
+    screen.at !== 'game' ||
+    screen.run.id !== snapshot.minigameId ||
+    screen.run.phase === 'over'
+  if (needsBriefing) openMinigame(snapshot.minigameId)
+}
+
 function boardMatches(snapshot: MinigameRoundSnapshot): boolean {
   const board = getBoardMovement()
   return (
     board.sessionId === snapshot.boardSessionId &&
     board.room === snapshot.room &&
     board.round === snapshot.boardRound &&
-    board.phase === 'round_complete'
+    board.phase === 'round_complete' &&
+    isBoardMovementVisualSettled(board)
   )
 }
 
@@ -88,6 +104,7 @@ function adopt(snapshot: MinigameRoundSnapshot): boolean {
   const current = store.get()
   if (current.sessionId === snapshot.sessionId && snapshot.revision <= current.revision) return false
   accept(snapshot)
+  preloadRoundGame(snapshot)
   return true
 }
 
@@ -139,6 +156,7 @@ export function syncMinigameRoundLifecycle(): void {
     party.phase === 'playing' &&
     getGameMode() === 'island' &&
     board.phase === 'round_complete' &&
+    isBoardMovementVisualSettled(board) &&
     boardSessionId !== null &&
     boardRoom !== null
 
@@ -195,6 +213,16 @@ export function recordFinalMinigame(standings: readonly Standing[]): boolean {
   if (!getNet().host) return false
   const current = store.get()
   const next = finishFinalMinigame(current, standings, localAction('finish'))
+  if (next === current) return false
+  accept(next)
+  announce(next)
+  return true
+}
+
+export function continueToMinigameRewards(): boolean {
+  if (!getNet().host) return false
+  const current = store.get()
+  const next = requestRewardHandoff(current, localAction('continue'))
   if (next === current) return false
   accept(next)
   announce(next)

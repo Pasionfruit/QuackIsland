@@ -8,6 +8,7 @@ import {
   eligibleFreeForAll,
   finishFinalMinigame,
   isMinigameRoundSnapshot,
+  requestRewardHandoff,
 } from '../internal/rules'
 
 function board(playerCount = 2): BoardMovementSnapshot {
@@ -81,6 +82,21 @@ describe('minigame round rules', () => {
     expect(finishFinalMinigame(complete, [standing('p1', 1), standing('p2', 2)], 'again')).toBe(complete)
     expect(canAcknowledgeMinigameRound(complete, complete.sessionId)).toBe(true)
     expect(canAcknowledgeMinigameRound(complete, 'stale')).toBe(false)
+  })
+
+  it('records one explicit host handoff after final placements', () => {
+    const created = createMinigameRound(board(), games)
+    const final = beginMinigameAttempt(created, 'final', 'final')
+    const complete = finishFinalMinigame(final, [standing('p1', 1), standing('p2', 2)], 'finish')
+    const continued = requestRewardHandoff(complete, 'continue')
+    expect(continued).toMatchObject({
+      phase: 'complete',
+      continueRequested: true,
+      revision: complete.revision + 1,
+    })
+    expect(requestRewardHandoff(continued, 'continue-again')).toBe(continued)
+    expect(requestRewardHandoff(final, 'too-early')).toBe(final)
+    expect(isMinigameRoundSnapshot(continued)).toBe(true)
   })
 
   it('gives no podium rank when everybody ties', () => {

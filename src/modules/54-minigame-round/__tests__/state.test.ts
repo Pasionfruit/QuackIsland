@@ -29,16 +29,23 @@ const mocks = vi.hoisted(() => ({
   screen: { at: 'game', run: { id: 'zombie-tag', phase: 'briefing' } } as Record<string, unknown>,
   send: vi.fn(),
   acknowledgeBoard: vi.fn(() => true),
+  visualSettled: true,
   open: vi.fn(),
   play: vi.fn(),
+  listener: null as null | ((senderId: string, payload: unknown) => void),
 }))
 
 vi.mock('../../09-net', () => ({
   getNet: () => mocks.net,
   getPeers: () => [{ id: 'guest', name: 'Guest', colour: '#fff', ping: 1 }],
-  isHost: (id: string, ids: Iterable<string>) => id === [...ids].sort()[0],
+  isHost: (id: string) => id === 'host',
   sendToRoom: mocks.send,
-  subscribeRoom: () => () => undefined,
+  subscribeRoom: (listener: (senderId: string, payload: unknown) => void) => {
+    mocks.listener = listener
+    return () => {
+      mocks.listener = null
+    }
+  },
 }))
 
 vi.mock('../../10-party', () => ({ getParty: () => ({ phase: 'playing' }) }))
@@ -46,6 +53,7 @@ vi.mock('../../13-modes', () => ({ getGameMode: () => 'island' }))
 vi.mock('../../53-board-movement', () => ({
   acknowledgeBoardRound: mocks.acknowledgeBoard,
   getBoardMovement: () => mocks.board,
+  isBoardMovementVisualSettled: () => mocks.visualSettled,
 }))
 vi.mock('../../15-minigames', () => ({
   builtMinigames: () => ['zombie-tag'],
@@ -67,7 +75,9 @@ vi.mock('../../15-minigames', () => ({
 
 import {
   acknowledgeMinigameRound,
+  continueToMinigameRewards,
   getMinigameRound,
+  listenForMinigameRound,
   recordFinalMinigame,
   resetMinigameRound,
   startFinalMinigame,
@@ -78,7 +88,9 @@ import {
 describe('host minigame-round coordination', () => {
   beforeEach(() => {
     resetMinigameRound()
+    mocks.net.id = 'host'
     mocks.net.host = true
+    mocks.visualSettled = true
     mocks.screen = { at: 'game', run: { id: 'zombie-tag', phase: 'briefing' } }
     mocks.send.mockClear()
     mocks.acknowledgeBoard.mockClear()
@@ -95,6 +107,19 @@ describe('host minigame-round coordination', () => {
     })
     expect(mocks.acknowledgeBoard).toHaveBeenCalledWith('board-session', 1)
     expect(mocks.send).toHaveBeenCalledOnce()
+  })
+
+  it('waits for the final board movement to visibly settle', () => {
+    mocks.visualSettled = false
+    syncMinigameRoundLifecycle()
+    expect(getMinigameRound().phase).toBe('idle')
+    expect(mocks.acknowledgeBoard).not.toHaveBeenCalled()
+    expect(mocks.send).not.toHaveBeenCalled()
+
+    mocks.visualSettled = true
+    syncMinigameRoundLifecycle()
+    expect(getMinigameRound().phase).toBe('briefing')
+    expect(mocks.acknowledgeBoard).toHaveBeenCalledWith('board-session', 1)
   })
 
   it('runs practices, locks the final, and records host standings', () => {
@@ -118,7 +143,29 @@ describe('host minigame-round coordination', () => {
     const complete = getMinigameRound()
     expect(complete.phase).toBe('complete')
     expect(complete.placements.find((placement) => placement.playerId === 'guest')?.rank).toBe(1)
+    expect(continueToMinigameRewards()).toBe(true)
+    expect(getMinigameRound().continueRequested).toBe(true)
+    expect(continueToMinigameRewards()).toBe(false)
     expect(acknowledgeMinigameRound(complete.sessionId)).toBe(true)
+  })
+
+  it('preloads a selected game on a guest before the play call arrives', () => {
+    syncMinigameRoundLifecycle()
+    const payload = mocks.send.mock.calls[0]?.[0]
+    expect(payload).toBeDefined()
+
+    resetMinigameRound()
+    mocks.open.mockClear()
+    mocks.net.id = 'guest'
+    mocks.net.host = false
+    mocks.screen = { at: 'dashboard' }
+    const stop = listenForMinigameRound()
+    mocks.listener?.('host', payload)
+
+    expect(getMinigameRound().phase).toBe('briefing')
+    expect(mocks.open).toHaveBeenCalledWith('zombie-tag')
+    expect(mocks.play).not.toHaveBeenCalled()
+    stop()
   })
 
   it('does not let a guest start or finish an attempt', () => {

@@ -4926,7 +4926,7 @@
       "id": "54-minigame-round",
       "phase": "P7",
       "title": "Volcano minigame round: after every completed board round, select one free-for-all minigame, brief every player, allow host-run practice attempts, run one final attempt, and publish final placements",
-      "status": "changes_requested",
+      "status": "passed",
       "dependsOn": [
         "00-core",
         "09-net",
@@ -4972,27 +4972,74 @@
           "id": "54.6",
           "title": "Two-player and eight-player verification, workflow scripts, contract and MODULE.md",
           "status": "done"
+        },
+        {
+          "id": "54.7",
+          "title": "Wait for final board movement settlement before selecting and presenting the minigame",
+          "status": "done"
+        },
+        {
+          "id": "54.8",
+          "title": "Polished Island controls with standalone play, replay and dashboard navigation suppressed",
+          "status": "done"
+        },
+        {
+          "id": "54.9",
+          "title": "Guest preloading before countdown and synchronized Continue-to-rewards handoff",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-22T01:42:56.186Z"
+          "at": "2026-09-22T02:34:24.785Z"
         },
         "human": {
-          "status": "changes_requested",
-          "at": "2026-09-22T02:10:17.854Z",
-          "note": "Wait for final movement, improve host controls, auto-launch Island minigames, and hide replay/menu controls"
+          "status": "pass",
+          "at": "2026-09-22T03:22:32.929Z",
+          "note": "Guest preload and Continue handoff approved"
         },
         "history": [
           {
             "at": "2026-09-22T02:10:17.854Z",
             "result": "changes_requested",
             "note": "Wait for final movement, improve host controls, auto-launch Island minigames, and hide replay/menu controls"
+          },
+          {
+            "at": "2026-09-22T02:27:46.894Z",
+            "result": "changes_requested",
+            "note": "Guests must load the selected game before countdown; final results need a Continue to rewards handoff"
+          },
+          {
+            "at": "2026-09-22T02:28:40.271Z",
+            "result": "changes_requested",
+            "note": "Guests must load the selected game before countdown; final results need a Continue to rewards handoff"
+          },
+          {
+            "at": "2026-09-22T03:22:32.929Z",
+            "result": "pass",
+            "note": "Guest preload and Continue handoff approved"
           }
         ]
       },
-      "freeze": null,
+      "freeze": {
+        "sha256": "d4b6d05c72a5093681ab2da090f2b90cb4dfc326d1ed6429cba6b3e40ec0cf7b",
+        "files": {
+          "src/modules/54-minigame-round/MODULE.md": "3cc6b2749a58d453e5c9d066b79ae2e08aa8bfde094c87e16f0850ae641cd422",
+          "src/modules/54-minigame-round/__tests__/protocol.test.ts": "ab2bf8c50d00927cf9f4dd1f46a3ac06f25da6ab82e900f64d5c17088ebdfcf6",
+          "src/modules/54-minigame-round/__tests__/rules.test.ts": "f270021baae7f98eaa76cb82b13a517d7dca27061a906641309160c895180eee",
+          "src/modules/54-minigame-round/__tests__/state.test.ts": "7f7bb6acd3b575f5b9e245451402093c40612101076c3e0e74f93126a924e5fc",
+          "src/modules/54-minigame-round/contract.snapshot.d.ts": "c7e1a24bf0090e87625ccde26675fb9b2d41bdfbfd7c9e25b4d1155de513d1bf",
+          "src/modules/54-minigame-round/index.ts": "434fb5c4ca6994f324e14f6728008f8be9e08df7b932dd71e813e74cea0ba42a",
+          "src/modules/54-minigame-round/internal/MinigameRoundView.tsx": "873d358d66bf513aa26d1905d1370105e3fea29dbc98a6ba87fe2561c817467d",
+          "src/modules/54-minigame-round/internal/minigame-round.css": "faef19471151d404ea80981f076203ed40a8fff5070b3a9f2b1cc8876f474a3a",
+          "src/modules/54-minigame-round/internal/protocol.ts": "c3c4cbe1876de1de50247102ae6b462bc671b2a6b6e27d038409b0ffd32bca83",
+          "src/modules/54-minigame-round/internal/rules.ts": "0b45924bfc57520b109898c0d06d4995b169b0c6d5ea52eddc2cc04185101e7c",
+          "src/modules/54-minigame-round/internal/state.ts": "104cc02c4b8278af3dd16a6ca1a1eb13dc4b4992a7183081f2a06a7d39364a98"
+        },
+        "at": "2026-09-22T03:22:32.929Z",
+        "commit": "f97c034"
+      },
       "nonGoals": [
         "No golden, silver or bronze reward dice; a downstream module consumes final placements",
         "No board-round resume before rewards are applied",
