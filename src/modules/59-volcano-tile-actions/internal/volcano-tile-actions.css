@@ -1,0 +1,101 @@
+.volcano-tile-actions-hud {
+  position: fixed;
+  top: 76px;
+  right: 18px;
+  z-index: 640;
+  display: grid;
+  width: min(220px, calc(100vw - 36px));
+  gap: 10px;
+  color: #f8f2e8;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  pointer-events: none;
+}
+
+.volcano-tile-actions-legend,
+.volcano-tile-actions-result {
+  padding: 11px 13px;
+  border: 1px solid rgb(255 255 255 / 13%);
+  border-radius: 14px;
+  background: rgb(20 15 13 / 80%);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 28%);
+  backdrop-filter: blur(8px);
+}
+
+.volcano-tile-actions-legend {
+  display: grid;
+  gap: 7px;
+  font-size: 0.78rem;
+}
+
+.volcano-tile-actions-legend > strong {
+  color: #d9c8b5;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.volcano-tile-actions-legend span {
+  display: grid;
+  grid-template-columns: 11px 1fr auto;
+  align-items: center;
+  gap: 7px;
+}
+
+.volcano-tile-actions-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ff7a1a;
+  box-shadow: 0 0 8px rgb(255 122 26 / 70%);
+}
+
+.volcano-tile-actions-legend [data-kind="ash_slide"] i {
+  background: #77808f;
+  box-shadow: 0 0 7px rgb(185 196 213 / 38%);
+}
+
+.volcano-tile-actions-legend b {
+  color: #fff1c8;
+}
+
+.volcano-tile-actions-result {
+  display: grid;
+  gap: 3px;
+  border-color: rgb(255 132 43 / 38%);
+  animation: volcano-tile-result-in 260ms ease-out;
+}
+
+.volcano-tile-actions-result[data-kind="ash_slide"] {
+  border-color: rgb(174 188 208 / 34%);
+}
+
+.volcano-tile-actions-result strong {
+  color: #ffbd69;
+}
+
+.volcano-tile-actions-result[data-kind="ash_slide"] strong {
+  color: #cbd5e3;
+}
+
+.volcano-tile-actions-result span {
+  color: #d9cfc5;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+@keyframes volcano-tile-result-in {
+  from { opacity: 0; transform: translateX(10px); }
+}
+
+@media (max-width: 620px) {
+  .volcano-tile-actions-hud {
+    top: auto;
+    right: 12px;
+    bottom: 12px;
+    width: min(200px, calc(100vw - 24px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .volcano-tile-actions-result { animation: none; }
+}

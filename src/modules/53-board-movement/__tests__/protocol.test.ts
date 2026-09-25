@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { TurnOrderSnapshot } from '../../52-turn-order'
 import { decodeBoardMovementMessage, decodeBoardMovementSnapshot, encodeBoardMovementMessage } from '../internal/protocol'
-import { applyBoardRoll, createBoardMovement } from '../internal/rules'
+import { applyBoardLandingEffect, applyBoardRoll, createBoardMovement } from '../internal/rules'
 
 const order: TurnOrderSnapshot = {
   sessionId: 'ROOM:order',
@@ -27,6 +27,14 @@ describe('board movement wire protocol', () => {
   it('round-trips a moved snapshot', () => {
     let snapshot = createBoardMovement(order, 9001, 120)
     snapshot = applyBoardRoll(snapshot, 'p1', [{ kind: 'base', sides: 6, value: 4 }], 'move:p1')
+    const encoded = encodeBoardMovementMessage({ type: 'snapshot', snapshot })
+    expect(decodeBoardMovementMessage(encoded)).toEqual({ type: 'snapshot', snapshot })
+  })
+
+  it('round-trips the authoritative position after a landing displacement', () => {
+    let snapshot = createBoardMovement(order, 9001, 120)
+    snapshot = applyBoardRoll(snapshot, 'p1', [{ kind: 'base', sides: 6, value: 4 }], 'move:p1')
+    snapshot = applyBoardLandingEffect(snapshot, { id: 'ash', label: 'Ash slide', moveBy: -2 }, 'effect:p1')
     const encoded = encodeBoardMovementMessage({ type: 'snapshot', snapshot })
     expect(decodeBoardMovementMessage(encoded)).toEqual({ type: 'snapshot', snapshot })
   })

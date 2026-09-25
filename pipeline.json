@@ -206,7 +206,10 @@
         "53-board-movement",
         "54-minigame-round",
         "55-reward-dice",
-        "56-volcano-victory"
+        "56-volcano-victory",
+        "58-breaking-the-ice",
+        "59-volcano-tile-actions",
+        "60-volcano-map-landmarks"
       ],
       "generation": 1,
       "contract": {
@@ -414,7 +417,8 @@
         "49-needs-a-walmart",
         "50-milf-fishing",
         "51-perfect-game",
-        "53-board-movement"
+        "53-board-movement",
+        "58-breaking-the-ice"
       ],
       "generation": 1,
       "contract": {
@@ -950,7 +954,8 @@
         "54-minigame-round",
         "55-reward-dice",
         "56-volcano-victory",
-        "57-volcano-postgame"
+        "57-volcano-postgame",
+        "58-breaking-the-ice"
       ],
       "generation": 1,
       "contract": {
@@ -1040,7 +1045,9 @@
         "54-minigame-round",
         "55-reward-dice",
         "56-volcano-victory",
-        "57-volcano-postgame"
+        "57-volcano-postgame",
+        "59-volcano-tile-actions",
+        "60-volcano-map-landmarks"
       ],
       "generation": 1,
       "contract": {
@@ -1268,7 +1275,9 @@
         "54-minigame-round",
         "55-reward-dice",
         "56-volcano-victory",
-        "57-volcano-postgame"
+        "57-volcano-postgame",
+        "59-volcano-tile-actions",
+        "60-volcano-map-landmarks"
       ],
       "generation": 1,
       "contract": {
@@ -1493,7 +1502,8 @@
         "50-milf-fishing",
         "51-perfect-game",
         "54-minigame-round",
-        "55-reward-dice"
+        "55-reward-dice",
+        "58-breaking-the-ice"
       ],
       "generation": 1,
       "contract": {
@@ -4821,9 +4831,11 @@
       "dependents": [
         "54-minigame-round",
         "55-reward-dice",
-        "56-volcano-victory"
+        "56-volcano-victory",
+        "59-volcano-tile-actions",
+        "60-volcano-map-landmarks"
       ],
-      "generation": 2,
+      "generation": 4,
       "contract": {
         "version": "0.1.0",
         "snapshot": "src/modules/53-board-movement/contract.snapshot.d.ts",
@@ -4869,17 +4881,27 @@
           "id": "53.8",
           "title": "Mouse-boosted dice spin interaction and regression coverage",
           "status": "done"
+        },
+        {
+          "id": "53.9",
+          "title": "Additive host-side landing-effect resolver with bounded forward/backward displacement and visual settlement",
+          "status": "done"
+        },
+        {
+          "id": "53.10",
+          "title": "Stable shared-tile player spacing for two through eight players",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-22T02:06:00.973Z"
+          "at": "2026-09-25T16:11:01.793Z"
         },
         "human": {
           "status": "pass",
-          "at": "2026-09-22T02:10:12.437Z",
-          "note": "Slower movement and dice spin approved"
+          "at": "2026-09-25T16:12:35.566Z",
+          "note": "Shared-tile players remain separated and synchronized"
         },
         "history": [
           {
@@ -4891,29 +4913,40 @@
             "at": "2026-09-22T02:10:12.437Z",
             "result": "pass",
             "note": "Slower movement and dice spin approved"
+          },
+          {
+            "at": "2026-09-25T15:28:34.274Z",
+            "result": "pass",
+            "note": "Landing-effect seam approved; existing board, minigame, rewards, and victory flow still work"
+          },
+          {
+            "at": "2026-09-25T16:12:35.566Z",
+            "result": "pass",
+            "note": "Shared-tile players remain separated and synchronized"
           }
         ]
       },
       "freeze": {
-        "sha256": "b996772819ac3665c2bdc8f2f825a8572c6fc69294b0cc1bdcedcc4d787969e1",
+        "sha256": "4563b7b035e160f52c955aa3d6e02234b94d42fd7f6a1966be1e89bbd354ff28",
         "files": {
-          "src/modules/53-board-movement/MODULE.md": "ae928ca94593171abf150684959ad4e225064e3cb99f73a86b1f4f4b40058222",
-          "src/modules/53-board-movement/__tests__/motion.test.ts": "fa426e1cc7cc9f050e06704847e8f76994ec868258f3faf85957514aac56499d",
-          "src/modules/53-board-movement/__tests__/position.test.ts": "c78e0fc6a54786c25eb99223ef4d0141afa6c7fe5cfd68fa146d7516cc5c210e",
-          "src/modules/53-board-movement/__tests__/protocol.test.ts": "c77a0af708c98c1611adc8c5d41fd2d1aed071813d9e2cbe6d248c130e5b6c0a",
-          "src/modules/53-board-movement/__tests__/rules.test.ts": "f5160621dc5804f647cf95bc35364f1b79285401d7f8904815d726ba92753c57",
-          "src/modules/53-board-movement/contract.snapshot.d.ts": "28451b06724f372da1545259270f3cfea6506de12d25f5262eb2aaf8a6fdb1ca",
-          "src/modules/53-board-movement/index.ts": "ce9324759d3c76c6d72987f645fd8edbb612227ad3fd9a9553e833dd7ac25934",
-          "src/modules/53-board-movement/internal/BoardMovementView.tsx": "9a14453f967078c33d23f2defe209d765547cf5098ceb1946ce9442c5d6f1c3d",
+          "src/modules/53-board-movement/MODULE.md": "3f9211b2dd8ddeae856daff1f30547900c17854888d472d069fe35e1cc13514c",
+          "src/modules/53-board-movement/__tests__/landing-effect-state.test.ts": "b2100384a933469d0df4ee8a7497c6a4cab6972b411bf43cf1274e8962ceef5b",
+          "src/modules/53-board-movement/__tests__/motion.test.ts": "120dacdebd244595d27b69afecd0c6eaa247f3e7f64402b1b9206f64bd998936",
+          "src/modules/53-board-movement/__tests__/position.test.ts": "078ea1133decc82cd9627c738823ce78131d00ea6811a445e98bae01c80c6b41",
+          "src/modules/53-board-movement/__tests__/protocol.test.ts": "e2859e4e237ad778af490ba438c4a04c5e35b191a9f90c0e3c8e491944e70274",
+          "src/modules/53-board-movement/__tests__/rules.test.ts": "a6ffd6ad47966253d3f6872a6ede676d588a00eda0f1d576688e71a862e5e5e7",
+          "src/modules/53-board-movement/contract.snapshot.d.ts": "f8e77a1155f8279c8ad5dd70b732402cf79c76d203ddbe61b50d8417c048da96",
+          "src/modules/53-board-movement/index.ts": "e691aecb74378adb22fcae5c12d593a160be771fc5338eb5e2e98f616a760c5e",
+          "src/modules/53-board-movement/internal/BoardMovementView.tsx": "b4b416e07b0a794d148420cbd54a79507b1201e216cf06a8da14eaa58e3a8d0c",
           "src/modules/53-board-movement/internal/board-movement.css": "965c372941c34ed60cd06588a5f6aba15ce4d61f4de80aefe02f02f609620b3c",
-          "src/modules/53-board-movement/internal/motion.ts": "ca75c2aef486aee7f6fbd5fd6681bfa659838872f8d9d430e51ca995fecfe5d5",
-          "src/modules/53-board-movement/internal/position.ts": "78b7bc17bf3d485a02be355b46d938580e8c57a7482b97fb4cb3918bd3e385dd",
+          "src/modules/53-board-movement/internal/motion.ts": "2dab92595f7414163edd18587d3258ce6a0f86c0f4dfd9192e896882d239b3b2",
+          "src/modules/53-board-movement/internal/position.ts": "abf03a693b2221fd21d5b03c82ae84db12114cb8bb531e9fb192f7f0b9d9c42f",
           "src/modules/53-board-movement/internal/protocol.ts": "d4a1f1f185cc7660369f6f4cedae96435ba56e8c1387350d96d0ea020fe1b2d9",
-          "src/modules/53-board-movement/internal/rules.ts": "fcc23131087de0f092f88a60df3eb650f09665f6b44dc6c701a60bcfdc4c9b58",
-          "src/modules/53-board-movement/internal/state.ts": "92e13192c957e2e6fa15c9241003aa41f7b6f4d12abd9199178ddf7aa3227718"
+          "src/modules/53-board-movement/internal/rules.ts": "43a913ea70b4b13760a24814605e31a166a6930cc764045604e58922e70ab040",
+          "src/modules/53-board-movement/internal/state.ts": "28bd65c13675781faa941489e61de9e0164f946d0de623fa0d6418f37ee5d500"
         },
-        "at": "2026-09-22T02:10:12.437Z",
-        "commit": "87dcea0"
+        "at": "2026-09-25T16:12:35.566Z",
+        "commit": "c19387f"
       },
       "nonGoals": [
         "No minigame selection or transition after round completion",
@@ -4933,6 +4966,18 @@
           "reason": "Slow tile traversal and add mouse-boosted dice spinning",
           "priorSha256": "1a358f170d35bf5ae5c3ef17a237ade3bbd45523d16c968bce8e8ec855bacb45",
           "generation": 1
+        },
+        {
+          "at": "2026-09-25T15:18:13.025Z",
+          "reason": "Add a public landing-effect extension seam for modular tile actions",
+          "priorSha256": "b996772819ac3665c2bdc8f2f825a8572c6fc69294b0cc1bdcedcc4d787969e1",
+          "generation": 2
+        },
+        {
+          "at": "2026-09-25T16:08:02.357Z",
+          "reason": "Players sharing a tile must render with stable separate positions instead of overlapping",
+          "priorSha256": "0eb373b0ecc67ec49bd73bdea40803c38c1ed817346be0395629718d823b73e8",
+          "generation": 3
         }
       ]
     },
@@ -4940,7 +4985,7 @@
       "id": "54-minigame-round",
       "phase": "P7",
       "title": "Volcano minigame round: after every completed board round, select one free-for-all minigame, brief every player, allow host-run practice attempts, run one final attempt, and publish final placements",
-      "status": "passed",
+      "status": "in_progress",
       "dependsOn": [
         "00-core",
         "09-net",
@@ -4952,7 +4997,7 @@
       "dependents": [
         "55-reward-dice"
       ],
-      "generation": 1,
+      "generation": 2,
       "contract": {
         "version": "0.1.0",
         "snapshot": "src/modules/54-minigame-round/contract.snapshot.d.ts",
@@ -5007,13 +5052,10 @@
       ],
       "gate": {
         "machine": {
-          "status": "green",
-          "at": "2026-09-22T02:34:24.785Z"
+          "status": "unknown"
         },
         "human": {
-          "status": "pass",
-          "at": "2026-09-22T03:22:32.929Z",
-          "note": "Guest preload and Continue handoff approved"
+          "status": "pending"
         },
         "history": [
           {
@@ -5038,24 +5080,7 @@
           }
         ]
       },
-      "freeze": {
-        "sha256": "d4b6d05c72a5093681ab2da090f2b90cb4dfc326d1ed6429cba6b3e40ec0cf7b",
-        "files": {
-          "src/modules/54-minigame-round/MODULE.md": "3cc6b2749a58d453e5c9d066b79ae2e08aa8bfde094c87e16f0850ae641cd422",
-          "src/modules/54-minigame-round/__tests__/protocol.test.ts": "ab2bf8c50d00927cf9f4dd1f46a3ac06f25da6ab82e900f64d5c17088ebdfcf6",
-          "src/modules/54-minigame-round/__tests__/rules.test.ts": "f270021baae7f98eaa76cb82b13a517d7dca27061a906641309160c895180eee",
-          "src/modules/54-minigame-round/__tests__/state.test.ts": "7f7bb6acd3b575f5b9e245451402093c40612101076c3e0e74f93126a924e5fc",
-          "src/modules/54-minigame-round/contract.snapshot.d.ts": "c7e1a24bf0090e87625ccde26675fb9b2d41bdfbfd7c9e25b4d1155de513d1bf",
-          "src/modules/54-minigame-round/index.ts": "434fb5c4ca6994f324e14f6728008f8be9e08df7b932dd71e813e74cea0ba42a",
-          "src/modules/54-minigame-round/internal/MinigameRoundView.tsx": "873d358d66bf513aa26d1905d1370105e3fea29dbc98a6ba87fe2561c817467d",
-          "src/modules/54-minigame-round/internal/minigame-round.css": "faef19471151d404ea80981f076203ed40a8fff5070b3a9f2b1cc8876f474a3a",
-          "src/modules/54-minigame-round/internal/protocol.ts": "c3c4cbe1876de1de50247102ae6b462bc671b2a6b6e27d038409b0ffd32bca83",
-          "src/modules/54-minigame-round/internal/rules.ts": "0b45924bfc57520b109898c0d06d4995b169b0c6d5ea52eddc2cc04185101e7c",
-          "src/modules/54-minigame-round/internal/state.ts": "104cc02c4b8278af3dd16a6ca1a1eb13dc4b4992a7183081f2a06a7d39364a98"
-        },
-        "at": "2026-09-22T03:22:32.929Z",
-        "commit": "f97c034"
-      },
+      "freeze": null,
       "nonGoals": [
         "No golden, silver or bronze reward dice; a downstream module consumes final placements",
         "No board-round resume before rewards are applied",
@@ -5067,7 +5092,15 @@
         "trianglesMax": 0
       },
       "measured": null,
-      "blockers": []
+      "blockers": [],
+      "unfreezes": [
+        {
+          "at": "2026-09-25T16:12:52.173Z",
+          "reason": "Second player does not load the selected minigame during the Volcano round handoff",
+          "priorSha256": "d4b6d05c72a5093681ab2da090f2b90cb4dfc326d1ed6429cba6b3e40ec0cf7b",
+          "generation": 1
+        }
+      ]
     },
     {
       "id": "55-reward-dice",
@@ -5342,6 +5375,273 @@
         "No party disband or relay disconnect",
         "No changes to the frozen winner presentation or game modules",
         "No tile actions, obstacles or persistent match history"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "59-volcano-tile-actions",
+      "phase": "P8",
+      "title": "Volcano movement tiles: deterministic Lava Lift and Ash Slide placements, host-authoritative landing effects, procedural markers and shared feedback",
+      "status": "passed",
+      "dependsOn": [
+        "00-core",
+        "10-party",
+        "13-modes",
+        "53-board-movement"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": "src/modules/59-volcano-tile-actions/contract.snapshot.d.ts",
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "59.1",
+          "title": "Seeded balanced non-adjacent action placement with start and summit exclusions",
+          "status": "done"
+        },
+        {
+          "id": "59.2",
+          "title": "Register deterministic Lava Lift +3 and Ash Slide -2 effects through the frozen landing resolver",
+          "status": "done"
+        },
+        {
+          "id": "59.3",
+          "title": "Low-draw procedural tile markers, legend and synchronized landing feedback",
+          "status": "done"
+        },
+        {
+          "id": "59.4",
+          "title": "Two-player, eight-player, seeded layout, effect and workflow tests plus contract and MODULE.md",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-25T15:58:01.623Z"
+        },
+        "human": {
+          "status": "pass",
+          "at": "2026-09-25T15:58:26.222Z",
+          "note": "Lava Lift and Ash Slide markers and movements match on both browsers"
+        },
+        "history": [
+          {
+            "at": "2026-09-25T15:58:26.222Z",
+            "result": "pass",
+            "note": "Lava Lift and Ash Slide markers and movements match on both browsers"
+          }
+        ]
+      },
+      "freeze": {
+        "sha256": "3aadee0e3f22302da5e6e1d99881424f9fdcc74112e54045de116883c1c8870e",
+        "files": {
+          "src/modules/59-volcano-tile-actions/MODULE.md": "771a8c92466cc2c6f43a573b467f0adc3306698b582bb8950646bca8e7cf9212",
+          "src/modules/59-volcano-tile-actions/__tests__/rules.test.ts": "9ff0b35ec1bce4d4726f6c1348aaab04ce20eb468331d104e0501b43f56e0cb7",
+          "src/modules/59-volcano-tile-actions/contract.snapshot.d.ts": "3fbc87086aee9b82b726b8a6e276a5e5ccbfac6cabc0658a3e022189341e9ace",
+          "src/modules/59-volcano-tile-actions/index.ts": "9ebec31d5332fa4854a82db0fc874275538089c05a5121fa9cb12c8e49cd8858",
+          "src/modules/59-volcano-tile-actions/internal/VolcanoTileActionsView.tsx": "903eb09f750657ee80174ee6f34093a6d38c7113e444937279d3e84911aef044",
+          "src/modules/59-volcano-tile-actions/internal/rules.ts": "b30b8822df8872ebbc896f79edd716644e35761a3382a86f75133c257197a40e",
+          "src/modules/59-volcano-tile-actions/internal/volcano-tile-actions.css": "9da09e21981c24a8191e9417562217ae6fc2a0e528deaa094756a009d6ef1550"
+        },
+        "at": "2026-09-25T15:58:26.222Z",
+        "commit": "c19387f"
+      },
+      "nonGoals": [
+        "No skipped turns, extra turns, branching routes or player choices",
+        "No changes inside frozen board, minigame, reward, victory or postgame modules",
+        "No unseeded placement or client-authoritative movement",
+        "No external models, textures or asset pipeline"
+      ],
+      "budgets": {
+        "drawCallsMax": 2,
+        "trianglesMax": 2000
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "60-volcano-map-landmarks",
+      "phase": "P8",
+      "title": "Volcano route landmarks: deterministic start gate, progress cairns and summit beacon for map readability",
+      "status": "passed",
+      "dependsOn": [
+        "00-core",
+        "10-party",
+        "13-modes",
+        "53-board-movement"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": "src/modules/60-volcano-map-landmarks/contract.snapshot.d.ts",
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "60.1",
+          "title": "Deterministic landmark layout and route-relative placement contract",
+          "status": "done"
+        },
+        {
+          "id": "60.2",
+          "title": "Low-draw procedural start gate, progress cairns and summit beacon",
+          "status": "done"
+        },
+        {
+          "id": "60.3",
+          "title": "Volcano-mode composition with no movement or input interception",
+          "status": "done"
+        },
+        {
+          "id": "60.4",
+          "title": "Layout, geometry-budget and mode-visibility tests plus contract and MODULE.md",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-25T16:05:34.289Z"
+        },
+        "human": {
+          "status": "pass",
+          "at": "2026-09-25T16:06:08.049Z",
+          "note": "Landmarks match across both browsers and do not obstruct movement"
+        },
+        "history": [
+          {
+            "at": "2026-09-25T16:06:08.049Z",
+            "result": "pass",
+            "note": "Landmarks match across both browsers and do not obstruct movement"
+          }
+        ]
+      },
+      "freeze": {
+        "sha256": "19a0ebafd6a40759727a540028dce4e6131dd8ce628f1f37e692cd7f5ef4408a",
+        "files": {
+          "src/modules/60-volcano-map-landmarks/MODULE.md": "c5fa9bedd711ae77b9fa425548e1e89dfa8e6ec4fad5864c6a1783126cc20aad",
+          "src/modules/60-volcano-map-landmarks/__tests__/layout.test.ts": "b3bd7bdf72fda254f574776b4871c8cc213ac42930a072df0a680ecf376415f3",
+          "src/modules/60-volcano-map-landmarks/contract.snapshot.d.ts": "72e7a27d44070776c59350e5fd9a6c3a344319f67a6d3d36deb148f2a72484ed",
+          "src/modules/60-volcano-map-landmarks/index.ts": "928649663e8a735667c4be156bd257b2ec49f266dd05bd62e5e0012aa3a968be",
+          "src/modules/60-volcano-map-landmarks/internal/VolcanoMapLandmarksView.tsx": "41c79f77c432d738e3a5956d95488aed23c71134aed853bc0ff82757fcd879b2",
+          "src/modules/60-volcano-map-landmarks/internal/layout.ts": "45c8cdfe466b7215020f1a4f73c66f1517905e7e568b6fbab8676aa48edb9314",
+          "src/modules/60-volcano-map-landmarks/internal/visibility.ts": "d448a814a5487c9f9f19736dd4d0ffc83a4aed4530d610cd4d207a78ee1b4d5e"
+        },
+        "at": "2026-09-25T16:06:08.049Z",
+        "commit": "c19387f"
+      },
+      "nonGoals": [
+        "No obstacle collisions or new tile effects",
+        "No changes inside frozen terrain, board, tile-action or game-flow modules",
+        "No external models, textures or asset pipeline",
+        "No additional network state or host authority"
+      ],
+      "budgets": {
+        "drawCallsMax": 6,
+        "trianglesMax": 2500
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "58-breaking-the-ice",
+      "phase": "P6",
+      "title": "Breaking the Ice: a three-layer breakable iceberg, tiles that crack before they break, and falling through to the sea",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": "src/modules/58-breaking-the-ice/contract.snapshot.d.ts",
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "58.1",
+          "title": "Three concentric tile layers, addressed the same way, and a shrink schedule derived purely from the clock",
+          "status": "done"
+        },
+        {
+          "id": "58.2",
+          "title": "Cracking and breaking: a fuse that shortens with the round and the layer, and an instant break on a second click",
+          "status": "done"
+        },
+        {
+          "id": "58.3",
+          "title": "Real gravity and landing: falling through a layer lands you on the one below, or keeps you falling past it",
+          "status": "done"
+        },
+        {
+          "id": "58.4",
+          "title": "Pushing: a facing cone, a decaying knockback, and a brief stun",
+          "status": "done"
+        },
+        {
+          "id": "58.5",
+          "title": "The round: elimination at the void, a beat to watch the last fall, a safety-net limit, placings",
+          "status": "done"
+        },
+        {
+          "id": "58.6",
+          "title": "Controls: WASD move, mouse aim/camera, left click break, space jump, right click push",
+          "status": "done"
+        },
+        {
+          "id": "58.7",
+          "title": "A camera that climbs and drops with whichever layer you are on, pulling back once fallen or decided",
+          "status": "done"
+        },
+        {
+          "id": "58.8",
+          "title": "One round shared across the lobby: player state at 20Hz, sparse player-caused tile damage separately, stand-ins alone",
+          "status": "done"
+        },
+        {
+          "id": "58.9",
+          "title": "Contract, tests including a lossy-network convergence check, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "58.10",
+          "title": "The assets: models, sprites and sound in place of capsules and boxes",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-25T16:09:37.147Z"
+        },
+        "human": {
+          "status": "pending",
+          "at": null,
+          "note": null
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: players are the island's capsule, tiles are flat boxes",
+        "No sound beyond the shared cues other minigames already use",
+        "No client-side prediction",
+        "No body collision - only a push moves anybody",
+        "No score kept between rounds"
       ],
       "budgets": {
         "drawCallsMax": 0,

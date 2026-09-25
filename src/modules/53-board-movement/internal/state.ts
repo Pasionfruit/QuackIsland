@@ -8,17 +8,20 @@ import {
   getTurnOrder,
 } from '../../52-turn-order'
 import { decodeBoardMovementMessage, encodeBoardMovementMessage } from './protocol'
-import { boardMoveDurationMs } from './motion'
+import { boardTravelDurationMs } from './motion'
 import {
   EMPTY_BOARD_MOVEMENT,
   activeBoardPlayer,
+  applyBoardLandingEffect,
   applyBoardRoll,
   beginNextBoardRound,
+  boardLandingContext,
   canAcknowledgeBoardRound,
   createBoardMovement,
   reconcileBoardPlayers,
   type BoardDieRoll,
   type BoardDieSpec,
+  type BoardLandingEffectResolver,
   type BoardMovementSnapshot,
 } from './rules'
 
@@ -33,14 +36,16 @@ const handoffStore = createStore<{ sessionId: string | null; round: number; ackn
   round: 0,
   acknowledged: false,
 })
-const visualStore = createStore<{ sessionId: string | null; moveCount: number; settled: boolean }>({
+const visualStore = createStore<{ sessionId: string | null; revision: number; settled: boolean }>({
   sessionId: null,
-  moveCount: 0,
+  revision: 0,
   settled: true,
 })
 let visualTimer: ReturnType<typeof setTimeout> | null = null
 let actionSerial = 0
 let diceProvider: BoardDiceProvider = () => [{ kind: 'base', sides: 6 }]
+let landingEffectResolver: BoardLandingEffectResolver = () => null
+let evaluatedLandingKey = ''
 
 export function getBoardMovement(): BoardMovementSnapshot {
   return store.get()
@@ -55,7 +60,7 @@ export function isBoardMovementVisualSettled(snapshot = store.get()): boolean {
   return snapshot.phase === 'idle' || Boolean(
     snapshot.sessionId &&
       visual.sessionId === snapshot.sessionId &&
-      visual.moveCount === snapshot.moves.length &&
+      visual.revision === snapshot.revision &&
       visual.settled,
   )
 }
@@ -66,13 +71,18 @@ export function useBoardMovementVisualSettled(): boolean {
   return snapshot.phase === 'idle' || Boolean(
     snapshot.sessionId &&
       visual.sessionId === snapshot.sessionId &&
-      visual.moveCount === snapshot.moves.length &&
+      visual.revision === snapshot.revision &&
       visual.settled,
   )
 }
 
 export function setBoardDiceProvider(provider: BoardDiceProvider | null): void {
   diceProvider = provider ?? (() => [{ kind: 'base', sides: 6 }])
+}
+
+export function setBoardLandingEffectResolver(resolver: BoardLandingEffectResolver | null): void {
+  landingEffectResolver = resolver ?? (() => null)
+  evaluatedLandingKey = ''
 }
 
 export function isBoardRoundAcknowledged(
@@ -111,24 +121,50 @@ function trackVisualMovement(current: BoardMovementSnapshot, snapshot: BoardMove
     visualTimer = null
   }
   const visual = visualStore.get()
-  const addedMove = current.sessionId === snapshot.sessionId && snapshot.moves.length > current.moves.length
-  const lastMove = snapshot.moves[snapshot.moves.length - 1]
-  if (!addedMove || !lastMove) {
-    if (visual.sessionId !== snapshot.sessionId || visual.moveCount !== snapshot.moves.length || !visual.settled) {
-      visualStore.set({ sessionId: snapshot.sessionId, moveCount: snapshot.moves.length, settled: true })
+  const oldPositions = new Map(current.positions.map((position) => [position.playerId, position.tileIndex]))
+  const travel = current.sessionId === snapshot.sessionId
+    ? snapshot.positions.reduce((largest, position) => {
+      const previous = oldPositions.get(position.playerId)
+      return previous === undefined ? largest : Math.max(largest, Math.abs(position.tileIndex - previous))
+    }, 0)
+    : 0
+  if (travel === 0) {
+    if (visual.sessionId !== snapshot.sessionId || visual.revision !== snapshot.revision || !visual.settled) {
+      visualStore.set({ sessionId: snapshot.sessionId, revision: snapshot.revision, settled: true })
     }
     return
   }
 
   const sessionId = snapshot.sessionId
-  const moveCount = snapshot.moves.length
-  visualStore.set({ sessionId, moveCount, settled: false })
+  const revision = snapshot.revision
+  visualStore.set({ sessionId, revision, settled: false })
   visualTimer = setTimeout(() => {
     visualTimer = null
     const latest = store.get()
-    if (latest.sessionId !== sessionId || latest.moves.length !== moveCount) return
-    visualStore.set({ sessionId, moveCount, settled: true })
-  }, boardMoveDurationMs(lastMove))
+    if (latest.sessionId !== sessionId || latest.revision !== revision) return
+    visualStore.set({ sessionId, revision, settled: true })
+    resolveHostLandingEffect(latest)
+  }, boardTravelDurationMs(0, travel))
+}
+
+function resolveHostLandingEffect(snapshot: BoardMovementSnapshot): void {
+  const net = getNet()
+  if (!net.host || !isBoardMovementVisualSettled(snapshot)) return
+  const context = boardLandingContext(snapshot)
+  if (!context) return
+  const landingKey = `${context.sessionId}:${context.round}:${context.moveNumber}`
+  if (evaluatedLandingKey === landingKey) return
+  evaluatedLandingKey = landingKey
+  let effect = null
+  try {
+    effect = landingEffectResolver(context, snapshot)
+  } catch {
+    return
+  }
+  const next = applyBoardLandingEffect(snapshot, effect, `effect:${newActionId(context.playerId)}`.slice(0, 80))
+  if (next === snapshot) return
+  adoptSnapshot(next)
+  announce(next)
 }
 
 function adoptSnapshot(snapshot: BoardMovementSnapshot): void {
@@ -147,13 +183,14 @@ export function resetBoardMovement(): void {
   }
   if (store.get().phase !== 'idle') store.set(EMPTY_BOARD_MOVEMENT)
   const visual = visualStore.get()
-  if (visual.sessionId !== null || visual.moveCount !== 0 || !visual.settled) {
-    visualStore.set({ sessionId: null, moveCount: 0, settled: true })
+  if (visual.sessionId !== null || visual.revision !== 0 || !visual.settled) {
+    visualStore.set({ sessionId: null, revision: 0, settled: true })
   }
   const handoff = handoffStore.get()
   if (handoff.sessionId !== null || handoff.round !== 0 || handoff.acknowledged) {
     handoffStore.set({ sessionId: null, round: 0, acknowledged: false })
   }
+  evaluatedLandingKey = ''
 }
 
 function active(): boolean {

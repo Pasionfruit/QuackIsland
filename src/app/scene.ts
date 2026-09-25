@@ -28,6 +28,8 @@ import { MinigameRound } from '../modules/54-minigame-round'
 import { RewardDice } from '../modules/55-reward-dice'
 import { VolcanoVictory } from '../modules/56-volcano-victory'
 import { VolcanoPostgame } from '../modules/57-volcano-postgame'
+import { VolcanoTileActions } from '../modules/59-volcano-tile-actions'
+import { VolcanoMapLandmarks } from '../modules/60-volcano-map-landmarks'
 import { isSettingsOpen } from './settingsOpen'
 
 /**
@@ -203,6 +205,8 @@ export const SCENE: SceneEntry[] = [
   { id: '55-reward-dice', order: 550, enabled: true, Component: RewardDice },
   { id: '56-volcano-victory', order: 560, enabled: true, Component: VolcanoVictory },
   { id: '57-volcano-postgame', order: 570, enabled: true, Component: VolcanoPostgame },
+  { id: '59-volcano-tile-actions', order: 590, enabled: true, Component: VolcanoTileActions },
+  { id: '60-volcano-map-landmarks', order: 600, enabled: true, Component: VolcanoMapLandmarks },
 ]
 
 // Toggling a module on or off has to reach the canvas, which is a different

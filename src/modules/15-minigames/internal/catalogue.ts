@@ -130,8 +130,30 @@ const ENTRIES = [
     done: { environment: true, controls: true, assets: false },
   },
   {
-    id: 'chef-caricature',
+    id: 'breaking-the-ice',
     number: 2,
+    title: 'Breaking the Ice',
+    kind: 'free-for-all',
+    description: [
+      "Battle across a floating iceberg, three layers of breakable ice tiles stacked over the sea! Break the tile under an opponent, or push them toward a hole - anybody's tiles are fair game.",
+      "A tile cracks on the first hit and only breaks on the second (or a few seconds later on its own) - crack one under yourself by mistake and you still have a moment to get off it. Fall through a layer and you drop onto the one below rather than going straight out - it's only the bottom layer, into the sea, that eliminates you.",
+      'The iceberg keeps shrinking and weakening as the round goes on, and the lower layers are smaller and frailer than the one above. Last player standing wins.',
+    ],
+    controls: [
+      { input: 'WASD', does: 'Move' },
+      { input: 'Mouse', does: 'Aim and look around' },
+      { input: 'Left click', does: 'Crack an ice tile - click it again to break it' },
+      { input: 'Space', does: 'Jump' },
+      { input: 'Right click', does: 'Push whoever is in front of you' },
+    ],
+    reserved: false,
+    // Built: see `58-breaking-the-ice`. The assets stage is still to do - the
+    // players are the island's capsule and the tiles are flat ice-blue boxes.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'chef-caricature',
+    number: 3,
     title: 'Chef Caricature',
     kind: 'free-for-all',
     description: [
@@ -149,7 +171,7 @@ const ENTRIES = [
   },
   {
     id: 'color-coded',
-    number: 3,
+    number: 4,
     title: 'Color Coded',
     kind: 'free-for-all',
     description: [
@@ -170,7 +192,7 @@ const ENTRIES = [
   },
   {
     id: 'duck-hunt',
-    number: 4,
+    number: 5,
     title: 'Duck Hunt',
     kind: 'free-for-all',
     description: [
@@ -188,7 +210,7 @@ const ENTRIES = [
   },
   {
     id: 'feeding-time',
-    number: 5,
+    number: 6,
     title: 'Feeding Time',
     kind: 'free-for-all',
     description: [
@@ -207,7 +229,7 @@ const ENTRIES = [
   },
   {
     id: 'find-yourself',
-    number: 6,
+    number: 7,
     title: 'Find Yourself',
     kind: 'free-for-all',
     description: [
@@ -225,7 +247,7 @@ const ENTRIES = [
   },
   {
     id: 'helping-dad',
-    number: 7,
+    number: 8,
     title: 'Helping Dad',
     kind: 'free-for-all',
     description: [
@@ -244,7 +266,7 @@ const ENTRIES = [
   },
   {
     id: 'hes-one-shot',
-    number: 8,
+    number: 9,
     title: "He's One Shot",
     kind: 'free-for-all',
     description: [
@@ -265,7 +287,7 @@ const ENTRIES = [
   },
   {
     id: 'highest-in-the-room',
-    number: 9,
+    number: 10,
     title: 'Highest In The Room',
     kind: 'free-for-all',
     description: [
@@ -282,7 +304,7 @@ const ENTRIES = [
   },
   {
     id: 'i-just-work-here',
-    number: 10,
+    number: 11,
     title: 'I Just Work Here',
     kind: 'free-for-all',
     description: [
@@ -303,7 +325,7 @@ const ENTRIES = [
   },
   {
     id: 'ill-just-wait',
-    number: 11,
+    number: 12,
     title: "I'll Just Wait",
     kind: 'free-for-all',
     description: [
@@ -323,7 +345,7 @@ const ENTRIES = [
   },
   {
     id: 'i-see-the-light',
-    number: 12,
+    number: 13,
     title: 'I See The Light',
     kind: 'free-for-all',
     description: [
@@ -341,7 +363,7 @@ const ENTRIES = [
   },
   {
     id: 'keyboard-warrior',
-    number: 13,
+    number: 14,
     title: 'Keyboard Warrior',
     kind: 'free-for-all',
     description: [
@@ -358,7 +380,7 @@ const ENTRIES = [
   },
   {
     id: 'lady-luck',
-    number: 14,
+    number: 15,
     title: 'Lady Luck',
     kind: 'free-for-all',
     description: [
@@ -376,7 +398,7 @@ const ENTRIES = [
   },
   {
     id: 'let-him-cook',
-    number: 15,
+    number: 16,
     title: 'Let Him Cook',
     kind: 'free-for-all',
     description: [
@@ -395,7 +417,7 @@ const ENTRIES = [
   },
   {
     id: 'make-some-noise',
-    number: 16,
+    number: 17,
     title: 'Make Some Noise',
     kind: 'free-for-all',
     description: [
@@ -408,7 +430,7 @@ const ENTRIES = [
   },
   {
     id: 'make-the-cut',
-    number: 17,
+    number: 18,
     title: 'Make The Cut',
     kind: 'free-for-all',
     description: [
@@ -427,7 +449,7 @@ const ENTRIES = [
   },
   {
     id: 'messy-maze',
-    number: 18,
+    number: 19,
     title: 'Messy Maze',
     kind: 'free-for-all',
     description: [
@@ -446,7 +468,7 @@ const ENTRIES = [
   },
   {
     id: 'milf-fishing',
-    number: 19,
+    number: 20,
     title: 'M.I.L.F (fishing)',
     kind: 'free-for-all',
     description: [
@@ -465,7 +487,7 @@ const ENTRIES = [
   },
   {
     id: 'musical-mayhem',
-    number: 20,
+    number: 21,
     title: 'Musical Mayhem',
     kind: 'free-for-all',
     description: [
@@ -485,7 +507,7 @@ const ENTRIES = [
   },
   {
     id: 'needs-a-walmart',
-    number: 21,
+    number: 22,
     title: 'OG Black Friday',
     kind: 'free-for-all',
     description: [
@@ -506,7 +528,7 @@ const ENTRIES = [
   },
   {
     id: 'one-piece',
-    number: 22,
+    number: 23,
     title: 'One Piece?!',
     kind: 'free-for-all',
     description: [
@@ -525,7 +547,7 @@ const ENTRIES = [
   },
   {
     id: 'perfect-game',
-    number: 23,
+    number: 24,
     title: 'Perfect Game',
     kind: 'free-for-all',
     description: [
@@ -545,7 +567,7 @@ const ENTRIES = [
   },
   {
     id: 'pet-race',
-    number: 24,
+    number: 25,
     title: 'Pet Race',
     kind: 'free-for-all',
     description: [
@@ -565,7 +587,7 @@ const ENTRIES = [
   },
   {
     id: 'probable-stop',
-    number: 25,
+    number: 26,
     title: 'Probable Stop',
     kind: 'free-for-all',
     description: [
@@ -585,7 +607,7 @@ const ENTRIES = [
   },
   {
     id: 'punch-buggy',
-    number: 26,
+    number: 27,
     title: 'Punch Buggy',
     kind: 'free-for-all',
     description: [
@@ -605,7 +627,7 @@ const ENTRIES = [
   },
   {
     id: 'shanty-matrix',
-    number: 27,
+    number: 28,
     title: 'Shanty Matrix',
     kind: 'free-for-all',
     description: [
@@ -625,7 +647,7 @@ const ENTRIES = [
   },
   {
     id: 'sharing-is-caring',
-    number: 28,
+    number: 29,
     title: 'Sharing Is Caring',
     kind: 'free-for-all',
     description: [
@@ -643,7 +665,7 @@ const ENTRIES = [
   },
   {
     id: 'spidey-senses',
-    number: 29,
+    number: 30,
     title: 'Spidey Senses',
     kind: 'free-for-all',
     description: [
@@ -663,7 +685,7 @@ const ENTRIES = [
   },
   {
     id: 'sprint-triathlon',
-    number: 30,
+    number: 31,
     title: 'Sprint Triathlon',
     kind: 'free-for-all',
     description: [
@@ -683,7 +705,7 @@ const ENTRIES = [
   },
   {
     id: 'synchronize-steps',
-    number: 31,
+    number: 32,
     title: 'Synchronize Steps',
     kind: 'free-for-all',
     description: [
@@ -699,19 +721,6 @@ const ENTRIES = [
     // Built: see `30-synchronize-steps`. The assets stage is still to do - the
     // players are the island's capsule and the tower is primitives.
     done: { environment: true, controls: true, assets: false },
-  },
-  {
-    id: 'tetris-master',
-    number: 32,
-    title: 'Tetris Master',
-    kind: 'free-for-all',
-    description: [
-      'Build the best tower! Everybody stacks blocks of awkward shapes into their own tower - build it high and build it steady.',
-      'Earthquakes and worse are coming for it. The best tower still standing at the end wins.',
-    ],
-    controls: [],
-    reserved: false,
-    done: { environment: false, controls: false, assets: false },
   },
   {
     id: 'time-it',

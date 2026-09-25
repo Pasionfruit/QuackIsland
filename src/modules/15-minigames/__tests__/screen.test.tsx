@@ -278,7 +278,7 @@ describe('a game briefing', () => {
 
   it('says so when a game has no controls written down', () => {
     const where = mount()
-    act(() => openMinigame('tetris-master'))
+    act(() => openMinigame('make-some-noise'))
     click(where.querySelector('[data-leaf="controls"]'))
     expect(where.textContent).toContain('Not written down yet')
   })
@@ -286,7 +286,7 @@ describe('a game briefing', () => {
   it('lists the three stages with the next one marked', () => {
     const where = mount()
     // A game nothing has been done to: the first stage is the one owed.
-    act(() => openMinigame('tetris-master'))
+    act(() => openMinigame('make-some-noise'))
 
     for (const step of BUILD_STEPS) {
       expect(where.querySelector(`[data-step="${step}"]`)).not.toBeNull()

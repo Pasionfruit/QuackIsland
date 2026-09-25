@@ -29,10 +29,16 @@ local avatar movement to a compact browser interface. It deliberately stops at
 | `isBoardMovementVisualSettled` / `useBoardMovementVisualSettled` | True after the latest visible tile traversal has had time to land |
 | `requestBoardRoll()` | Requests the local active player's roll |
 | `setBoardDiceProvider(provider)` | Future reward module seam; defaults to one base d6 |
+| `BOARD_LANDING_EFFECT` | Public bounds for downstream movement-effect definitions |
+| `boardLandingContext(snapshot)` | Describes the latest unresolved rolled landing, or `null` |
+| `applyBoardLandingEffect(snapshot, effect, action)` | Pure bounded movement effect after a rolled landing |
+| `validBoardLandingEffect(effect)` | Validates a named integer displacement from -12 through +12 tiles |
+| `setBoardLandingEffectResolver(resolver)` | Registers the host-side resolver used after visible landing; `null` restores no effect |
 | `acknowledgeBoardRound(session, round)` | Future minigame handoff that hides presentation without discarding positions |
 | `resumeBoardMovement(session, round)` | Host resumes the next round after the future minigame/reward phase |
 | `encodeBoardMovementMessage` / `decodeBoardMovementMessage` | Bounded room protocol |
 | `BOARD_TILES`, `tileWorldPoint`, `boardPointAt` | Public tile-to-world placement and hop interpolation |
+| `BOARD_SHARED_TILE`, `sharedTileOffset` | Stable turn-order slots for players occupying the same tile |
 
 ## State and authority
 
@@ -72,6 +78,37 @@ The roll button now spends 1.25 seconds spinning before it submits exactly one
 request. Every additional click during that window accelerates the CSS die up
 to a bounded ten-click boost; it never influences the seeded authoritative die
 value. Reduced-motion users receive a pulse instead of 3D rotation.
+
+Forward and backward authoritative position changes now share the same measured
+tile speed and visual-settlement lock. Ordinary revisions that do not move a
+player settle immediately.
+
+Players who share a tile are arranged in stable slots around its centre rather
+than occupying the same point. Slot order follows the locked turn order, so all
+browsers independently agree on the arrangement. One player remains centred;
+groups of two through eight use an evenly spaced ring capped at 0.82 metres.
+During movement, the travel path stays centred and blends into the player's
+slot over the final tile hop. The resulting local body position continues over
+the existing ordinary player sync, with no board protocol change.
+
+## Landing-effect extension
+
+A downstream tile module may register one `BoardLandingEffectResolver`. The
+resolver runs only on the elected host and only after the rolled movement has
+visibly landed. It receives a read-only landing context and board snapshot and
+may return one named integer displacement from -12 through +12 tiles. Returning
+`null`, throwing, or returning malformed data leaves the board unchanged.
+
+The displacement is clamped to the existing track. It cannot chain: once a
+player's authoritative position differs from the rolled landing tile, that move
+has no unresolved landing context. Duplicate evaluation is also suppressed per
+session, round, and move number. A forward effect that reaches the summit uses
+the same terminal winner state as an ordinary roll.
+
+The rolled `BoardMove` remains unchanged, preserving every existing public
+signature and allowing downstream code to distinguish the dice landing from
+the final authoritative position. The resulting board snapshot is broadcast by
+the existing protocol; no extra relay channel or service is introduced.
 
 ## Round and future-module handoffs
 
@@ -115,6 +152,8 @@ and one small snapshot per turn, with at most eight players.
 - There are no reward dice in ordinary play yet; only the extension contract
   and validation exist.
 - Tiles have no actions, obstacles, branches, or movement choices.
+- The new landing resolver is an extension contract only. This generation does
+  not register an effect catalogue or change any tile by itself.
 
 ## How to review
 
@@ -148,9 +187,27 @@ Eight-player sequencing, bonus-die summing, duplicate rejection, multi-round
 position preservation, disconnect advancement, world placement, clamping, and
 immediate summit victory are covered by the automated tests.
 
+For generation 3, repeat the ordinary two-browser roll and confirm there is no
+change when no resolver is registered. The next player must still unlock only
+after the visible movement lands. Also recheck the dependent flow: the final
+round move must finish before the minigame appears, reward dice must resume the
+next round, and reaching the summit must still show the shared winner screen.
+Bounded forward/backward effects, one-shot host resolution, protocol round-trip,
+effect-driven victory, and backward settlement timing are covered by automated
+tests until the first visible tile-action module registers the seam.
+
+For generation 4, let both players remain on the starting tile and confirm
+they stand on opposite sides rather than overlapping. Move one player onto a
+tile occupied by the other and confirm the arriving duck blends into its slot
+during the final hop while both browsers show the same arrangement. Recheck
+the dependent minigame, rewards, victory, tile-action, and landmark flow.
+Single-player centring, two-player opposition, deterministic snapshot ordering,
+and eight-player bounded unique slots are covered by automated tests.
+
 ## Gate record
 
-Pending human review.
+Generation 4 adds deterministic shared-tile player spacing. Pending human
+review, including regression review of modules 54-56, 59, and 60.
 
 ## Measured
 

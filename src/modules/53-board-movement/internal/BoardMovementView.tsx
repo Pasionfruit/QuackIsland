@@ -7,7 +7,7 @@ import { getParty, useParty } from '../../10-party'
 import { getGameMode, useGameMode } from '../../13-modes'
 import { getTurnOrder, useTurnOrder } from '../../52-turn-order'
 import { BOARD_MOTION, boardDieSpinMs } from './motion'
-import { boardPointAt } from './position'
+import { boardPointAt, sharedTileOffset } from './position'
 import { activeBoardPlayer, boardPosition } from './rules'
 import {
   getBoardMovement,
@@ -45,12 +45,15 @@ export function BoardMovement(): null {
     if (animation.current.sessionId !== snapshot.sessionId || animation.current.playerId !== playerId) {
       animation.current = { sessionId: snapshot.sessionId, playerId, position: target }
     }
-    if (animation.current.position > target) animation.current.position = target
-    if (animation.current.position < target) {
+    if (animation.current.position > target) {
+      animation.current.position = Math.max(target, animation.current.position - delta * BOARD_MOTION.tilesPerSecond)
+    } else if (animation.current.position < target) {
       animation.current.position = Math.min(target, animation.current.position + delta * BOARD_MOTION.tilesPerSecond)
     }
     const point = boardPointAt(animation.current.position)
-    movePlayerTo(point.x, point.y, point.z)
+    const offset = sharedTileOffset(playerId, target, snapshot.turnOrder, snapshot.positions)
+    const landingBlend = 1 - Math.min(1, Math.abs(animation.current.position - target))
+    movePlayerTo(point.x + offset.x * landingBlend, point.y, point.z + offset.z * landingBlend)
   }, PRIORITY.world)
 
   useEffect(() => {

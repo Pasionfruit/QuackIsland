@@ -10,7 +10,11 @@ export const BOARD_MOTION = {
 } as const
 
 export function boardMoveDurationMs(move: Pick<BoardMove, 'fromTile' | 'toTile'>): number {
-  const tiles = Math.max(0, move.toTile - move.fromTile)
+  return boardTravelDurationMs(move.fromTile, move.toTile)
+}
+
+export function boardTravelDurationMs(fromTile: number, toTile: number): number {
+  const tiles = Math.abs(toTile - fromTile)
   return Math.ceil((tiles / BOARD_MOTION.tilesPerSecond) * 1_000) + BOARD_MOTION.settleBufferMs
 }
 

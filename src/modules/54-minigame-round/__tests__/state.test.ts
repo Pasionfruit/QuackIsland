@@ -168,6 +168,32 @@ describe('host minigame-round coordination', () => {
     stop()
   })
 
+  it('retains the host briefing until the guest final movement settles', () => {
+    syncMinigameRoundLifecycle()
+    const payload = mocks.send.mock.calls[0]?.[0]
+    expect(payload).toBeDefined()
+
+    resetMinigameRound()
+    mocks.open.mockClear()
+    mocks.net.id = 'guest'
+    mocks.net.host = false
+    mocks.visualSettled = false
+    mocks.screen = { at: 'dashboard' }
+    const stop = listenForMinigameRound()
+    mocks.listener?.('host', payload)
+
+    expect(getMinigameRound().phase).toBe('idle')
+    expect(mocks.open).not.toHaveBeenCalled()
+
+    mocks.visualSettled = true
+    syncMinigameRoundLifecycle()
+
+    expect(getMinigameRound().phase).toBe('briefing')
+    expect(mocks.open).toHaveBeenCalledWith('zombie-tag')
+    expect(mocks.send).not.toHaveBeenCalledWith(expect.objectContaining({ kind: 'sync' }))
+    stop()
+  })
+
   it('does not let a guest start or finish an attempt', () => {
     syncMinigameRoundLifecycle()
     mocks.net.host = false

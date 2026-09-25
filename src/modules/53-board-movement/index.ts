@@ -8,19 +8,26 @@
 
 export {
   BOARD_MOVEMENT,
+  BOARD_LANDING_EFFECT,
   EMPTY_BOARD_MOVEMENT,
   activeBoardPlayer,
+  applyBoardLandingEffect,
   applyBoardRoll,
   beginNextBoardRound,
+  boardLandingContext,
   boardPosition,
   canAcknowledgeBoardRound,
   createBoardMovement,
   reconcileBoardPlayers,
+  validBoardLandingEffect,
   validBoardDice,
   type BoardDieKind,
   type BoardDieRoll,
   type BoardDieSides,
   type BoardDieSpec,
+  type BoardLandingContext,
+  type BoardLandingEffect,
+  type BoardLandingEffectResolver,
   type BoardMove,
   type BoardMovementPhase,
   type BoardMovementSnapshot,
@@ -36,7 +43,16 @@ export {
   type BoardMovementMessage,
 } from './internal/protocol'
 
-export { BOARD_TILES, boardPointAt, tileWorldPoint, type BoardWorldPoint } from './internal/position'
+export {
+  BOARD_SHARED_TILE,
+  BOARD_TILES,
+  boardPointAt,
+  sharedTileOffset,
+  tileWorldPoint,
+  type BoardTileOccupant,
+  type BoardTileOffset,
+  type BoardWorldPoint,
+} from './internal/position'
 
 export {
   acknowledgeBoardRound,
@@ -48,6 +64,7 @@ export {
   resetBoardMovement,
   resumeBoardMovement,
   setBoardDiceProvider,
+  setBoardLandingEffectResolver,
   syncBoardMovementLifecycle,
   useBoardMovement,
   useBoardMovementVisualSettled,

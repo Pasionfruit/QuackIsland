@@ -36,6 +36,7 @@ const acknowledged = createStore('')
 let stopListening: (() => void) | null = null
 let requestedSession = ''
 let actionSequence = 0
+let pendingSnapshot: MinigameRoundSnapshot | null = null
 
 export function getMinigameRound(): MinigameRoundSnapshot {
   return store.get()
@@ -73,6 +74,9 @@ function accept(snapshot: MinigameRoundSnapshot): void {
   const previous = store.get()
   if (previous.sessionId !== snapshot.sessionId) acknowledged.set('')
   store.set(snapshot)
+  if (pendingSnapshot?.sessionId === snapshot.sessionId && pendingSnapshot.revision <= snapshot.revision) {
+    pendingSnapshot = null
+  }
   acknowledgeBoardRound(snapshot.boardSessionId, snapshot.boardRound)
 }
 
@@ -86,21 +90,38 @@ function preloadRoundGame(snapshot: MinigameRoundSnapshot): void {
   if (needsBriefing) openMinigame(snapshot.minigameId)
 }
 
-function boardMatches(snapshot: MinigameRoundSnapshot): boolean {
+function boardSessionMatches(snapshot: MinigameRoundSnapshot): boolean {
   const board = getBoardMovement()
   return (
     board.sessionId === snapshot.boardSessionId &&
     board.room === snapshot.room &&
-    board.round === snapshot.boardRound &&
-    board.phase === 'round_complete' &&
-    isBoardMovementVisualSettled(board)
+    board.round === snapshot.boardRound
   )
 }
 
+function boardMatches(snapshot: MinigameRoundSnapshot): boolean {
+  const board = getBoardMovement()
+  return boardSessionMatches(snapshot) && board.phase === 'round_complete' && isBoardMovementVisualSettled(board)
+}
+
+function rememberPending(snapshot: MinigameRoundSnapshot): void {
+  if (
+    pendingSnapshot === null ||
+    pendingSnapshot.sessionId !== snapshot.sessionId ||
+    snapshot.revision > pendingSnapshot.revision
+  ) {
+    pendingSnapshot = snapshot
+  }
+}
+
 function adopt(snapshot: MinigameRoundSnapshot): boolean {
-  if (!boardMatches(snapshot)) return false
   const net = getNet()
   if (net.room !== snapshot.room || !snapshot.players.some((player) => player.id === net.id)) return false
+  if (!boardSessionMatches(snapshot)) return false
+  if (!boardMatches(snapshot)) {
+    rememberPending(snapshot)
+    return false
+  }
   const current = store.get()
   if (current.sessionId === snapshot.sessionId && snapshot.revision <= current.revision) return false
   accept(snapshot)
@@ -167,6 +188,10 @@ export function syncMinigameRoundLifecycle(): void {
 
   if (boardSessionId === null || boardRoom === null) return
   const sessionId = `${boardSessionId}:minigame:${board.round}`
+  if (pendingSnapshot?.sessionId === sessionId && adopt(pendingSnapshot)) {
+    requestedSession = ''
+    return
+  }
   const current = store.get()
   if (current.sessionId === sessionId) {
     acknowledgeBoardRound(boardSessionId, board.round)
@@ -234,4 +259,5 @@ export function resetMinigameRound(): void {
   acknowledged.set('')
   requestedSession = ''
   actionSequence = 0
+  pendingSnapshot = null
 }

@@ -10,6 +10,12 @@ export const BOARD_MOVEMENT = {
   tilesPerSecond: 3,
 } as const
 
+export const BOARD_LANDING_EFFECT = {
+  maxShift: 12,
+  maxIdLength: 48,
+  maxLabelLength: 64,
+} as const
+
 export type BoardMovementPhase = 'idle' | 'turn' | 'round_complete' | 'won' | 'invalid'
 export type BoardDieKind = 'base' | 'gold' | 'silver' | 'bronze'
 export type BoardDieSides = 2 | 4 | 6
@@ -41,6 +47,27 @@ export interface BoardMove {
   dice: readonly BoardDieRoll[]
   total: number
 }
+
+export interface BoardLandingContext {
+  sessionId: string
+  playerId: string
+  round: number
+  moveNumber: number
+  fromTile: number
+  landingTile: number
+  tileCount: number
+}
+
+export interface BoardLandingEffect {
+  id: string
+  label: string
+  moveBy: number
+}
+
+export type BoardLandingEffectResolver = (
+  context: Readonly<BoardLandingContext>,
+  snapshot: Readonly<BoardMovementSnapshot>,
+) => BoardLandingEffect | null
 
 export interface BoardMovementSnapshot {
   sessionId: string | null
@@ -128,6 +155,68 @@ export function activeBoardPlayer(snapshot: BoardMovementSnapshot): string | nul
 
 export function boardPosition(snapshot: BoardMovementSnapshot, playerId: string): number | null {
   return snapshot.positions.find((position) => position.playerId === playerId)?.tileIndex ?? null
+}
+
+export function boardLandingContext(snapshot: Readonly<BoardMovementSnapshot>): BoardLandingContext | null {
+  if (
+    !snapshot.sessionId ||
+    (snapshot.phase !== 'turn' && snapshot.phase !== 'round_complete') ||
+    snapshot.moves.length < 1
+  ) return null
+  const move = snapshot.moves[snapshot.moves.length - 1]
+  if (move.round !== snapshot.round) return null
+  const position = boardPosition(snapshot, move.playerId)
+  if (position !== move.toTile) return null
+  return {
+    sessionId: snapshot.sessionId,
+    playerId: move.playerId,
+    round: move.round,
+    moveNumber: snapshot.moves.length,
+    fromTile: move.fromTile,
+    landingTile: move.toTile,
+    tileCount: snapshot.tileCount,
+  }
+}
+
+export function validBoardLandingEffect(effect: unknown): effect is BoardLandingEffect {
+  if (!effect || typeof effect !== 'object') return false
+  const candidate = effect as Record<string, unknown>
+  return (
+    typeof candidate.id === 'string' &&
+    candidate.id.length > 0 &&
+    candidate.id.length <= BOARD_LANDING_EFFECT.maxIdLength &&
+    typeof candidate.label === 'string' &&
+    candidate.label.length > 0 &&
+    candidate.label.length <= BOARD_LANDING_EFFECT.maxLabelLength &&
+    Number.isInteger(candidate.moveBy) &&
+    (candidate.moveBy as number) !== 0 &&
+    Math.abs(candidate.moveBy as number) <= BOARD_LANDING_EFFECT.maxShift
+  )
+}
+
+export function applyBoardLandingEffect(
+  snapshot: BoardMovementSnapshot,
+  effect: BoardLandingEffect | null,
+  actionId: string,
+): BoardMovementSnapshot {
+  const context = boardLandingContext(snapshot)
+  if (!context || !validBoardLandingEffect(effect)) return snapshot
+  if (!actionId || actionId.length > 80 || snapshot.appliedActionIds.includes(actionId)) return snapshot
+  const destination = Math.max(0, Math.min(snapshot.tileCount - 1, context.landingTile + effect.moveBy))
+  if (destination === context.landingTile) return snapshot
+  const positions = snapshot.positions.map((position) =>
+    position.playerId === context.playerId ? { ...position, tileIndex: destination } : position,
+  )
+  const won = destination === snapshot.tileCount - 1
+  return {
+    ...snapshot,
+    revision: snapshot.revision + 1,
+    phase: won ? 'won' : snapshot.phase,
+    activeTurnIndex: won ? null : snapshot.activeTurnIndex,
+    positions,
+    winnerId: won ? context.playerId : snapshot.winnerId,
+    appliedActionIds: [...snapshot.appliedActionIds, actionId].slice(-BOARD_MOVEMENT.maxActionHistory),
+  }
 }
 
 export function validBoardDice(dice: readonly BoardDieRoll[]): boolean {

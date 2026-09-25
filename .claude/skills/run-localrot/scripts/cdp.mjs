@@ -236,6 +236,12 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'players',
   },
+  'breaking-the-ice': {
+    title: 'Breaking the Ice',
+    screen: 'IceScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
   'highest-in-the-room': {
     title: 'Highest In The Room',
     screen: 'TowerScreen',

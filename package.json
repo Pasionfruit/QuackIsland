@@ -42,7 +42,16 @@
     "gate:volcano-victory": "node scripts/gate.mjs 56-volcano-victory",
     "brief:volcano-postgame": "node scripts/brief.mjs 57-volcano-postgame",
     "test:volcano-postgame": "vitest run src/modules/57-volcano-postgame",
-    "gate:volcano-postgame": "node scripts/gate.mjs 57-volcano-postgame"
+    "gate:volcano-postgame": "node scripts/gate.mjs 57-volcano-postgame",
+    "brief:breaking-the-ice": "node scripts/brief.mjs 58-breaking-the-ice",
+    "test:breaking-the-ice": "vitest run src/modules/58-breaking-the-ice",
+    "gate:breaking-the-ice": "node scripts/gate.mjs 58-breaking-the-ice",
+    "brief:volcano-tile-actions": "node scripts/brief.mjs 59-volcano-tile-actions",
+    "test:volcano-tile-actions": "vitest run src/modules/59-volcano-tile-actions",
+    "gate:volcano-tile-actions": "node scripts/gate.mjs 59-volcano-tile-actions",
+    "brief:volcano-map-landmarks": "node scripts/brief.mjs 60-volcano-map-landmarks",
+    "test:volcano-map-landmarks": "vitest run src/modules/60-volcano-map-landmarks",
+    "gate:volcano-map-landmarks": "node scripts/gate.mjs 60-volcano-map-landmarks"
   },
   "dependencies": {
     "@react-three/fiber": "^9.7.0",
