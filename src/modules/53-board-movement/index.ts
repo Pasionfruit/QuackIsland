@@ -55,6 +55,14 @@ export {
 } from './internal/position'
 
 export {
+  BOARD_CAMERA,
+  advanceBoardCameraPosition,
+  boardCameraPose,
+  boardCameraSubject,
+  type BoardCameraPose,
+} from './internal/camera'
+
+export {
   acknowledgeBoardRound,
   getBoardMovement,
   isBoardMovementVisualSettled,

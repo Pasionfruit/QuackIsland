@@ -31,6 +31,9 @@ simulation and controls.
 | `acknowledgeMinigameRound(session)` | Stable downstream handoff after placements are consumed |
 | `isMinigameRoundAcknowledged` / `useMinigameRoundAcknowledged` | Plain and React-safe handoff state |
 | `encodeMinigameRoundMessage` / `decodeMinigameRoundMessage` | Bounded room protocol |
+| `encodeMinigameRoundReady` / `decodeMinigameRoundReady` | Separate bounded briefing-loaded acknowledgement protocol |
+| `allConnectedMinigamePlayersReady` | Pure preload barrier for the current connected roster |
+| `markMinigameRoundReady` / `isMinigameRoundReadyToStart` | Runtime preload acknowledgement and host launch guard |
 
 The completed snapshot contains the board session and round, selected game,
 locked two-to-eight-player roster, practice count, normalized placements, and
@@ -52,6 +55,17 @@ copied from board movement and never admits a later relay id.
 Adopting a host briefing snapshot also opens the selected game locally before
 the later Play call arrives. This makes every browser construct and display the
 game behind the shared countdown instead of first mounting it after 3-2-1.
+
+If that host snapshot arrives while a guest is still showing the final board
+movement, it is retained instead of discarded. The guest adopts the newest
+authenticated snapshot as soon as its matching board round visibly settles.
+
+Once the briefing is actually mounted, each connected player sends a bounded
+ready acknowledgement. Practice and Start final remain disabled on the host
+until every currently connected member of the locked round roster is ready.
+Disconnected members are excluded from this preload barrier, matching the
+existing rule that a disconnected player cannot hold the party forever. The
+ready channel contains only the session and round and adds no polling loop.
 
 `53-board-movement` is acknowledged only after its public visual-settlement
 signal confirms the final player's last hop has landed and this module has
@@ -135,7 +149,9 @@ Run `npm run dev:multi`, then use a normal and private browser window.
    same randomly selected free-for-all briefing in both browsers.
 3. Switch between the description and controls tabs in both browsers. The
    standalone Play button must be absent. The guest should see `Waiting for the
-   host`; only the host has the polished Practice and Start final cards.
+   host`; only the host has the polished Practice and Start final cards. The
+   cards must remain disabled with `Loading the minigame for every player...`
+   until the guest's briefing is mounted.
 4. Press Practice. Both browsers should enter the same game through its normal
    countdown and show a Practice badge stating that results do not count.
 5. Finish the practice. Replay and Minigame dashboard must be absent and Escape
@@ -158,11 +174,15 @@ irreversible final state, ties, omitted players, duplicate actions, malformed
 messages, host-only controls, and result handoff are covered by automated
 tests.
 
+To exercise the generation 2 race, let the guest's final board movement remain
+in progress when the host settles. The guest must still open the selected
+briefing after landing, acknowledge readiness, and enable the host controls.
+Starting either mode must then load both browsers before countdown.
+
 ## Gate record
 
-Returned twice after human review: first for board movement and Island-specific
-controls, then for guest preloading and a synchronized Continue-to-rewards
-handoff. Pending a new human review.
+Generation 2 retains early host snapshots and adds an explicit connected-player
+preload barrier before the host can launch. Pending a new human review.
 
 ## Measured
 

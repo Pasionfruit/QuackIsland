@@ -1,12 +1,13 @@
 import { type ReactNode, useEffect, useRef } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { useNet } from '../../09-net'
+import { useNet, usePeers } from '../../09-net'
 import { useParty } from '../../10-party'
 import { useGameMode } from '../../13-modes'
 import { minigameById, openMinigame, useMinigameScreen } from '../../15-minigames'
 import { useBoardMovement, useBoardMovementVisualSettled } from '../../53-board-movement'
 import {
   continueToMinigameRewards,
+  markMinigameRoundReady,
   listenForMinigameRound,
   recordFinalMinigame,
   startFinalMinigame,
@@ -14,7 +15,9 @@ import {
   syncMinigameRoundLifecycle,
   useMinigameRound,
   useMinigameRoundAcknowledged,
+  useMinigameRoundReadyPlayers,
 } from './state'
+import { allConnectedMinigamePlayersReady } from './readiness'
 import './minigame-round.css'
 
 function rankLabel(rank: number): string {
@@ -95,9 +98,11 @@ export function MinigameRound() {
   const party = useParty()
   const mode = useGameMode()
   const net = useNet()
+  const peers = usePeers()
   const screen = useMinigameScreen()
   const boardSettled = useBoardMovementVisualSettled()
   const acknowledged = useMinigameRoundAcknowledged(round.sessionId)
+  const readyPlayers = useMinigameRoundReadyPlayers()
 
   useEffect(() => listenForMinigameRound(), [])
 
@@ -109,6 +114,17 @@ export function MinigameRound() {
     if (round.phase !== 'briefing' || round.minigameId === '') return
     if (screen.at !== 'game' || screen.run.id !== round.minigameId || screen.run.phase !== 'briefing') {
       openMinigame(round.minigameId)
+    }
+  }, [round.minigameId, round.phase, round.sessionId, screen])
+
+  useEffect(() => {
+    if (
+      round.phase === 'briefing' &&
+      screen.at === 'game' &&
+      screen.run.id === round.minigameId &&
+      screen.run.phase === 'briefing'
+    ) {
+      markMinigameRoundReady()
     }
   }, [round.minigameId, round.phase, round.sessionId, screen])
 
@@ -126,6 +142,14 @@ export function MinigameRound() {
   }, [net.host, round.minigameId, round.phase, screen])
 
   const game = round.minigameId === '' ? null : minigameById(round.minigameId)
+  const connectedIds = [net.id, ...peers.map((peer) => peer.id)].filter(
+    (id): id is string => typeof id === 'string' && id.length > 0,
+  )
+  const everyoneLoaded = allConnectedMinigamePlayersReady(
+    round.players.map((player) => player.id),
+    connectedIds,
+    readyPlayers,
+  )
   const practiceReady =
     round.phase === 'practice' &&
     (screen.at !== 'game' || screen.run.id !== round.minigameId || screen.run.phase === 'over')
@@ -189,16 +213,21 @@ export function MinigameRound() {
           </span>
         </div>
         {net.host ? (
-          <div className="minigame-round__buttons">
-            <button type="button" className="minigame-round__practice" onClick={startMinigamePractice}>
-              <span className="minigame-round__button-icon" aria-hidden="true">P</span>
-              <span><strong>Practice</strong><small>Results do not count</small></span>
-            </button>
-            <button type="button" className="minigame-round__final" onClick={startFinalMinigame}>
-              <span className="minigame-round__button-icon" aria-hidden="true">F</span>
-              <span><strong>Start final</strong><small>Lock the official result</small></span>
-            </button>
-          </div>
+          <>
+            <div className="minigame-round__buttons">
+              <button type="button" className="minigame-round__practice" onClick={startMinigamePractice} disabled={!everyoneLoaded}>
+                <span className="minigame-round__button-icon" aria-hidden="true">P</span>
+                <span><strong>Practice</strong><small>Results do not count</small></span>
+              </button>
+              <button type="button" className="minigame-round__final" onClick={startFinalMinigame} disabled={!everyoneLoaded}>
+                <span className="minigame-round__button-icon" aria-hidden="true">F</span>
+                <span><strong>Start final</strong><small>Lock the official result</small></span>
+              </button>
+            </div>
+            {!everyoneLoaded && (
+              <span className="minigame-round__waiting">Loading the minigame for every player...</span>
+            )}
+          </>
         ) : (
           <span className="minigame-round__waiting">Waiting for the host</span>
         )}

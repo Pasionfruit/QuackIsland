@@ -5,9 +5,9 @@
  * the keys and the mouse turned into hands for `useIceNet`, and the words -
  * the clock, who is still standing, and what the ice under you is doing.
  *
- * **WASD to move, the mouse to look round - it is your camera as well as
- * your aim. Left click cracks the tile you are facing, and cracks it for
- * good on a second click. Space jumps. Right click pushes** whoever is in
+ * **WASD to move, the mouse to look round - it is your camera too. Wherever
+ * you walk, the ice cracks under you and is gone three seconds later, whether
+ * you are still on it or not. Space jumps. Right click pushes** whoever is in
  * front of you. The first click on the ice takes the mouse (pointer lock);
  * escape gives it back. A browser that will not lock gets drag-to-turn instead.
  */
@@ -90,7 +90,6 @@ export function IceScreen({ run }: { run: MinigameRun }) {
   const look = useRef<LookRef>({ yaw: 0, pitch: 0.55 })
   const lookFor = useRef<number | null>(null)
   const held = useRef(new Set<string>())
-  const breaks = useRef(0)
   const jumps = useRef(0)
   const pushes = useRef(0)
   const board = useRef<HTMLDivElement>(null)
@@ -123,7 +122,7 @@ export function IceScreen({ run }: { run: MinigameRun }) {
         }
       }
       const move = walk(look.current.yaw, Math.sign(f), Math.sign(r))
-      const intent: Intent = { x: move.x, z: move.z, yaw: look.current.yaw, breaks: breaks.current, jumps: jumps.current, pushes: pushes.current }
+      const intent: Intent = { x: move.x, z: move.z, yaw: look.current.yaw, jumps: jumps.current, pushes: pushes.current }
       if (wire.advance(current, dt, intent, paused.current)) setRound({ ...current })
       frame = requestAnimationFrame(tick)
     }
@@ -190,10 +189,7 @@ export function IceScreen({ run }: { run: MinigameRun }) {
       return
     }
     if (e.button !== 0) return
-    if (isLocked()) {
-      breaks.current += 1
-      return
-    }
+    if (isLocked()) return
     if (refused.current) {
       dragging.current = true
       return
@@ -234,7 +230,7 @@ export function IceScreen({ run }: { run: MinigameRun }) {
       <div ref={board} style={board2} onPointerDown={onPointerDown} onContextMenu={(e) => e.preventDefault()} data-board>
         <Stage live={live} look={look} />
         {ready && !locked && !lockRefused && mine?.alive && !round.over ? (
-          <div style={hint}>click to take the mouse - left click breaks, right click pushes</div>
+          <div style={hint}>click to take the mouse - walking cracks the ice, right click pushes</div>
         ) : null}
       </div>
 
@@ -243,7 +239,7 @@ export function IceScreen({ run }: { run: MinigameRun }) {
   )
 }
 
-/** What the ice under you is doing, and what a click will do about it. */
+/** What the ice under you is doing. */
 function IcePill({ round, mine, colour }: { round: Round; mine: Round['players'][number]; colour: string }) {
   let text = 'on solid ice'
   if (!mine.alive) text = 'in the sea'

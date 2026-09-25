@@ -86,10 +86,10 @@ describe('a player snapshot', () => {
 })
 
 describe('tile damage', () => {
-  it('sends only what a player did, never what the shrink already claimed', () => {
+  it('sends only what a player marked, never what the shrink already claimed', () => {
     const round = host()
     round.tiles.crackedAt[tileIndex(0, 4, 4)] = 1
-    round.tiles.instantAt[tileIndex(0, 0, 0)] = 2 // ring 4, claimed by the shrink well before elapsed 70
+    round.tiles.crackedAt[tileIndex(0, 0, 0)] = 2 // ring 4, claimed by the shrink well before elapsed 70
     round.elapsed = 70
     const sparse = sparseDamage(round)
     expect(sparse.some(([i]) => i === tileIndex(0, 4, 4))).toBe(true)
@@ -99,18 +99,18 @@ describe('tile damage', () => {
   it('comes back as the marks that went out, and merges onto what a guest already has', () => {
     const round = host()
     round.tiles.crackedAt[tileIndex(0, 4, 4)] = 5
-    round.tiles.instantAt[tileIndex(1, 4, 4)] = 6
+    round.tiles.crackedAt[tileIndex(1, 4, 4)] = 6
     const copy = createRound(SEED, [{ id: 'p1' }], 77)
     applyTiles(copy, decodeTiles(relay(encodeTiles(round)))!)
     expect(copy.tiles.crackedAt[tileIndex(0, 4, 4)]).toBe(5)
-    expect(copy.tiles.instantAt[tileIndex(1, 4, 4)]).toBe(6)
+    expect(copy.tiles.crackedAt[tileIndex(1, 4, 4)]).toBe(6)
   })
 
   it('is refused whole rather than half-read', () => {
     expect(decodeTiles({ t: 'nope', g: 1, d: [] })).toBeNull()
-    expect(decodeTiles({ t: 'bti-t', g: 1, d: [[0, 3, 0]] })).toBeNull()
-    expect(decodeTiles({ t: 'bti-t', g: 1, d: [[-1, 1, 0]] })).toBeNull()
-    expect(decodeTiles({ t: 'bti-t', g: 1, d: [[0, 1]] })).toBeNull()
+    expect(decodeTiles({ t: 'bti-t', g: 1, d: [[-1, 0]] })).toBeNull()
+    expect(decodeTiles({ t: 'bti-t', g: 1, d: [[0, -1]] })).toBeNull()
+    expect(decodeTiles({ t: 'bti-t', g: 1, d: [[0]] })).toBeNull()
     expect(decodeTiles({ t: 'bti-t', g: -1, d: [] })).toBeNull()
   })
 
@@ -128,20 +128,19 @@ describe('tile damage', () => {
 
 describe('an intent', () => {
   it('comes back as what was sent, for its round', () => {
-    const said = decodeIntent(relay(encodeIntent({ x: 0.5, z: -0.5, yaw: 1.2, breaks: 2, jumps: 1, pushes: 0 }, 12)))!
+    const said = decodeIntent(relay(encodeIntent({ x: 0.5, z: -0.5, yaw: 1.2, jumps: 1, pushes: 0 }, 12)))!
     expect(said.round).toBe(12)
     expect(said.intent.x).toBeCloseTo(0.5)
     expect(said.intent.z).toBeCloseTo(-0.5)
     expect(said.intent.yaw).toBeCloseTo(1.2)
-    expect(said.intent.breaks).toBe(2)
     expect(said.intent.jumps).toBe(1)
   })
 
   it('cannot ask for more than full speed, and is refused when a count is missing or negative', () => {
-    const fast = decodeIntent({ t: 'bti-in', r: 1, x: 30, z: 40, w: 0, b: 0, j: 0, u: 0 })!
+    const fast = decodeIntent({ t: 'bti-in', r: 1, x: 30, z: 40, w: 0, j: 0, u: 0 })!
     expect(Math.hypot(fast.intent.x, fast.intent.z)).toBeCloseTo(1)
-    expect(decodeIntent({ t: 'bti-in', r: 1, x: 0, z: 0, w: 0, b: -1, j: 0, u: 0 })).toBeNull()
-    expect(decodeIntent({ t: 'bti-in', x: 0, z: 0, w: 0, b: 0, j: 0, u: 0 })).toBeNull()
+    expect(decodeIntent({ t: 'bti-in', r: 1, x: 0, z: 0, w: 0, j: -1, u: 0 })).toBeNull()
+    expect(decodeIntent({ t: 'bti-in', x: 0, z: 0, w: 0, j: 0, u: 0 })).toBeNull()
   })
 })
 
@@ -160,8 +159,7 @@ describe('eight players in one round', () => {
         const dx = -me.x
         const dz = -me.z
         const length = Math.hypot(dx, dz) || 1
-        const breaks = frame % 90 === guests.indexOf(guest) * 11 ? me.breaks + 1 : me.breaks
-        const intent: Intent = { x: dx / length, z: dz / length, yaw: 0, breaks, jumps: 0, pushes: 0 }
+        const intent: Intent = { x: dx / length, z: dz / length, yaw: 0, jumps: 0, pushes: 0 }
         if (random() < 0.3) continue
         const said = decodeIntent(relay(encodeIntent(intent, round.id)))!
         if (said.round === round.id) heard.set(guest.id, said.intent)

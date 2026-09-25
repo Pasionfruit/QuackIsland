@@ -22,6 +22,11 @@ import {
 } from '../../53-board-movement'
 import { decodeMinigameRoundMessage, encodeMinigameRoundMessage } from './protocol'
 import {
+  allConnectedMinigamePlayersReady,
+  decodeMinigameRoundReady,
+  encodeMinigameRoundReady,
+} from './readiness'
+import {
   EMPTY_MINIGAME_ROUND,
   beginMinigameAttempt,
   canAcknowledgeMinigameRound,
@@ -33,10 +38,12 @@ import {
 
 const store = createStore<MinigameRoundSnapshot>(EMPTY_MINIGAME_ROUND)
 const acknowledged = createStore('')
+const readyPlayers = createStore<readonly string[]>([])
 let stopListening: (() => void) | null = null
 let requestedSession = ''
 let actionSequence = 0
 let pendingSnapshot: MinigameRoundSnapshot | null = null
+let announcedReadySession = ''
 
 export function getMinigameRound(): MinigameRoundSnapshot {
   return store.get()
@@ -44,6 +51,10 @@ export function getMinigameRound(): MinigameRoundSnapshot {
 
 export function useMinigameRound(): MinigameRoundSnapshot {
   return useStore(store)
+}
+
+export function useMinigameRoundReadyPlayers(): readonly string[] {
+  return useStore(readyPlayers)
 }
 
 export function isMinigameRoundAcknowledged(sessionId: string): boolean {
@@ -72,7 +83,11 @@ function announce(snapshot: MinigameRoundSnapshot): void {
 
 function accept(snapshot: MinigameRoundSnapshot): void {
   const previous = store.get()
-  if (previous.sessionId !== snapshot.sessionId) acknowledged.set('')
+  if (previous.sessionId !== snapshot.sessionId) {
+    acknowledged.set('')
+    readyPlayers.set([])
+    announcedReadySession = ''
+  }
   store.set(snapshot)
   if (pendingSnapshot?.sessionId === snapshot.sessionId && pendingSnapshot.revision <= snapshot.revision) {
     pendingSnapshot = null
@@ -140,6 +155,22 @@ function senderIsHost(senderId: string): boolean {
 export function listenForMinigameRound(): () => void {
   if (stopListening) return stopListening
   stopListening = subscribeRoom((senderId, payload) => {
+    const ready = decodeMinigameRoundReady(payload)
+    if (ready) {
+      const current = store.get()
+      if (
+        getNet().host &&
+        current.phase === 'briefing' &&
+        current.sessionId === ready.sessionId &&
+        current.boardRound === ready.boardRound &&
+        current.players.some((player) => player.id === senderId)
+      ) {
+        const next = new Set(readyPlayers.get())
+        next.add(senderId)
+        readyPlayers.set([...next])
+      }
+      return
+    }
     const message = decodeMinigameRoundMessage(payload)
     if (!message) return
     if (message.kind === 'snapshot') {
@@ -160,6 +191,42 @@ export function listenForMinigameRound(): () => void {
     stopListening?.()
     stopListening = null
   }
+}
+
+export function markMinigameRoundReady(): boolean {
+  const current = store.get()
+  const net = getNet()
+  if (
+    current.phase !== 'briefing' ||
+    !net.id ||
+    !current.players.some((player) => player.id === net.id)
+  ) return false
+
+  if (net.host) {
+    const next = new Set(readyPlayers.get())
+    if (next.has(net.id)) return true
+    next.add(net.id)
+    readyPlayers.set([...next])
+    return true
+  }
+
+  if (announcedReadySession === current.sessionId) return true
+  announcedReadySession = current.sessionId
+  sendToRoom({ ...encodeMinigameRoundReady(current.sessionId, current.boardRound) })
+  return true
+}
+
+export function isMinigameRoundReadyToStart(): boolean {
+  const current = store.get()
+  const net = getNet()
+  const connected = [net.id, ...getPeers().map((peer) => peer.id)].filter(
+    (id): id is string => typeof id === 'string' && id.length > 0,
+  )
+  return allConnectedMinigamePlayersReady(
+    current.players.map((player) => player.id),
+    connected,
+    readyPlayers.get(),
+  )
 }
 
 export function requestMinigameRoundSync(sessionId: string, boardRound: number): void {
@@ -213,6 +280,7 @@ export function syncMinigameRoundLifecycle(): void {
 function startAttempt(kind: 'practice' | 'final'): boolean {
   if (!getNet().host) return false
   const current = store.get()
+  if (current.phase === 'briefing' && !isMinigameRoundReadyToStart()) return false
   const next = beginMinigameAttempt(current, kind, localAction(kind))
   if (next === current || next.minigameId === '') return false
   accept(next)
@@ -260,4 +328,6 @@ export function resetMinigameRound(): void {
   requestedSession = ''
   actionSequence = 0
   pendingSnapshot = null
+  readyPlayers.set([])
+  announcedReadySession = ''
 }

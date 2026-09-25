@@ -39,6 +39,7 @@ local avatar movement to a compact browser interface. It deliberately stops at
 | `encodeBoardMovementMessage` / `decodeBoardMovementMessage` | Bounded room protocol |
 | `BOARD_TILES`, `tileWorldPoint`, `boardPointAt` | Public tile-to-world placement and hop interpolation |
 | `BOARD_SHARED_TILE`, `sharedTileOffset` | Stable turn-order slots for players occupying the same tile |
+| `BOARD_CAMERA`, `boardCameraSubject`, `boardCameraPose` | Deterministic active-player framing and camera placement |
 
 ## State and authority
 
@@ -90,6 +91,25 @@ groups of two through eight use an evenly spaced ring capped at 0.82 metres.
 During movement, the travel path stays centred and blends into the player's
 slot over the final tile hop. The resulting local body position continues over
 the existing ordinary player sync, with no board protocol change.
+
+## Board camera
+
+While the board panel is active, every browser frames the same subject. Before
+a roll this is the active roller. Once a roll is accepted, the previous roller
+remains the subject while their visible route position advances at the same
+measured tile speed as the body. Only after that movement settles does the
+camera pan to the next roller. Backward tile effects use the same path, the
+last mover remains framed at round completion, and a summit winner remains the
+subject on the terminal board state.
+
+The camera is placed above and radially outside the volcano so the player and
+upcoming route remain visible. Position and look target ease between players;
+the initial board view focuses immediately. Shared-tile offsets are included,
+so the camera looks at the chosen duck rather than the centre of a group.
+Every client derives this from the synchronized board snapshot—there is no new
+camera message or remote-position dependency. The override uses the project
+camera frame priority and releases as soon as the board round is acknowledged
+for the minigame handoff.
 
 ## Landing-effect extension
 
@@ -204,10 +224,18 @@ the dependent minigame, rewards, victory, tile-action, and landmark flow.
 Single-player centring, two-player opposition, deterministic snapshot ordering,
 and eight-player bounded unique slots are covered by automated tests.
 
+For generation 5, compare both browsers throughout a full board round. Before
+each roll, both views must frame the named roller. During movement, both views
+must follow the moving duck through every hop before easing to the next roller.
+Confirm the camera follows an Ash Slide backward, stays on the last mover until
+the minigame appears, and focuses a summit winner. The minigame must still open
+on both browsers after the final movement settles.
+
 ## Gate record
 
-Generation 4 adds deterministic shared-tile player spacing. Pending human
-review, including regression review of modules 54-56, 59, and 60.
+Generation 5 adds synchronized board camera direction derived entirely from
+the existing snapshot. Pending human review, including regression review of
+modules 54-56, 59, and 60.
 
 ## Measured
 

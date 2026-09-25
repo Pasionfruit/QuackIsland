@@ -2,15 +2,14 @@
  * The rules of Breaking the Ice, as arithmetic.
  *
  * Three square layers of ice tiles, stacked over the sea and centred on the
- * same spot - a smaller, weaker layer under a bigger, sturdier one. A left
- * click cracks the tile you are facing; cracked, it breaks on its own a
- * little later, or at once if anybody clicks it again. Walk, get pushed, or
- * simply wait on a tile that breaks under you and you lose your footing -
- * a short beat later gravity takes you, and you fall until you land on a
- * solid tile of the layer below, or - off the bottom layer - into the sea.
- * The iceberg keeps shrinking and its ice keeps weakening as the round runs
- * on, fastest and soonest on the layer nearest the sea. Last one standing
- * wins.
+ * same spot. Wherever you walk, the tile under your feet cracks - the
+ * instant you first stand on it, not before - and three seconds later it is
+ * gone, whether you are still on it or not. Get pushed, or simply linger, on
+ * a tile that gives way and you lose your footing - a short beat later
+ * gravity takes you, and you fall until you land on a solid tile of the
+ * layer below, or - off the bottom layer - into the sea. The iceberg keeps
+ * shrinking as the round runs on, fastest and soonest on the layer nearest
+ * the sea. Last one standing wins.
  *
  * No three.js, no React, no clock of its own. `stepRound` takes a round,
  * what everybody is pressing and how long since last time, and gives back
@@ -38,12 +37,8 @@ export const LAYERS = [
 export const TILES_PER_LAYER = DIM * DIM
 export const TILE_COUNT = TILES_PER_LAYER * LAYERS.length
 
-/** How a tile weakens over the round: it cracks for less time the longer the round runs, down to a floor. */
-const CRACK = [
-  { base: 1.6, floor: 0.7, rate: 0.01 },
-  { base: 1.3, floor: 0.55, rate: 0.012 },
-  { base: 1.0, floor: 0.4, rate: 0.014 },
-] as const
+/** How long a tile holds once somebody has stood on it, before it is gone. */
+export const CRACK_TIME = 3
 
 /**
  * When each layer's outer rings force-break, one ring at a time - a pure
@@ -76,13 +71,6 @@ export const MOVE = {
   void: 1.6,
 } as const
 
-export const BREAK = {
-  /** How far ahead of you a click reaches. About half a tile. */
-  reach: 1.25,
-  /** Seconds between break-intents being dealt with. */
-  cooldown: 0.35,
-} as const
-
 export const PUSH = {
   reach: 1.9,
   /** Half the angle, either side of where you face, that a push reaches. */
@@ -109,7 +97,7 @@ export function forward(yaw: number): { x: number; z: number } {
 
 /** Ahead, turned a quarter turn clockwise seen from above - a strafe to the right. */
 export function rightOf(yaw: number): { x: number; z: number } {
-  return { x: -Math.cos(yaw), z: Math.sin(yaw) }
+  return { x: Math.cos(yaw), z: -Math.sin(yaw) }
 }
 
 export function tileIndex(layer: number, row: number, col: number): number {
@@ -154,32 +142,22 @@ export function shrunk(layer: 0 | 1 | 2, row: number, col: number, elapsed: numb
   return ringOf(layer, row, col) > maxRing - gone
 }
 
-/** How long a tile that cracks at `at` (round seconds) stays cracked before it breaks on its own. */
-export function crackTime(layer: 0 | 1 | 2, at: number): number {
-  const c = CRACK[layer]
-  return Math.max(c.floor, c.base - c.rate * at)
-}
-
 /** Per-tile state the rules keep beyond the shrink: only what a player has actually done to it. */
 export interface Tiles {
-  /** Round-seconds a tile cracked, or `null`. Fixes its fuse; a late joiner needs no more. */
+  /** Round-seconds a tile first had somebody stand on it, or `null`. Fixes its fuse. */
   crackedAt: (number | null)[]
-  /** Round-seconds a tile was finished off early, or `null`. */
-  instantAt: (number | null)[]
 }
 
 export function createTiles(): Tiles {
-  return { crackedAt: new Array(TILE_COUNT).fill(null), instantAt: new Array(TILE_COUNT).fill(null) }
+  return { crackedAt: new Array(TILE_COUNT).fill(null) }
 }
 
-/** Whether `(layer, row, col)` is broken - by the shrink, by a click, or by its own crack running out. */
+/** Whether `(layer, row, col)` is broken - by the shrink, or by its own crack running out. */
 export function broken(tiles: Tiles, layer: 0 | 1 | 2, row: number, col: number, elapsed: number): boolean {
   if (!inFootprint(layer, row, col)) return true
   if (shrunk(layer, row, col, elapsed)) return true
-  const i = tileIndex(layer, row, col)
-  if (tiles.instantAt[i] !== null) return true
-  const at = tiles.crackedAt[i]
-  return at !== null && elapsed >= at + crackTime(layer, at)
+  const at = tiles.crackedAt[tileIndex(layer, row, col)]
+  return at !== null && elapsed >= at + CRACK_TIME
 }
 
 /** Whether `(layer, row, col)` is cracked but not yet broken - a warning to get off it. */
@@ -204,11 +182,9 @@ export interface Player {
   knockX: number
   knockZ: number
   stunUntil: number
-  /** How many break/jump/push intents have been dealt with - see `Intent`. */
-  breaks: number
+  /** How many jump/push intents have been dealt with - see `Intent`. */
   jumps: number
   pushes: number
-  breakAt: number
   pushAt: number
   mine: boolean
   bot: boolean
@@ -230,16 +206,15 @@ export interface Round {
 /**
  * What somebody wants this frame.
  *
- * `breaks`, `jumps` and `pushes` are **running counts**, not "pressed this
- * frame" - the same idea as every other minigame's click count, so a message
- * the network drops or repeats never loses or doubles an action.
+ * `jumps` and `pushes` are **running counts**, not "pressed this frame" -
+ * the same idea as every other minigame's click count, so a message the
+ * network drops or repeats never loses or doubles an action.
  */
 export interface Intent {
   /** Desired movement, already turned to face the way the camera does. */
   x: number
   z: number
   yaw: number
-  breaks: number
   jumps: number
   pushes: number
 }
@@ -285,10 +260,8 @@ export function createRound(seed: number, entrants: readonly Entrant[], id = 1):
       knockX: 0,
       knockZ: 0,
       stunUntil: 0,
-      breaks: 0,
       jumps: 0,
       pushes: 0,
-      breakAt: -Infinity,
       pushAt: -Infinity,
       mine: e.mine ?? false,
       bot: e.bot ?? false,
@@ -300,20 +273,14 @@ export function standing(round: Round): Player[] {
   return round.players.filter((p) => p.alive)
 }
 
-/** Crack an intact tile, or finish off one already cracked - the second click on it, by anyone. */
-function crack(round: Round, layer: 0 | 1 | 2, row: number, col: number): void {
-  if (!inFootprint(layer, row, col)) return
-  const i = tileIndex(layer, row, col)
-  const t = round.tiles
-  if (broken(t, layer, row, col, round.elapsed)) return
-  if (t.crackedAt[i] === null) t.crackedAt[i] = round.elapsed
-  else t.instantAt[i] = round.elapsed
-}
-
-function tryBreak(round: Round, p: Player): void {
-  const f = forward(p.yaw)
-  const { row, col } = tileAt(p.x + f.x * BREAK.reach, p.z + f.z * BREAK.reach)
-  crack(round, p.layer, row, col)
+/** The tile under a grounded player cracks the instant they first stand on it - never twice. */
+function crackUnderfoot(round: Round, p: Player): void {
+  const { row, col } = tileAt(p.x, p.z)
+  if (!inFootprint(p.layer, row, col)) return
+  const i = tileIndex(p.layer, row, col)
+  if (round.tiles.crackedAt[i] === null && !shrunk(p.layer, row, col, round.elapsed)) {
+    round.tiles.crackedAt[i] = round.elapsed
+  }
 }
 
 function tryPush(round: Round, p: Player): void {
@@ -353,12 +320,12 @@ function eliminate(round: Round, p: Player): void {
  * Mutates and returns the same round. `dt` is clamped, so a tab back from the
  * background does not carry anybody through a floor they never touched.
  *
- * In order: breaks, jumps and pushes, each a running count dealt with one at
- * a time and gated by its own cooldown; movement, camera-relative and already
+ * In order: jumps and pushes, each a running count dealt with one at a time,
+ * pushes gated by their own cooldown; movement, camera-relative and already
  * turned before it gets here; knockback easing off; gravity and landing,
- * which is where a broken tile actually costs you your footing; falling
- * through the bottom layer, into the sea. The round ends `ROUND.outro` after
- * one is left standing, or at `ROUND.limit`.
+ * where standing on a whole tile cracks it and a broken one actually costs
+ * you your footing; falling through the bottom layer, into the sea. The
+ * round ends `ROUND.outro` after one is left standing, or at `ROUND.limit`.
  */
 export function stepRound(round: Round, intents: ReadonlyMap<string, Intent>, dt: number): Round {
   if (round.over) return round
@@ -373,11 +340,6 @@ export function stepRound(round: Round, intents: ReadonlyMap<string, Intent>, dt
   for (const p of round.players) {
     const intent = intents.get(p.id)
     if (!intent || !p.alive) continue
-    while (p.breaks < intent.breaks && round.elapsed - p.breakAt >= BREAK.cooldown) {
-      p.breaks += 1
-      p.breakAt = round.elapsed
-      tryBreak(round, p)
-    }
     while (p.pushes < intent.pushes && round.elapsed - p.pushAt >= PUSH.cooldown) {
       p.pushes += 1
       p.pushAt = round.elapsed
@@ -415,6 +377,7 @@ export function stepRound(round: Round, intents: ReadonlyMap<string, Intent>, dt
   for (const p of round.players) {
     if (!p.alive) continue
     if (p.grounded) {
+      crackUnderfoot(round, p)
       const { row, col } = tileAt(p.x, p.z)
       if (inFootprint(p.layer, row, col) && !broken(round.tiles, p.layer, row, col, round.elapsed)) {
         p.hang = MOVE.hang

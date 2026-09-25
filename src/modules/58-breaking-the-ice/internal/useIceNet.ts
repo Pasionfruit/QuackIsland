@@ -49,7 +49,7 @@ export interface RoundNet {
 
 export function useIceNet(): RoundNet {
   const heard = useRef(new Map<string, { intent: Intent; round: number; at: number }>())
-  const lastCounts = useRef({ breaks: 0, jumps: 0, pushes: 0 })
+  const lastCounts = useRef({ jumps: 0, pushes: 0 })
   const lastRound = useRef(0)
   const latest = useRef<Snapshot | null>(null)
   const latestTiles = useRef<TileSync | null>(null)
@@ -87,7 +87,7 @@ export function useIceNet(): RoundNet {
     const net = getNet()
     const now = performance.now()
     const wish: Intent = paused ? { ...mine, x: 0, z: 0 } : mine
-    lastCounts.current = { breaks: wish.breaks, jumps: wish.jumps, pushes: wish.pushes }
+    lastCounts.current = { jumps: wish.jumps, pushes: wish.pushes }
     lastRound.current = round.id
 
     // A pause is shared: whoever pressed it stopped the round for everybody,
@@ -124,7 +124,7 @@ export function useIceNet(): RoundNet {
       return stepped
     }
 
-    const said = `${round.id}:${wish.x.toFixed(2)}:${wish.z.toFixed(2)}:${wish.yaw.toFixed(2)}:${wish.breaks}:${wish.jumps}:${wish.pushes}`
+    const said = `${round.id}:${wish.x.toFixed(2)}:${wish.z.toFixed(2)}:${wish.yaw.toFixed(2)}:${wish.jumps}:${wish.pushes}`
     if (round.id !== 0 && (said !== lastSaid.current || now - saidAt.current >= REPEAT_MS)) {
       lastSaid.current = said
       saidAt.current = now

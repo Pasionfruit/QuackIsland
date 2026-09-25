@@ -3,14 +3,15 @@
 ## What this is
 
 **Catalogue slot 2, "Breaking the Ice".** Three square layers of ice tiles,
-stacked over the sea and centred on each other - smaller and weaker the
-further down they sit. Left click cracks the tile you are facing; cracked, it
-breaks on its own a little later, or at once on a second click, from anybody.
-Stand, walk, or get pushed onto a tile that has broken and you lose your
-footing - a short beat later gravity takes you, and you fall until you land
-on a whole tile of the layer below, or - off the bottom layer - into the sea.
-The iceberg keeps shrinking and its ice keeps weakening as the round runs on,
-soonest and fastest on the layer nearest the water. Last one standing wins.
+stacked over the sea and centred on each other - smaller the further down
+they sit. Wherever you walk, the tile under your feet cracks - the instant
+you first stand on it, not before - and is gone three seconds later, whether
+you are still on it or not. Stand, walk, or get pushed onto a tile that has
+broken and you lose your footing - a short beat later gravity takes you, and
+you fall until you land on a whole tile of the layer below, or - off the
+bottom layer - into the sea. The iceberg keeps shrinking as the round runs
+on, soonest and fastest on the layer nearest the water. Last one standing
+wins.
 
 It plugs into `15-minigames` and nothing else in the build knows it exists.
 Importing the module registers it - one line in the composition root.
@@ -23,37 +24,33 @@ not: the players are the island's capsule and the ice is flat coloured boxes.
 | The brief said | Where it is |
 | --- | --- |
 | A floating iceberg of breakable tiles, three layers | `LAYERS`, `DIM`, `CELL`, `tileIndex`, `inFootprint` |
-| Destroy tiles beneath and around each other | `BREAK`, `tryBreak` inside `stepRound` |
-| Tiles crack before breaking, a brief chance to escape | `crackTime`, `Tiles.crackedAt`, `broken`, `cracked` |
+| Destroy tiles beneath and around each other | `crackUnderfoot` inside `stepRound` |
+| Tiles crack before breaking, a brief chance to escape | `CRACK_TIME`, `Tiles.crackedAt`, `broken`, `cracked` |
 | Push opponents toward holes | `PUSH`, `tryPush` inside `stepRound` |
 | Falling through a layer drops you onto the one below | `landingBelow`, the gravity/landing pass in `stepRound` |
 | The bottom layer, into the sea, eliminates you | `eliminate`, `MOVE.void` |
 | The iceberg shrinks as the round runs on | `shrunk`, `ringsGoneAt`, `ringOf` - a pure function of the clock |
-| Lower floors smaller and more fragile | `LAYERS` sizes; `CRACK` per layer in `crackTime` |
-| WASD move; mouse aim/camera; left click break; space jump; right click push | the screen |
+| Lower floors smaller | `LAYERS` sizes |
+| WASD move; mouse look/camera; space jump; right click push | the screen |
 
 ## The ice
 
-A tile is **intact**, **cracked**, or **broken** - never anything else.
-Clicking an intact tile in front of you cracks it (`crack`); clicking a
-cracked tile, by anyone, breaks it at once. Left alone, a cracked tile breaks
-on its own after `crackTime(layer, crackedAt)` seconds, fixed the moment it
-cracks so a late joiner can work out exactly how long is left from that one
-number, no replay needed. The fuse is shorter for a tile that cracks later in
-the round, down to a floor, and shorter again the further down the layer -
-the bottom layer's ice is the frailest throughout.
+A tile is **intact**, **cracked**, or **broken** - never anything else. The
+moment a grounded player is first found standing on an intact tile, it
+cracks (`crackUnderfoot`) - not before, and never twice: standing there
+longer, or somebody else arriving after, does not restart its fuse. Left
+alone, a cracked tile breaks exactly `CRACK_TIME` (three) seconds after it
+first cracked, fixed at that moment so a late joiner can work out exactly how
+long is left from that one stored number, no replay needed.
 
-- **A break reaches about half a tile ahead of where you are facing**
-  (`BREAK.reach`) - not a raycast, since the rules only know your yaw, not
-  your camera's pitch, the same flat-aim idiom as every other minigame's
-  reach. Whether that lands on your own tile or the one ahead of you depends
-  on exactly where you are standing and facing.
-- **A short cooldown** (`BREAK.cooldown`) gates one break-intent at a time;
-  the rest wait, the same running-count idiom as a punch's click.
+- **There is no separate "break" action.** Walking is the whole of it - the
+  brief said "have it be where the player is walking," so a tile's fuse
+  starts the instant your feet are on it, whether you are standing still or
+  passing through.
 - **The shrink never needs to be sent.** Which outer ring of a layer is gone
   is worked out purely from the round's seed and clock (`shrunk`), the same
-  trick `44-color-coded` uses for its panels - only ice a *player* has
-  actually cracked or broken is ever put on the wire.
+  trick `44-color-coded` uses for its panels - only ice somebody has actually
+  stood on is ever put on the wire.
 
 ## Falling
 
@@ -108,11 +105,11 @@ different rate.
   has not already independently claimed - never the whole grid, and it only
   ever shrinks as the round goes on, since the shrink itself is derived, not
   sent.
-- **Break, jump and push are each a running count**, the same idiom as a
-  punch's click: a guest says "I have broken four times, ever," not "I broke
-  just now," so a message the network drops or repeats can neither lose an
-  action nor double it. Tested with a third of the messages dropped, host and
-  eight guests agreeing on who fell, where, and which tiles are gone.
+- **Jump and push are each a running count**, the same idiom as a punch's
+  click: a guest says "I have pushed four times, ever," not "I pushed just
+  now," so a message the network drops or repeats can neither lose an action
+  nor double it. Tested with a third of the messages dropped, host and eight
+  guests agreeing on who fell, where, and which tiles are gone.
 - A guest that goes quiet stops moving on the host; its counts are never
   forgotten. Walking out of a round says "standing still." A pause stops the
   round for everybody, the host's own simulation included.
@@ -122,10 +119,10 @@ different rate.
 
 **The roster is the lobby**, host first, up to eight - eight colours. Alone,
 three stand-ins fill in: they keep off ice they know is about to give way,
-break the tile under whoever is nearest when they can reach it, push them if
-they are already close enough for that instead, and otherwise close the
-distance - seeded per bot per decision, so the same round plays out the same
-way every time it is replayed with the same seed.
+close in on whoever is nearest, and push them once they are close enough -
+the walking itself does the cracking, on stand-ins the same as anybody -
+seeded per bot per decision, so the same round plays out the same way every
+time it is replayed with the same seed.
 
 ## Seeing what happened
 
@@ -155,9 +152,9 @@ Exported because it is worth testing, not because anything else needs it.
 
 | Export | What it is |
 | --- | --- |
-| `LAYERS`, `DIM`, `CELL`, `TILE_COUNT`, `TILES_PER_LAYER`, `MOVE`, `BREAK`, `PUSH`, `ROUND`, `COLOURS` | The rules and the look, as numbers. |
+| `LAYERS`, `DIM`, `CELL`, `TILE_COUNT`, `TILES_PER_LAYER`, `MOVE`, `PUSH`, `ROUND`, `CRACK_TIME`, `COLOURS` | The rules and the look, as numbers. |
 | `createRound`, `createTiles`, `stepRound`, `spawns`, `standing`, `timeLeft`, `placings` | The round. Pure. |
-| `tileIndex`, `inFootprint`, `tileCentre`, `tileAt`, `ringOf`, `ringsGoneAt`, `shrunk`, `crackTime`, `broken`, `cracked` | The ice, addressed and judged. Pure. |
+| `tileIndex`, `inFootprint`, `tileCentre`, `tileAt`, `ringOf`, `ringsGoneAt`, `shrunk`, `broken`, `cracked` | The ice, addressed and judged. Pure. |
 | `forward`, `rightOf` | Which way is which, at a yaw. Pure. |
 | `Round`, `Player`, `Tiles`, `Intent`, `Entrant` | Its shapes. |
 | `botIntent`, `botIntents`, `BOT_OPENING` | The stand-ins. |
@@ -167,19 +164,20 @@ Exported because it is worth testing, not because anything else needs it.
 
 ## Invariants you may rely on
 
-- **A tile cracks on the first click and breaks on the second, by anyone, or
-  on its own after its fuse - which shortens as the round and the layer both
-  weaken.** Tested.
-- **Player-caused tile damage is all that is ever sent; the shrink is derived
-  by every client from the same seed and clock.** Tested.
+- **A tile cracks the instant somebody first stands on it, never twice, and
+  is gone exactly `CRACK_TIME` later.** Tested.
+- **Only ice somebody has actually stood on is ever sent; the shrink is
+  derived by every client from the same seed and clock.** Tested.
+- **A tile never cracks under somebody who is airborne** - only a grounded
+  player's own tile starts its fuse. Tested.
 - **Falling looks for a whole tile of a lower layer at the same spot, nearest
   first, and keeps falling past a layer with nothing there.** Tested.
 - **Below the bottom layer, you are eliminated; nowhere else are you.**
   Tested.
 - **A push only knocks back whoever is ahead of you and in reach - never
   anyone behind you.** Tested.
-- **Break, jump and push counts said many times are dealt with once each**,
-  and an intent only counts for its own round. Tested.
+- **Jump and push counts said many times are dealt with once each**, and an
+  intent only counts for its own round. Tested.
 - **The round ends at one standing, after a beat to watch the last fall, or
   at the safety-net limit; the standing share first, the rest rank by how
   long they lasted.** Tested.
@@ -196,13 +194,12 @@ Exported because it is worth testing, not because anything else needs it.
 
 ## Known limitations
 
-- **A guest's own movement, breaks, jumps and pushes are a round trip behind
-  their keys**, with no prediction - about 50ms plus ping, the same
-  limitation every other minigame here has.
+- **A guest's own movement, jumps and pushes are a round trip behind their
+  keys**, with no prediction - about 50ms plus ping, the same limitation
+  every other minigame here has.
 - **Grid sizes, timings and reach/impulse numbers are a starting point**, not
   a tuned final balance - the brief asks for the shape of the game, and the
-  exact pace of the shrink and the weakening is the kind of thing only
-  playtesting settles.
+  exact pace of the shrink is the kind of thing only playtesting settles.
 - **The shared plumbing is copied again** - host/guest hook, results card,
   roster rules. Moving it into `15-minigames` is overdue, same note as
   Punch Buggy's.
@@ -217,8 +214,8 @@ Open a lobby, leave the game on Volcano Island, press **minigames**, open
   spread round the top.
 - **Move the mouse.** The camera turns behind you; **WASD** moves relative to
   where you are looking.
-- **Left click a tile ahead of you.** It tints - cracked. Click it again: it
-  sinks out of sight at once. Leave it: it goes on its own a little later.
+- **Walk onto a fresh tile.** It tints at once - cracked. Stand there, or
+  walk away: three seconds after you first arrived, it is gone regardless.
 - **Stand on a tile as it breaks.** A short beat, then you drop - and land on
   the layer below, not eliminated.
 - **Walk off the edge of a layer where nothing is below you.** You keep
@@ -233,7 +230,7 @@ Open a lobby, leave the game on Volcano Island, press **minigames**, open
 
 ### With two browsers
 
-- **Both break and fall.** Each sees the other's tiles crack and break, and
+- **Both walk and fall.** Each sees the other's tiles crack and break, and
   which layer they land on.
 - **One host, one guest, both watch the same iceberg shrink.** No
   disagreement about which tiles are gone.

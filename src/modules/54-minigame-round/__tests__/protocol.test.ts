@@ -3,6 +3,11 @@ import type { MinigameId } from '../../15-minigames'
 import type { BoardMovementSnapshot } from '../../53-board-movement'
 import { decodeMinigameRoundMessage, encodeMinigameRoundMessage } from '../internal/protocol'
 import { createMinigameRound } from '../internal/rules'
+import {
+  allConnectedMinigamePlayersReady,
+  decodeMinigameRoundReady,
+  encodeMinigameRoundReady,
+} from '../internal/readiness'
 
 const board: BoardMovementSnapshot = {
   sessionId: 'board-session',
@@ -64,5 +69,27 @@ describe('minigame round wire protocol', () => {
         snapshot: { ...snapshot, minigameId: 'reserved-41' },
       }),
     ).toBeNull()
+  })
+})
+
+describe('minigame preload readiness', () => {
+  it('round-trips a bounded ready acknowledgement', () => {
+    const encoded = encodeMinigameRoundReady('board-session:minigame:3', 3)
+    expect(decodeMinigameRoundReady(JSON.parse(JSON.stringify(encoded)))).toEqual(encoded)
+    expect(decodeMinigameRoundReady({ ...encoded, sessionId: 'x'.repeat(97) })).toBeNull()
+    expect(decodeMinigameRoundReady({ ...encoded, boardRound: 0 })).toBeNull()
+  })
+
+  it('requires every connected roster member and ignores disconnected members', () => {
+    expect(allConnectedMinigamePlayersReady(
+      ['host', 'guest', 'gone'],
+      ['host', 'guest'],
+      ['host'],
+    )).toBe(false)
+    expect(allConnectedMinigamePlayersReady(
+      ['host', 'guest', 'gone'],
+      ['host', 'guest'],
+      ['host', 'guest'],
+    )).toBe(true)
   })
 })

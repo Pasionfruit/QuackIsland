@@ -78,12 +78,15 @@ import {
   continueToMinigameRewards,
   getMinigameRound,
   listenForMinigameRound,
+  markMinigameRoundReady,
   recordFinalMinigame,
   resetMinigameRound,
   startFinalMinigame,
   startMinigamePractice,
   syncMinigameRoundLifecycle,
+  isMinigameRoundReadyToStart,
 } from '../internal/state'
+import { encodeMinigameRoundReady } from '../internal/readiness'
 
 describe('host minigame-round coordination', () => {
   beforeEach(() => {
@@ -124,6 +127,11 @@ describe('host minigame-round coordination', () => {
 
   it('runs practices, locks the final, and records host standings', () => {
     syncMinigameRoundLifecycle()
+    expect(startMinigamePractice()).toBe(false)
+    expect(markMinigameRoundReady()).toBe(true)
+    const stop = listenForMinigameRound()
+    mocks.listener?.('guest', encodeMinigameRoundReady(getMinigameRound().sessionId, 1))
+    expect(isMinigameRoundReadyToStart()).toBe(true)
     expect(startMinigamePractice()).toBe(true)
     expect(getMinigameRound()).toMatchObject({ phase: 'practice', practiceAttempts: 1 })
     expect(mocks.play).toHaveBeenCalledOnce()
@@ -147,6 +155,7 @@ describe('host minigame-round coordination', () => {
     expect(getMinigameRound().continueRequested).toBe(true)
     expect(continueToMinigameRewards()).toBe(false)
     expect(acknowledgeMinigameRound(complete.sessionId)).toBe(true)
+    stop()
   })
 
   it('preloads a selected game on a guest before the play call arrives', () => {

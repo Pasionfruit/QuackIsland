@@ -2,12 +2,12 @@
  * 58-breaking-the-ice - the public contract.
  *
  * Minigame 2 written, catalogue slot "Breaking the Ice". Three layers of
- * breakable ice tiles stacked over the sea. Break the tile under an
- * opponent, or push them toward a hole; crack one under yourself and you
- * still have a moment to get off it. Fall through a layer and you land on
- * the one below rather than going straight out - only the bottom layer, into
- * the sea, eliminates you. The iceberg shrinks and weakens as the round
- * runs on, fastest on the layer nearest the water. Last one standing wins.
+ * ice tiles stacked over the sea. Wherever you walk, the tile cracks and is
+ * gone three seconds later; push an opponent toward a hole it has opened.
+ * Fall through a layer and you land on the one below rather than going
+ * straight out - only the bottom layer, into the sea, eliminates you. The
+ * iceberg shrinks as the round runs on, fastest on the layer nearest the
+ * water. Last one standing wins.
  *
  * It plugs into `15-minigames` and nothing else in the build knows it
  * exists. Importing this module registers it - one line in the composition
@@ -26,9 +26,9 @@ registerMinigame('breaking-the-ice', {
 })
 
 export {
-  BREAK,
   CELL,
   COLOURS,
+  CRACK_TIME,
   DIM,
   LAYERS,
   MOVE,
@@ -40,7 +40,6 @@ export {
   cracked,
   createRound,
   createTiles,
-  crackTime,
   forward,
   inFootprint,
   placings,

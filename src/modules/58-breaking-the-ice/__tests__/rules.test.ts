@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { botIntents } from '../internal/ai'
 import {
-  BREAK,
+  CRACK_TIME,
   DIM,
   LAYERS,
   MOVE,
@@ -9,7 +9,6 @@ import {
   broken,
   cracked,
   createRound,
-  crackTime,
   forward,
   inFootprint,
   placings,
@@ -28,7 +27,7 @@ import {
   type Round,
 } from '../internal/rules'
 
-const STILL: Intent = { x: 0, z: 0, yaw: 0, breaks: 0, jumps: 0, pushes: 0 }
+const STILL: Intent = { x: 0, z: 0, yaw: 0, jumps: 0, pushes: 0 }
 
 /** Runs a round for `seconds`, at a fixed 1/60 step, applying the same intents every tick. */
 function run(round: Round, seconds: number, intents: ReadonlyMap<string, Intent>): Round {
@@ -79,18 +78,7 @@ describe('the grid', () => {
   })
 })
 
-describe('weakening ice', () => {
-  it('cracks for less time the longer the round has run, down to a floor', () => {
-    const early = crackTime(0, 0)
-    const late = crackTime(0, 200)
-    expect(late).toBeLessThan(early)
-    expect(late).toBeGreaterThanOrEqual(0.7)
-  })
-
-  it('the bottom layer is weaker throughout than the top', () => {
-    expect(crackTime(2, 0)).toBeLessThan(crackTime(0, 0))
-  })
-
+describe('the shrink', () => {
   it('shrinks nothing before the first checkpoint, then claims the outer ring', () => {
     expect(shrunk(0, 0, 0, 0)).toBe(false)
     expect(ringsGoneAt(0, 25)).toBe(0)
@@ -107,51 +95,55 @@ describe('weakening ice', () => {
   })
 })
 
-/** The tile a break from here, facing `yaw`, actually reaches - not necessarily the one you stand on. */
-function aimTile(p: { x: number; z: number; yaw: number }): { row: number; col: number } {
-  const f = forward(p.yaw)
-  return tileAt(p.x + f.x * BREAK.reach, p.z + f.z * BREAK.reach)
-}
-
-describe('cracking and breaking', () => {
-  it('cracks on the first click, and breaks on its own after its fuse', () => {
+describe('cracking underfoot', () => {
+  it('cracks the tile the instant you stand on it, and it is gone CRACK_TIME later', () => {
     const round = createRound(1, [{ id: 'a', mine: true }], 1)
     const p = round.players[0]
     p.x = 0
     p.z = 0
-    p.yaw = 0
-    const { row, col } = aimTile(p)
-    expect(broken(round.tiles, 0, row, col, 0)).toBe(false)
-    run(round, 0.05, new Map([['a', { ...STILL, breaks: 1 }]]))
+    const { row, col } = tileAt(p.x, p.z)
+    expect(cracked(round.tiles, 0, row, col, round.elapsed)).toBe(false)
+    stepRound(round, new Map([['a', STILL]]), 1 / 60)
     expect(cracked(round.tiles, 0, row, col, round.elapsed)).toBe(true)
     expect(broken(round.tiles, 0, row, col, round.elapsed)).toBe(false)
-    const fuse = crackTime(0, round.tiles.crackedAt[tileIndex(0, row, col)] as number)
-    run(round, fuse + 0.2, new Map([['a', STILL]]))
+    run(round, CRACK_TIME + 0.2, new Map([['a', STILL]]))
     expect(broken(round.tiles, 0, row, col, round.elapsed)).toBe(true)
   })
 
-  it('breaks at once on a second click, by anyone', () => {
+  it('does not restart the fuse just because you are still standing there', () => {
+    const round = createRound(1, [{ id: 'a', mine: true }], 1)
+    const p = round.players[0]
+    p.x = 0
+    p.z = 0
+    stepRound(round, new Map([['a', STILL]]), 1 / 60)
+    const crackedAt = round.tiles.crackedAt[tileIndex(0, 4, 4)]
+    run(round, 1, new Map([['a', STILL]])) // still on the same tile a second later
+    expect(round.tiles.crackedAt[tileIndex(0, 4, 4)]).toBe(crackedAt)
+  })
+
+  it('a tile two players share cracks once, timed from whoever got there first', () => {
     const round = duo()
     const [a, b] = round.players
     a.x = 0
     a.z = 0
-    a.yaw = 0
+    stepRound(round, new Map([['a', STILL]]), 1 / 60)
+    const firstCrack = round.tiles.crackedAt[tileIndex(0, 4, 4)]
+    run(round, 1, new Map())
     b.x = 0
     b.z = 0
-    b.yaw = 0
-    const { row, col } = aimTile(a)
-    run(round, 0.05, new Map([['a', { ...STILL, breaks: 1 }]]))
-    expect(broken(round.tiles, 0, row, col, round.elapsed)).toBe(false)
-    run(round, 0.05, new Map([['b', { ...STILL, breaks: 1 }]]))
-    expect(broken(round.tiles, 0, row, col, round.elapsed)).toBe(true)
+    run(round, 0.05, new Map([['b', STILL]]))
+    expect(round.tiles.crackedAt[tileIndex(0, 4, 4)]).toBe(firstCrack)
   })
 
-  it('gates repeat breaks with a cooldown', () => {
+  it('never cracks a tile under somebody who is airborne', () => {
     const round = createRound(1, [{ id: 'a', mine: true }], 1)
     const p = round.players[0]
-    run(round, 0.01, new Map([['a', { ...STILL, breaks: 3 }]]))
-    // Every unconsumed count beyond the cooldown just waits; only one is dealt with at once.
-    expect(p.breaks).toBeLessThan(3)
+    p.x = 0
+    p.z = 0
+    p.grounded = false
+    p.vy = 5
+    run(round, 0.05, new Map([['a', STILL]]))
+    expect(round.tiles.crackedAt[tileIndex(0, 4, 4)]).toBeNull()
   })
 })
 
@@ -161,14 +153,10 @@ describe('falling', () => {
     const p = round.players[0]
     p.x = 0
     p.z = 0
-    // Let a tick pass first so the player's coyote time is armed like anyone
-    // who has actually been standing there, then break the tile under them.
-    stepRound(round, new Map([['a', STILL]]), 1 / 60)
-    const under = tileAt(p.x, p.z)
-    round.tiles.instantAt[tileIndex(0, under.row, under.col)] = round.elapsed
-    expect(p.grounded).toBe(true)
-    run(round, MOVE.hang - 0.02, new Map([['a', STILL]]))
-    expect(p.grounded).toBe(true) // still within the coyote window
+    // Standing still is enough: the tile cracks the instant you arrive, and
+    // is gone CRACK_TIME later.
+    run(round, CRACK_TIME - 0.02, new Map([['a', STILL]]))
+    expect(p.grounded).toBe(true) // still within the fuse
     run(round, 2, new Map([['a', STILL]]))
     expect(p.alive).toBe(true)
     expect(p.grounded).toBe(true)
@@ -183,9 +171,7 @@ describe('falling', () => {
     // is nothing to land on until layer 2, which does not reach this far out either.
     p.x = 0
     p.z = tileCentre(0, 4).z // row 0: on layer 0, off both layer 1 and layer 2
-    stepRound(round, new Map([['a', STILL]]), 1 / 60)
-    const under = tileAt(p.x, p.z)
-    round.tiles.instantAt[tileIndex(0, under.row, under.col)] = round.elapsed
+    run(round, CRACK_TIME + 0.2, new Map([['a', STILL]]))
     run(round, 3, new Map([['a', STILL]]))
     expect(p.alive).toBe(false)
   })
@@ -197,9 +183,7 @@ describe('falling', () => {
     p.z = 0
     p.layer = 2
     p.y = LAYERS[2].y
-    stepRound(round, new Map([['a', STILL]]), 1 / 60)
-    const under = tileAt(p.x, p.z)
-    round.tiles.instantAt[tileIndex(2, under.row, under.col)] = round.elapsed
+    run(round, CRACK_TIME + 0.2, new Map([['a', STILL]]))
     run(round, 2, new Map([['a', STILL]]))
     expect(p.alive).toBe(false)
     expect(p.eliminatedAt).not.toBeNull()
@@ -264,9 +248,13 @@ describe('the round', () => {
     expect(round.over).toBe(true)
   })
 
-  it('ends at the safety-net limit with nobody eliminated', () => {
+  it('ends at the safety-net limit if the round has not otherwise been decided', () => {
+    // Standing still is no longer a stalemate - your own tile cracks under you
+    // regardless - so the safety net is checked directly at the clock, not by
+    // simulating a real 150-second standoff.
     const round = duo()
-    run(round, ROUND.limit + 1, new Map())
+    round.elapsed = ROUND.limit - 0.01
+    stepRound(round, new Map(), 1 / 60)
     expect(round.over).toBe(true)
     expect(timeLeft(round)).toBe(0)
   })
@@ -305,6 +293,19 @@ describe('which way is which', () => {
       const r = rightOf(yaw)
       expect(f.x * r.x + f.z * r.z).toBeCloseTo(0)
     }
+  })
+
+  it('right is really to the right, not the left - so A and D are not swapped', () => {
+    // Facing -Z (yaw 0, the way spawns() faces the middle from the south),
+    // right hand points to +X: cross(forward, up) with up = +Y.
+    const f = forward(0)
+    const r = rightOf(0)
+    expect(f.x).toBeCloseTo(0)
+    expect(f.z).toBeCloseTo(-1)
+    expect(r.x).toBeCloseTo(1)
+    expect(r.z).toBeCloseTo(0)
+    // The determinant of [forward, right] is positive for a genuine right turn.
+    expect(f.x * r.z - f.z * r.x).toBeGreaterThan(0)
   })
 })
 

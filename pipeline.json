@@ -4835,7 +4835,7 @@
         "59-volcano-tile-actions",
         "60-volcano-map-landmarks"
       ],
-      "generation": 4,
+      "generation": 5,
       "contract": {
         "version": "0.1.0",
         "snapshot": "src/modules/53-board-movement/contract.snapshot.d.ts",
@@ -4891,17 +4891,22 @@
           "id": "53.10",
           "title": "Stable shared-tile player spacing for two through eight players",
           "status": "done"
+        },
+        {
+          "id": "53.11",
+          "title": "Synchronized active-roller and moving-player board camera focus",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-25T16:11:01.793Z"
+          "at": "2026-09-25T17:33:19.697Z"
         },
         "human": {
           "status": "pass",
-          "at": "2026-09-25T16:12:35.566Z",
-          "note": "Shared-tile players remain separated and synchronized"
+          "at": "2026-09-25T22:35:38.233Z",
+          "note": "Both screens follow the active roller and moving player"
         },
         "history": [
           {
@@ -4923,30 +4928,37 @@
             "at": "2026-09-25T16:12:35.566Z",
             "result": "pass",
             "note": "Shared-tile players remain separated and synchronized"
+          },
+          {
+            "at": "2026-09-25T22:35:38.233Z",
+            "result": "pass",
+            "note": "Both screens follow the active roller and moving player"
           }
         ]
       },
       "freeze": {
-        "sha256": "4563b7b035e160f52c955aa3d6e02234b94d42fd7f6a1966be1e89bbd354ff28",
+        "sha256": "6b1227943e05e190cd2cfcff680e6372400f42cce82dddbd8bc200872ab54851",
         "files": {
-          "src/modules/53-board-movement/MODULE.md": "3f9211b2dd8ddeae856daff1f30547900c17854888d472d069fe35e1cc13514c",
+          "src/modules/53-board-movement/MODULE.md": "1a398822f98e116d73a5a755ad8ec7275bfc338cffc24d7bfb86dcae02b4c02c",
+          "src/modules/53-board-movement/__tests__/camera.test.ts": "e3cf255a913b16e504601aac08912ce58219bc5f74af8dd4820d5a7d26e1c227",
           "src/modules/53-board-movement/__tests__/landing-effect-state.test.ts": "b2100384a933469d0df4ee8a7497c6a4cab6972b411bf43cf1274e8962ceef5b",
           "src/modules/53-board-movement/__tests__/motion.test.ts": "120dacdebd244595d27b69afecd0c6eaa247f3e7f64402b1b9206f64bd998936",
           "src/modules/53-board-movement/__tests__/position.test.ts": "078ea1133decc82cd9627c738823ce78131d00ea6811a445e98bae01c80c6b41",
           "src/modules/53-board-movement/__tests__/protocol.test.ts": "e2859e4e237ad778af490ba438c4a04c5e35b191a9f90c0e3c8e491944e70274",
           "src/modules/53-board-movement/__tests__/rules.test.ts": "a6ffd6ad47966253d3f6872a6ede676d588a00eda0f1d576688e71a862e5e5e7",
-          "src/modules/53-board-movement/contract.snapshot.d.ts": "f8e77a1155f8279c8ad5dd70b732402cf79c76d203ddbe61b50d8417c048da96",
-          "src/modules/53-board-movement/index.ts": "e691aecb74378adb22fcae5c12d593a160be771fc5338eb5e2e98f616a760c5e",
-          "src/modules/53-board-movement/internal/BoardMovementView.tsx": "b4b416e07b0a794d148420cbd54a79507b1201e216cf06a8da14eaa58e3a8d0c",
+          "src/modules/53-board-movement/contract.snapshot.d.ts": "fc02eaed7032e4a8be7fc5a3adc4774a99646263a64cd669bb4e740f57606892",
+          "src/modules/53-board-movement/index.ts": "b02ed5b4e4f95760bd56f733bc0360ed48207d381dc017de91b391fdeb07c906",
+          "src/modules/53-board-movement/internal/BoardMovementView.tsx": "029bd6557ea7b69d01f622a6a44f3dc65cc9ef203f68a5fe5340981466aca05b",
           "src/modules/53-board-movement/internal/board-movement.css": "965c372941c34ed60cd06588a5f6aba15ce4d61f4de80aefe02f02f609620b3c",
+          "src/modules/53-board-movement/internal/camera.ts": "a4a74d1e74d48ced8e035f0bf45cb4111b0d8689f90143370647e3ac8d7896e3",
           "src/modules/53-board-movement/internal/motion.ts": "2dab92595f7414163edd18587d3258ce6a0f86c0f4dfd9192e896882d239b3b2",
           "src/modules/53-board-movement/internal/position.ts": "abf03a693b2221fd21d5b03c82ae84db12114cb8bb531e9fb192f7f0b9d9c42f",
           "src/modules/53-board-movement/internal/protocol.ts": "d4a1f1f185cc7660369f6f4cedae96435ba56e8c1387350d96d0ea020fe1b2d9",
           "src/modules/53-board-movement/internal/rules.ts": "43a913ea70b4b13760a24814605e31a166a6930cc764045604e58922e70ab040",
           "src/modules/53-board-movement/internal/state.ts": "28bd65c13675781faa941489e61de9e0164f946d0de623fa0d6418f37ee5d500"
         },
-        "at": "2026-09-25T16:12:35.566Z",
-        "commit": "c19387f"
+        "at": "2026-09-25T22:35:38.233Z",
+        "commit": "bad5204"
       },
       "nonGoals": [
         "No minigame selection or transition after round completion",
@@ -4978,6 +4990,12 @@
           "reason": "Players sharing a tile must render with stable separate positions instead of overlapping",
           "priorSha256": "0eb373b0ecc67ec49bd73bdea40803c38c1ed817346be0395629718d823b73e8",
           "generation": 3
+        },
+        {
+          "at": "2026-09-25T17:28:45.247Z",
+          "reason": "All clients should focus the camera on the active roller and follow the player moving across board tiles",
+          "priorSha256": "4563b7b035e160f52c955aa3d6e02234b94d42fd7f6a1966be1e89bbd354ff28",
+          "generation": 4
         }
       ]
     },
@@ -4985,7 +5003,7 @@
       "id": "54-minigame-round",
       "phase": "P7",
       "title": "Volcano minigame round: after every completed board round, select one free-for-all minigame, brief every player, allow host-run practice attempts, run one final attempt, and publish final placements",
-      "status": "in_progress",
+      "status": "ready_for_review",
       "dependsOn": [
         "00-core",
         "09-net",
@@ -5048,11 +5066,17 @@
           "id": "54.9",
           "title": "Guest preloading before countdown and synchronized Continue-to-rewards handoff",
           "status": "done"
+        },
+        {
+          "id": "54.10",
+          "title": "Retained early host snapshots and connected-player preload acknowledgements before launch",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
-          "status": "unknown"
+          "status": "green",
+          "at": "2026-09-25T17:28:19.584Z"
         },
         "human": {
           "status": "pending"
@@ -5556,7 +5580,7 @@
     {
       "id": "58-breaking-the-ice",
       "phase": "P6",
-      "title": "Breaking the Ice: a three-layer breakable iceberg, tiles that crack before they break, and falling through to the sea",
+      "title": "Breaking the Ice: a three-layer breakable iceberg, tiles that crack underfoot and fall away, and falling through to the sea",
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
@@ -5579,7 +5603,7 @@
         },
         {
           "id": "58.2",
-          "title": "Cracking and breaking: a fuse that shortens with the round and the layer, and an instant break on a second click",
+          "title": "Cracking underfoot: whoever first stands on a tile starts its fuse, gone a flat three seconds later",
           "status": "done"
         },
         {
@@ -5599,7 +5623,7 @@
         },
         {
           "id": "58.6",
-          "title": "Controls: WASD move, mouse aim/camera, left click break, space jump, right click push",
+          "title": "Controls: WASD move, mouse look/camera, space jump, right click push",
           "status": "done"
         },
         {
@@ -5626,7 +5650,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-25T16:09:37.147Z"
+          "at": "2026-09-25T17:28:52.033Z"
         },
         "human": {
           "status": "pending",

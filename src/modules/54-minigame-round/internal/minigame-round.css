@@ -118,13 +118,20 @@
   opacity: 1;
 }
 
-.minigame-round button:hover,
+.minigame-round button:not(:disabled):hover,
 .minigame-round button:focus-visible {
   transform: translateY(-1px);
   outline: 3px solid rgba(255, 255, 255, 0.8);
   outline-offset: 2px;
   filter: brightness(1.06);
   box-shadow: 0 0.75rem 1.6rem rgba(0, 0, 0, 0.3), inset 0 1px rgba(255, 255, 255, 0.6);
+}
+
+.minigame-round button:disabled {
+  cursor: wait;
+  filter: grayscale(0.35);
+  opacity: 0.52;
+  box-shadow: none;
 }
 
 .minigame-round button.minigame-round__final {

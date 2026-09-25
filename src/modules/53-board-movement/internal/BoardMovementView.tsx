@@ -1,16 +1,25 @@
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
+import { Vector3 } from 'three'
 import { PRIORITY, useGameFrame } from '../../00-core'
 import { movePlayerTo } from '../../02-player'
 import { getNet, useNet, usePeers } from '../../09-net'
 import { getParty, useParty } from '../../10-party'
 import { getGameMode, useGameMode } from '../../13-modes'
 import { getTurnOrder, useTurnOrder } from '../../52-turn-order'
+import {
+  BOARD_CAMERA,
+  advanceBoardCameraPosition,
+  boardCameraPose,
+  boardCameraSubject,
+} from './camera'
 import { BOARD_MOTION, boardDieSpinMs } from './motion'
 import { boardPointAt, sharedTileOffset } from './position'
 import { activeBoardPlayer, boardPosition } from './rules'
 import {
   getBoardMovement,
+  isBoardMovementVisualSettled,
+  isBoardRoundAcknowledged,
   listenForBoardMovement,
   requestBoardRoll,
   syncBoardMovementLifecycle,
@@ -28,8 +37,19 @@ interface AnimationState {
   position: number
 }
 
+interface CameraAnimationState {
+  sessionId: string | null
+  playerId: string | null
+  position: number
+}
+
 export function BoardMovement(): null {
   const animation = useRef<AnimationState>({ sessionId: null, playerId: null, position: 0 })
+  const cameraAnimation = useRef<CameraAnimationState>({ sessionId: null, playerId: null, position: 0 })
+  const cameraFocus = useRef(new Vector3())
+  const desiredCamera = useRef(new Vector3())
+  const desiredFocus = useRef(new Vector3())
+  const cameraEngaged = useRef(false)
 
   useGameFrame((_frame, delta) => {
     if (getGameMode() !== 'island' || getParty().phase !== 'playing' || getTurnOrder().phase !== 'complete') {
@@ -55,6 +75,57 @@ export function BoardMovement(): null {
     const landingBlend = 1 - Math.min(1, Math.abs(animation.current.position - target))
     movePlayerTo(point.x + offset.x * landingBlend, point.y, point.z + offset.z * landingBlend)
   }, PRIORITY.world)
+
+  useGameFrame((frame, delta) => {
+    const snapshot = getBoardMovement()
+    const active =
+      getGameMode() === 'island' &&
+      getParty().phase === 'playing' &&
+      getTurnOrder().phase === 'complete' &&
+      snapshot.phase !== 'idle' &&
+      snapshot.sessionId !== null &&
+      !isBoardRoundAcknowledged(snapshot.sessionId, snapshot.round)
+    if (!active) {
+      cameraAnimation.current = { sessionId: null, playerId: null, position: 0 }
+      cameraEngaged.current = false
+      return
+    }
+
+    const visualSettled = isBoardMovementVisualSettled(snapshot)
+    const playerId = boardCameraSubject(snapshot, visualSettled)
+    if (!playerId) return
+    const target = boardPosition(snapshot, playerId)
+    if (target === null) return
+
+    if (
+      cameraAnimation.current.sessionId !== snapshot.sessionId ||
+      cameraAnimation.current.playerId !== playerId
+    ) {
+      cameraAnimation.current = { sessionId: snapshot.sessionId, playerId, position: target }
+    } else {
+      cameraAnimation.current.position = advanceBoardCameraPosition(
+        cameraAnimation.current.position,
+        target,
+        delta * BOARD_MOTION.tilesPerSecond,
+      )
+    }
+
+    const pose = boardCameraPose(snapshot, playerId, cameraAnimation.current.position)
+    if (!pose) return
+    desiredCamera.current.set(pose.cameraX, pose.cameraY, pose.cameraZ)
+    desiredFocus.current.set(pose.focusX, pose.focusY, pose.focusZ)
+
+    if (!cameraEngaged.current) {
+      frame.camera.position.copy(desiredCamera.current)
+      cameraFocus.current.copy(desiredFocus.current)
+      cameraEngaged.current = true
+    } else {
+      const smoothing = 1 - Math.exp(-BOARD_CAMERA.smoothing * Math.max(0, delta))
+      frame.camera.position.lerp(desiredCamera.current, smoothing)
+      cameraFocus.current.lerp(desiredFocus.current, smoothing)
+    }
+    frame.camera.lookAt(cameraFocus.current)
+  }, PRIORITY.camera)
 
   useEffect(() => {
     const mount = document.createElement('div')
