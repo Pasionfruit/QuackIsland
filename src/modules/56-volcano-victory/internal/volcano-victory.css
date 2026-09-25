@@ -1,0 +1,90 @@
+.volcano-victory-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: #fff8e7;
+  background:
+    radial-gradient(circle at 50% 24%, rgb(255 172 47 / 28%), transparent 32%),
+    linear-gradient(180deg, rgb(20 7 4 / 80%), rgb(8 4 3 / 94%));
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  backdrop-filter: blur(8px);
+}
+
+.volcano-victory-panel {
+  width: min(560px, 100%);
+  padding: clamp(28px, 6vw, 54px);
+  text-align: center;
+  border: 1px solid rgb(255 193 84 / 48%);
+  border-radius: 28px;
+  background: linear-gradient(145deg, rgb(67 22 12 / 96%), rgb(24 10 7 / 98%));
+  box-shadow: 0 30px 90px rgb(0 0 0 / 58%), inset 0 1px rgb(255 255 255 / 12%);
+}
+
+.volcano-victory-kicker {
+  color: #ffbd55;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.volcano-victory-crown {
+  margin: 18px 0 8px;
+  color: #ffd36a;
+  font-size: clamp(3.8rem, 11vw, 6rem);
+  line-height: 1;
+  filter: drop-shadow(0 8px 18px rgb(255 124 19 / 40%));
+}
+
+.volcano-victory-panel h1 {
+  margin: 12px 0;
+  font-size: clamp(2rem, 7vw, 3.5rem);
+  line-height: 0.98;
+}
+
+.volcano-victory-panel p {
+  margin: 0 auto 24px;
+  max-width: 42ch;
+  color: #efd9c5;
+  line-height: 1.55;
+}
+
+.volcano-victory-result {
+  display: grid;
+  gap: 6px;
+  margin: 0 auto 22px;
+  padding: 16px 20px;
+  border-radius: 16px;
+  color: #fff4d0;
+  background: rgb(255 177 53 / 12%);
+}
+
+.volcano-victory-result strong {
+  font-size: 1.2rem;
+}
+
+.volcano-victory-result span,
+.volcano-victory-panel small {
+  color: #cdb7a5;
+}
+
+@media (max-width: 520px) {
+  .volcano-victory-shell { padding: 12px; }
+  .volcano-victory-panel { border-radius: 20px; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .volcano-victory-panel { animation: volcano-victory-arrive 520ms cubic-bezier(.2, .8, .2, 1); }
+  .volcano-victory-crown { animation: volcano-victory-glow 1.8s ease-in-out infinite alternate; }
+}
+
+@keyframes volcano-victory-arrive {
+  from { opacity: 0; transform: translateY(18px) scale(.96); }
+}
+
+@keyframes volcano-victory-glow {
+  to { transform: translateY(-4px); filter: drop-shadow(0 12px 26px rgb(255 158 32 / 62%)); }
+}

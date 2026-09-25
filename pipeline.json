@@ -204,7 +204,9 @@
         "51-perfect-game",
         "52-turn-order",
         "53-board-movement",
-        "54-minigame-round"
+        "54-minigame-round",
+        "55-reward-dice",
+        "56-volcano-victory"
       ],
       "generation": 1,
       "contract": {
@@ -945,7 +947,10 @@
         "51-perfect-game",
         "52-turn-order",
         "53-board-movement",
-        "54-minigame-round"
+        "54-minigame-round",
+        "55-reward-dice",
+        "56-volcano-victory",
+        "57-volcano-postgame"
       ],
       "generation": 1,
       "contract": {
@@ -1032,7 +1037,10 @@
         "14-garden",
         "52-turn-order",
         "53-board-movement",
-        "54-minigame-round"
+        "54-minigame-round",
+        "55-reward-dice",
+        "56-volcano-victory",
+        "57-volcano-postgame"
       ],
       "generation": 1,
       "contract": {
@@ -1257,7 +1265,10 @@
         "15-minigames",
         "52-turn-order",
         "53-board-movement",
-        "54-minigame-round"
+        "54-minigame-round",
+        "55-reward-dice",
+        "56-volcano-victory",
+        "57-volcano-postgame"
       ],
       "generation": 1,
       "contract": {
@@ -1481,7 +1492,8 @@
         "49-needs-a-walmart",
         "50-milf-fishing",
         "51-perfect-game",
-        "54-minigame-round"
+        "54-minigame-round",
+        "55-reward-dice"
       ],
       "generation": 1,
       "contract": {
@@ -4807,7 +4819,9 @@
         "52-turn-order"
       ],
       "dependents": [
-        "54-minigame-round"
+        "54-minigame-round",
+        "55-reward-dice",
+        "56-volcano-victory"
       ],
       "generation": 2,
       "contract": {
@@ -4935,7 +4949,9 @@
         "15-minigames",
         "53-board-movement"
       ],
-      "dependents": [],
+      "dependents": [
+        "55-reward-dice"
+      ],
       "generation": 1,
       "contract": {
         "version": "0.1.0",
@@ -5045,6 +5061,287 @@
         "No board-round resume before rewards are applied",
         "No new minigame implementation or modification of the existing minigame catalogue",
         "No durable database or server-authoritative simulation"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "55-reward-dice",
+      "phase": "P7",
+      "title": "Volcano reward dice: convert final minigame placements into next-round bonus dice, reveal them to the party, close the minigame, and resume the preserved board",
+      "status": "passed",
+      "dependsOn": [
+        "00-core",
+        "09-net",
+        "10-party",
+        "13-modes",
+        "15-minigames",
+        "53-board-movement",
+        "54-minigame-round"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": "src/modules/55-reward-dice/contract.snapshot.d.ts",
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "55.1",
+          "title": "Pure placement-to-reward rules, next-round dice lookup and bounded validation",
+          "status": "done"
+        },
+        {
+          "id": "55.2",
+          "title": "Host-authoritative revisioned reward snapshots, idempotent return action and late sync",
+          "status": "done"
+        },
+        {
+          "id": "55.3",
+          "title": "Shared reward reveal with host-only Return to board control and guest waiting state",
+          "status": "done"
+        },
+        {
+          "id": "55.4",
+          "title": "Install bonus dice provider, close the minigame and resume the exact preserved board round",
+          "status": "done"
+        },
+        {
+          "id": "55.5",
+          "title": "Two-player, eight-player, ties, duplicate actions, workflow, contract and MODULE.md",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-22T03:38:01.725Z"
+        },
+        "human": {
+          "status": "pass",
+          "at": "2026-09-23T20:57:01.730Z",
+          "note": "Reward reveal, return to board, and bonus dice work in both browsers"
+        },
+        "history": [
+          {
+            "at": "2026-09-23T20:57:01.730Z",
+            "result": "pass",
+            "note": "Reward reveal, return to board, and bonus dice work in both browsers"
+          }
+        ]
+      },
+      "freeze": {
+        "sha256": "9dbfd18c0e2eb75b93e823202a72655254f308a06389389414b603c353859399",
+        "files": {
+          "src/modules/55-reward-dice/MODULE.md": "11bb79211feeb79c7ff930820a49e340d5a7a13a7ccfa8636d02492a678c4f8b",
+          "src/modules/55-reward-dice/__tests__/protocol.test.ts": "ad070b7a5ad9e7e3da19ccc78548fc1b175d6ce2eee8262925bf849fb2d2eaa2",
+          "src/modules/55-reward-dice/__tests__/rules.test.ts": "3bdd27972f83db55ba0e8d2cfca3ae92ffb1510d127a90ccf55cf57e131b9a56",
+          "src/modules/55-reward-dice/__tests__/state.test.ts": "73230f33f22677fe17e05fd7d00d4d1411c2ffb98ca1d222a71585e082aa38ff",
+          "src/modules/55-reward-dice/contract.snapshot.d.ts": "b2b00b0917cf0f571c0dc6996981dc945b60d7bfd1242739f6e299e28fd4f637",
+          "src/modules/55-reward-dice/index.ts": "061b60717e1c1df66c663adbf106350a56472bdfe2963a72394235bfb9e03b3c",
+          "src/modules/55-reward-dice/internal/RewardDiceView.tsx": "1acf40b8be54b803b7538c3f8aea7a65b87929077905764d6256fffcb32d4dfe",
+          "src/modules/55-reward-dice/internal/protocol.ts": "83dcd48bc8648d2344c25bb4cc8c9b733d0292c56417ad84114f6124aba5c0cb",
+          "src/modules/55-reward-dice/internal/reward-dice.css": "bf6c7b037d1c3d0cb6045199e8444107f448970ce61969da321a5d8dd828705d",
+          "src/modules/55-reward-dice/internal/rules.ts": "bd246e9988b9199bd1c1128d5b4eb8abb7711f3aeacf1ddb6e2c46fe908008ee",
+          "src/modules/55-reward-dice/internal/state.ts": "02449814d14532347cadb452da0cb5c2594bf309bef13e46f5fd8787f04310c1"
+        },
+        "at": "2026-09-23T20:57:01.730Z",
+        "commit": "0cbfbae"
+      },
+      "nonGoals": [
+        "No reward inventory beyond the immediately following board round",
+        "No changes to board die generation or validation owned by 53-board-movement",
+        "No tile actions, obstacles or branching movement",
+        "No durable database or server-authoritative simulation"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "56-volcano-victory",
+      "phase": "P7",
+      "title": "Volcano summit victory: detect the first settled player at the top, synchronize the winner, stop the board loop, and show the party end state",
+      "status": "passed",
+      "dependsOn": [
+        "00-core",
+        "09-net",
+        "10-party",
+        "13-modes",
+        "53-board-movement"
+      ],
+      "dependents": [
+        "57-volcano-postgame"
+      ],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": "src/modules/56-volcano-victory/contract.snapshot.d.ts",
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "56.1",
+          "title": "Pure summit eligibility, winner snapshot and bounded validation rules",
+          "status": "done"
+        },
+        {
+          "id": "56.2",
+          "title": "Host-authoritative revisioned victory protocol with duplicate-safe late sync",
+          "status": "done"
+        },
+        {
+          "id": "56.3",
+          "title": "Stop post-summit board progression through its public contract after visual settlement",
+          "status": "done"
+        },
+        {
+          "id": "56.4",
+          "title": "Shared winner overlay for host and guests with stable end-of-game state",
+          "status": "done"
+        },
+        {
+          "id": "56.5",
+          "title": "Two-player and eight-player tests, malformed and duplicate messages, workflow, contract and MODULE.md",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-23T21:11:45.378Z"
+        },
+        "human": {
+          "status": "pass",
+          "at": "2026-09-25T15:05:27.661Z",
+          "note": "Victory appears after the final hop and matches on both browsers"
+        },
+        "history": [
+          {
+            "at": "2026-09-25T15:05:27.661Z",
+            "result": "pass",
+            "note": "Victory appears after the final hop and matches on both browsers"
+          }
+        ]
+      },
+      "freeze": {
+        "sha256": "fbe03412d55e9eac98d7291cb920d93df9779266b6ababa8594f52020dde0c40",
+        "files": {
+          "src/modules/56-volcano-victory/MODULE.md": "1b60fb8c91b66516e4f8cd7f8536bd8bb1af616a46179064f68915876ad4fad5",
+          "src/modules/56-volcano-victory/__tests__/protocol.test.ts": "7a1dbad07f834b2f7b86766cb29aa1a25550b3e14d56fc9ca23aba1757aada93",
+          "src/modules/56-volcano-victory/__tests__/rules.test.ts": "210d9eff70b676af652b4097bfaa82a3b1196cb551ef79711856dc223e390233",
+          "src/modules/56-volcano-victory/__tests__/state.test.ts": "7d4a605197873d786847c906be33eeb66c94ee452ecb98ca76918c5a4793497b",
+          "src/modules/56-volcano-victory/contract.snapshot.d.ts": "55d384ac86aaf76ff7c87058caca5fc8ca6cea41e5a15749766b897f1ea2202c",
+          "src/modules/56-volcano-victory/index.ts": "d0eb1f7ab534b76250cbae657ba29a0ce86f5176ef817635f72b378bc408e267",
+          "src/modules/56-volcano-victory/internal/VolcanoVictoryView.tsx": "1e24503862d44ed92c9561a0a3da9f2b237a08efcc8fb40c7428791589e2b52b",
+          "src/modules/56-volcano-victory/internal/protocol.ts": "98700f49289abd6ee70e1683a7f389132f736cbf9ec0c683b5ceed691677b827",
+          "src/modules/56-volcano-victory/internal/rules.ts": "497f21cbead29ea280e2405fdbd80f5a498bf97802eea579aab1dd3759fd91ad",
+          "src/modules/56-volcano-victory/internal/state.ts": "e2bf528f27ddbe4896bdf99f6e6800bc40b671d68afa24faecd79ebe34c8f344",
+          "src/modules/56-volcano-victory/internal/volcano-victory.css": "1b316a9c5134f1f1833ca2c46e93d04e872ef59d3783d0fd9f05c739605a3dfc"
+        },
+        "at": "2026-09-25T15:05:27.661Z",
+        "commit": "0cbfbae"
+      },
+      "nonGoals": [
+        "No replay, rematch or return-to-menu flow",
+        "No tile actions, obstacles or branching movement",
+        "No persistent match history or durable server authority",
+        "No changes inside frozen board, minigame or reward modules"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "57-volcano-postgame",
+      "phase": "P7",
+      "title": "Volcano postgame handoff: give the host a synchronized Return to lobby action while guests wait on the final result",
+      "status": "passed",
+      "dependsOn": [
+        "09-net",
+        "10-party",
+        "13-modes",
+        "56-volcano-victory"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": "src/modules/57-volcano-postgame/contract.snapshot.d.ts",
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "57.1",
+          "title": "Pure host-only postgame eligibility and stable rejection reasons",
+          "status": "done"
+        },
+        {
+          "id": "57.2",
+          "title": "Guarded Return to lobby action through the public synchronized party end-game seam",
+          "status": "done"
+        },
+        {
+          "id": "57.3",
+          "title": "Host action and guest waiting controls layered over the frozen victory screen",
+          "status": "done"
+        },
+        {
+          "id": "57.4",
+          "title": "Host, guest, stale-state and duplicate-action tests plus workflow, contract and MODULE.md",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-25T15:10:17.999Z"
+        },
+        "human": {
+          "status": "pass",
+          "at": "2026-09-25T15:16:25.225Z",
+          "note": "Host and guest return to the existing lobby correctly after victory"
+        },
+        "history": [
+          {
+            "at": "2026-09-25T15:16:25.225Z",
+            "result": "pass",
+            "note": "Host and guest return to the existing lobby correctly after victory"
+          }
+        ]
+      },
+      "freeze": {
+        "sha256": "6e956d478e48b372854055f60e196195b82457d8e846e4af44fb569ec86f1c53",
+        "files": {
+          "src/modules/57-volcano-postgame/MODULE.md": "0e1888d817f9b2f5a7193808b51ce858126fc54239bc209e4ea28f1575d9d61e",
+          "src/modules/57-volcano-postgame/__tests__/rules.test.ts": "11c383392e598451b9d15b6df9ed271a65d66345194b8ed2d5cbade7386e275e",
+          "src/modules/57-volcano-postgame/__tests__/state.test.ts": "9446e8920929dae2288d4132dd13bba9346c7ddc7d6d4fd441a53fe7f47b33b9",
+          "src/modules/57-volcano-postgame/contract.snapshot.d.ts": "1a7a0f8d8a65223c65f350ad8efbf7af3d6973ec2d128efa6c5d58a22e31b7ef",
+          "src/modules/57-volcano-postgame/index.ts": "e65495dc715d180e78cda345187505121152a2e8b8538f891ff417675bcd7654",
+          "src/modules/57-volcano-postgame/internal/VolcanoPostgameView.tsx": "d32b88d7278dc7999647013bfeb8ebd3410620c1accf917b50c3e78e63834a84",
+          "src/modules/57-volcano-postgame/internal/rules.ts": "a1146e912bb5ac5b993adc510ce93f09e6a9935f59f1a3d9f678cf355b19472c",
+          "src/modules/57-volcano-postgame/internal/state.ts": "45078cc9e2284aef5515930b7065cc865d195e749edc03e7072e9a04d9fd167c",
+          "src/modules/57-volcano-postgame/internal/volcano-postgame.css": "4b7ba757827b9bb4ac3c0aca3b7559ca04e0d0d1d4750e0a732a5fa13a08ab05"
+        },
+        "at": "2026-09-25T15:16:25.225Z",
+        "commit": "0cbfbae"
+      },
+      "nonGoals": [
+        "No automatic rematch or automatic ready state",
+        "No party disband or relay disconnect",
+        "No changes to the frozen winner presentation or game modules",
+        "No tile actions, obstacles or persistent match history"
       ],
       "budgets": {
         "drawCallsMax": 0,

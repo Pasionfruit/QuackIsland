@@ -33,7 +33,16 @@
     "gate:board-movement": "node scripts/gate.mjs 53-board-movement",
     "brief:minigame-round": "node scripts/brief.mjs 54-minigame-round",
     "test:minigame-round": "vitest run src/modules/54-minigame-round",
-    "gate:minigame-round": "node scripts/gate.mjs 54-minigame-round"
+    "gate:minigame-round": "node scripts/gate.mjs 54-minigame-round",
+    "brief:reward-dice": "node scripts/brief.mjs 55-reward-dice",
+    "test:reward-dice": "vitest run src/modules/55-reward-dice",
+    "gate:reward-dice": "node scripts/gate.mjs 55-reward-dice",
+    "brief:volcano-victory": "node scripts/brief.mjs 56-volcano-victory",
+    "test:volcano-victory": "vitest run src/modules/56-volcano-victory",
+    "gate:volcano-victory": "node scripts/gate.mjs 56-volcano-victory",
+    "brief:volcano-postgame": "node scripts/brief.mjs 57-volcano-postgame",
+    "test:volcano-postgame": "vitest run src/modules/57-volcano-postgame",
+    "gate:volcano-postgame": "node scripts/gate.mjs 57-volcano-postgame"
   },
   "dependencies": {
     "@react-three/fiber": "^9.7.0",

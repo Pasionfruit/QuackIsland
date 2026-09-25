@@ -1,0 +1,52 @@
+.volcano-postgame-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 1210;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 24px 24px clamp(34px, 7vh, 70px);
+  pointer-events: none;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.volcano-postgame-control {
+  min-width: min(360px, calc(100vw - 32px));
+  padding: 13px 16px;
+  text-align: center;
+  color: #e7d5c3;
+  border: 1px solid rgb(255 205 115 / 30%);
+  border-radius: 16px;
+  background: rgb(22 9 6 / 88%);
+  box-shadow: 0 18px 50px rgb(0 0 0 / 42%);
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+}
+
+.volcano-postgame-control button {
+  width: 100%;
+  padding: 12px 18px;
+  color: #251006;
+  font: inherit;
+  font-weight: 850;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffd875, #f5a52d);
+  box-shadow: 0 8px 22px rgb(231 116 18 / 28%);
+  cursor: pointer;
+}
+
+.volcano-postgame-control button:hover {
+  filter: brightness(1.07);
+}
+
+.volcano-postgame-control button:focus-visible {
+  outline: 3px solid #fff2c3;
+  outline-offset: 3px;
+}
+
+.volcano-postgame-control span {
+  display: block;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}

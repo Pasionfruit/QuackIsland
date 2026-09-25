@@ -25,6 +25,9 @@ import { getMinigameScreen } from '../modules/15-minigames'
 import { TurnOrder } from '../modules/52-turn-order'
 import { BoardMovement } from '../modules/53-board-movement'
 import { MinigameRound } from '../modules/54-minigame-round'
+import { RewardDice } from '../modules/55-reward-dice'
+import { VolcanoVictory } from '../modules/56-volcano-victory'
+import { VolcanoPostgame } from '../modules/57-volcano-postgame'
 import { isSettingsOpen } from './settingsOpen'
 
 /**
@@ -197,6 +200,9 @@ export const SCENE: SceneEntry[] = [
   { id: '52-turn-order', order: 520, enabled: true, Component: TurnOrder },
   { id: '53-board-movement', order: 530, enabled: true, Component: BoardMovement },
   { id: '54-minigame-round', order: 540, enabled: true, Component: MinigameRound },
+  { id: '55-reward-dice', order: 550, enabled: true, Component: RewardDice },
+  { id: '56-volcano-victory', order: 560, enabled: true, Component: VolcanoVictory },
+  { id: '57-volcano-postgame', order: 570, enabled: true, Component: VolcanoPostgame },
 ]
 
 // Toggling a module on or off has to reach the canvas, which is a different
