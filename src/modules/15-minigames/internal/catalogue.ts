@@ -415,21 +415,8 @@ const ENTRIES = [
     done: { environment: true, controls: true, assets: false },
   },
   {
-    id: 'make-some-noise',
-    number: 17,
-    title: 'Make Some Noise',
-    kind: 'free-for-all',
-    description: [
-      'Wreck as much as you can! You are a duck on a floating island with 1 minute to smash it up.',
-      'Different parts of the island are worth different amounts. Fall off the edge and your turn ends that instant.',
-    ],
-    controls: [],
-    reserved: false,
-    done: { environment: false, controls: false, assets: false },
-  },
-  {
     id: 'make-the-cut',
-    number: 18,
+    number: 17,
     title: 'Make The Cut',
     kind: 'free-for-all',
     description: [
@@ -448,7 +435,7 @@ const ENTRIES = [
   },
   {
     id: 'messy-maze',
-    number: 19,
+    number: 18,
     title: 'Messy Maze',
     kind: 'free-for-all',
     description: [
@@ -467,7 +454,7 @@ const ENTRIES = [
   },
   {
     id: 'milf-fishing',
-    number: 20,
+    number: 19,
     title: 'M.I.L.F (fishing)',
     kind: 'free-for-all',
     description: [
@@ -486,7 +473,7 @@ const ENTRIES = [
   },
   {
     id: 'musical-mayhem',
-    number: 21,
+    number: 20,
     title: 'Musical Mayhem',
     kind: 'free-for-all',
     description: [
@@ -506,7 +493,7 @@ const ENTRIES = [
   },
   {
     id: 'needs-a-walmart',
-    number: 22,
+    number: 21,
     title: 'OG Black Friday',
     kind: 'free-for-all',
     description: [
@@ -527,7 +514,7 @@ const ENTRIES = [
   },
   {
     id: 'one-piece',
-    number: 23,
+    number: 22,
     title: 'One Piece?!',
     kind: 'free-for-all',
     description: [
@@ -542,6 +529,25 @@ const ENTRIES = [
     reserved: false,
     // Built: see `41-one-piece`. The assets stage is still to do - the faces
     // are the island's pill drawn flat, and there is no sound of its own.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'op-finder',
+    number: 23,
+    title: 'OP Finder',
+    kind: 'free-for-all',
+    description: [
+      "Race everyone else through the same ten CAPTCHA checks, back to back - prove you're human before they do! Match the image, type the warped text, spot the odd one out, pick what comes next, tick the right boxes, count the icons - the ten tasks cycle through all of it, same order for everyone.",
+      'Get one wrong and there is a short lockout before your next try counts - guessing fast is not the same as guessing right. First to clear all ten wins; everyone else is ranked by how far they got.',
+    ],
+    controls: [
+      { input: 'Mouse', does: 'Navigate and interact with the CAPTCHA challenges' },
+      { input: 'Left click', does: 'Select images, buttons and answers' },
+      { input: 'Keyboard', does: 'Type answers when required' },
+    ],
+    reserved: false,
+    // Built: see `61-op-finder`. The assets stage is still to do - the
+    // players are the island's capsule and every "image" is a Unicode glyph.
     done: { environment: true, controls: true, assets: false },
   },
   {

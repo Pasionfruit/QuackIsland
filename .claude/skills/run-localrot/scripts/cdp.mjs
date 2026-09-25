@@ -242,6 +242,12 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'players',
   },
+  'op-finder': {
+    title: 'OP Finder',
+    screen: 'OpFinderScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
   'highest-in-the-room': {
     title: 'Highest In The Room',
     screen: 'TowerScreen',

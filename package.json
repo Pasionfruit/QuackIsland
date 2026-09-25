@@ -51,7 +51,10 @@
     "gate:volcano-tile-actions": "node scripts/gate.mjs 59-volcano-tile-actions",
     "brief:volcano-map-landmarks": "node scripts/brief.mjs 60-volcano-map-landmarks",
     "test:volcano-map-landmarks": "vitest run src/modules/60-volcano-map-landmarks",
-    "gate:volcano-map-landmarks": "node scripts/gate.mjs 60-volcano-map-landmarks"
+    "gate:volcano-map-landmarks": "node scripts/gate.mjs 60-volcano-map-landmarks",
+    "brief:op-finder": "node scripts/brief.mjs 61-op-finder",
+    "test:op-finder": "vitest run src/modules/61-op-finder",
+    "gate:op-finder": "node scripts/gate.mjs 61-op-finder"
   },
   "dependencies": {
     "@react-three/fiber": "^9.7.0",

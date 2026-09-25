@@ -209,7 +209,8 @@
         "56-volcano-victory",
         "58-breaking-the-ice",
         "59-volcano-tile-actions",
-        "60-volcano-map-landmarks"
+        "60-volcano-map-landmarks",
+        "61-op-finder"
       ],
       "generation": 1,
       "contract": {
@@ -418,7 +419,8 @@
         "50-milf-fishing",
         "51-perfect-game",
         "53-board-movement",
-        "58-breaking-the-ice"
+        "58-breaking-the-ice",
+        "61-op-finder"
       ],
       "generation": 1,
       "contract": {
@@ -955,7 +957,8 @@
         "55-reward-dice",
         "56-volcano-victory",
         "57-volcano-postgame",
-        "58-breaking-the-ice"
+        "58-breaking-the-ice",
+        "61-op-finder"
       ],
       "generation": 1,
       "contract": {
@@ -1503,7 +1506,8 @@
         "51-perfect-game",
         "54-minigame-round",
         "55-reward-dice",
-        "58-breaking-the-ice"
+        "58-breaking-the-ice",
+        "61-op-finder"
       ],
       "generation": 1,
       "contract": {
@@ -5665,6 +5669,102 @@
         "No sound beyond the shared cues other minigames already use",
         "No client-side prediction",
         "No body collision - only a push moves anybody",
+        "No score kept between rounds"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "61-op-finder",
+      "phase": "P6",
+      "title": "OP Finder: a race through the same ten seeded CAPTCHA-style challenges, first to clear them all wins",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": "src/modules/61-op-finder/contract.snapshot.d.ts",
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "61.1",
+          "title": "The challenge pool: six kinds, a seeded ten-stage sequence with no kind twice running",
+          "status": "done"
+        },
+        {
+          "id": "61.2",
+          "title": "Advancement: a right guess raises your stage, a wrong one starts a short local lockout",
+          "status": "done"
+        },
+        {
+          "id": "61.3",
+          "title": "Anti-cheat: a reported stage cannot rise faster than the floor allows",
+          "status": "done"
+        },
+        {
+          "id": "61.4",
+          "title": "The round: decided at the first finish, an outro, a safety-net limit, placings by finish time or stage",
+          "status": "done"
+        },
+        {
+          "id": "61.5",
+          "title": "Controls: mouse to navigate and click, keyboard to type when a challenge asks for it",
+          "status": "done"
+        },
+        {
+          "id": "61.6",
+          "title": "A fixed camera over a decorative line of racers, no movement to follow",
+          "status": "done"
+        },
+        {
+          "id": "61.7",
+          "title": "Stand-ins that solve each stage after a seeded pause, sometimes wrong first",
+          "status": "done"
+        },
+        {
+          "id": "61.8",
+          "title": "One round shared across the lobby: progress-only snapshots, no challenge content ever sent",
+          "status": "done"
+        },
+        {
+          "id": "61.9",
+          "title": "Contract, tests including a lossy-network convergence check, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "61.10",
+          "title": "The assets: models, sprites and sound in place of capsules and emoji",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-25T23:20:44.183Z"
+        },
+        "human": {
+          "status": "pending",
+          "at": null,
+          "note": null
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: players are the island's capsule, challenge icons are Unicode glyphs",
+        "No sound beyond the shared cues other minigames already use",
+        "No client-side prediction beyond a guest's own optimistic local answer",
         "No score kept between rounds"
       ],
       "budgets": {

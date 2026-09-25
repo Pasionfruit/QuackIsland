@@ -11,7 +11,7 @@
 import { act, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { BUILD_STEPS, MINIGAMES, minigameById, minigamesOfKind } from '../internal/catalogue'
+import { MINIGAMES, minigameById, minigamesOfKind } from '../internal/catalogue'
 import { COLUMNS, PER_PAGE, ROWS, pageCount } from '../internal/Dashboard'
 import { MinigameScreen } from '../internal/MinigameScreen'
 import { FADE, forgetBuilds, registerMinigame, type MinigameRun } from '../internal/registry'
@@ -278,22 +278,18 @@ describe('a game briefing', () => {
 
   it('says so when a game has no controls written down', () => {
     const where = mount()
-    act(() => openMinigame('make-some-noise'))
+    act(() => openMinigame('reserved-39'))
     click(where.querySelector('[data-leaf="controls"]'))
     expect(where.textContent).toContain('Not written down yet')
   })
 
-  it('lists the three stages with the next one marked', () => {
-    const where = mount()
-    // A game nothing has been done to: the first stage is the one owed.
-    act(() => openMinigame('make-some-noise'))
-
-    for (const step of BUILD_STEPS) {
-      expect(where.querySelector(`[data-step="${step}"]`)).not.toBeNull()
-    }
-    expect(where.querySelector('[data-step="environment"]')?.textContent).toContain('→')
-    expect(where.querySelector('[data-step="controls"]')?.textContent).not.toContain('→')
-  })
+  // There is no longer a named, non-reserved game with nothing built at all
+  // to open here - every named slot has at least environment and controls
+  // now. `nextStep(fake({}))` in catalogue.test.ts still pins that a fresh
+  // game's next owed stage is 'environment', and the test below pins the
+  // same [data-step]/arrow rendering this one used to, from the other end
+  // of the ladder - a reserved slot has no ladder at all (`nextStep` on one
+  // is `null`, per catalogue.test.ts), so it cannot stand in either.
 
   it('ticks off the stages a part-built game has finished', () => {
     const where = mount()
