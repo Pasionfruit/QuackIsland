@@ -54,9 +54,8 @@ the marked tile.
 ## Presentation and budget
 
 Two instanced procedural cylinder meshes mark all action tiles: orange for Lava
-Lift and slate for Ash Slide. The DOM legend repeats that mapping. Once an
-authoritative position differs from the rolled landing, both browsers derive
-and display the same player/action feedback from the synchronized board.
+Lift and slate for Ash Slide. The board applies the deterministic movement
+effect without an Action Tiles legend or landing-result dialog.
 
 At the maximum twelve placements the markers use two draw calls and about 864
 displayed triangles. There are no textures, models, generated assets, or extra
@@ -67,12 +66,12 @@ network messages.
 Use one host browser and one guest browser in the same two-player Island party:
 
 1. Complete turn order and enter the board. Confirm both browsers show action
-   markers on the same tiles and the same Lava Lift/Ash Slide legend.
+   markers on the same tiles, without an Action Tiles legend.
 2. Confirm the opening tiles and summit are unmarked and no two action markers
    are adjacent.
 3. Continue rolling until a player lands exactly on a Lava Lift. The ordinary
    dice movement must land first; then the player should travel three more
-   tiles. Both browsers must show the same final position and result message.
+   tiles. Both browsers must show the same final position without a result dialog.
 4. Land exactly on an Ash Slide. After landing, the player should visibly move
    backward two tiles on both browsers.
 5. During either action, confirm the next player cannot roll. If it is the last

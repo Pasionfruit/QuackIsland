@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { useNet, usePeers } from '../../09-net'
 import { useParty } from '../../10-party'
@@ -53,8 +53,25 @@ function useDomOverlay(content: ReactNode): void {
   }, [content])
 }
 
+function useFinalAttemptBadge(phase: string, sessionId: string, revision: number): boolean {
+  const finalKey = `${sessionId}:${revision}`
+  const [dismissedFinalKey, setDismissedFinalKey] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (phase !== 'final') return
+    const timeout = window.setTimeout(() => setDismissedFinalKey(finalKey), 3_000)
+    return () => window.clearTimeout(timeout)
+  }, [finalKey, phase])
+
+  return phase === 'final' && dismissedFinalKey !== finalKey
+}
+
 function controlLabel(element: HTMLButtonElement): string {
   return (element.textContent ?? '').replace(/\s+/g, ' ').trim().toLowerCase()
+}
+
+function isSuppressedControl(label: string, labels: ReadonlySet<string>): boolean {
+  return [...labels].some((candidate) => label === candidate || label.startsWith(`${candidate} `))
 }
 
 function useIslandMinigameChrome(
@@ -68,7 +85,7 @@ function useIslandMinigameChrome(
 
     const suppressStandaloneControls = () => {
       for (const button of document.querySelectorAll('button')) {
-        if (button.closest('[data-minigame-round-root]') || !labels.has(controlLabel(button))) continue
+        if (button.closest('[data-minigame-round-root]') || !isSuppressedControl(controlLabel(button), labels)) continue
         if (!hidden.has(button)) hidden.set(button, button.hidden)
         button.hidden = true
       }
@@ -103,6 +120,7 @@ export function MinigameRound() {
   const boardSettled = useBoardMovementVisualSettled()
   const acknowledged = useMinigameRoundAcknowledged(round.sessionId)
   const readyPlayers = useMinigameRoundReadyPlayers()
+  const showFinalAttemptBadge = useFinalAttemptBadge(round.phase, round.sessionId, round.revision)
 
   useEffect(() => listenForMinigameRound(), [])
 
@@ -238,7 +256,7 @@ export function MinigameRound() {
         )}
       </section>
     )
-  } else {
+  } else if (round.phase !== 'final' || showFinalAttemptBadge) {
     content = (
       <aside className={`minigame-round minigame-round--badge minigame-round--${round.phase}`}>
         <strong>{round.phase === 'practice' ? `Practice ${round.practiceAttempts}` : 'Final attempt'}</strong>

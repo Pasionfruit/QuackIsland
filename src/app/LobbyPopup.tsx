@@ -276,8 +276,10 @@ export function LobbyPopup() {
       : net.status === 'connecting'
         ? '#ffcf8a'
         : net.status === 'error'
-          ? '#ff8d84'
+        ? '#ff8d84'
           : '#8d8a84'
+
+  if (mode === 'island' && party.phase === 'playing') return null
 
   return (
     <div ref={shell} style={{ position: 'relative' }}>

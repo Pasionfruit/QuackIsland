@@ -54,6 +54,8 @@ import {
 import { MusicControls } from '../modules/05-music'
 import { AUDIO, getCueEngine, readStoredVolume, setEffectsVolume } from '../modules/08-audio'
 import { useNet, usePeers } from '../modules/09-net'
+import { useParty } from '../modules/10-party'
+import { useGameMode } from '../modules/13-modes'
 import {
   CURRENCIES,
   balanceOf,
@@ -98,6 +100,8 @@ function storeTab(tab: SettingsTab): void {
 /** The gear, and the page behind it. */
 export function Settings() {
   const shown = useStore(open)
+  const party = useParty()
+  const mode = useGameMode()
 
   // Escape closes, as it does everywhere else.
   useEffect(() => {
@@ -108,6 +112,8 @@ export function Settings() {
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)
   }, [shown])
+
+  if (mode === 'island' && party.phase === 'playing') return null
 
   return (
     <>

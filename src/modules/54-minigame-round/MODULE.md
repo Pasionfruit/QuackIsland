@@ -163,8 +163,9 @@ Run `npm run dev:multi`, then use a normal and private browser window.
    must not leave the Island flow. The host should be offered Practice and
    Start final again, and the displayed practice count should increase. Run a
    second practice to confirm each attempt starts fresh.
-6. Press Start final. Both browsers should show Final attempt. Escape must not
-   expose restart or leave controls, and no practice control should return.
+6. Press Start final. Both browsers should show Final attempt for three
+   seconds. Escape must not expose restart or leave controls, and no practice
+   control should return.
 7. Finish the game. Both browsers should retain the ordinary podium without
    Replay or Minigame dashboard controls and show the same final placement list.
    Only the host should have Continue; the guest waits for the host.

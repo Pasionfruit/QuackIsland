@@ -5,7 +5,6 @@ import { useParty } from '../../10-party'
 import { useGameMode } from '../../13-modes'
 import {
   boardPointAt,
-  boardPosition,
   setBoardLandingEffectResolver,
   useBoardMovement,
 } from '../../53-board-movement'
@@ -13,7 +12,6 @@ import {
   VOLCANO_TILE_ACTIONS,
   buildVolcanoTileActions,
   resolveVolcanoTileAction,
-  volcanoTileActionAt,
   type VolcanoTileAction,
   type VolcanoTileActionKind,
 } from './rules'
@@ -54,42 +52,7 @@ function ActionInstances({ actions, kind }: {
 }
 
 function VolcanoTileActionOverlay(): React.JSX.Element | null {
-  const mode = useGameMode()
-  const party = useParty()
-  const board = useBoardMovement()
-  const actions = useMemo(
-    () => buildVolcanoTileActions(board.tileCount, board.seed),
-    [board.seed, board.tileCount],
-  )
-  const lastMove = board.moves[board.moves.length - 1]
-  const action = lastMove ? volcanoTileActionAt(actions, lastMove.toTile) : null
-  const finalTile = lastMove ? boardPosition(board, lastMove.playerId) : null
-  const triggered = Boolean(
-    action &&
-    lastMove?.round === board.round &&
-    finalTile !== null &&
-    finalTile !== lastMove.toTile,
-  )
-  const playerName = lastMove
-    ? board.players.find((player) => player.id === lastMove.playerId)?.name ?? lastMove.playerId
-    : ''
-  const active = mode === 'island' && party.phase === 'playing' && board.phase !== 'idle' && board.phase !== 'invalid'
-  if (!active) return null
-  return (
-    <aside className="volcano-tile-actions-hud" aria-label="Volcano tile actions">
-      <div className="volcano-tile-actions-legend">
-        <strong>Action tiles</strong>
-        <span data-kind="lava_lift"><i /> Lava Lift <b>+3</b></span>
-        <span data-kind="ash_slide"><i /> Ash Slide <b>−2</b></span>
-      </div>
-      {triggered && action && (
-        <div className="volcano-tile-actions-result" data-kind={action.kind} aria-live="polite">
-          <strong>{action.label}</strong>
-          <span>{playerName} {action.effect.moveBy > 0 ? 'surges forward' : 'slides backward'} {Math.abs(action.effect.moveBy)} tiles</span>
-        </div>
-      )}
-    </aside>
-  )
+  return null
 }
 
 export function VolcanoTileActions(): React.JSX.Element | null {

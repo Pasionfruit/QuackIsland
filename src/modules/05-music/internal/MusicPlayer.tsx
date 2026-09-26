@@ -12,6 +12,8 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { assetUrl, createStore, readFolded, useStore, writeFolded } from '../../00-core'
+import { useParty } from '../../10-party'
+import { useGameMode } from '../../13-modes'
 import {
   MUSIC,
   clampVolume,
@@ -56,6 +58,8 @@ export interface MusicPlayerProps {
 }
 
 export function MusicPlayer({ stopped = false }: MusicPlayerProps = {}) {
+  const party = useParty()
+  const mode = useGameMode()
   const audio = useRef<HTMLAudioElement | null>(null)
   const [tracks, setTracks] = useState<Track[]>([])
   const [index, setIndex] = useState(0)
@@ -313,6 +317,8 @@ export function MusicPlayer({ stopped = false }: MusicPlayerProps = {}) {
     musicView.set(view)
   })
   useEffect(() => () => musicView.set(null), [])
+
+  if (mode === 'island' && party.phase === 'playing') return null
 
   if (folded) {
     // Folded, it is a square with a note on it: out of the way, but plainly

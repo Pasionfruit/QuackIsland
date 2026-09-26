@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { minimapDots, playerColour, routePercent } from '../internal/layout'
+import { minimapDots, playerColour, routePercent, spiralPoint, spiralRoute } from '../internal/layout'
 
 describe('Volcano minimap layout', () => {
   it('maps the start, summit, and out-of-range positions onto the route', () => {
@@ -12,6 +12,14 @@ describe('Volcano minimap layout', () => {
   it('gives each player id a repeatable colour', () => {
     expect(playerColour('guest-a')).toBe(playerColour('guest-a'))
     expect(playerColour('guest-a')).not.toBe('')
+  })
+
+  it('projects the whole board route into a padded spiral map', () => {
+    const route = spiralRoute(120)
+    expect(route).toHaveLength(120)
+    expect(route.every((point) => point.x >= 7 && point.x <= 93 && point.y >= 7 && point.y <= 93)).toBe(true)
+    expect(spiralPoint(-9, 120)).toEqual(route[0])
+    expect(spiralPoint(999, 120)).toEqual(route[119])
   })
 
   it('separates players sharing a tile without moving them along the route', () => {

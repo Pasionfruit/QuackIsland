@@ -4,7 +4,10 @@ export {
   minimapDots,
   playerColour,
   routePercent,
+  spiralPoint,
+  spiralRoute,
   type MinimapDot,
+  type MinimapRoutePoint,
   type MinimapPlayer,
 } from './internal/layout'
 export { VolcanoMinimap } from './internal/VolcanoMinimapView'

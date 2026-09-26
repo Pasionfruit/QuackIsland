@@ -13,11 +13,40 @@ export interface MinimapDot {
   lane: number
 }
 
+export interface MinimapRoutePoint {
+  x: number
+  y: number
+}
+
 /** Converts a zero-based board tile into a point on the minimap route. */
 export function routePercent(position: number, tileCount: number): number {
   if (tileCount <= 1) return 0
   const clamped = Math.max(0, Math.min(tileCount - 1, position))
   return (clamped / (tileCount - 1)) * 100
+}
+
+/** Projects the public board route into a padded square minimap. */
+export function spiralRoute(tileCount: number): readonly MinimapRoutePoint[] {
+  const count = Math.max(2, Math.floor(tileCount))
+  const points = Array.from({ length: count }, (_, index) => boardPointAt(index))
+  const minX = Math.min(...points.map((point) => point.x))
+  const maxX = Math.max(...points.map((point) => point.x))
+  const minZ = Math.min(...points.map((point) => point.z))
+  const maxZ = Math.max(...points.map((point) => point.z))
+  const spanX = Math.max(1, maxX - minX)
+  const spanZ = Math.max(1, maxZ - minZ)
+  const pad = 7
+  const span = 100 - pad * 2
+  return points.map((point) => ({
+    x: pad + ((point.x - minX) / spanX) * span,
+    y: pad + ((maxZ - point.z) / spanZ) * span,
+  }))
+}
+
+/** Looks up a route point while clamping positions at the start and summit. */
+export function spiralPoint(position: number, tileCount: number): MinimapRoutePoint {
+  const route = spiralRoute(tileCount)
+  return route[Math.round(Math.max(0, Math.min(route.length - 1, position)))]
 }
 
 /** A player's colour belongs to their id, not their current order in the line. */
@@ -51,3 +80,4 @@ export function minimapDots(players: readonly MinimapPlayer[], tileCount: number
     }
   })
 }
+import { boardPointAt } from '../../53-board-movement'

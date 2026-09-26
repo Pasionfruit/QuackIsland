@@ -149,7 +149,7 @@
       "id": "00-core",
       "phase": "P0",
       "title": "Canvas, render loop, times of day, camera arbitration, perf HUD",
-      "status": "ready_for_review",
+      "status": "in_progress",
       "dependsOn": [],
       "dependents": [
         "01-terrain",
@@ -282,7 +282,10 @@
       },
       "measured": null,
       "blockers": [
-        "Gate infrastructure blocker: passed dependency 52-turn-order has no contract.snapshot.d.ts, so check:contracts fails even though check:frozen confirms it is untouched. The declaration generator must be repaired and 52-turn-order reopened/re-gated to create the missing snapshot before 53-board-movement can reach review."
+        "Gate infrastructure blocker: passed dependency 52-turn-order has no contract.snapshot.d.ts, so check:contracts fails even though check:frozen confirms it is untouched. The declaration generator must be repaired and 52-turn-order reopened/re-gated to create the missing snapshot before 53-board-movement can reach review.",
+        "Turn-follow camera request is blocked: 02-player owns the camera handoff but needs active-turn board state from frozen 52-turn-order and 53-board-movement. The turn/board contract must be reopened before that target can be supplied.",
+        "Action-tile dialog removal is blocked: Lava Lift and Ash Slide are owned by passed, frozen 59-volcano-tile-actions. It must be unfrozen before its UI can change.",
+        "Volcano-party HUD suppression is blocked: the requested Action Tiles surface belongs to frozen 59-volcano-tile-actions, while settings, music, player and party surfaces have separate owners. Those modules must be reopened to hide their UI during an active Volcano Island party without a cross-module DOM shim."
       ]
     },
     {
@@ -643,9 +646,11 @@
       "id": "05-music",
       "phase": "P1",
       "title": "Background playlist with a panel to skip, rewind, pause and set the volume",
-      "status": "ready_for_review",
+      "status": "in_progress",
       "dependsOn": [
-        "00-core"
+        "00-core",
+        "10-party",
+        "13-modes"
       ],
       "dependents": [],
       "generation": 1,
@@ -678,6 +683,11 @@
         {
           "id": "05.5",
           "title": "Stopping for a game, and picking back up where it left off",
+          "status": "done"
+        },
+        {
+          "id": "05.6",
+          "title": "Hide music controls during an active Volcano Island party",
           "status": "done"
         }
       ],
@@ -1045,6 +1055,7 @@
         "09-net"
       ],
       "dependents": [
+        "05-music",
         "14-garden",
         "15-minigames",
         "52-turn-order",
@@ -1277,6 +1288,7 @@
         "09-net"
       ],
       "dependents": [
+        "05-music",
         "14-garden",
         "15-minigames",
         "52-turn-order",
@@ -5116,12 +5128,17 @@
           "id": "54.13",
           "title": "Keep the final-attempt badge to its title alone",
           "status": "done"
+        },
+        {
+          "id": "54.14",
+          "title": "Show the final-attempt badge for three seconds only",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "red",
-          "at": "2026-09-26T01:32:56.052Z",
+          "at": "2026-09-26T01:43:21.073Z",
           "failed": "test"
         },
         "human": {
@@ -5162,7 +5179,9 @@
         "trianglesMax": 0
       },
       "measured": null,
-      "blockers": [],
+      "blockers": [
+        "Action-title popup removal is blocked: 59-volcano-tile-actions is passed and frozen; it must be unfrozen before changing that UI."
+      ],
       "unfreezes": [
         {
           "at": "2026-09-25T16:12:52.173Z",
@@ -5456,8 +5475,8 @@
     {
       "id": "59-volcano-tile-actions",
       "phase": "P8",
-      "title": "Volcano movement tiles: deterministic Lava Lift and Ash Slide placements, host-authoritative landing effects, procedural markers and shared feedback",
-      "status": "passed",
+      "title": "Volcano movement tiles: deterministic Lava Lift and Ash Slide placements, host-authoritative landing effects and procedural markers",
+      "status": "in_progress",
       "dependsOn": [
         "00-core",
         "10-party",
@@ -5484,12 +5503,17 @@
         },
         {
           "id": "59.3",
-          "title": "Low-draw procedural tile markers, legend and synchronized landing feedback",
+          "title": "Low-draw procedural tile markers with synchronized landing effects",
           "status": "done"
         },
         {
           "id": "59.4",
           "title": "Two-player, eight-player, seeded layout, effect and workflow tests plus contract and MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "59.5",
+          "title": "Remove the Action Tiles legend and landing-result dialog from the board HUD",
           "status": "done"
         }
       ],
@@ -5499,9 +5523,9 @@
           "at": "2026-09-25T15:58:01.623Z"
         },
         "human": {
-          "status": "pass",
-          "at": "2026-09-25T15:58:26.222Z",
-          "note": "Lava Lift and Ash Slide markers and movements match on both browsers"
+          "status": "pending",
+          "at": null,
+          "note": null
         },
         "history": [
           {
@@ -5511,20 +5535,7 @@
           }
         ]
       },
-      "freeze": {
-        "sha256": "3aadee0e3f22302da5e6e1d99881424f9fdcc74112e54045de116883c1c8870e",
-        "files": {
-          "src/modules/59-volcano-tile-actions/MODULE.md": "771a8c92466cc2c6f43a573b467f0adc3306698b582bb8950646bca8e7cf9212",
-          "src/modules/59-volcano-tile-actions/__tests__/rules.test.ts": "9ff0b35ec1bce4d4726f6c1348aaab04ce20eb468331d104e0501b43f56e0cb7",
-          "src/modules/59-volcano-tile-actions/contract.snapshot.d.ts": "3fbc87086aee9b82b726b8a6e276a5e5ccbfac6cabc0658a3e022189341e9ace",
-          "src/modules/59-volcano-tile-actions/index.ts": "9ebec31d5332fa4854a82db0fc874275538089c05a5121fa9cb12c8e49cd8858",
-          "src/modules/59-volcano-tile-actions/internal/VolcanoTileActionsView.tsx": "903eb09f750657ee80174ee6f34093a6d38c7113e444937279d3e84911aef044",
-          "src/modules/59-volcano-tile-actions/internal/rules.ts": "b30b8822df8872ebbc896f79edd716644e35761a3382a86f75133c257197a40e",
-          "src/modules/59-volcano-tile-actions/internal/volcano-tile-actions.css": "9da09e21981c24a8191e9417562217ae6fc2a0e528deaa094756a009d6ef1550"
-        },
-        "at": "2026-09-25T15:58:26.222Z",
-        "commit": "c19387f"
-      },
+      "freeze": null,
       "nonGoals": [
         "No skipped turns, extra turns, branching routes or player choices",
         "No changes inside frozen board, minigame, reward, victory or postgame modules",
@@ -5536,7 +5547,15 @@
         "trianglesMax": 2000
       },
       "measured": null,
-      "blockers": []
+      "blockers": [],
+      "unfreezes": [
+        {
+          "at": "2026-09-26T01:55:00.000Z",
+          "reason": "Hide the Action Tiles board HUD during Volcano Island play",
+          "priorSha256": "3aadee0e3f22302da5e6e1d99881424f9fdcc74112e54045de116883c1c8870e",
+          "generation": 1
+        }
+      ]
     },
     {
       "id": "60-volcano-map-landmarks",
@@ -5820,7 +5839,7 @@
       "id": "62-volcano-minimap",
       "phase": "P8",
       "title": "Volcano minimap: a compact route line with stable player-colour position dots",
-      "status": "ready_for_review",
+      "status": "in_progress",
       "dependsOn": [
         "00-core",
         "10-party",
@@ -5849,12 +5868,23 @@
           "id": "62.3",
           "title": "Tests, contract and review notes",
           "status": "done"
+        },
+        {
+          "id": "62.4",
+          "title": "Top-right spiral board map and synchronized CSS 3D dice display",
+          "status": "done"
+        },
+        {
+          "id": "62.5",
+          "title": "Settle each animated die on its synchronized rolled value",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
-          "status": "green",
-          "at": "2026-09-26T00:06:32.866Z"
+          "status": "red",
+          "at": "2026-09-26T01:50:01.682Z",
+          "failed": "test"
         },
         "human": {
           "status": "pending",

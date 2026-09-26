@@ -2,10 +2,10 @@
 
 ## What this is
 
-A small, read-only route display for an active Volcano Island game. It is a
-single horizontal line, with one coloured dot for every player at that
-player's current board tile. The left end is start and the right end is the
-summit.
+A small, read-only board HUD for an active Volcano Island game. It maps the
+actual board route into a compact spiral, with one coloured dot for every
+player at that player's current tile, and shows the latest synchronized roll
+as animated 3D dice.
 
 The overlay uses the already synchronized `53-board-movement` snapshot. It
 does not send a message, change a turn, or move an avatar. A colour is derived
@@ -16,10 +16,14 @@ place in the current turn order.
 
 - The map appears only while a Volcano Island party is playing and has a board
   roster. It vanishes when the game ends.
-- Tile zero maps to the route's left end and the final tile maps to its right
-  end. Out-of-range values are defensively clamped.
-- Players on one tile are fanned above and below the line. Their horizontal
-  position remains the exact shared tile, while every dot stays visible.
+- The map sits in the top-right corner. Its path samples the public board
+  positions, so it follows the game's actual spiral to the summit.
+- Tile zero maps to the route start and the final tile maps to the summit.
+  Out-of-range values are defensively clamped.
+- Players on one tile are fanned above and below the route while every dot
+  stays visible.
+- The most recent roll tumbles as CSS 3D dice and settles with its synchronized
+  value on the visible face. It adds no WebGL work or board state.
 - The overlay has `pointer-events: none`; it never captures board controls,
   camera input, or clicks.
 
@@ -28,6 +32,7 @@ place in the current turn order.
 | Export | Meaning |
 | --- | --- |
 | `routePercent` | Converts a zero-based board tile into a clamped route percentage. |
+| `spiralRoute` / `spiralPoint` | Projects the public board positions into the minimap path. |
 | `playerColour` / `MINIMAP_COLOURS` | Stable player-id colour selection. |
 | `minimapDots` | Produces position, colour, and same-tile stacking data. |
 | `VolcanoMinimap` | The scene component that mounts the overlay. |
@@ -41,10 +46,10 @@ place in the current turn order.
 ## How to review
 
 1. Start a two-player Volcano Island game and finish turn order.
-2. A compact **Summit route** line should appear at the bottom centre, with a
+2. A compact **Summit route** spiral should appear at the top right, with a
    differently coloured dot for each player at start.
-3. Roll for one player. Their dot should move right to their current tile in
-   both browsers, while the other dot remains at start.
+3. Roll for one player. The dice should tumble in 3D and settle on the shared
+   result; that player's dot should then move around the spiral in both browsers.
 4. Move both players to the same tile. Both dots should remain visible, one a
    little above and one a little below the route.
 5. End the party. The minimap should disappear and it must never block clicks

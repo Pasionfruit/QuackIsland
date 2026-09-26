@@ -32,6 +32,8 @@ export function PartyPanel() {
   const waiting = waitingFor(everyone, party.ready)
   const way = mode === 'garden' ? gardenModeById(gardenMode).title : null
 
+  if (mode === 'island' && party.phase === 'playing') return null
+
   return (
     <div style={panel}>
       <div style={heading}>PARTY</div>
