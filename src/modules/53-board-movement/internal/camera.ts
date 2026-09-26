@@ -4,6 +4,7 @@ import { activeBoardPlayer, boardPosition, type BoardMovementSnapshot } from './
 
 export const BOARD_CAMERA = Object.freeze({
   distance: 6.8,
+  rollingDistance: 17,
   height: 4.4,
   focusHeight: 0.82,
   smoothing: 5.5,
@@ -69,4 +70,3 @@ export function boardCameraPose(
     focusZ,
   }
 }
-

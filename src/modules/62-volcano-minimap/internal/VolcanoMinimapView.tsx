@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { BOARD_TILES, boardPosition, useBoardMovement, type BoardDieRoll } from '../../53-board-movement'
+import { usePlayerColour } from '../../02-player'
+import { useNet, usePeers } from '../../09-net'
 import { useParty } from '../../10-party'
 import { useGameMode } from '../../13-modes'
 import { minimapDots, spiralPoint, spiralRoute, type MinimapDot } from './layout'
@@ -12,13 +14,19 @@ export function VolcanoMinimap() {
   const party = useParty()
   const mode = useGameMode()
   const board = useBoardMovement()
+  const net = useNet()
+  const peers = usePeers()
+  const localColour = usePlayerColour()
   const dots = useMemo(() => {
     const players = board.players.flatMap((player) => {
       const position = boardPosition(board, player.id)
-      return position === null ? [] : [{ id: player.id, position }]
+      const colour = player.id === net.id
+        ? localColour
+        : peers.find((peer) => peer.id === player.id)?.colour ?? undefined
+      return position === null ? [] : [{ id: player.id, position, colour }]
     })
     return minimapDots(players, BOARD_TILES.length)
-  }, [board])
+  }, [board, localColour, net.id, peers])
   const visible = party.phase === 'playing' && mode === 'island' && dots.length > 0
 
   useEffect(() => {

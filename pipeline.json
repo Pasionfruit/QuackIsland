@@ -212,7 +212,8 @@
         "60-volcano-map-landmarks",
         "61-op-finder",
         "62-volcano-minimap",
-        "63-volcano-pause"
+        "63-volcano-pause",
+        "64-jackal"
       ],
       "generation": 1,
       "contract": {
@@ -425,7 +426,10 @@
         "51-perfect-game",
         "53-board-movement",
         "58-breaking-the-ice",
-        "61-op-finder"
+        "59-volcano-tile-actions",
+        "61-op-finder",
+        "62-volcano-minimap",
+        "64-jackal"
       ],
       "generation": 1,
       "contract": {
@@ -970,8 +974,11 @@
         "56-volcano-victory",
         "57-volcano-postgame",
         "58-breaking-the-ice",
+        "59-volcano-tile-actions",
         "61-op-finder",
-        "63-volcano-pause"
+        "62-volcano-minimap",
+        "63-volcano-pause",
+        "64-jackal"
       ],
       "generation": 1,
       "contract": {
@@ -1529,7 +1536,8 @@
         "55-reward-dice",
         "58-breaking-the-ice",
         "61-op-finder",
-        "63-volcano-pause"
+        "63-volcano-pause",
+        "64-jackal"
       ],
       "generation": 1,
       "contract": {
@@ -4943,12 +4951,17 @@
           "id": "53.12",
           "title": "Give board-turn framing exclusive camera ownership over the local player rig",
           "status": "done"
+        },
+        {
+          "id": "53.13",
+          "title": "Pull the board camera far back while a dice move is in flight",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "red",
-          "at": "2026-09-26T02:12:27.332Z",
+          "at": "2026-09-26T05:07:07.889Z",
           "failed": "test"
         },
         "human": {
@@ -5473,6 +5486,8 @@
       "status": "in_progress",
       "dependsOn": [
         "00-core",
+        "02-player",
+        "09-net",
         "10-party",
         "13-modes",
         "53-board-movement"
@@ -5837,6 +5852,8 @@
       "status": "in_progress",
       "dependsOn": [
         "00-core",
+        "02-player",
+        "09-net",
         "10-party",
         "13-modes",
         "53-board-movement"
@@ -5877,6 +5894,11 @@
         {
           "id": "62.6",
           "title": "Show the synchronized roll result and let players collapse the Summit route",
+          "status": "done"
+        },
+        {
+          "id": "62.7",
+          "title": "Use synchronized avatar colours for player position dots",
           "status": "done"
         }
       ],
@@ -5964,6 +5986,93 @@
         "No edits to the frozen board-movement or minigame modules",
         "No board simulation, turn, or network protocol changes",
         "No guest authority to restart a minigame or end the party"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "64-jackal",
+      "phase": "P6",
+      "title": "Minigame 41, Jackal: one player is the Sniper atop a tower with a laser-sighted rifle, everybody else a Runner rushing it through cover; the Sniper wins by eliminating every runner, the Runners win the instant one reaches the base",
+      "status": "in_progress",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "64.1",
+          "title": "The lane: procedural crates, barrels and trees between a spawn line and a tower, a bounded platform on top and a base zone at its foot",
+          "status": "done"
+        },
+        {
+          "id": "64.2",
+          "title": "The Sniper: aim, a laser traced every tick whether or not the trigger is pulled, ammo scaled to the roster with a forced reload, scope as a move-speed trade-off",
+          "status": "done"
+        },
+        {
+          "id": "64.3",
+          "title": "The Runners: WASD and a jump that vaults short cover but never a tree, two lives with a brief invulnerable window on a hit",
+          "status": "done"
+        },
+        {
+          "id": "64.4",
+          "title": "The end: reaching base wins it for the Runners, every runner down wins it for the Sniper, decided the same step - no outro to sit through",
+          "status": "done"
+        },
+        {
+          "id": "64.5",
+          "title": "Bots: runner stand-ins that rush the tower and flinch off whichever side of the visible laser they are not on",
+          "status": "done"
+        },
+        {
+          "id": "64.6",
+          "title": "One lane shared across the lobby: host-authoritative movement, and a Sniper's shots claimed by whoever is playing it and verified by the host",
+          "status": "done"
+        },
+        {
+          "id": "64.7",
+          "title": "Contract, tests including a lossy-network convergence check with a guest playing the Sniper, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "64.8",
+          "title": "The assets: models, sprites and sound in place of primitives and capsules",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "red",
+          "at": "2026-09-26T05:39:36.024Z",
+          "failed": "test"
+        },
+        "human": {
+          "status": "pending",
+          "at": null,
+          "note": null
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: bodies are the island's avatar, cover is boxes and cones, the tower is boxes",
+        "No manual reload, no knockback, no respawn - a hit is a life and a brief invulnerable window",
+        "No team scores or a standard N-way podium: a custom results card off `round.winner`",
+        "No sound but the shared cues. No score kept between rounds"
       ],
       "budgets": {
         "drawCallsMax": 0,

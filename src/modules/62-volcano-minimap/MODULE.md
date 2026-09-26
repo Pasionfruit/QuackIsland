@@ -8,9 +8,9 @@ player at that player's current tile, and shows the latest synchronized roll
 as animated 3D dice.
 
 The overlay uses the already synchronized `53-board-movement` snapshot. It
-does not send a message, change a turn, or move an avatar. A colour is derived
-from the player's stable id, so it stays with that player rather than with a
-place in the current turn order.
+does not send a message, change a turn, or move an avatar. Each dot uses the
+player's selected avatar colour as synchronized by the roster; a stable id
+palette is only a fallback while that colour is unavailable.
 
 ## Behaviour
 
@@ -33,7 +33,7 @@ place in the current turn order.
 | --- | --- |
 | `routePercent` | Converts a zero-based board tile into a clamped route percentage. |
 | `spiralRoute` / `spiralPoint` | Projects the public board positions into the minimap path. |
-| `playerColour` / `MINIMAP_COLOURS` | Stable player-id colour selection. |
+| `playerColour` / `MINIMAP_COLOURS` | Stable fallback colour selection. |
 | `minimapDots` | Produces position, colour, and same-tile stacking data. |
 | `VolcanoMinimap` | The scene component that mounts the overlay. |
 

@@ -115,7 +115,15 @@ export function BoardMovement(): null {
 
     const pose = boardCameraPose(snapshot, playerId, cameraAnimation.current.position)
     if (!pose) return
-    desiredCamera.current.set(pose.cameraX, pose.cameraY, pose.cameraZ)
+    const cameraDistance = !visualSettled && snapshot.moves.length > 0
+      ? BOARD_CAMERA.rollingDistance
+      : BOARD_CAMERA.distance
+    const distanceScale = cameraDistance / BOARD_CAMERA.distance
+    desiredCamera.current.set(
+      pose.focusX + (pose.cameraX - pose.focusX) * distanceScale,
+      pose.focusY + (pose.cameraY - pose.focusY) * distanceScale,
+      pose.focusZ + (pose.cameraZ - pose.focusZ) * distanceScale,
+    )
     desiredFocus.current.set(pose.focusX, pose.focusY, pose.focusZ)
 
     if (!cameraEngaged.current) {

@@ -883,8 +883,8 @@ const ENTRIES = [
       { input: 'Runner: Space', does: 'Jump / vault over cover' },
     ],
     reserved: false,
-    // Not yet built - see `64-jackal`.
-    done: { environment: false, controls: false, assets: false },
+    // Built: see `64-jackal`.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'reserved-42',

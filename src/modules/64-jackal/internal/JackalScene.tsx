@@ -203,8 +203,13 @@ function LaneView({ seed }: { seed: number }) {
  * same segment on every screen because `laserOf` is a pure function of what
  * is already synced. Visible whether or not the trigger is pulled.
  */
-const LASER_GEOMETRY = new CylinderGeometry(0.03, 0.03, 1, 6, 1, true)
+// Unit radius: the actual thickness is set through each mesh's own scale, in
+// metres, so the outer glow and the bright core can be sized independently.
+const LASER_GEOMETRY = new CylinderGeometry(1, 1, 1, 8, 1, true)
 const UP = new Vector3(0, 1, 0)
+/** Metres: thin enough to read as a laser, thick enough to actually show up over 70 m. */
+const BEAM_RADIUS = 0.11
+const CORE_RADIUS = 0.045
 
 function Laser({ live }: { live: RefObject<Round> }) {
   const beam = useRef<Mesh>(null)
@@ -225,16 +230,16 @@ function Laser({ live }: { live: RefObject<Round> }) {
       mesh.position.copy(mid)
       mesh.quaternion.setFromUnitVectors(UP, rot)
     }
-    beam.current.scale.set(1, length, 1)
-    core.current.scale.set(0.35, length, 0.35)
+    beam.current.scale.set(BEAM_RADIUS, length, BEAM_RADIUS)
+    core.current.scale.set(CORE_RADIUS, length, CORE_RADIUS)
   })
   return (
     <group>
       <mesh ref={beam} geometry={LASER_GEOMETRY} renderOrder={30}>
-        <meshBasicMaterial color={PALETTE.laser} transparent opacity={0.35} depthWrite={false} />
+        <meshBasicMaterial color={PALETTE.laser} transparent opacity={0.55} depthWrite={false} toneMapped={false} />
       </mesh>
       <mesh ref={core} geometry={LASER_GEOMETRY} renderOrder={31}>
-        <meshBasicMaterial color={PALETTE.laserCore} transparent opacity={0.85} depthWrite={false} />
+        <meshBasicMaterial color={PALETTE.laserCore} transparent opacity={0.95} depthWrite={false} toneMapped={false} />
       </mesh>
     </group>
   )

@@ -70,7 +70,10 @@ export function JackalScreen({ run }: { run: MinigameRun }) {
   const me = net.id ?? myId()
   const nameOf = (id: string) => (id === me ? 'you' : (peers.find((p) => p.id === id)?.name ?? id))
   const colours = round.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers))
-  const results = useFinish(round.over, () => resultsOf(round, me, nameOf, colours))
+  // No `standings` handed over: a binary Sniper-vs-Runners result does not fit
+  // the podium's N-way placings, so `Over` below is this game's own card, and
+  // this is what keeps `useFinish` from swapping the panel out for it.
+  const results = useFinish(round.over)
   const wire = useJackalNet()
   const live = useRef(round)
   live.current = round
@@ -374,16 +377,6 @@ const SHADOWS = { type: PCFShadowMap }
 const DPR: [number, number] = [1, 2]
 const CAMERA = { fov: 68, near: 0.05, far: 260, position: [0, 30, 30] as [number, number, number] }
 const GL = { antialias: true, powerPreference: 'high-performance' as const }
-
-function resultsOf(round: Round, me: string, nameOf: (id: string) => string, colours: readonly string[]) {
-  return summarize(round).map(({ player, index }) => ({
-    id: player.id,
-    place: player.role === 'sniper' ? (round.winner === 'sniper' ? 1 : 2) : round.winner === 'runner' ? 1 : 2,
-    name: nameOf(player.id),
-    colour: colours[index],
-    mine: player.id === me,
-  }))
-}
 
 function Over({
   round,

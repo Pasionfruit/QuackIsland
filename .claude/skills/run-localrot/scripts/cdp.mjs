@@ -248,6 +248,12 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'players',
   },
+  jackal: {
+    title: 'Jackal',
+    screen: 'JackalScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
   'highest-in-the-room': {
     title: 'Highest In The Room',
     screen: 'TowerScreen',
@@ -587,6 +593,70 @@ export function oneShotPlay({ mode = 'play', fire = true } = {}) {
       board.dispatchEvent(new PointerEvent('pointerdown', { button: 0, bubbles: true }))
       board.dispatchEvent(new PointerEvent('pointerup', { button: 0, bubbles: true }))
       state.fired = true
+    }
+    return state
+  })()`
+}
+
+/**
+ * An expression that, in a page showing Jackal, stands in for the pointer
+ * lock the same way `oneShotPlay` does, then - only while `me` is the Sniper -
+ * aims at the nearest standing runner it has a clear line to and fires when
+ * roughly on target and the gun is ready. It never moves the Sniper: the
+ * platform is small, and a stationary Sniper is enough to exercise the beam,
+ * cover blocking it, ammo and the reload, and every hit. Evaluates to a small
+ * state object for logging.
+ */
+export function jackalPlay({ mode = 'play' } = {}) {
+  return `(async () => {
+    const arena = await import('/src/modules/64-jackal/internal/arena.ts')
+    const rules = await import('/src/modules/64-jackal/internal/rules.ts')
+    const screen = await import('/src/modules/64-jackal/internal/JackalScreen.tsx')
+    const w = (window.__jkl ??= { held: new Set() })
+    const press = (code, down) => {
+      if (down === w.held.has(code)) return
+      down ? w.held.add(code) : w.held.delete(code)
+      window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, key: code.slice(3).toLowerCase() }))
+    }
+    if (!w.locked) {
+      Object.defineProperty(document, 'pointerLockElement', { configurable: true, get: () => document.querySelector('[data-board]') })
+      document.dispatchEvent(new Event('pointerlockchange'))
+      w.locked = true
+    }
+    const g = ${gameState('jackal')}
+    if (!g || g.players.length === 0) return null
+    const me = g.players.find((p) => p.mine)
+    const state = { clock: +g.elapsed.toFixed(2), over: g.over, winner: g.winner, role: me.role, bullets: me.bullets, reloading: rules.reloading(g, me), fired: false, target: null }
+    if (${JSON.stringify(mode)} === 'lock' || g.over || me.role !== 'sniper') {
+      for (const code of [...w.held]) press(code, false)
+      return state
+    }
+    const A = arena.arenaFor(g.seed)
+    const eye = rules.eyeOf(me)
+    let target = null
+    let best = Infinity
+    for (const p of g.players) {
+      if (p.role !== 'runner' || !rules.isStanding(p)) continue
+      const d = Math.hypot(p.x - me.x, p.z - me.z)
+      if (d < best && arena.lineClear(A, eye, { x: p.x, y: p.y + rules.BODY.height / 2, z: p.z })) { best = d; target = p }
+    }
+    if (target) {
+      const wantYaw = Math.atan2(-(target.x - me.x), -(target.z - me.z))
+      const wantPitch = Math.atan2(target.y + rules.BODY.height / 2 - eye.y, best)
+      state.target = target.id
+      const turn = Math.max(-0.35, Math.min(0.35, rules.wrapAngle(wantYaw - me.yaw)))
+      const mx = Math.round(-turn / screen.SENSITIVITY)
+      const my = Math.round((me.pitch - wantPitch) / screen.SENSITIVITY)
+      if (mx || my) document.dispatchEvent(new MouseEvent('mousemove', { movementX: mx, movementY: my, bubbles: true }))
+      const board = document.querySelector('[data-board]')
+      // Never waste a bullet on somebody still invulnerable from the last hit -
+      // a real duel has few enough bullets that overkill is a real cost.
+      const worthIt = g.elapsed >= target.invulnerableUntil
+      if (worthIt && Math.abs(rules.wrapAngle(wantYaw - me.yaw)) < 0.03 && rules.canShoot(g, me)) {
+        board.dispatchEvent(new PointerEvent('pointerdown', { button: 0, bubbles: true }))
+        board.dispatchEvent(new PointerEvent('pointerup', { button: 0, bubbles: true }))
+        state.fired = true
+      }
     }
     return state
   })()`

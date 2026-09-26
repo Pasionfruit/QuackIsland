@@ -27,4 +27,9 @@ describe('Volcano minimap layout', () => {
     expect(dots.map((dot) => dot.percent)).toEqual([routePercent(8, 120), routePercent(8, 120)])
     expect(dots.map((dot) => dot.lane)).toEqual([-0.5, 0.5])
   })
+
+  it('keeps each player\'s selected avatar colour on their dot', () => {
+    const [dot] = minimapDots([{ id: 'a', position: 8, colour: '#1d9bf0' }], 120)
+    expect(dot.colour).toBe('#1d9bf0')
+  })
 })

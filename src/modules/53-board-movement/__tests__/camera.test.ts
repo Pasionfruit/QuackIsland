@@ -89,5 +89,8 @@ describe('board camera', () => {
     expect(cameraRadius).toBeCloseTo(focusRadius + BOARD_CAMERA.distance, 5)
     expect(pose.cameraY - pose.focusY).toBeCloseTo(BOARD_CAMERA.height - BOARD_CAMERA.focusHeight)
   })
-})
 
+  it('uses a substantial pullback distance while a dice move is in flight', () => {
+    expect(BOARD_CAMERA.rollingDistance).toBeGreaterThan(BOARD_CAMERA.distance * 2)
+  })
+})

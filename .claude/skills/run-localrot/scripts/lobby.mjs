@@ -21,7 +21,7 @@
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, chefTrace, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, oneShotPlay, say, sleep, stepsPick, timeItStop, torchDrive, torchMove, triathlonMove, typeLetter, whackMove } from './cdp.mjs'
+import { GAMES, args, chefTrace, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, jackalPlay, launch, lightMove, oneShotPlay, say, sleep, stepsPick, timeItStop, torchDrive, torchMove, triathlonMove, typeLetter, whackMove } from './cdp.mjs'
 
 const opt = args({ players: '8', games: 'zombie-tag,messy-maze,probable-stop,duck-hunt,feeding-time,sprint-triathlon,punch-buggy,time-it,wack-attack,lady-luck,find-yourself,make-the-cut,let-him-cook,i-see-the-light,helping-dad,synchronize-steps,hes-one-shot,keyboard-warrior,chef-caricature', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'lobby'), port: '9410' })
 const count = Number(opt.players)
@@ -69,6 +69,13 @@ try {
     const { people } = GAMES[game]
     await host.eval(`window.__mg.openMinigame(${JSON.stringify(game)})`)
     for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'game'`, 30000)
+    if (game === 'jackal') {
+      // The host picks the *other* browser as the 1, off the party tab's own
+      // machinery - the point being to prove `useTheOneSync` actually carries
+      // that pick to a guest, not just that the host's own copy has it.
+      await host.eval(`window.__mg.chooseTheOne(${JSON.stringify(moverId)})`)
+      for (const p of pages) await p.waitFor(`window.__mg.getTheOne() === ${JSON.stringify(moverId)}`, 10000)
+    }
     await host.eval('window.__mg.playMinigame()')
     for (const p of pages) {
       await p.waitFor(`(() => { const s = ${gameState(game)}; return !!s && s.${people}.length >= ${Math.min(count, 8)} })()`, 120000)
@@ -518,6 +525,59 @@ try {
       continue
     }
 
+    if (game === 'jackal') {
+      // Every browser should already agree who the Sniper is - `chooseTheOne`
+      // above named the last guest, and this is `useTheOneSync` actually
+      // having carried it there. Then that guest plays the Sniper for real,
+      // and every browser should end up agreeing on lives, who is down, who
+      // reached base and who won.
+      const roles = await Promise.all(
+        pages.map((p) => p.eval(`(() => { const g = ${gameState(game)}; return { me: window.__net.getNet().id, sniperId: g.sniperId, myRole: g.players.find((pl) => pl.mine).role } })()`)),
+      )
+      say(`${game}: sniperId agreed by every browser`, JSON.stringify(roles))
+      if (!roles.every((r) => r.sniperId === moverId)) throw new Error(`${game}: not every browser agrees the Sniper is ${moverId} - ${JSON.stringify(roles)}`)
+      const guestRole = roles.find((r) => r.me === moverId).myRole
+      if (guestRole !== 'sniper') throw new Error(`${game}: the chosen guest is not playing the Sniper - it is a ${guestRole}`)
+
+      let fired = 0
+      let last = null
+      for (let i = 0; i < 2000; i++) {
+        const s = await mover.eval(jackalPlay())
+        if (!s) break
+        last = s
+        if (s.fired) fired += 1
+        if (s.over) break
+        await sleep(30)
+      }
+      await mover.eval(jackalPlay({ mode: 'lock' }))
+      say(`${game}: fired ${fired}, last state`, JSON.stringify(last))
+      // A moment either side of `over`, the anchor this reads through can be
+      // mid-transition on one browser or the other - null is "try again", not
+      // a disagreement.
+      let views = []
+      for (let tries = 0; tries < 10; tries++) {
+        await sleep(600)
+        views = await Promise.all(
+          pages.map((p) =>
+            p.eval(`(() => { const g = ${gameState(game)}; if (!g || !g.over) return null; return JSON.stringify({ over: g.over, winner: g.winner, players: g.players.map((x) => [x.id, x.lives, x.alive, x.reachedBase]) }) })()`),
+          ),
+        )
+        if (views.every((v) => v !== null) && new Set(views).size === 1) break
+      }
+      if (views.some((v) => v === null)) throw new Error(`${game}: at least one browser never settled on the round being over - ${JSON.stringify(views)}`)
+      const agree = new Set(views).size === 1
+      const outcome = JSON.parse(views[0])
+      say(`${game}: ${fired} shots fired by the guest Sniper; every browser agrees ${agree}`, views[0])
+      await host.shot(`${game}-host.png`)
+      await mover.shot(`${game}-guest.png`)
+      if (!agree) throw new Error(`${game}: browsers disagree - ${views.join(' | ')}`)
+      if (!outcome.over || !outcome.winner) throw new Error(`${game}: the round never decided a winner`)
+      if (fired === 0) throw new Error(`${game}: the guest Sniper never fired a shot`)
+      await host.eval('window.__mg.backOut()')
+      for (const g of guests) await g.waitFor(`window.__mg.getMinigameScreen().at === 'closed'`, 30000)
+      continue
+    }
+
     if (game === 'synchronize-steps') {
       // Three rounds: every browser picks - a key or a button, some changing
       // their minds - and at each reveal every browser should agree on every
@@ -657,6 +717,8 @@ try {
   ok = true
 } catch (e) {
   say('FAILED', e.message.slice(0, 300))
+  const errors = pages.flatMap((p) => p.errors.map((err) => `${p.name}: ${String(err).slice(0, 200)}`))
+  if (errors.length) say('console errors at failure', JSON.stringify(errors.slice(0, 10)))
   for (const p of pages) await p.shot(`failure-${p.name}.png`).catch(() => {})
 } finally {
   for (const p of pages) p.close()

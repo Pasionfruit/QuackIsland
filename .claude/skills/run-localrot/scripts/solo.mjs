@@ -6,6 +6,7 @@
  * --game      messy-maze (default), zombie-tag, probable-stop, duck-hunt, punch-buggy
  *             time-it, feeding-time, find-yourself, sprint-triathlon, wack-attack, lady-luck, make-the-cut, let-him-cook
  *             i-see-the-light, synchronize-steps, helping-dad, hes-one-shot, keyboard-warrior, chef-caricature,
+ *             jackal,
  *             musical-mayhem, wheres-midnight or pet-race (the last three open and screenshot only - no --steer yet)
  * --app       dev server URL (default http://localhost:5199/)
  * --out       where screenshots go (default <temp>/localrot-run/solo)
@@ -92,13 +93,21 @@
  *             unless at least four are accepted, a dish each. Screenshots a
  *             stand-in drawing, a wiped attempt, drawing, the duck fed and the
  *             results. Takes the length of every turn: a few minutes.
+ *             Jackal: alone, the human defaults to the Sniper and stand-ins
+ *             rush the tower. Stands in for the pointer lock, then aims at the
+ *             nearest runner it has a clear line to and fires when on target
+ *             and the gun is ready - never moving off the platform. Fails
+ *             unless it fires, the laser has a target at some point, and a
+ *             hit lands; notes rather than fails if the magazine was never
+ *             emptied. Screenshots the briefing, playing, a first shot, a hit,
+ *             an elimination and the results.
  * --software  render with SwiftShader instead of the GPU (slow; see cdp.mjs)
  *
  * Needs the dev server running; not the relay - alone you are your own host.
  */
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { GAMES, args, chefTrace, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, launch, lightMove, oneShotPlay, say, sleep, stepsPick, timeItStop, torchMove, triathlonMove, typeLetter, whackMove } from './cdp.mjs'
+import { GAMES, args, chefTrace, cloverClick, cookPick, cupPick, cutterMove, duckHuntShot, feedFlick, gameState, jackalPlay, launch, lightMove, oneShotPlay, say, sleep, stepsPick, timeItStop, torchMove, triathlonMove, typeLetter, whackMove } from './cdp.mjs'
 
 const opt = args({ game: 'messy-maze', app: 'http://localhost:5199/', out: join(tmpdir(), 'localrot-run', 'solo'), port: '9400' })
 const game = GAMES[opt.game]
@@ -546,6 +555,68 @@ try {
     const places = await page.eval(`(() => { const g = ${gameState('hes-one-shot')}; return g ? JSON.stringify(g.players.map((p) => [p.id, p.out, p.by, p.kills])) : null })()`)
     say('results [id, out, by, kills]', places, await page.shot('7-results.png'))
     if (fired === 0) throw new Error('never got a shot off while hunting')
+  } else if (opt.steer && opt.game === 'jackal') {
+    const players = () => page.eval(`(() => { const g = ${gameState('jackal')}; return { over: g.over, winner: g.winner, players: g.players.map((p) => ({ id: p.id, mine: p.mine, role: p.role, lives: p.lives, alive: p.alive, reachedBase: p.reachedBase })) } })()`)
+    await page.eval(jackalPlay({ mode: 'lock' }))
+    const s0 = await players()
+    if (s0.players.length === 0) throw new Error('no players dealt')
+    say('roster', JSON.stringify(s0.players))
+    const myRole = s0.players.find((p) => p.mine).role
+    say('my role', myRole)
+    if (myRole !== 'sniper') throw new Error(`expected the solo human to default to Sniper, got ${myRole}`)
+
+    let fired = 0
+    let sawReload = false
+    let sawLaser = false
+    let firstShotShot = false
+    let lastLives = new Map(s0.players.filter((p) => p.role === 'runner').map((p) => [p.id, p.lives]))
+    let sawHit = false
+    let sawElimination = false
+    let last = null
+    for (let i = 0; i < 4000; i++) {
+      const s = await page.eval(jackalPlay())
+      if (!s) break
+      last = s
+      if (s.target) sawLaser = true
+      if (s.fired) {
+        fired += 1
+        if (!firstShotShot) {
+          firstShotShot = true
+          await sleep(60)
+          say('first shot fired, target ' + s.target, JSON.stringify(s), await page.shot('3-firing.png'))
+        }
+      }
+      if (s.reloading) sawReload = true
+      if (i % 10 === 0) {
+        const now = await players()
+        for (const p of now.players) {
+          if (p.role !== 'runner') continue
+          const was = lastLives.get(p.id)
+          if (was !== undefined && p.lives < was && !sawHit) {
+            sawHit = true
+            await sleep(60)
+            say('a runner took a hit', JSON.stringify(now.players), await page.shot('4-hit.png'))
+          }
+          if (was !== undefined && was > 0 && !p.alive && !sawElimination) {
+            sawElimination = true
+            await sleep(60)
+            say('a runner was eliminated', JSON.stringify(now.players), await page.shot('5-eliminated.png'))
+          }
+          lastLives.set(p.id, p.lives)
+        }
+        if (now.over) { last = { ...s, over: true, winner: now.winner }; break }
+      }
+      await sleep(30)
+    }
+    await page.eval(jackalPlay({ mode: 'lock' }))
+    say('sniped', JSON.stringify({ fired, sawLaser, sawReload, sawHit, sawElimination, end: last && last.clock, over: last && last.over, winner: last && last.winner }))
+    await page.waitFor(`!!document.querySelector('[data-again], [data-podium]')`, 100000)
+    await sleep(400)
+    say('results', await page.shot('6-results.png'))
+    if (fired === 0) throw new Error('the Sniper never fired a shot')
+    if (!sawLaser) throw new Error('the laser never had a target')
+    if (!sawHit) throw new Error('the Sniper never landed a hit on a runner')
+    if (!sawReload && fired < 6) say('note', 'never saw a forced reload - fewer shots were needed than the magazine held')
   } else if (opt.steer && opt.game === 'chef-caricature') {
     const state = () =>
       page.eval(`(async () => { const rules = await import('/src/modules/35-chef-caricature/internal/rules.ts'); const g = ${gameState('chef-caricature')}; return { over: g.over, phase: rules.phase(g), turn: g.turn, drawer: g.players[rules.drawer(g)].id, mine: g.players[rules.drawer(g)].mine, outline: g.outline, scores: g.players.map((p) => p.score) } })()`)

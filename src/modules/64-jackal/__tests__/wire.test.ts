@@ -118,7 +118,10 @@ describe("the host disputes a claim it would not make itself", () => {
     const missed = claim(round, si, wide)!
     expect(missed.hit).toBe(-1)
     expect(runner.lives).toBe(2)
-    tick(round, GUN.cooldown + 0.01)
+    // `tick` clamps a single step to 0.25 s (a backgrounded tab cannot skip a
+    // reload), so waiting out the cooldown takes two of them.
+    tick(round, 0.25)
+    tick(round, GUN.cooldown - 0.25 + 0.01)
 
     // Straight down the lane, aimed correctly - a real hit, to show the true aim does connect.
     const dx = runner.x - sniper.x
@@ -126,7 +129,6 @@ describe("the host disputes a claim it would not make itself", () => {
     const yaw = Math.atan2(-dx, -dz)
     const pitch = Math.atan2(runner.y + BODY.height / 2 - (sniper.y + BODY.eye), Math.hypot(dx, dz))
     const said = decodeShot(relay(encodeShot(round.id, { x: sniper.x, z: sniper.z, yaw, pitch, victim: runner.id })))!
-    console.log('DEBUG said', said, 'sniper', sniper, 'canShoot?')
     const hit = claim(round, si, said)!
     expect(hit.hit).toBe(ri)
     expect(runner.lives).toBe(1)

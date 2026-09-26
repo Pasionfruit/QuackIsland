@@ -4,6 +4,7 @@ export const MINIMAP_COLOURS = ['#ff6b6b', '#ffd166', '#5eead4', '#60a5fa', '#c0
 export interface MinimapPlayer {
   id: string
   position: number
+  colour?: string
 }
 
 export interface MinimapDot {
@@ -74,7 +75,7 @@ export function minimapDots(players: readonly MinimapPlayer[], tileCount: number
     seen.set(tile, index + 1)
     return {
       id: player.id,
-      colour: playerColour(player.id),
+      colour: player.colour ?? playerColour(player.id),
       percent: routePercent(player.position, tileCount),
       lane: index - ((counts.get(tile) ?? 1) - 1) / 2,
     }

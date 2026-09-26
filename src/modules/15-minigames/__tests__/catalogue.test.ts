@@ -141,7 +141,7 @@ describe('the catalogue', () => {
   it('knows the built games are part built and nothing else has started', () => {
     // The honest statement of where the build has got to. Meant to be edited
     // the day the next game starts, which is the point of writing it down.
-    for (const id of ['zombie-tag', 'messy-maze', 'probable-stop', 'duck-hunt', 'pet-race', 'feeding-time', 'sprint-triathlon', 'punch-buggy', 'time-it', 'wack-attack', 'lady-luck', 'find-yourself', 'make-the-cut', 'hes-one-shot', 'wheres-midnight', 'let-him-cook', 'i-see-the-light', 'helping-dad', 'synchronize-steps', 'keyboard-warrior', 'sharing-is-caring', 'chef-caricature', 'musical-mayhem', 'ill-just-wait', 'whats-your-rpm', 'one-piece', 'i-just-work-here', 'highest-in-the-room', 'color-coded', 'binary-bs', 'youre-the-bomb', 'shanty-matrix', 'spidey-senses', 'needs-a-walmart', 'milf-fishing', 'perfect-game', 'breaking-the-ice', 'op-finder'] as const) {
+    for (const id of ['zombie-tag', 'messy-maze', 'probable-stop', 'duck-hunt', 'pet-race', 'feeding-time', 'sprint-triathlon', 'punch-buggy', 'time-it', 'wack-attack', 'lady-luck', 'find-yourself', 'make-the-cut', 'hes-one-shot', 'wheres-midnight', 'let-him-cook', 'i-see-the-light', 'helping-dad', 'synchronize-steps', 'keyboard-warrior', 'sharing-is-caring', 'chef-caricature', 'musical-mayhem', 'ill-just-wait', 'whats-your-rpm', 'one-piece', 'i-just-work-here', 'highest-in-the-room', 'color-coded', 'binary-bs', 'youre-the-bomb', 'shanty-matrix', 'spidey-senses', 'needs-a-walmart', 'milf-fishing', 'perfect-game', 'breaking-the-ice', 'op-finder', 'jackal'] as const) {
       const game = minigameById(id)
       expect(game.done).toEqual({ environment: true, controls: true, assets: false })
       expect(nextStep(game)).toBe('assets')
@@ -149,7 +149,7 @@ describe('the catalogue', () => {
 
     const started = MINIGAMES.filter((game) => stepsDone(game) > 0).map((game) => game.id)
     // In alphabetical order now, so compared as a set: which games have started, and no others.
-    expect([...started].sort()).toEqual(['zombie-tag', 'messy-maze', 'probable-stop', 'duck-hunt', 'pet-race', 'feeding-time', 'sprint-triathlon', 'punch-buggy', 'time-it', 'wack-attack', 'lady-luck', 'find-yourself', 'make-the-cut', 'hes-one-shot', 'wheres-midnight', 'let-him-cook', 'i-see-the-light', 'helping-dad', 'synchronize-steps', 'sharing-is-caring', 'keyboard-warrior', 'musical-mayhem', 'ill-just-wait', 'one-piece', 'perfect-game', 'chef-caricature', 'whats-your-rpm', 'i-just-work-here', 'highest-in-the-room', 'color-coded', 'binary-bs', 'youre-the-bomb', 'shanty-matrix', 'spidey-senses', 'needs-a-walmart', 'milf-fishing', 'breaking-the-ice', 'op-finder'].sort())
+    expect([...started].sort()).toEqual(['zombie-tag', 'messy-maze', 'probable-stop', 'duck-hunt', 'pet-race', 'feeding-time', 'sprint-triathlon', 'punch-buggy', 'time-it', 'wack-attack', 'lady-luck', 'find-yourself', 'make-the-cut', 'hes-one-shot', 'wheres-midnight', 'let-him-cook', 'i-see-the-light', 'helping-dad', 'synchronize-steps', 'sharing-is-caring', 'keyboard-warrior', 'musical-mayhem', 'ill-just-wait', 'one-piece', 'perfect-game', 'chef-caricature', 'whats-your-rpm', 'i-just-work-here', 'highest-in-the-room', 'color-coded', 'binary-bs', 'youre-the-bomb', 'shanty-matrix', 'spidey-senses', 'needs-a-walmart', 'milf-fishing', 'breaking-the-ice', 'op-finder', 'jackal'].sort())
     expect(progress().playable).toBe(0)
   })
 
