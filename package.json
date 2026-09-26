@@ -63,7 +63,10 @@
     "gate:volcano-pause": "node scripts/gate.mjs 63-volcano-pause",
     "brief:jackal": "node scripts/brief.mjs 64-jackal",
     "test:jackal": "vitest run src/modules/64-jackal",
-    "gate:jackal": "node scripts/gate.mjs 64-jackal"
+    "gate:jackal": "node scripts/gate.mjs 64-jackal",
+    "brief:big-backs-are-near": "node scripts/brief.mjs 65-big-backs-are-near",
+    "test:big-backs-are-near": "vitest run src/modules/65-big-backs-are-near",
+    "gate:big-backs-are-near": "node scripts/gate.mjs 65-big-backs-are-near"
   },
   "dependencies": {
     "@react-three/fiber": "^9.7.0",

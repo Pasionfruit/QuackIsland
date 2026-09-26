@@ -26,6 +26,7 @@ export {
   type BoardDieSides,
   type BoardDieSpec,
   type BoardLandingContext,
+  type BoardLandingDestination,
   type BoardLandingEffect,
   type BoardLandingEffectResolver,
   type BoardMove,

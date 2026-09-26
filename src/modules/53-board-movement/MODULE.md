@@ -31,8 +31,8 @@ local avatar movement to a compact browser interface. It deliberately stops at
 | `setBoardDiceProvider(provider)` | Future reward module seam; defaults to one base d6 |
 | `BOARD_LANDING_EFFECT` | Public bounds for downstream movement-effect definitions |
 | `boardLandingContext(snapshot)` | Describes the latest unresolved rolled landing, or `null` |
-| `applyBoardLandingEffect(snapshot, effect, action)` | Pure bounded movement effect after a rolled landing |
-| `validBoardLandingEffect(effect)` | Validates a named integer displacement from -12 through +12 tiles |
+| `applyBoardLandingEffect(snapshot, effect, action)` | Pure single- or multi-player effect after a rolled landing |
+| `validBoardLandingEffect(effect)` | Validates a bounded displacement or named absolute player destinations |
 | `setBoardLandingEffectResolver(resolver)` | Registers the host-side resolver used after visible landing; `null` restores no effect |
 | `acknowledgeBoardRound(session, round)` | Future minigame handoff that hides presentation without discarding positions |
 | `resumeBoardMovement(session, round)` | Host resumes the next round after the future minigame/reward phase |
@@ -119,13 +119,20 @@ adjustments are never synchronized, and they end as soon as the turn or
 movement changes. The active player also sees six compact labels that map each
 possible d6 value to its landing tile.
 
+The board panel stays compact at the bottom centre. It contains only the
+current controls, roll targets, camera hint, and a last-result sentence such
+as `Ada (moved 4)`. The detailed title and roster-position grid are omitted;
+the top-left board HUD owns turn order and active-turn status. **Collapse**
+reduces the panel to one handle without interrupting the board simulation.
+
 ## Landing-effect extension
 
 A downstream tile module may register one `BoardLandingEffectResolver`. The
 resolver runs only on the elected host and only after the rolled movement has
 visibly landed. It receives a read-only landing context and board snapshot and
-may return one named integer displacement from -12 through +12 tiles. Returning
-`null`, throwing, or returning malformed data leaves the board unchanged.
+may return one named displacement or a bounded set of absolute player
+destinations. Returning `null`, throwing, or returning malformed data leaves
+the board unchanged.
 
 The displacement is clamped to the existing track. It cannot chain: once a
 player's authoritative position differs from the rolled landing tile, that move

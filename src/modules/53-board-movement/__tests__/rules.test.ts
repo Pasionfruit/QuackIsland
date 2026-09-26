@@ -118,11 +118,28 @@ describe('board movement rules', () => {
     expect(boardPosition(winning, 'p1')).toBe(9)
   })
 
+  it('applies validated multi-player landing destinations in one authoritative revision', () => {
+    const state = applyBoardRoll(begin(['p1', 'p2', 'p3']), 'p1', base(3), 'roll:multi')
+    const next = applyBoardLandingEffect(state, {
+      id: 'swap',
+      label: 'Swap',
+      destinations: [
+        { playerId: 'p1', tileIndex: 9 },
+        { playerId: 'p2', tileIndex: 3 },
+        { playerId: 'p3', tileIndex: 1 },
+      ],
+    }, 'effect:multi')
+    expect(boardPosition(next, 'p1')).toBe(9)
+    expect(boardPosition(next, 'p2')).toBe(3)
+    expect(boardPosition(next, 'p3')).toBe(1)
+    expect(next.revision).toBe(state.revision + 1)
+  })
+
   it('rejects malformed, zero and over-limit landing effects', () => {
     const state = applyBoardRoll(begin(['p1', 'p2']), 'p1', base(3), 'roll:invalid')
     expect(applyBoardLandingEffect(state, { id: '', label: 'Bad', moveBy: 2 }, 'effect:bad')).toBe(state)
     expect(applyBoardLandingEffect(state, { id: 'zero', label: 'Zero', moveBy: 0 }, 'effect:zero')).toBe(state)
-    expect(applyBoardLandingEffect(state, { id: 'far', label: 'Far', moveBy: 13 }, 'effect:far')).toBe(state)
+    expect(applyBoardLandingEffect(state, { id: 'far', label: 'Far', moveBy: 120 }, 'effect:far')).toBe(state)
   })
 
   it('clamps to the final tile and ends immediately with a winner', () => {

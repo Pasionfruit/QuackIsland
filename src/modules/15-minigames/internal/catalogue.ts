@@ -3,7 +3,7 @@
  *
  * Forty-six slots: forty free-for-all - every game named so far is one, the
  * turn-taking ones included, and two of the free slots are too - and six
- * one-vs-all, all of them still free slots.
+ * one-vs-all, two of them named games and four still free slots.
  *
  * **They are numbered alphabetically by title**: the thirty-eight named games in
  * order of name, then the two free-for-all slots, so the first forty are all
@@ -864,8 +864,29 @@ const ENTRIES = [
     done: { environment: false, controls: false, assets: false },
   },
   {
-    id: 'jackal',
+    id: 'big-backs-are-near',
     number: 41,
+    title: 'Big Backs are Near',
+    kind: 'one-vs-all',
+    description: [
+      "One player becomes the near-sighted Hunter, dropped in the middle of a huge corn maze; everyone else is a Hider, scattered from a pen near one edge. The Hunter can't see far and must rely on footsteps and nearby movement to track anyone down - a Hider gives themselves away only by actually moving, and standing still is genuinely silent.",
+      'Hiders are much slower than the Hunter on foot, so the maze itself - not speed - is what keeps them alive: threading corn rows, doubling back, and going still the moment the chase gets close. The Hunter can sprint to cover ground fast, but sprinting drowns out every footstep, so covering ground and listening for one are never both on at once.',
+      'The Hunter wins the moment every Hider is caught. The Hiders win as a team the instant the clock runs out with even one of them still free.',
+    ],
+    controls: [
+      { input: 'Hunter: WASD', does: 'Move' },
+      { input: 'Hunter: Mouse', does: 'Camera' },
+      { input: 'Hunter: Left Shift', does: 'Sprint (mutes hearing)' },
+      { input: 'Hider: WASD', does: 'Move' },
+      { input: 'Hider: Mouse', does: 'Camera' },
+    ],
+    reserved: false,
+    // Built: see `65-big-backs-are-near`.
+    done: { environment: true, controls: true, assets: false },
+  },
+  {
+    id: 'jackal',
+    number: 42,
     title: 'Jackal',
     kind: 'one-vs-all',
     description: [
@@ -885,16 +906,6 @@ const ENTRIES = [
     reserved: false,
     // Built: see `64-jackal`.
     done: { environment: true, controls: true, assets: false },
-  },
-  {
-    id: 'reserved-42',
-    number: 42,
-    title: 'Free slot',
-    kind: 'one-vs-all',
-    description: [],
-    controls: [],
-    reserved: true,
-    done: { environment: false, controls: false, assets: false },
   },
   {
     id: 'reserved-43',

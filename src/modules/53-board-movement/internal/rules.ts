@@ -11,7 +11,7 @@ export const BOARD_MOVEMENT = {
 } as const
 
 export const BOARD_LANDING_EFFECT = {
-  maxShift: 12,
+  maxShift: 119,
   maxIdLength: 48,
   maxLabelLength: 64,
 } as const
@@ -61,7 +61,14 @@ export interface BoardLandingContext {
 export interface BoardLandingEffect {
   id: string
   label: string
-  moveBy: number
+  moveBy?: number
+  destinations?: readonly BoardLandingDestination[]
+}
+
+/** Absolute board destinations for a multi-player landing effect. */
+export interface BoardLandingDestination {
+  playerId: string
+  tileIndex: number
 }
 
 export type BoardLandingEffectResolver = (
@@ -181,6 +188,28 @@ export function boardLandingContext(snapshot: Readonly<BoardMovementSnapshot>): 
 export function validBoardLandingEffect(effect: unknown): effect is BoardLandingEffect {
   if (!effect || typeof effect !== 'object') return false
   const candidate = effect as Record<string, unknown>
+  const moveBy = candidate.moveBy
+  const destinations = candidate.destinations
+  const validMove =
+    Number.isInteger(moveBy) &&
+    moveBy !== 0 &&
+    Math.abs(moveBy as number) <= BOARD_LANDING_EFFECT.maxShift
+  const validDestinations =
+    Array.isArray(destinations) &&
+    destinations.length > 0 &&
+    destinations.length <= BOARD_MOVEMENT.maxPlayers &&
+    destinations.every((destination) => {
+      if (!destination || typeof destination !== 'object') return false
+      const target = destination as Record<string, unknown>
+      return (
+        typeof target.playerId === 'string' &&
+        target.playerId.length > 0 &&
+        target.playerId.length <= 80 &&
+        Number.isInteger(target.tileIndex) &&
+        (target.tileIndex as number) >= 0 &&
+        (target.tileIndex as number) <= 1_000
+      )
+    })
   return (
     typeof candidate.id === 'string' &&
     candidate.id.length > 0 &&
@@ -188,9 +217,8 @@ export function validBoardLandingEffect(effect: unknown): effect is BoardLanding
     typeof candidate.label === 'string' &&
     candidate.label.length > 0 &&
     candidate.label.length <= BOARD_LANDING_EFFECT.maxLabelLength &&
-    Number.isInteger(candidate.moveBy) &&
-    (candidate.moveBy as number) !== 0 &&
-    Math.abs(candidate.moveBy as number) <= BOARD_LANDING_EFFECT.maxShift
+    (validMove || validDestinations) &&
+    !(validMove && validDestinations)
   )
 }
 
@@ -202,19 +230,33 @@ export function applyBoardLandingEffect(
   const context = boardLandingContext(snapshot)
   if (!context || !validBoardLandingEffect(effect)) return snapshot
   if (!actionId || actionId.length > 80 || snapshot.appliedActionIds.includes(actionId)) return snapshot
-  const destination = Math.max(0, Math.min(snapshot.tileCount - 1, context.landingTile + effect.moveBy))
-  if (destination === context.landingTile) return snapshot
-  const positions = snapshot.positions.map((position) =>
-    position.playerId === context.playerId ? { ...position, tileIndex: destination } : position,
-  )
-  const won = destination === snapshot.tileCount - 1
+  const destinationByPlayer = new Map<string, number>()
+  if (effect.destinations) {
+    for (const destination of effect.destinations) {
+      if (destinationByPlayer.has(destination.playerId)) return snapshot
+      if (!snapshot.positions.some((position) => position.playerId === destination.playerId)) return snapshot
+      if (destination.tileIndex < 0 || destination.tileIndex >= snapshot.tileCount) return snapshot
+      destinationByPlayer.set(destination.playerId, destination.tileIndex)
+    }
+  } else {
+    const destination = Math.max(0, Math.min(snapshot.tileCount - 1, context.landingTile + (effect.moveBy ?? 0)))
+    destinationByPlayer.set(context.playerId, destination)
+  }
+  if (!destinationByPlayer.has(context.playerId)) return snapshot
+  const positions = snapshot.positions.map((position) => ({
+    ...position,
+    tileIndex: destinationByPlayer.get(position.playerId) ?? position.tileIndex,
+  }))
+  if (positions.every((position, index) => position.tileIndex === snapshot.positions[index].tileIndex)) return snapshot
+  const winner = positions.find((position) => position.tileIndex === snapshot.tileCount - 1)
+  const won = winner !== undefined
   return {
     ...snapshot,
     revision: snapshot.revision + 1,
     phase: won ? 'won' : snapshot.phase,
     activeTurnIndex: won ? null : snapshot.activeTurnIndex,
     positions,
-    winnerId: won ? context.playerId : snapshot.winnerId,
+    winnerId: won ? winner.playerId : snapshot.winnerId,
     appliedActionIds: [...snapshot.appliedActionIds, actionId].slice(-BOARD_MOVEMENT.maxActionHistory),
   }
 }

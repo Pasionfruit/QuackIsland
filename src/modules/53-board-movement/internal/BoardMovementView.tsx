@@ -274,6 +274,7 @@ function BoardMovementOverlay(): React.JSX.Element | null {
   const visualSettled = useBoardMovementVisualSettled()
   const [spinBoost, setSpinBoost] = useState(0)
   const [rollSubmitted, setRollSubmitted] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
   const spinTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const peerKey = useMemo(() => peers.map((peer) => peer.id).sort().join(','), [peers])
   const active = mode === 'island' && party.phase === 'playing' && order.phase === 'complete'
@@ -362,8 +363,12 @@ function BoardMovementOverlay(): React.JSX.Element | null {
 
   return (
     <div className="board-movement-shell" role="dialog" aria-label="Volcano board movement">
-      <section className="board-movement-panel">
-        <header>
+      <section className={`board-movement-panel${collapsed ? ' is-collapsed' : ''}`}>
+        <button type="button" className="board-movement-collapse" aria-expanded={!collapsed} onClick={() => setCollapsed((was) => !was)}>
+          {collapsed ? 'Show board controls' : 'Collapse'}
+        </button>
+        {!collapsed && <>
+        <header hidden>
           <div>
             <p>Volcano Island · Round {snapshot.round}</p>
             <h2>
@@ -385,7 +390,7 @@ function BoardMovementOverlay(): React.JSX.Element | null {
           <p className="board-movement-error">This board was already locked before you joined.</p>
         )}
 
-        <ol className="board-movement-positions" aria-label="Board positions">
+        <ol hidden className="board-movement-positions" aria-label="Board positions">
           {snapshot.turnOrder.map((playerId, index) => {
             const player = snapshot.players.find((entry) => entry.id === playerId)
             const tile = boardPosition(snapshot, playerId) ?? 0
@@ -402,13 +407,7 @@ function BoardMovementOverlay(): React.JSX.Element | null {
 
         {lastMove && (
           <div className="board-movement-last" aria-live="polite">
-            <span>{snapshot.players.find((player) => player.id === lastMove.playerId)?.name ?? lastMove.playerId}</span>
-            <div>
-              {lastMove.dice.map((die, index) => (
-                <b key={`${lastMove.round}:${lastMove.playerId}:${index}`} data-kind={die.kind}>{die.value}</b>
-              ))}
-            </div>
-            <span>moved {lastMove.total}</span>
+            <span><strong>{snapshot.players.find((player) => player.id === lastMove.playerId)?.name ?? lastMove.playerId}</strong> (moved {lastMove.total})</span>
           </div>
         )}
 
@@ -460,6 +459,7 @@ function BoardMovementOverlay(): React.JSX.Element | null {
             The game stops immediately at tile {snapshot.tileCount}; no further turns are accepted.
           </p>
         )}
+        </>}
       </section>
     </div>
   )

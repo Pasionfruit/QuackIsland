@@ -8,7 +8,7 @@ import {
   useBoardMovement,
 } from '../../53-board-movement'
 import {
-  VOLCANO_TILE_ACTIONS,
+  VOLCANO_TILE_KINDS,
   buildVolcanoTileActions,
   resolveVolcanoTileAction,
   type VolcanoTileAction,
@@ -33,16 +33,14 @@ function ActionInstances({ actions, kind }: {
     mesh.current.instanceMatrix.needsUpdate = true
   }, [matching])
   if (matching.length === 0) return null
-  const colour = kind === 'lava_lift'
-    ? VOLCANO_TILE_ACTIONS.lavaLift.colour
-    : VOLCANO_TILE_ACTIONS.ashSlide.colour
+  const colour = matching[0].colour
   return (
     <instancedMesh ref={mesh} args={[undefined, undefined, matching.length]} frustumCulled={false}>
       <cylinderGeometry args={[0.38, 0.38, 0.07, 18]} />
       <meshStandardMaterial
         color={colour}
         emissive={colour}
-        emissiveIntensity={kind === 'lava_lift' ? 0.48 : 0.18}
+        emissiveIntensity={kind === 'regular' ? 0.08 : 0.42}
         roughness={0.64}
         metalness={0.08}
       />
@@ -68,8 +66,7 @@ export function VolcanoTileActions(): React.JSX.Element | null {
   if (!active || actions.length === 0) return null
   return (
     <group name="volcano-tile-actions">
-      <ActionInstances actions={actions} kind="lava_lift" />
-      <ActionInstances actions={actions} kind="ash_slide" />
+      {VOLCANO_TILE_KINDS.map((kind) => <ActionInstances actions={actions} kind={kind} key={kind} />)}
     </group>
   )
 }
