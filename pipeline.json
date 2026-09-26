@@ -5755,7 +5755,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-25T23:20:44.183Z"
+          "at": "2026-09-26T00:10:48.021Z"
         },
         "human": {
           "status": "pending",
@@ -5782,7 +5782,7 @@
       "id": "62-volcano-minimap",
       "phase": "P8",
       "title": "Volcano minimap: a compact route line with stable player-colour position dots",
-      "status": "in_progress",
+      "status": "ready_for_review",
       "dependsOn": [
         "00-core",
         "10-party",
@@ -5793,7 +5793,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/62-volcano-minimap/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -5815,8 +5815,8 @@
       ],
       "gate": {
         "machine": {
-          "status": "pending",
-          "at": null
+          "status": "green",
+          "at": "2026-09-26T00:06:32.866Z"
         },
         "human": {
           "status": "pending",

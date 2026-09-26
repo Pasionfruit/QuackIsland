@@ -335,7 +335,7 @@ function CountPanel({
   onGuess: (g: Guess) => void
 }) {
   return (
-    <Panel title="How many do you see?" locked={locked}>
+    <Panel title={`How many ${icon(challenge.target)} do you see?`} locked={locked}>
       <div style={countField} data-count-target={icon(challenge.target)}>
         {challenge.field.map((thing, i) => (
           <span key={i} style={countIcon}>{icon(thing)}</span>

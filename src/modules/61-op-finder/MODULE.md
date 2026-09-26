@@ -111,9 +111,11 @@ they cleared - ties share a place.
   caused.
 
 **The roster is the lobby**, host first, up to eight - eight colours. Alone,
-three stand-ins fill in: each "solves" its current stage after a seeded
-pause (1.4 to 4.2 seconds), sometimes getting its first attempt wrong first
-and paying the same lockout a person would - seeded per bot per stage, so
+three stand-ins fill in: they attempt nothing for the first four seconds
+(`BOT_OPENING`) - long enough to read what the game is even asking, the
+first time - then each "solves" its current stage after a seeded pause
+(3.5 to 10 seconds), sometimes getting its first attempt wrong first and
+paying the same lockout a person would - seeded per bot per stage, so
 the same round plays out the same way every time it is replayed with the
 same seed.
 
