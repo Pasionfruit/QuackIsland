@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { BOARD_TILES, boardPosition, useBoardMovement, type BoardDieRoll } from '../../53-board-movement'
+import { BOARD_TILES, activeBoardPlayer, boardPosition, useBoardMovement, type BoardDieRoll } from '../../53-board-movement'
 import { usePlayerColour } from '../../02-player'
 import { useNet, usePeers } from '../../09-net'
 import { useParty } from '../../10-party'
@@ -27,6 +27,16 @@ export function VolcanoMinimap() {
     })
     return minimapDots(players, BOARD_TILES.length)
   }, [board, localColour, net.id, peers])
+  const turnOrder = useMemo(() => {
+    const colourById = new Map(dots.map((dot) => [dot.id, dot.colour]))
+    return board.turnOrder.map((id, index) => ({
+      id,
+      place: index + 1,
+      name: board.players.find((player) => player.id === id)?.name ?? id,
+      colour: colourById.get(id) ?? '#dce8ef',
+    }))
+  }, [board.players, board.turnOrder, dots])
+  const activeId = activeBoardPlayer(board)
   const visible = party.phase === 'playing' && mode === 'island' && dots.length > 0
 
   useEffect(() => {
@@ -45,33 +55,53 @@ export function VolcanoMinimap() {
 
   useEffect(() => {
     const lastMove = board.moves[board.moves.length - 1] ?? null
-    root.current?.render(<MinimapOverlay dots={dots} dice={lastMove?.dice ?? []} rollKey={lastMove ? `${lastMove.playerId}:${lastMove.round}` : ''} visible={visible} />)
-  }, [board.moves, dots, visible])
+    root.current?.render(<MinimapOverlay activeId={activeId} dice={lastMove?.dice ?? []} dots={dots} rollKey={lastMove ? `${lastMove.playerId}:${lastMove.round}` : ''} round={board.round} turnOrder={turnOrder} visible={visible} />)
+  }, [activeId, board.moves, board.round, dots, turnOrder, visible])
 
   return null
 }
 
-function MinimapOverlay({ dots, dice, rollKey, visible }: { dots: MinimapDot[]; dice: readonly BoardDieRoll[]; rollKey: string; visible: boolean }) {
+interface TurnEntry {
+  id: string
+  place: number
+  name: string
+  colour: string
+}
+
+function MinimapOverlay({ activeId, dots, dice, rollKey, round, turnOrder, visible }: { activeId: string | null; dots: MinimapDot[]; dice: readonly BoardDieRoll[]; rollKey: string; round: number; turnOrder: readonly TurnEntry[]; visible: boolean }) {
   const [collapsed, setCollapsed] = useState(false)
   if (!visible) return null
   const route = spiralRoute(BOARD_TILES.length)
+  const active = turnOrder.find((player) => player.id === activeId)
   return (
-    <aside aria-label="Volcano Island player positions" style={styles.frame}>
-      <style>{keyframes}</style>
-      <button type="button" aria-expanded={!collapsed} aria-label={`${collapsed ? 'Show' : 'Hide'} summit route`} onClick={() => setCollapsed((was) => !was)} style={styles.caption}>
-        <span>Summit route</span><small>{collapsed ? 'Show' : 'Hide'}</small>
-      </button>
-      {!collapsed && <div style={styles.route}>
-          <svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none" style={styles.svg}>
-            <polyline points={route.map((point) => `${point.x},${point.y}`).join(' ')} fill="none" stroke="#e4b66d" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3.4" />
-            <polyline points={route.map((point) => `${point.x},${point.y}`).join(' ')} fill="none" stroke="rgba(75,40,31,0.68)" strokeDasharray="1.5 3" strokeLinecap="round" strokeWidth="0.8" />
-          </svg>
-          <span aria-hidden="true" style={styles.start}>START</span>
-          <span aria-hidden="true" style={styles.summit}>SUMMIT</span>
-          {dots.map((dot) => <MapDot dot={dot} key={dot.id} />)}
-        </div>}
-      {dice.length > 0 ? <DiceRoll dice={dice} rollKey={rollKey} /> : null}
-    </aside>
+    <>
+      <aside aria-label="Volcano Island turn order" style={styles.turnFrame}>
+        <span style={styles.turnEyebrow}>Round {round} · turn order</span>
+        <strong style={styles.turnName}>{active ? `${active.name}'s turn` : 'Round complete'}</strong>
+        <ol style={styles.turnOrder}>
+          {turnOrder.map((player) => <li key={player.id} style={{ ...styles.turnPlayer, ...(player.id === activeId ? styles.turnPlayerActive : {}) }}>
+            <i aria-hidden="true" style={{ ...styles.turnDot, background: player.colour }} />
+            <b>{player.place}</b><span>{player.name}</span>
+          </li>)}
+        </ol>
+      </aside>
+      <aside aria-label="Volcano Island player positions" style={styles.frame}>
+        <style>{keyframes}</style>
+        <button type="button" aria-expanded={!collapsed} aria-label={`${collapsed ? 'Show' : 'Hide'} summit route`} onClick={() => setCollapsed((was) => !was)} style={styles.caption}>
+          <span>Summit route</span><small>{collapsed ? 'Show' : 'Hide'}</small>
+        </button>
+        {!collapsed && <div style={styles.route}>
+            <svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none" style={styles.svg}>
+              <polyline points={route.map((point) => `${point.x},${point.y}`).join(' ')} fill="none" stroke="#e4b66d" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3.4" />
+              <polyline points={route.map((point) => `${point.x},${point.y}`).join(' ')} fill="none" stroke="rgba(75,40,31,0.68)" strokeDasharray="1.5 3" strokeLinecap="round" strokeWidth="0.8" />
+            </svg>
+            <span aria-hidden="true" style={styles.start}>START</span>
+            <span aria-hidden="true" style={styles.summit}>SUMMIT</span>
+            {dots.map((dot) => <MapDot dot={dot} key={dot.id} />)}
+          </div>}
+        {dice.length > 0 ? <DiceRoll dice={dice} rollKey={rollKey} /> : null}
+      </aside>
+    </>
   )
 }
 
@@ -121,6 +151,19 @@ const styles: Record<string, React.CSSProperties> = {
     boxShadow: '0 8px 24px rgba(0, 0, 0, 0.28)', pointerEvents: 'none', color: '#dce8ef',
     fontFamily: 'system-ui, sans-serif',
   },
+  turnFrame: {
+    position: 'fixed', left: 18, top: 18, zIndex: 12,
+    width: 'min(220px, calc(100vw - 36px))', padding: '10px 12px 11px', borderRadius: 16,
+    background: 'rgba(10, 16, 25, 0.78)', border: '1px solid rgba(255, 255, 255, 0.18)',
+    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.28)', pointerEvents: 'none', color: '#dce8ef',
+    fontFamily: 'system-ui, sans-serif',
+  },
+  turnEyebrow: { display: 'block', color: '#aebfca', fontSize: 9, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase' },
+  turnName: { display: 'block', marginTop: 3, color: '#fff3c4', fontSize: 14 },
+  turnOrder: { display: 'grid', gap: 3, margin: '8px 0 0', padding: 0, listStyle: 'none' },
+  turnPlayer: { display: 'grid', gridTemplateColumns: '10px 14px 1fr', alignItems: 'center', gap: 5, padding: '3px 5px', borderRadius: 6, color: '#bdcbd4', fontSize: 10 },
+  turnPlayerActive: { color: '#fff9df', background: 'rgba(255, 190, 93, 0.16)' },
+  turnDot: { display: 'block', width: 8, height: 8, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.75)' },
   caption: { display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, padding: 0, border: 0, background: 'transparent', color: 'inherit', cursor: 'pointer', fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', opacity: 0.72, pointerEvents: 'auto' },
   route: { position: 'relative', height: 154, borderRadius: 12, background: 'radial-gradient(circle at 52% 45%, rgba(223,101,58,0.42), rgba(29,59,69,0.55) 46%, rgba(5,14,22,0.35) 76%)', overflow: 'hidden' },
   svg: { position: 'absolute', inset: 0, width: '100%', height: '100%' },

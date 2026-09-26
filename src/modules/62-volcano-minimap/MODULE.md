@@ -18,6 +18,8 @@ palette is only a fallback while that colour is unavailable.
   roster. It vanishes when the game ends.
 - The map sits in the top-right corner. Its path samples the public board
   positions, so it follows the game's actual spiral to the summit.
+- A matching top-left strip shows the locked turn order and highlights the
+  player whose turn is active, using the same player colours as the map dots.
 - Tile zero maps to the route start and the final tile maps to the summit.
   Out-of-range values are defensively clamped.
 - Players on one tile are fanned above and below the route while every dot

@@ -645,8 +645,12 @@ export function jackalPlay({ mode = 'play' } = {}) {
       const wantPitch = Math.atan2(target.y + rules.BODY.height / 2 - eye.y, best)
       state.target = target.id
       const turn = Math.max(-0.35, Math.min(0.35, rules.wrapAngle(wantYaw - me.yaw)))
-      const mx = Math.round(-turn / screen.SENSITIVITY)
-      const my = Math.round((me.pitch - wantPitch) / screen.SENSITIVITY)
+      // The Sniper turns at their own, slider-adjustable rate, not the shared
+      // constant - read the slider's own value rather than assume the default.
+      const sensEl = document.querySelector('#jackal-sensitivity')
+      const sens = sensEl ? Number.parseFloat(sensEl.value) : screen.SENSITIVITY
+      const mx = Math.round(-turn / sens)
+      const my = Math.round((me.pitch - wantPitch) / sens)
       if (mx || my) document.dispatchEvent(new MouseEvent('mousemove', { movementX: mx, movementY: my, bubbles: true }))
       const board = document.querySelector('[data-board]')
       // Never waste a bullet on somebody still invulnerable from the last hit -

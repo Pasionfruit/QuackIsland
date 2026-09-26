@@ -112,6 +112,10 @@ map rank 1 to a golden d6, rank 2 to a silver d4, rank 3 to a bronze d2, give
 every player their base d6, install the board dice provider, and resume the
 preserved board round.
 
+The final-result strip sorts placements by rank and presents them from left to
+right, beginning with first place. It remains one horizontal sequence on a
+narrow screen, where it can scroll without reordering the placements.
+
 ## Render and server footprint
 
 The module adds no three.js draw calls or triangles. Its UI is a small DOM

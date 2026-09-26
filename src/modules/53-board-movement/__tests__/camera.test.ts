@@ -91,6 +91,6 @@ describe('board camera', () => {
   })
 
   it('uses a substantial pullback distance while a dice move is in flight', () => {
-    expect(BOARD_CAMERA.rollingDistance).toBeGreaterThan(BOARD_CAMERA.distance * 2)
+    expect(BOARD_CAMERA.rollingDistance).toBeGreaterThan(BOARD_CAMERA.distance * 3)
   })
 })

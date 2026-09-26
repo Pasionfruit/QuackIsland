@@ -213,13 +213,13 @@ testing, not because anybody else needs them.
 | `createRound`, `resolveSniper`, `Round`, `Player`, `Role`, `Entrant` | A round at its start, and who the Sniper is. All pure. |
 | `look`, `walkRunner`, `moveSniper`, `toggleScope`, `aimDirection`, `eyeOf`, `wrapAngle` | Moving and looking, per role. All pure. |
 | `laserOf`, `trace`, `bodyHit` | The beam, and what it meets. All pure. |
-| `fire`, `claim`, `cooldownLeft`, `canShoot`, `reloading` | The gun, and a guest Sniper's shot checked by the host. All pure. |
+| `fire`, `claim`, `cooldownLeft`, `canShoot`, `reloading`, `magazineSize` | The gun, and a guest Sniper's shot checked by the host. All pure. |
 | `report`, `tick`, `judgeEnd`, `stepRound`, `canAct`, `isStanding`, `leave`, `sniperOf`, `runnersOf`, `summarize` | A guest's walk checked by the host; the clock; the end; who placed how. |
 | `BOT`, `botSteer` | The stand-ins. |
 | `MAX_PLAYERS`, `ME`, `SOLO_PLAYERS`, `gameRoster`, `myId`, `newRound`, `nextSeed`, `waitingRound`, `RoundSetup` | Putting a round together from the lobby. |
 | `encodeSnapshot`, `decodeSnapshot`, `applySnapshot`, `encodeMove`, `decodeMove`, `encodeShot`, `decodeShot`, `SNAPSHOT_TAG`, `MOVE_TAG`, `SHOT_TAG`, `Snapshot`, `WirePlayer`, `MoveOut` | The wire. Decoding refuses a message whole rather than half-reading it. |
 | `JackalScene`, `PALETTE`, `PITCH`, `LookRef`, `HIT_FLASH` | The 3D view. |
-| `JackalScreen`, `SENSITIVITY` | The panel `15-minigames` draws, and the mouse's radians a pixel. |
+| `JackalScreen`, `SENSITIVITY` | The panel `15-minigames` draws, and a Runner's radians a pixel - the Sniper's own is lower by default and adjustable from a slider on their own screen, not exported: nothing outside the panel needs it. |
 
 ## Invariants you may rely on
 
@@ -288,9 +288,10 @@ testing, not because anybody else needs them.
   Sniper cannot presently see anyway, or past one that already is.
 - **Pointer lock cannot be tested headless.** The run-localrot skill stands
   in for the lock itself; everything after it is the real code path.
-- **The Sniper's own reticle changes shape when scoped, but nothing narrows
-  the mouse's own sensitivity** - scoping in is a movement and field-of-view
-  trade-off only, not a finer aim.
+- **Scoping in narrows the reticle and the FOV, and cuts movement, but does
+  not on its own change the mouse's sensitivity** - the Sniper's own slider
+  (bottom-right of their screen, remembered per browser) sets one sensitivity
+  used both scoped and unscoped; it does not scale automatically with FOV.
 
 ## How to review
 

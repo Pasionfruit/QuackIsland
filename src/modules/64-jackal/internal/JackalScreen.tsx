@@ -32,8 +32,39 @@ import {
 import { myId, newRound, waitingRound } from './setup'
 import { useJackalNet } from './useJackalNet'
 
-/** Radians turned per pixel of mouse movement. */
+/** Radians turned per pixel of mouse movement - Runners only; the Sniper has their own, adjustable. */
 export const SENSITIVITY = 0.0024
+
+/**
+ * The Sniper's own look sensitivity: lower by default than a Runner's, since
+ * a small twitch of the wrist reads huge at range, and adjustable from a
+ * slider in the bottom-right of their own screen (this role only - a Runner
+ * has no such need, wheeling a whole body around instead of a hair-fine
+ * aim). Remembered per browser, not synced - purely how one screen turns its
+ * own mouse into its own look, nothing the round or the wire needs to agree on.
+ */
+export const SNIPER_SENSITIVITY = { min: 0.0004, max: 0.0024, default: 0.0011 } as const
+const SENSITIVITY_KEY = 'jackal:sniper-sensitivity'
+
+const clampSensitivity = (v: number) => Math.max(SNIPER_SENSITIVITY.min, Math.min(SNIPER_SENSITIVITY.max, v))
+
+function readStoredSensitivity(): number {
+  try {
+    const raw = window.localStorage.getItem(SENSITIVITY_KEY)
+    const parsed = raw === null ? NaN : Number.parseFloat(raw)
+    return Number.isFinite(parsed) ? clampSensitivity(parsed) : SNIPER_SENSITIVITY.default
+  } catch {
+    return SNIPER_SENSITIVITY.default
+  }
+}
+
+function storeSensitivity(value: number): void {
+  try {
+    window.localStorage.setItem(SENSITIVITY_KEY, String(value))
+  } catch {
+    // Not remembering it is not worth breaking anything for.
+  }
+}
 
 const LOOK = {
   ink: '#1b1e24',
@@ -93,6 +124,9 @@ export function JackalScreen({ run }: { run: MinigameRun }) {
   const [lockRefused, setLockRefused] = useState(false)
   const refused = useRef(false)
   const [hitAt, setHitAt] = useState(-Infinity)
+  const [sniperSensitivity, setSniperSensitivity] = useState(readStoredSensitivity)
+  const sensitivity = useRef(sniperSensitivity)
+  sensitivity.current = sniperSensitivity
 
   useJackalSounds(round)
 
@@ -154,8 +188,9 @@ export function JackalScreen({ run }: { run: MinigameRun }) {
       const you = live.current.players.find((p) => p.mine)
       const sniper = you?.role === 'sniper'
       const [lo, hi] = sniper ? [-PITCH_LIMIT, PITCH_LIMIT] : [PITCH.min, PITCH.max]
-      look.current.yaw -= e.movementX * SENSITIVITY
-      look.current.pitch = Math.max(lo, Math.min(hi, look.current.pitch + (sniper ? -1 : 1) * e.movementY * SENSITIVITY))
+      const sens = sniper ? sensitivity.current : SENSITIVITY
+      look.current.yaw -= e.movementX * sens
+      look.current.pitch = Math.max(lo, Math.min(hi, look.current.pitch + (sniper ? -1 : 1) * e.movementY * sens))
     }
     const onLockChange = () => setLocked(isLocked())
     const onLockError = () => {
@@ -270,7 +305,16 @@ export function JackalScreen({ run }: { run: MinigameRun }) {
         {mine && mine.role === 'runner' && round.elapsed < mine.invulnerableUntil && !round.over ? <div style={invulnGlow} /> : null}
 
         {ready && mine && !round.over && iAmSniper ? (
-          <SniperHud scoped={mine.scoped} cooling={cooling} bullets={mine.bullets} reloading={isReloading} runnersLeft={standing} sinceHit={sinceHit} />
+          <>
+            <SniperHud scoped={mine.scoped} cooling={cooling} bullets={mine.bullets} reloading={isReloading} runnersLeft={standing} sinceHit={sinceHit} />
+            <SensitivitySlider
+              value={sniperSensitivity}
+              onChange={(v) => {
+                setSniperSensitivity(v)
+                storeSensitivity(v)
+              }}
+            />
+          </>
         ) : null}
 
         {ready && mine && !round.over && !iAmSniper ? <RunnerHud round={round} mine={mine} /> : null}
@@ -330,6 +374,33 @@ function RunnerHud({ round, mine }: { round: Round; mine: Round['players'][numbe
         ))}
       </div>
       {hint ? <div style={coverHint}>{hint}</div> : null}
+    </div>
+  )
+}
+
+/**
+ * The Sniper's own aim-sensitivity slider, bottom-right of the board - the
+ * one setting this role needs and a Runner does not. `stopPropagation` on
+ * every pointer event keeps dragging the thumb from also firing a shot or
+ * toggling scope on the board underneath it.
+ */
+function SensitivitySlider({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation()
+  return (
+    <div style={sensWrap} onPointerDown={stop} onPointerUp={stop} onContextMenu={stop} data-sniper-sensitivity>
+      <label htmlFor="jackal-sensitivity" style={sensLabel}>
+        sensitivity
+      </label>
+      <input
+        id="jackal-sensitivity"
+        type="range"
+        min={SNIPER_SENSITIVITY.min}
+        max={SNIPER_SENSITIVITY.max}
+        step={0.0001}
+        value={value}
+        onChange={(e) => onChange(clampSensitivity(Number.parseFloat(e.target.value)))}
+        style={sensInput}
+      />
     </div>
   )
 }
@@ -482,6 +553,23 @@ const runnerHudWrap: React.CSSProperties = { position: 'absolute', left: 14, bot
 const livesRow: React.CSSProperties = { display: 'flex', gap: 4 }
 
 const heart: React.CSSProperties = { fontSize: 22, color: LOOK.danger, textShadow: '0 1px 2px rgba(0,0,0,0.4)' }
+
+const sensWrap: React.CSSProperties = {
+  position: 'absolute',
+  right: 14,
+  bottom: 14,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 4,
+  padding: '8px 12px',
+  borderRadius: 12,
+  background: 'rgba(20,16,28,0.65)',
+  pointerEvents: 'auto',
+}
+
+const sensLabel: React.CSSProperties = { font: `600 11px/1.4 ${FONT}`, color: '#fff', letterSpacing: 0.4 }
+
+const sensInput: React.CSSProperties = { width: 140, accentColor: LOOK.sun, cursor: 'pointer' }
 
 const coverHint: React.CSSProperties = {
   padding: '3px 10px',

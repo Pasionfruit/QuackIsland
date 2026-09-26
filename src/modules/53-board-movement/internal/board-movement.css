@@ -188,6 +188,63 @@
   color: #cbbdc1;
 }
 
+.board-movement-roll-targets {
+  display: grid;
+  gap: 7px;
+  margin-top: 15px;
+  text-align: center;
+}
+
+.board-movement-roll-targets > span {
+  color: #cbbdc1;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.board-movement-roll-targets > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.board-movement-roll-targets b {
+  display: grid;
+  min-width: 43px;
+  gap: 1px;
+  padding: 5px 6px;
+  border: 1px solid rgba(255, 183, 92, 0.26);
+  border-radius: 8px;
+  background: rgba(255, 183, 92, 0.07);
+}
+
+.board-movement-roll-targets em {
+  color: #ffd17e;
+  font-size: 0.92rem;
+  font-style: normal;
+}
+
+.board-movement-roll-targets small {
+  color: #cbbdc1;
+  font-size: 0.57rem;
+  white-space: nowrap;
+}
+
+.board-movement-camera-hint {
+  display: grid;
+  gap: 2px;
+  margin-top: 15px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 190, 109, 0.23);
+  border-radius: 12px;
+  background: rgba(255, 190, 109, 0.06);
+}
+
+.board-movement-camera-hint strong { font-size: 0.78rem; }
+.board-movement-camera-hint small { color: #cbbdc1; font-size: 0.67rem; }
+
 .board-movement-message,
 .board-movement-error {
   margin: 16px 0 0;

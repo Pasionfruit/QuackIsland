@@ -1,4 +1,5 @@
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react'
+import { useThree } from '@react-three/fiber'
 import { createRoot } from 'react-dom/client'
 import { Vector3 } from 'three'
 import { PRIORITY, getCameraMode, setCameraMode, useGameFrame } from '../../00-core'
@@ -15,7 +16,7 @@ import {
 } from './camera'
 import { BOARD_MOTION, boardDieSpinMs } from './motion'
 import { boardPointAt, sharedTileOffset } from './position'
-import { activeBoardPlayer, boardPosition } from './rules'
+import { BOARD_MOVEMENT, activeBoardPlayer, boardPosition } from './rules'
 import {
   getBoardMovement,
   isBoardMovementVisualSettled,
@@ -43,7 +44,51 @@ interface CameraAnimationState {
   position: number
 }
 
+interface ManualBoardCamera {
+  enabled: boolean
+  ownerId: string | null
+  distance: number
+  panX: number
+  panZ: number
+  forwardX: number
+  forwardZ: number
+}
+
+const manualBoardCamera: ManualBoardCamera = {
+  enabled: false,
+  ownerId: null,
+  distance: BOARD_CAMERA.distance,
+  panX: 0,
+  panZ: 0,
+  forwardX: 0,
+  forwardZ: -1,
+}
+
+function resetManualBoardCamera(): void {
+  manualBoardCamera.enabled = false
+  manualBoardCamera.ownerId = null
+  manualBoardCamera.distance = BOARD_CAMERA.distance
+  manualBoardCamera.panX = 0
+  manualBoardCamera.panZ = 0
+}
+
+function canTakeManualBoardCamera(): boolean {
+  const snapshot = getBoardMovement()
+  const id = getNet().id
+  return Boolean(
+    id &&
+    snapshot.phase === 'turn' &&
+    isBoardMovementVisualSettled(snapshot) &&
+    activeBoardPlayer(snapshot) === id,
+  )
+}
+
+function ownsManualBoardCamera(): boolean {
+  return canTakeManualBoardCamera() && manualBoardCamera.enabled && manualBoardCamera.ownerId === getNet().id
+}
+
 export function BoardMovement(): null {
+  const domElement = useThree((state) => state.gl.domElement)
   const animation = useRef<AnimationState>({ sessionId: null, playerId: null, position: 0 })
   const cameraAnimation = useRef<CameraAnimationState>({ sessionId: null, playerId: null, position: 0 })
   const cameraFocus = useRef(new Vector3())
@@ -89,6 +134,7 @@ export function BoardMovement(): null {
       if (getCameraMode() === 'board') setCameraMode('player')
       cameraAnimation.current = { sessionId: null, playerId: null, position: 0 }
       cameraEngaged.current = false
+      resetManualBoardCamera()
       return
     }
 
@@ -115,16 +161,25 @@ export function BoardMovement(): null {
 
     const pose = boardCameraPose(snapshot, playerId, cameraAnimation.current.position)
     if (!pose) return
-    const cameraDistance = !visualSettled && snapshot.moves.length > 0
+    const canControlCamera = ownsManualBoardCamera() && playerId === getNet().id
+    if (!canControlCamera && manualBoardCamera.enabled) resetManualBoardCamera()
+    const cameraDistance = canControlCamera
+      ? manualBoardCamera.distance
+      : !visualSettled && snapshot.moves.length > 0
       ? BOARD_CAMERA.rollingDistance
       : BOARD_CAMERA.distance
     const distanceScale = cameraDistance / BOARD_CAMERA.distance
+    const radialLength = Math.hypot(pose.cameraX - pose.focusX, pose.cameraZ - pose.focusZ) || 1
+    manualBoardCamera.forwardX = (pose.cameraX - pose.focusX) / radialLength
+    manualBoardCamera.forwardZ = (pose.cameraZ - pose.focusZ) / radialLength
+    const focusX = pose.focusX + (canControlCamera ? manualBoardCamera.panX : 0)
+    const focusZ = pose.focusZ + (canControlCamera ? manualBoardCamera.panZ : 0)
     desiredCamera.current.set(
-      pose.focusX + (pose.cameraX - pose.focusX) * distanceScale,
+      focusX + (pose.cameraX - pose.focusX) * distanceScale,
       pose.focusY + (pose.cameraY - pose.focusY) * distanceScale,
-      pose.focusZ + (pose.cameraZ - pose.focusZ) * distanceScale,
+      focusZ + (pose.cameraZ - pose.focusZ) * distanceScale,
     )
-    desiredFocus.current.set(pose.focusX, pose.focusY, pose.focusZ)
+    desiredFocus.current.set(focusX, pose.focusY, focusZ)
 
     if (!cameraEngaged.current) {
       frame.camera.position.copy(desiredCamera.current)
@@ -137,6 +192,62 @@ export function BoardMovement(): null {
     }
     frame.camera.lookAt(cameraFocus.current)
   }, PRIORITY.camera)
+
+  useEffect(() => {
+    let button = -1
+    const stop = (event: Event) => {
+      event.preventDefault()
+      event.stopImmediatePropagation()
+    }
+    const onDown = (event: MouseEvent) => {
+      if (!canTakeManualBoardCamera() || (event.button !== 0 && event.button !== 2)) return
+      if (!ownsManualBoardCamera()) {
+        manualBoardCamera.enabled = true
+        manualBoardCamera.ownerId = getNet().id
+        manualBoardCamera.distance = BOARD_CAMERA.distance
+        manualBoardCamera.panX = 0
+        manualBoardCamera.panZ = 0
+      }
+      button = event.button
+      stop(event)
+    }
+    const onMove = (event: MouseEvent) => {
+      if (button < 0 || !ownsManualBoardCamera()) return
+      const scale = BOARD_CAMERA.manualPanPerPixel * (manualBoardCamera.distance / BOARD_CAMERA.distance)
+      const rightX = -manualBoardCamera.forwardZ
+      const rightZ = manualBoardCamera.forwardX
+      manualBoardCamera.panX += (-event.movementX * rightX + event.movementY * manualBoardCamera.forwardX) * scale
+      manualBoardCamera.panZ += (-event.movementX * rightZ + event.movementY * manualBoardCamera.forwardZ) * scale
+      const panLength = Math.hypot(manualBoardCamera.panX, manualBoardCamera.panZ)
+      if (panLength > BOARD_CAMERA.manualPanLimit) {
+        manualBoardCamera.panX = manualBoardCamera.panX / panLength * BOARD_CAMERA.manualPanLimit
+        manualBoardCamera.panZ = manualBoardCamera.panZ / panLength * BOARD_CAMERA.manualPanLimit
+      }
+      stop(event)
+    }
+    const onUp = () => { button = -1 }
+    const onWheel = (event: WheelEvent) => {
+      if (!ownsManualBoardCamera()) return
+      const next = manualBoardCamera.distance * Math.exp(event.deltaY * 0.0012)
+      manualBoardCamera.distance = Math.min(BOARD_CAMERA.manualDistanceMax, Math.max(BOARD_CAMERA.manualDistanceMin, next))
+      stop(event)
+    }
+    const onContext = (event: Event) => {
+      if (ownsManualBoardCamera()) stop(event)
+    }
+    domElement.addEventListener('mousedown', onDown, true)
+    domElement.addEventListener('wheel', onWheel, { capture: true, passive: false })
+    domElement.addEventListener('contextmenu', onContext, true)
+    window.addEventListener('mousemove', onMove, true)
+    window.addEventListener('mouseup', onUp, true)
+    return () => {
+      domElement.removeEventListener('mousedown', onDown, true)
+      domElement.removeEventListener('wheel', onWheel, true)
+      domElement.removeEventListener('contextmenu', onContext, true)
+      window.removeEventListener('mousemove', onMove, true)
+      window.removeEventListener('mouseup', onUp, true)
+    }
+  }, [domElement])
 
   useEffect(() => {
     const mount = document.createElement('div')
@@ -167,6 +278,9 @@ function BoardMovementOverlay(): React.JSX.Element | null {
   const peerKey = useMemo(() => peers.map((peer) => peer.id).sort().join(','), [peers])
   const active = mode === 'island' && party.phase === 'playing' && order.phase === 'complete'
   const showing = active && snapshot.phase !== 'idle' && !acknowledged
+  const me = net.id
+  const activeId = activeBoardPlayer(snapshot)
+  const mayRoll = Boolean(me && showing && snapshot.phase === 'turn' && activeId === me && visualSettled)
 
   useEffect(() => listenForBoardMovement(), [])
 
@@ -200,12 +314,21 @@ function BoardMovementOverlay(): React.JSX.Element | null {
     if (spinTimer.current !== null) clearTimeout(spinTimer.current)
   }, [])
 
+  useEffect(() => {
+    if (mayRoll) return
+    resetManualBoardCamera()
+  }, [mayRoll])
+
   if (!showing) return null
 
-  const me = net.id
-  const activeId = activeBoardPlayer(snapshot)
   const activeName = snapshot.players.find((player) => player.id === activeId)?.name ?? activeId
-  const mayRoll = Boolean(me && snapshot.phase === 'turn' && activeId === me && visualSettled)
+  const rollTargets = activeId && mayRoll
+    ? Array.from({ length: BOARD_MOVEMENT.baseDieSides }, (_, index) => {
+      const roll = index + 1
+      const tile = Math.min(snapshot.tileCount - 1, (boardPosition(snapshot, activeId) ?? 0) + roll)
+      return { roll, tile }
+    })
+    : []
   const lastMove = snapshot.moves[snapshot.moves.length - 1]
   const winner = snapshot.players.find((player) => player.id === snapshot.winnerId)
   const localPlayer = snapshot.players.find((player) => player.id === me)
@@ -303,6 +426,26 @@ function BoardMovementOverlay(): React.JSX.Element | null {
               <span>{rollLabel}</span>
             </button>
             <small>{spinBoost > 0 ? 'Keep clicking to spin faster.' : 'The host generates and validates every die.'}</small>
+          </div>
+        )}
+
+        {rollTargets.length > 0 && (
+          <div className="board-movement-roll-targets" aria-label="Possible d6 landing tiles">
+            <span>Roll to land on</span>
+            <div>
+              {rollTargets.map((target) => (
+                <b key={target.roll} title={`Roll ${target.roll} to reach tile ${target.tile + 1}`}>
+                  <em>{target.roll}</em><small>Tile {target.tile + 1}</small>
+                </b>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {mayRoll && (
+          <div className="board-movement-camera-hint">
+            <strong>Your turn camera</strong>
+            <small>Drag the board to take the view and pan. Use the wheel to zoom.</small>
           </div>
         )}
 

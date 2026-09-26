@@ -161,7 +161,7 @@ export function resolveSniper(roster: readonly Entrant[], chosen: string | null)
 
 export function createRound(seed: number, entrants: readonly Entrant[], chosen: string | null, id = 1): Round {
   const sniperId = resolveSniper(entrants, chosen)
-  const bullets = Math.round(entrants.length * 1.5)
+  const bullets = magazineSize(entrants.length)
   const runners = entrants.filter((e) => e.id !== sniperId)
   return {
     seed,
@@ -336,6 +336,17 @@ export function cooldownLeft(round: Round, p: Player): number {
 
 export function reloading(round: Round, p: Player): boolean {
   return round.elapsed < p.reloadingUntil
+}
+
+/**
+ * How many bullets a full magazine holds - fixed for the round at
+ * `round(playerCount * 1.5)`. `round.players` never shrinks (somebody who
+ * leaves is marked `left`, not removed), so this is stable to recompute from
+ * its length rather than carry as a field of its own - one less thing for
+ * the wire to agree on.
+ */
+export function magazineSize(playerCount: number): number {
+  return Math.round(playerCount * 1.5)
 }
 
 export function canShoot(round: Round, p: Player): boolean {
@@ -514,9 +525,21 @@ export function report(round: Round, index: number, at: Point, yaw: number, pitc
   checkBase(p)
 }
 
+/** Once a forced reload's time is up, the magazine is full again - nothing else refills it. */
+function resupply(round: Round): void {
+  const full = magazineSize(round.players.length)
+  for (const p of round.players) {
+    if (p.role === 'sniper' && p.reloadingUntil > 0 && round.elapsed >= p.reloadingUntil) {
+      p.bullets = full
+      p.reloadingUntil = 0
+    }
+  }
+}
+
 export function tick(round: Round, dt: number): void {
   if (round.over) return
   round.elapsed += Math.min(Math.max(dt, 0), 0.25)
+  resupply(round)
 }
 
 /** Only the host decides. Ends the instant a runner reaches base, or the last one goes down - same step, no outro. */

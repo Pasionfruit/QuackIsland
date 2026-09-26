@@ -111,6 +111,14 @@ camera message or remote-position dependency. The override uses the project
 camera frame priority and releases as soon as the board round is acknowledged
 for the minigame handoff.
 
+The normal board frame is deliberately wider than the player camera, and a
+moving roll pulls much farther back so the route is readable. Once movement is
+settled, only the player whose turn it is can drag the canvas to take the
+local view, then continue dragging to pan and use the wheel to zoom. Those
+adjustments are never synchronized, and they end as soon as the turn or
+movement changes. The active player also sees six compact labels that map each
+possible d6 value to its landing tile.
+
 ## Landing-effect extension
 
 A downstream tile module may register one `BoardLandingEffectResolver`. The
@@ -190,18 +198,23 @@ Run `npm run build`, keep one relay running, then open
 5. Both panels should display the same value and destination tile. The owning
    body should hop at the slower pace along the volcano track, and the next
    player must remain locked until that movement lands.
-6. Roll from the second browser. Both panels should enter `Board round
+6. On the active player's browser, confirm the **Roll to land on** labels map
+   each value from 1 through 6 to the corresponding next tile. Drag the canvas
+   to take the local view and pan, then use the wheel to zoom. The other
+   browser must keep its synchronized automatic frame. Roll and confirm manual
+   control ends when movement starts.
+7. Roll from the second browser. Both panels should enter `Board round
    complete`, retain both positions, expose visual settlement after the last
    hop lands, and accept no further roll.
-7. Compare every player name, tile, last die, active player, round, and revision
+8. Compare every player name, tile, last die, active player, round, and revision
    between the two browsers; they should agree.
-8. Hold WASD and Space while the panel is active. Manual movement must not pull
+9. Hold WASD and Space while the panel is active. Manual movement must not pull
    the body away from its board tile.
-9. Close a browser before its turn. The host should remove that pending relay
+10. Close a browser before its turn. The host should remove that pending relay
    id instead of waiting forever; below two players it should explain that the
    party is interrupted.
-10. Join after the board is locked. The new relay id must not enter the board
-    roster or receive a roll.
+11. Join after the board is locked. The new relay id must not enter the board
+   roster or receive a roll.
 
 Eight-player sequencing, bonus-die summing, duplicate rejection, multi-round
 position preservation, disconnect advancement, world placement, clamping, and

@@ -20,6 +20,7 @@ import {
   laserOf,
   leave,
   look,
+  magazineSize,
   moveSniper,
   reloading,
   report,
@@ -139,6 +140,25 @@ describe('the gun', () => {
     expect(canShoot(r, r.players[si])).toBe(false)
     wait(r, GUN.reload + 0.01)
     expect(reloading(r, r.players[si])).toBe(false)
+    // A reload that finishes but never refills the magazine is a Sniper who
+    // can never fire again - the actual point of "forced to reload".
+    expect(r.players[si].bullets).toBe(start)
+    expect(canShoot(r, r.players[si])).toBe(true)
+  })
+
+  it('refills to the same magazine size every reload, however many times it empties', () => {
+    const r = round(3)
+    const si = sniperIndex(r)
+    const full = magazineSize(r.players.length)
+    for (let round_ = 0; round_ < 3; round_++) {
+      for (let i = 0; i < full; i++) {
+        recharge(r)
+        fire(r, si)
+      }
+      expect(r.players[si].bullets).toBe(0)
+      wait(r, GUN.reload + 0.01)
+      expect(r.players[si].bullets).toBe(full)
+    }
   })
 
   it('costs a runner a life through a clear line of sight, and does nothing through cover', () => {

@@ -198,7 +198,7 @@ export function MinigameRound() {
           <span>Reward dice are next</span>
         </div>
         <ol>
-          {round.placements.map((placement) => (
+          {[...round.placements].sort((left, right) => left.rank - right.rank || left.name.localeCompare(right.name)).map((placement) => (
             <li key={placement.playerId}>
               <b>{rankLabel(placement.rank)}</b> {placement.name}
             </li>

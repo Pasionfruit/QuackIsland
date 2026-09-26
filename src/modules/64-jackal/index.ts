@@ -71,6 +71,7 @@ export {
   laserOf,
   leave,
   look,
+  magazineSize,
   moveSniper,
   reloading,
   report,

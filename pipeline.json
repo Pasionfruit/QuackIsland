@@ -4956,6 +4956,16 @@
           "id": "53.13",
           "title": "Pull the board camera far back while a dice move is in flight",
           "status": "done"
+        },
+        {
+          "id": "53.14",
+          "title": "Give the active roller local pan and zoom plus d6 landing-tile labels",
+          "status": "done"
+        },
+        {
+          "id": "53.15",
+          "title": "Start active-turn camera control directly from a canvas drag",
+          "status": "done"
         }
       ],
       "gate": {
@@ -5139,6 +5149,11 @@
         {
           "id": "54.15",
           "title": "Soften the Island minigame controls and remove unused letter badges",
+          "status": "done"
+        },
+        {
+          "id": "54.16",
+          "title": "Show final placements left to right in rank order",
           "status": "done"
         }
       ],
@@ -5899,6 +5914,11 @@
         {
           "id": "62.7",
           "title": "Use synchronized avatar colours for player position dots",
+          "status": "done"
+        },
+        {
+          "id": "62.8",
+          "title": "Show the synchronized turn order and active player at the top left",
           "status": "done"
         }
       ],

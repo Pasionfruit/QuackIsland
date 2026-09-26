@@ -3,11 +3,15 @@ import { boardPointAt, sharedTileOffset } from './position'
 import { activeBoardPlayer, boardPosition, type BoardMovementSnapshot } from './rules'
 
 export const BOARD_CAMERA = Object.freeze({
-  distance: 6.8,
-  rollingDistance: 17,
+  distance: 14,
+  rollingDistance: 54,
   height: 4.4,
   focusHeight: 0.82,
   smoothing: 5.5,
+  manualDistanceMin: 7,
+  manualDistanceMax: 110,
+  manualPanLimit: 90,
+  manualPanPerPixel: 0.025,
 })
 
 export interface BoardCameraPose {
