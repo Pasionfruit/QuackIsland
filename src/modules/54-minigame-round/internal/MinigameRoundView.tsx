@@ -209,7 +209,6 @@ export function MinigameRound() {
             <span className="minigame-round__waiting">Preparing reward dice...</span>
           ) : net.host ? (
             <button type="button" className="minigame-round__continue" onClick={continueToMinigameRewards}>
-              <span className="minigame-round__button-icon" aria-hidden="true">C</span>
               <span><strong>Continue</strong><small>Reveal reward dice</small></span>
             </button>
           ) : (
@@ -234,11 +233,9 @@ export function MinigameRound() {
           <>
             <div className="minigame-round__buttons">
               <button type="button" className="minigame-round__practice" onClick={startMinigamePractice} disabled={!everyoneLoaded}>
-                <span className="minigame-round__button-icon" aria-hidden="true">P</span>
                 <span><strong>Practice</strong><small>Results do not count</small></span>
               </button>
               <button type="button" className="minigame-round__final" onClick={startFinalMinigame} disabled={!everyoneLoaded}>
-                <span className="minigame-round__button-icon" aria-hidden="true">F</span>
                 <span><strong>Start final</strong><small>Lock the official result</small></span>
               </button>
             </div>

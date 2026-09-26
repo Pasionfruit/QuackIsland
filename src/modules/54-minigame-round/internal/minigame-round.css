@@ -19,13 +19,13 @@
   min-height: 7rem;
   padding: 1.15rem 1.35rem;
   overflow: hidden;
-  border: 1px solid rgba(255, 210, 137, 0.46);
-  border-radius: 1.5rem;
+  border: 1px solid rgba(255, 236, 205, 0.2);
+  border-radius: 1.35rem;
   background:
-    radial-gradient(circle at 10% 0%, rgba(255, 151, 66, 0.18), transparent 42%),
-    linear-gradient(145deg, rgba(39, 31, 34, 0.98), rgba(17, 38, 42, 0.98));
-  box-shadow: 0 1rem 3rem rgba(4, 12, 15, 0.5), inset 0 1px rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(14px);
+    radial-gradient(circle at 8% 2%, rgba(255, 192, 123, 0.16), transparent 46%),
+    linear-gradient(145deg, rgba(49, 45, 51, 0.94), rgba(24, 48, 55, 0.94));
+  box-shadow: 0 0.75rem 2.25rem rgba(4, 12, 15, 0.32), inset 0 1px rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(18px) saturate(0.9);
 }
 
 .minigame-round--controls > div:first-child,
@@ -71,19 +71,19 @@
 .minigame-round button {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
-  min-width: 13.25rem;
-  min-height: 3.6rem;
-  padding: 0.55rem 1.1rem;
-  border: 1px solid rgba(255, 247, 220, 0.55);
-  border-radius: 999px;
-  color: #4a3524;
-  background: #ffc94d;
+  gap: 0.5rem;
+  min-width: 12.25rem;
+  min-height: 3.45rem;
+  padding: 0.65rem 1.05rem;
+  border: 1px solid rgba(255, 247, 220, 0.38);
+  border-radius: 1rem;
+  color: #483a2d;
+  background: linear-gradient(145deg, #f5d58e, #eab85d);
   font: inherit;
   font-weight: 800;
   text-align: left;
   cursor: pointer;
-  box-shadow: 0 4px 0 #d79a22, 0 0.5rem 1.25rem rgba(0, 0, 0, 0.22), inset 0 1px rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0.45rem 1.15rem rgba(0, 0, 0, 0.16), inset 0 1px rgba(255, 255, 255, 0.46);
   transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
 }
 
@@ -104,27 +104,13 @@
   opacity: 0.7;
 }
 
-.minigame-round span.minigame-round__button-icon {
-  display: grid;
-  width: 2.35rem;
-  height: 2.35rem;
-  flex: 0 0 auto;
-  place-items: center;
-  border: 1px solid rgba(53, 29, 12, 0.22);
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.42);
-  font-size: 0.8rem;
-  font-weight: 950;
-  opacity: 1;
-}
-
 .minigame-round button:not(:disabled):hover,
 .minigame-round button:focus-visible {
   transform: translateY(-1px);
   outline: 3px solid rgba(255, 255, 255, 0.8);
   outline-offset: 2px;
   filter: brightness(1.06);
-  box-shadow: 0 0.75rem 1.6rem rgba(0, 0, 0, 0.3), inset 0 1px rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0.65rem 1.35rem rgba(0, 0, 0, 0.22), inset 0 1px rgba(255, 255, 255, 0.6);
 }
 
 .minigame-round button:disabled {
@@ -153,16 +139,16 @@
 
 .minigame-round button.minigame-round__final {
   color: #fff7dc;
-  border-color: rgba(255, 220, 164, 0.72);
-  background: #e8705a;
-  box-shadow: 0 4px 0 #b84c3a, 0 0.5rem 1.4rem rgba(174, 55, 39, 0.36), inset 0 1px rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 225, 198, 0.5);
+  background: linear-gradient(145deg, #df9d8e, #c96658);
+  box-shadow: 0 0.5rem 1.3rem rgba(174, 55, 39, 0.25), inset 0 1px rgba(255, 255, 255, 0.2);
 }
 
 .minigame-round button.minigame-round__continue {
   color: #102f2b;
-  border-color: rgba(193, 255, 211, 0.72);
-  background: linear-gradient(145deg, #c9f6bb, #65c99c);
-  box-shadow: 0 0.5rem 1.4rem rgba(40, 139, 105, 0.3), inset 0 1px rgba(255, 255, 255, 0.45);
+  border-color: rgba(220, 255, 228, 0.58);
+  background: linear-gradient(145deg, #d1edc4, #79c5a1);
+  box-shadow: 0 0.5rem 1.25rem rgba(40, 139, 105, 0.22), inset 0 1px rgba(255, 255, 255, 0.48);
 }
 
 .minigame-round__result-action {

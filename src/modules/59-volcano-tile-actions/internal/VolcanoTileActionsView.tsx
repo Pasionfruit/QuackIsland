@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
-import { createRoot } from 'react-dom/client'
 import { InstancedMesh, Matrix4 } from 'three'
 import { useParty } from '../../10-party'
 import { useGameMode } from '../../13-modes'
@@ -51,10 +50,6 @@ function ActionInstances({ actions, kind }: {
   )
 }
 
-function VolcanoTileActionOverlay(): React.JSX.Element | null {
-  return null
-}
-
 export function VolcanoTileActions(): React.JSX.Element | null {
   const mode = useGameMode()
   const party = useParty()
@@ -67,18 +62,6 @@ export function VolcanoTileActions(): React.JSX.Element | null {
   useEffect(() => {
     setBoardLandingEffectResolver(resolveVolcanoTileAction)
     return () => setBoardLandingEffectResolver(null)
-  }, [])
-
-  useEffect(() => {
-    const mount = document.createElement('div')
-    mount.dataset.volcanoTileActionsRoot = 'true'
-    document.body.append(mount)
-    const root = createRoot(mount)
-    root.render(<VolcanoTileActionOverlay />)
-    return () => {
-      root.unmount()
-      mount.remove()
-    }
   }, [])
 
   const active = mode === 'island' && party.phase === 'playing' && board.phase !== 'idle' && board.phase !== 'invalid'

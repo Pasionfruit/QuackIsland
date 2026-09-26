@@ -5133,6 +5133,11 @@
           "id": "54.14",
           "title": "Show the final-attempt badge for three seconds only",
           "status": "done"
+        },
+        {
+          "id": "54.15",
+          "title": "Soften the Island minigame controls and remove unused letter badges",
+          "status": "done"
         }
       ],
       "gate": {
@@ -5513,14 +5518,14 @@
         },
         {
           "id": "59.5",
-          "title": "Remove the Action Tiles legend and landing-result dialog from the board HUD",
+          "title": "Remove the Action Tiles HUD mount, legend and landing-result dialog",
           "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "red",
-          "at": "2026-09-26T02:02:21.265Z",
+          "at": "2026-09-26T02:06:21.964Z",
           "failed": "test"
         },
         "human": {
