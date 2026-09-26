@@ -128,9 +128,6 @@ export function OpFinderScreen({ run }: { run: MinigameRun }) {
             onGuess={guess}
           />
         ) : null}
-        {ready && mine && mine.stage >= STAGE_COUNT && !round.over ? (
-          <div style={waitCard}>you're through - waiting for the others…</div>
-        ) : null}
       </div>
 
       {results && ready ? <Over round={round} me={me} nameOf={nameOf} colours={colours} onAgain={net.host ? replayMinigame : null} /> : null}
@@ -429,18 +426,6 @@ const pill: React.CSSProperties = {
 }
 
 const board: React.CSSProperties = { flex: 1, minHeight: 0, width: '100%', position: 'relative' }
-
-const waitCard: React.CSSProperties = {
-  position: 'absolute',
-  left: '50%',
-  top: '50%',
-  transform: 'translate(-50%, -50%)',
-  padding: '14px 22px',
-  borderRadius: 16,
-  background: 'rgba(42, 34, 51, 0.85)',
-  color: '#fff',
-  font: `600 14px/1.4 ${FONT}`,
-}
 
 const panelWrap: React.CSSProperties = {
   position: 'absolute',

@@ -65,25 +65,25 @@
 .minigame-round__buttons {
   display: flex;
   flex: 0 0 auto;
-  gap: 0.75rem;
+  gap: 0.6rem;
 }
 
 .minigame-round button {
   display: flex;
   align-items: center;
   gap: 0.7rem;
-  min-width: 12.5rem;
-  min-height: 4rem;
-  padding: 0.65rem 0.9rem;
+  min-width: 13.25rem;
+  min-height: 3.6rem;
+  padding: 0.55rem 1.1rem;
   border: 1px solid rgba(255, 247, 220, 0.55);
-  border-radius: 1rem;
-  color: #173438;
-  background: linear-gradient(145deg, #ffedb3, #eebd62);
+  border-radius: 999px;
+  color: #4a3524;
+  background: #ffc94d;
   font: inherit;
   font-weight: 800;
   text-align: left;
   cursor: pointer;
-  box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.22), inset 0 1px rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 0 #d79a22, 0 0.5rem 1.25rem rgba(0, 0, 0, 0.22), inset 0 1px rgba(255, 255, 255, 0.5);
   transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
 }
 
@@ -95,7 +95,7 @@
 }
 
 .minigame-round button strong {
-  font-size: 0.92rem;
+  font-size: 0.98rem;
 }
 
 .minigame-round button small {
@@ -111,7 +111,7 @@
   flex: 0 0 auto;
   place-items: center;
   border: 1px solid rgba(53, 29, 12, 0.22);
-  border-radius: 0.7rem;
+  border-radius: 50%;
   background: rgba(255, 255, 255, 0.42);
   font-size: 0.8rem;
   font-weight: 950;
@@ -135,10 +135,10 @@
 }
 
 .minigame-round button.minigame-round__final {
-  color: white;
-  border-color: rgba(255, 190, 119, 0.8);
-  background: linear-gradient(145deg, #dc6b3f, #a93a2c);
-  box-shadow: 0 0.5rem 1.4rem rgba(174, 55, 39, 0.36), inset 0 1px rgba(255, 255, 255, 0.18);
+  color: #fff7dc;
+  border-color: rgba(255, 220, 164, 0.72);
+  background: #e8705a;
+  box-shadow: 0 4px 0 #b84c3a, 0 0.5rem 1.4rem rgba(174, 55, 39, 0.36), inset 0 1px rgba(255, 255, 255, 0.18);
 }
 
 .minigame-round button.minigame-round__continue {

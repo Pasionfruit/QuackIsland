@@ -48,19 +48,24 @@ plain Unicode glyphs (`THINGS` - animals, fruit, vehicles, shapes), zero
 asset cost, the same "no asset pipeline" approach every other minigame's
 procedural primitives take:
 
-- **`match`** - one target icon shown large; a grid of six, one of them it.
-- **`text`** - six letters and digits (no `O`/`0`/`I`/`1`/`l`, too easy to
+- **`match`** - one target icon shown large; a grid of nine, one of them it -
+  the other eight drawn from the whole table, category included, so a
+  handful are often close cousins of the target rather than obviously
+  something else.
+- **`text`** - eight letters and digits (no `O`/`0`/`I`/`1`/`l`, too easy to
   mix up), each character independently rotated and offset with an inline
   CSS transform for the classic warped look.
-- **`identify`** - seven icons from one category and exactly one from
-  another - the odd one out.
-- **`pattern`** - a short repeating cycle of icons with the next slot
-  blank, plus a few options.
-- **`checkboxes`** - a grid of icons and a stated rule ("check all the
-  fruits") - check exactly the matching ones and confirm; the wrong set
-  is a miss, not a clear.
-- **`count`** - a cluttered field with a target icon repeated a few times
-  among decoys - pick the right count from a few numbers.
+- **`identify`** - ten icons from one category, repeats allowed, and exactly
+  one from another - the odd one out.
+- **`pattern`** - a repeating cycle three or four icons long, shown fewer
+  than two full turns of it - not enough repetition to take the rule for
+  granted - plus five options.
+- **`checkboxes`** - a grid of ten icons and a stated rule ("check all the
+  fruits") - check exactly the matching ones (three to five of them) and
+  confirm; the wrong set is a miss, not a clear.
+- **`count`** - a cluttered field of about twenty icons with a target icon
+  repeated four to nine times among the decoys - pick the right count from
+  a few close numbers.
 
 ## Answering
 
@@ -68,10 +73,11 @@ procedural primitives take:
 the same trust model Sprint Triathlon uses for its keystrokes: the host has
 no way to check a guess's content anyway, since it never sees it. A right
 guess past your own lockout raises your `stage`; reaching `STAGE_COUNT` sets
-`finishAt`. A wrong guess raises `mistakes` and starts a short local lockout
-(`ANSWER.lockout`, 0.4s) before your next attempt is even judged - the
-brief's "rapid-fire" framing wants guessing fast not to be the same as
-guessing right.
+`finishAt`. A wrong guess raises `mistakes` and starts a real local lockout
+(`ANSWER.lockout`, 1.5s) before your next attempt is even judged - long
+enough that guessing your way through is slower than reading the challenge,
+which is the whole point of the brief's "rapid-fire" framing: it rewards
+actually being able to prove you are not a bot, not fast clicking.
 
 What crosses the wire is only your own running `stage` and `mistakes`
 (`Intent`) - never the guess itself. The host folds every report in
@@ -84,9 +90,9 @@ CAPTCHA answer is already a much coarser, rarer action than a keystroke.
 
 ## The end
 
-**Decided the instant the first player finishes** (the brief: "First player
-to finish wins," not a podium) - `decidedAt` set there, a short outro
-(`ROUND.outro`, 2s) so everyone sees the win, then `over`. A safety-net
+**Over the instant the first player finishes** - the brief: "First player to
+finish wins," and means it: `over` is set in the same step as `decidedAt`,
+no grace period spent watching everybody else catch up. A safety-net
 `ROUND.limit` (180s) covers a stall with nobody finishing. `placings()`
 ranks any finisher by finish time, then everybody else by how many stages
 they cleared - ties share a place.
@@ -111,11 +117,9 @@ they cleared - ties share a place.
   caused.
 
 **The roster is the lobby**, host first, up to eight - eight colours. Alone,
-three stand-ins fill in: they attempt nothing for the first four seconds
-(`BOT_OPENING`) - long enough to read what the game is even asking, the
-first time - then each "solves" its current stage after a seeded pause
-(3.5 to 10 seconds), sometimes getting its first attempt wrong first and
-paying the same lockout a person would - seeded per bot per stage, so
+three stand-ins fill in: each "solves" its current stage after a seeded
+pause (1.4 to 4.2 seconds), sometimes getting its first attempt wrong first
+and paying the same lockout a person would - seeded per bot per stage, so
 the same round plays out the same way every time it is replayed with the
 same seed.
 
@@ -127,8 +131,8 @@ same seed.
   the clock (red for the last twenty seconds) and your own `stage/10`.
 - A wrong guess flashes the card's border red with a short "not quite" hint
   until the lockout passes.
-- Finishing early shows a "you're through - waiting for the others" card
-  instead of a challenge.
+- The instant somebody clears the tenth, the round is over - the results
+  card comes down there and then, nobody is left watching an empty panel.
 
 ## The camera does not move
 
@@ -165,8 +169,8 @@ Exported because it is worth testing, not because anything else needs it.
   attempt briefly and does not.** Tested.
 - **A reported stage cannot rise faster than the anti-cheat floor allows,
   however it is reported.** Tested.
-- **The round is decided at the first finish, ends after the outro, or at
-  the safety-net limit; finishers rank by time, the rest by stage reached.**
+- **The round is over the instant the first player finishes, or at the
+  safety-net limit; finishers rank by time, the rest by stage reached.**
   Tested.
 - **Eight players with a lossy network agree on who finished and how far
   everyone else got.** Tested.
@@ -210,12 +214,16 @@ Open a lobby, leave the game on Volcano Island, press **minigames**, open
   right answer - your progress bar and your `stage/10` in the HUD both
   advance, and a fresh challenge, a different kind, appears at once.
 - **Get one wrong on purpose.** The card's border flashes red with a
-  "not quite" hint; clicking again does nothing until it clears.
+  "not quite" hint for 1.5 seconds; clicking again does nothing until it
+  clears - long enough that guessing is a real setback, not a shrug.
 - **Play through all six kinds.** `match`, `text`, `identify`, `pattern`,
-  `checkboxes` and `count` should each turn up somewhere across the ten.
-- **Finish all ten before the stand-ins.** A "you're through" card while
-  the others keep going; the round ends the moment anybody clears all ten.
-  **Again** starts a new round, a different seed.
+  `checkboxes` and `count` should each turn up somewhere across the ten, and
+  each should take genuine reading - the match and identify grids should
+  routinely include a decoy from the target's own category, not just
+  obviously-different icons.
+- **Finish all ten before the stand-ins.** The round ends there and then -
+  no card, no wait, straight to the results. **Again** starts a new round,
+  a different seed.
 
 ### With two browsers
 

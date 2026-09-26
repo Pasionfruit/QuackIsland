@@ -98,7 +98,7 @@ describe('the challenge pool', () => {
       }
     }
     expect(text).not.toBeNull()
-    expect(text!.length).toBe(6)
+    expect(text!.length).toBe(8)
     expect(checkGuess({ kind: 'text', text: text! }, { kind: 'text', text: `  ${text!.toLowerCase()}  ` })).toBe(true)
     expect(checkGuess({ kind: 'text', text: text! }, { kind: 'text', text: 'wrong!' })).toBe(false)
   })
@@ -166,14 +166,12 @@ describe('the round', () => {
     expect(round.players[0].stage).toBe(STAGE_COUNT)
   })
 
-  it('decides the instant somebody finishes, and ends after the outro', () => {
+  it('ends the instant somebody finishes - first to finish wins, no waiting for anybody else', () => {
     const round = createRound(1, [{ id: 'a', mine: true }, { id: 'b' }], 1)
     round.players[0].stage = STAGE_COUNT - 1
     run(round, ANSWER.minStageTime + 0.02, new Map([['a', { stage: STAGE_COUNT, mistakes: 0 }]]))
     expect(round.players[0].finishAt).not.toBeNull()
     expect(round.decidedAt).not.toBeNull()
-    expect(round.over).toBe(false)
-    run(round, ROUND.outro + 0.1, new Map())
     expect(round.over).toBe(true)
   })
 

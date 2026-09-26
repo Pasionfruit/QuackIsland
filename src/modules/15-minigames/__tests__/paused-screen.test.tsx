@@ -20,6 +20,8 @@ const lobby = vi.hoisted(() => ({
   heard: new Set<(from: string, raw: Record<string, unknown>) => void>(),
 }))
 
+const island = vi.hoisted(() => ({ phase: 'off', mode: 'island' }))
+
 vi.mock('../../09-net', () => ({
   // The real rule: the lowest id in the room hosts.
   isHost: (me: string, others: readonly string[]) => others.every((id) => me < id),
@@ -33,6 +35,12 @@ vi.mock('../../09-net', () => ({
     lobby.heard.add(fn)
     return () => lobby.heard.delete(fn)
   },
+}))
+
+vi.mock('../../10-party', () => ({ useParty: () => ({ phase: island.phase }) }))
+vi.mock('../../13-modes', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../13-modes')>()),
+  useGameMode: () => island.mode,
 }))
 
 import { Paused } from '../internal/Paused'
@@ -109,6 +117,8 @@ beforeEach(() => {
   lobby.net = { status: 'joined', room: 'ABCDE', id: 'p1', peers: 1, host: true, why: null }
   lobby.peers = [{ id: 'p2', name: 'bea', ping: null }]
   lobby.sent = []
+  island.phase = 'off'
+  island.mode = 'island'
 })
 
 afterEach(() => {
@@ -243,6 +253,16 @@ describe('the card', () => {
     expect(where.querySelector('[data-leave]')).not.toBeNull()
     expect(where.querySelector('[data-waiting]')).toBeNull()
     expect(where.textContent).toContain('You stopped the round')
+  })
+
+  it('keeps a Volcano Island party in its paused round', () => {
+    island.phase = 'playing'
+    island.mode = 'island'
+    const where = mountCard({ isHost: true, pausedBy: { id: 'p1', name: 'ali' }, me: 'p1', mayControl: true })
+    expect(where.querySelector('[data-resume]')).not.toBeNull()
+    expect(where.querySelector('[data-restart]')).toBeNull()
+    expect(where.querySelector('[data-leave]')).toBeNull()
+    expect(where.textContent).toContain('paused the Volcano Island round')
   })
 
   it('offers nobody else anything, and says who they are waiting for', () => {

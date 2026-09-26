@@ -959,7 +959,8 @@
         "56-volcano-victory",
         "57-volcano-postgame",
         "58-breaking-the-ice",
-        "61-op-finder"
+        "61-op-finder",
+        "63-volcano-pause"
       ],
       "generation": 1,
       "contract": {
@@ -1044,6 +1045,7 @@
       ],
       "dependents": [
         "14-garden",
+        "15-minigames",
         "52-turn-order",
         "53-board-movement",
         "54-minigame-round",
@@ -1052,7 +1054,8 @@
         "57-volcano-postgame",
         "59-volcano-tile-actions",
         "60-volcano-map-landmarks",
-        "62-volcano-minimap"
+        "62-volcano-minimap",
+        "63-volcano-pause"
       ],
       "generation": 1,
       "contract": {
@@ -1283,7 +1286,8 @@
         "57-volcano-postgame",
         "59-volcano-tile-actions",
         "60-volcano-map-landmarks",
-        "62-volcano-minimap"
+        "62-volcano-minimap",
+        "63-volcano-pause"
       ],
       "generation": 1,
       "contract": {
@@ -1468,6 +1472,7 @@
       "dependsOn": [
         "00-core",
         "09-net",
+        "10-party",
         "13-modes"
       ],
       "dependents": [
@@ -1510,12 +1515,13 @@
         "54-minigame-round",
         "55-reward-dice",
         "58-breaking-the-ice",
-        "61-op-finder"
+        "61-op-finder",
+        "63-volcano-pause"
       ],
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/15-minigames/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -1575,6 +1581,11 @@
           "status": "done"
         },
         {
+          "id": "15.13",
+          "title": "Keep an active Volcano Island minigame pause on its board round",
+          "status": "done"
+        },
+        {
           "id": "15.7",
           "title": "The games themselves, one build at a time, three stages each",
           "status": "planned"
@@ -1583,7 +1594,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-20T19:42:17.812Z"
+          "at": "2026-09-26T00:47:04.349Z"
         },
         "human": {
           "status": "pending"
@@ -5011,7 +5022,7 @@
       "id": "54-minigame-round",
       "phase": "P7",
       "title": "Volcano minigame round: after every completed board round, select one free-for-all minigame, brief every player, allow host-run practice attempts, run one final attempt, and publish final placements",
-      "status": "ready_for_review",
+      "status": "in_progress",
       "dependsOn": [
         "00-core",
         "09-net",
@@ -5078,6 +5089,11 @@
         {
           "id": "54.10",
           "title": "Retained early host snapshots and connected-player preload acknowledgements before launch",
+          "status": "done"
+        },
+        {
+          "id": "54.11",
+          "title": "Island-style practice and final controls with catalogue back navigation suppressed",
           "status": "done"
         }
       ],
@@ -5718,7 +5734,7 @@
         },
         {
           "id": "61.4",
-          "title": "The round: decided at the first finish, an outro, a safety-net limit, placings by finish time or stage",
+          "title": "The round: over the instant the first player finishes, a safety-net limit, placings by finish time or stage",
           "status": "done"
         },
         {
@@ -5755,7 +5771,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-26T00:10:48.021Z"
+          "at": "2026-09-26T00:44:01.161Z"
         },
         "human": {
           "status": "pending",
@@ -5830,6 +5846,66 @@
         "No changes to board movement, authority, player positions or network messages",
         "No interactive controls or input interception",
         "No world-space geometry, external assets or textures"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "63-volcano-pause",
+      "phase": "P8",
+      "title": "Volcano pause: a host-controlled shared pause card that owns Escape during a board party",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "09-net",
+        "10-party",
+        "13-modes",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": "src/modules/63-volcano-pause/contract.snapshot.d.ts",
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "63.1",
+          "title": "Shared host pause state with late-join synchronization",
+          "status": "done"
+        },
+        {
+          "id": "63.2",
+          "title": "Escape capture and an input-blocking pause overlay",
+          "status": "done"
+        },
+        {
+          "id": "63.3",
+          "title": "Tests, contract and review notes",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-26T00:31:28.114Z"
+        },
+        "human": {
+          "status": "pending",
+          "at": null,
+          "note": null
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No edits to the frozen board-movement or minigame modules",
+        "No board simulation, turn, or network protocol changes",
+        "No guest authority to pause or resume"
       ],
       "budgets": {
         "drawCallsMax": 0,

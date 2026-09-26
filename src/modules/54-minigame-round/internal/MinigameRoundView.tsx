@@ -18,6 +18,7 @@ import {
   useMinigameRoundReadyPlayers,
 } from './state'
 import { allConnectedMinigamePlayersReady } from './readiness'
+import { suppressedIslandControls, type IslandMinigameScreenPhase } from './chrome'
 import './minigame-round.css'
 
 function rankLabel(rank: number): string {
@@ -57,14 +58,12 @@ function controlLabel(element: HTMLButtonElement): string {
 
 function useIslandMinigameChrome(
   active: boolean,
-  screenPhase: 'briefing' | 'over' | null,
+  screenPhase: IslandMinigameScreenPhase | null,
 ): void {
   useEffect(() => {
     if (!active || screenPhase === null || typeof document === 'undefined') return
     const hidden = new Map<HTMLButtonElement, boolean>()
-    const labels = screenPhase === 'briefing'
-      ? new Set(['play'])
-      : new Set(['replay', 'minigame dashboard'])
+    const labels = suppressedIslandControls(screenPhase)
 
     const suppressStandaloneControls = () => {
       for (const button of document.querySelectorAll('button')) {

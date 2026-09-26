@@ -57,7 +57,10 @@
     "gate:op-finder": "node scripts/gate.mjs 61-op-finder",
     "brief:volcano-minimap": "node scripts/brief.mjs 62-volcano-minimap",
     "test:volcano-minimap": "vitest run src/modules/62-volcano-minimap",
-    "gate:volcano-minimap": "node scripts/gate.mjs 62-volcano-minimap"
+    "gate:volcano-minimap": "node scripts/gate.mjs 62-volcano-minimap",
+    "brief:volcano-pause": "node scripts/brief.mjs 63-volcano-pause",
+    "test:volcano-pause": "vitest run src/modules/63-volcano-pause",
+    "gate:volcano-pause": "node scripts/gate.mjs 63-volcano-pause"
   },
   "dependencies": {
     "@react-three/fiber": "^9.7.0",

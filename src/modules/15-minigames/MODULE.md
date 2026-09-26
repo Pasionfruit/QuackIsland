@@ -528,7 +528,9 @@ party panel, bottom left.
 
 ## Gate record
 
-Not yet gated.
+Generation 2 keeps a paused minigame inside an active Volcano Island party:
+the host may resume, but cannot restart the round or return to the catalogue.
+Standalone minigames retain their existing pause choices. Pending human review.
 
 ## Measured
 

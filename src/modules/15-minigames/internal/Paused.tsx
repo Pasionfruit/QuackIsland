@@ -18,12 +18,18 @@
  * where they were. A guest leaving takes only themselves - and, because they
  * were the one holding the pause, lets everybody else carry on.
  */
+import { useParty } from '../../10-party'
+import { useGameMode } from '../../13-modes'
 import { FONT, ISLAND, button } from './look'
+import { isVolcanoIslandParty } from './islandParty'
 import { nameOfPauser, type Pauser } from './pause'
 import { backOut, restartMinigame, resumeMinigame } from './state'
 import { clicked } from './sound'
 
 export function Paused({ isHost, pausedBy, me, mayControl }: { isHost: boolean; pausedBy: Pauser | null; me: string; mayControl: boolean }) {
+  const party = useParty()
+  const mode = useGameMode()
+  const islandParty = isVolcanoIslandParty(party.phase, mode)
   const who = nameOfPauser(pausedBy, me)
   const mine = who === 'you'
   const gone = pausedBy !== null && !mine && mayControl
@@ -37,7 +43,9 @@ export function Paused({ isHost, pausedBy, me, mayControl }: { isHost: boolean; 
         <div style={{ color: ISLAND.fadedInk, marginBottom: 14 }} data-pause-note>
           {mine
             ? isHost
-              ? 'You stopped the round for everybody. Leaving takes them all back with you.'
+              ? islandParty
+                ? 'You paused the Volcano Island round for everybody. Resume when the party is ready.'
+                : 'You stopped the round for everybody. Leaving takes them all back with you.'
               : 'You stopped the round for everybody. Leaving lets them carry on without you.'
             : gone
               ? `${who} stopped the round and has since left, so it is yours to start again.`
@@ -49,17 +57,21 @@ export function Paused({ isHost, pausedBy, me, mayControl }: { isHost: boolean; 
             <button type="button" data-resume onClick={resumeMinigame} style={resume}>
               resume
             </button>
-            <button
-              type="button"
-              data-restart
-              onClick={clicked(restartMinigame)}
-              style={{ ...button, width: '100%', marginTop: 8, padding: '9px 16px', font: `700 14px/1.2 ${FONT}` }}
-            >
-              restart the round
-            </button>
-            <button type="button" data-leave onClick={clicked(backOut)} style={{ ...button, width: '100%', marginTop: 8 }}>
-              {isHost ? 'back to the games' : 'leave this round'}
-            </button>
+            {!islandParty ? (
+              <>
+                <button
+                  type="button"
+                  data-restart
+                  onClick={clicked(restartMinigame)}
+                  style={{ ...button, width: '100%', marginTop: 8, padding: '9px 16px', font: `700 14px/1.2 ${FONT}` }}
+                >
+                  restart the round
+                </button>
+                <button type="button" data-leave onClick={clicked(backOut)} style={{ ...button, width: '100%', marginTop: 8 }}>
+                  {isHost ? 'back to the games' : 'leave this round'}
+                </button>
+              </>
+            ) : null}
           </>
         ) : (
           <div style={waiting} data-waiting>

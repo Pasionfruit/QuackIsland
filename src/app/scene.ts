@@ -31,6 +31,7 @@ import { VolcanoPostgame } from '../modules/57-volcano-postgame'
 import { VolcanoTileActions } from '../modules/59-volcano-tile-actions'
 import { VolcanoMapLandmarks } from '../modules/60-volcano-map-landmarks'
 import { VolcanoMinimap } from '../modules/62-volcano-minimap'
+import { VolcanoPause } from '../modules/63-volcano-pause'
 import { isSettingsOpen } from './settingsOpen'
 
 /**
@@ -209,6 +210,7 @@ export const SCENE: SceneEntry[] = [
   { id: '59-volcano-tile-actions', order: 590, enabled: true, Component: VolcanoTileActions },
   { id: '60-volcano-map-landmarks', order: 600, enabled: true, Component: VolcanoMapLandmarks },
   { id: '62-volcano-minimap', order: 620, enabled: true, Component: VolcanoMinimap },
+  { id: '63-volcano-pause', order: 630, enabled: true, Component: VolcanoPause },
 ]
 
 // Toggling a module on or off has to reach the canvas, which is a different

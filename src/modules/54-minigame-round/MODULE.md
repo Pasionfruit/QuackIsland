@@ -181,8 +181,11 @@ Starting either mode must then load both browsers before countdown.
 
 ## Gate record
 
-Generation 2 retains early host snapshots and adds an explicit connected-player
-preload barrier before the host can launch. Pending a new human review.
+Generation 3 retains early host snapshots and adds an explicit connected-player
+preload barrier before the host can launch. Its Island controls now use the
+same rounded sun/coral treatment as the minigame screen, the briefing back
+button is hidden, and the active-party pause card cannot restart or leave the
+coordinated round. Pending a new human review.
 
 ## Measured
 

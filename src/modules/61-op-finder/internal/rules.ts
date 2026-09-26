@@ -24,7 +24,7 @@ export const STAGE_COUNT = 10
 
 export const ANSWER = {
   /** Seconds a wrong guess blocks the next attempt from counting. */
-  lockout: 0.4,
+  lockout: 1.5,
   /** Anti-cheat floor: a reported stage cannot rise faster than one every this many seconds. */
   minStageTime: 0.5,
 } as const
@@ -32,8 +32,6 @@ export const ANSWER = {
 export const ROUND = {
   /** Safety net: however far anybody has got, the round ends here. */
   limit: 180,
-  /** Seconds after the first finish before the round is actually over - long enough to see who won. */
-  outro: 2,
 } as const
 
 export type Kind = 'match' | 'text' | 'identify' | 'pattern' | 'checkboxes' | 'count'
@@ -70,7 +68,7 @@ function shuffled<T>(random: () => number, items: readonly T[]): T[] {
   return out
 }
 
-/** `count` distinct indices into `THINGS`, none sharing `exclude`'s category if given. */
+/** `count` distinct indices into `THINGS`, never `exclude` itself - other members of its category are fair game, on purpose: a decoy from the same category is what makes a grid worth reading closely. */
 function sampleThings(random: () => number, count: number, exclude?: number): number[] {
   const pool = THINGS.map((_, i) => i).filter((i) => i !== exclude)
   return shuffled(random, pool).slice(0, count)
@@ -114,13 +112,13 @@ export type Challenge = MatchChallenge | TextChallenge | IdentifyChallenge | Pat
 
 function genMatch(random: () => number): MatchChallenge {
   const target = Math.floor(random() * THINGS.length)
-  const distractors = sampleThings(random, 5, target)
+  const distractors = sampleThings(random, 8, target)
   return { kind: 'match', target, options: shuffled(random, [target, ...distractors]) }
 }
 
 function genText(random: () => number): TextChallenge {
   let text = ''
-  for (let i = 0; i < 6; i++) text += GLYPHS[Math.floor(random() * GLYPHS.length)]
+  for (let i = 0; i < 8; i++) text += GLYPHS[Math.floor(random() * GLYPHS.length)]
   return { kind: 'text', text }
 }
 
@@ -128,7 +126,11 @@ function genIdentify(random: () => number): IdentifyChallenge {
   const first = Math.floor(random() * THINGS.length)
   const category = THINGS[first].cat
   const sameCat = THINGS.map((_, i) => i).filter((i) => THINGS[i].cat === category)
-  const majority = shuffled(random, sameCat).slice(0, 7)
+  // Every same-category icon, shuffled and repeated to fill the grid, so a
+  // decoy can turn up more than once - reading each one is the only way through.
+  const pool: number[] = []
+  while (pool.length < 10) pool.push(...shuffled(random, sameCat))
+  const majority = pool.slice(0, 10)
   const otherCats = CATEGORIES.filter((c) => c !== category)
   const oddCat = otherCats[Math.floor(random() * otherCats.length)]
   const oddPool = THINGS.map((_, i) => i).filter((i) => THINGS[i].cat === oddCat)
@@ -138,12 +140,14 @@ function genIdentify(random: () => number): IdentifyChallenge {
 }
 
 function genPattern(random: () => number): PatternChallenge {
-  const cycleLength = random() < 0.5 ? 2 : 3
+  const cycleLength = random() < 0.5 ? 3 : 4
   const cycle = sampleThings(random, cycleLength)
+  // Fewer than two full turns of the cycle shown - not enough repetition to
+  // take the rule for granted, only enough to work it out.
   const sequence = Array.from({ length: 5 }, (_, i) => cycle[i % cycle.length])
   const correct = cycle[5 % cycle.length]
-  const decoys = sampleThings(random, 3, correct).filter((i) => !cycle.includes(i))
-  const options = shuffled(random, [correct, ...decoys.slice(0, 3)])
+  const decoys = sampleThings(random, 8, correct).filter((i) => !cycle.includes(i))
+  const options = shuffled(random, [correct, ...decoys.slice(0, 4)])
   return { kind: 'pattern', sequence, options, answerIndex: options.indexOf(correct) }
 }
 
@@ -151,9 +155,9 @@ function genCheckboxes(random: () => number): CheckboxesChallenge {
   const category = CATEGORIES[Math.floor(random() * CATEGORIES.length)]
   const matching = THINGS.map((_, i) => i).filter((i) => THINGS[i].cat === category)
   const others = THINGS.map((_, i) => i).filter((i) => THINGS[i].cat !== category)
-  const wantMatching = 2 + Math.floor(random() * 3) // 2..4
+  const wantMatching = 3 + Math.floor(random() * 3) // 3..5
   const chosenMatching = shuffled(random, matching).slice(0, wantMatching)
-  const chosenOthers = shuffled(random, others).slice(0, 7 - wantMatching)
+  const chosenOthers = shuffled(random, others).slice(0, 10 - wantMatching)
   const options = shuffled(random, [...chosenMatching, ...chosenOthers])
   const correct = options.map((thing, i) => (THINGS[thing].cat === category ? i : -1)).filter((i) => i >= 0)
   return { kind: 'checkboxes', options, category, correct }
@@ -161,8 +165,8 @@ function genCheckboxes(random: () => number): CheckboxesChallenge {
 
 function genCount(random: () => number): CountChallenge {
   const target = Math.floor(random() * THINGS.length)
-  const answer = 2 + Math.floor(random() * 4) // 2..5
-  const decoyCount = 10
+  const answer = 4 + Math.floor(random() * 6) // 4..9
+  const decoyCount = 18
   const decoys = Array.from({ length: decoyCount }, () => sampleThings(random, 1, target)[0])
   const field = shuffled(random, [...Array(answer).fill(target), ...decoys])
   const wrongChoices = new Set<number>()
@@ -314,19 +318,14 @@ export function answer(round: Round, player: Player, guess: Guess): boolean {
 
 /**
  * One step of the round: folds in everybody's reported progress (the host's
- * own included), rate-clamped, then checks whether the round has been
- * decided. `dt` is clamped, same as every other minigame, so a backgrounded
- * tab cannot report a burst of stages all reaching the floor at once.
+ * own included), rate-clamped, then checks whether the round is over. `dt`
+ * is clamped, same as every other minigame, so a backgrounded tab cannot
+ * report a burst of stages all reaching the floor at once.
  */
 export function stepRound(round: Round, intents: ReadonlyMap<string, Intent>, dt: number): Round {
   if (round.over) return round
   const step = Math.min(Math.max(dt, 0), 0.05)
   round.elapsed += step
-
-  if (round.decidedAt !== null) {
-    if (round.elapsed - round.decidedAt >= ROUND.outro) round.over = true
-    return round
-  }
 
   for (const p of round.players) {
     const intent = intents.get(p.id)
@@ -339,8 +338,11 @@ export function stepRound(round: Round, intents: ReadonlyMap<string, Intent>, dt
     if (p.stage >= STAGE_COUNT && p.finishAt === null) p.finishAt = round.elapsed
   }
 
+  // The first finish ends the round at once - see the brief: "First player
+  // to finish wins," not a moment spent watching everybody else catch up.
   if (round.players.some((p) => p.finishAt !== null)) {
     round.decidedAt = round.elapsed
+    round.over = true
   } else if (round.elapsed >= ROUND.limit) {
     round.over = true
     round.elapsed = ROUND.limit
