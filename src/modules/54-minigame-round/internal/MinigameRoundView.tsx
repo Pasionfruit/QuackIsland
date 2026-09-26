@@ -242,7 +242,7 @@ export function MinigameRound() {
     content = (
       <aside className={`minigame-round minigame-round--badge minigame-round--${round.phase}`}>
         <strong>{round.phase === 'practice' ? `Practice ${round.practiceAttempts}` : 'Final attempt'}</strong>
-        <span>{round.phase === 'practice' ? 'Results do not count' : 'This result determines placement'}</span>
+        {round.phase === 'practice' ? <span>Results do not count</span> : null}
       </aside>
     )
   }

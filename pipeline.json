@@ -5033,7 +5033,7 @@
       "id": "54-minigame-round",
       "phase": "P7",
       "title": "Volcano minigame round: after every completed board round, select one free-for-all minigame, brief every player, allow host-run practice attempts, run one final attempt, and publish final placements",
-      "status": "ready_for_review",
+      "status": "in_progress",
       "dependsOn": [
         "00-core",
         "09-net",
@@ -5111,12 +5111,18 @@
           "id": "54.12",
           "title": "Recover a missed player-ready acknowledgement without changing the selected minigame",
           "status": "done"
+        },
+        {
+          "id": "54.13",
+          "title": "Keep the final-attempt badge to its title alone",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
-          "status": "green",
-          "at": "2026-09-26T01:01:34.446Z"
+          "status": "red",
+          "at": "2026-09-26T01:32:56.052Z",
+          "failed": "test"
         },
         "human": {
           "status": "pending"

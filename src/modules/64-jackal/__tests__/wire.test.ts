@@ -126,6 +126,7 @@ describe("the host disputes a claim it would not make itself", () => {
     const yaw = Math.atan2(-dx, -dz)
     const pitch = Math.atan2(runner.y + BODY.height / 2 - (sniper.y + BODY.eye), Math.hypot(dx, dz))
     const said = decodeShot(relay(encodeShot(round.id, { x: sniper.x, z: sniper.z, yaw, pitch, victim: runner.id })))!
+    console.log('DEBUG said', said, 'sniper', sniper, 'canShoot?')
     const hit = claim(round, si, said)!
     expect(hit.hit).toBe(ri)
     expect(runner.lives).toBe(1)
