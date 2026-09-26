@@ -96,7 +96,7 @@ describe('the party', () => {
 describe('on a one-vs-all game’s screen', () => {
   it('opens on the party, with a tab for it, and the host is the 1 until they say otherwise', () => {
     const screen = mount()
-    act(() => openMinigame('reserved-41'))
+    act(() => openMinigame('reserved-42'))
     expect(screen.querySelector('[data-leaf="party"]')).not.toBeNull()
     expect([...screen.querySelectorAll('[data-member]')].map((b) => b.getAttribute('data-member'))).toEqual(['p1', 'p2', 'p3'])
     expect(getTheOne()).toBe('p1')
@@ -106,7 +106,7 @@ describe('on a one-vs-all game’s screen', () => {
 
   it('lets the host click who the 1 is, and tells everybody', () => {
     const screen = mount()
-    act(() => openMinigame('reserved-41'))
+    act(() => openMinigame('reserved-42'))
     lobby.sent.length = 0
     click(screen.querySelector('[data-member="p3"]'))
     expect(getTheOne()).toBe('p3')
@@ -117,7 +117,7 @@ describe('on a one-vs-all game’s screen', () => {
 
   it('has a dice that makes it somebody in the party, and can land on anybody', () => {
     const screen = mount()
-    act(() => openMinigame('reserved-41'))
+    act(() => openMinigame('reserved-42'))
     const seen = new Set<string | null>()
     for (let i = 0; i < 80; i++) {
       click(screen.querySelector('[data-one-dice]'))
@@ -133,7 +133,7 @@ describe('on a one-vs-all game’s screen', () => {
     // A guest cannot set it, so put it where the host's word would have.
     theOne.reset()
     const screen = mount()
-    act(() => openMinigame('reserved-41'))
+    act(() => openMinigame('reserved-42'))
     expect(screen.querySelector('[data-one-dice]')).toBeNull()
     const chip = screen.querySelector('[data-member="p3"]') as HTMLButtonElement
     expect(chip.disabled).toBe(true)

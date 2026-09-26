@@ -52,14 +52,19 @@ describe('the catalogue', () => {
     expect(MINIGAMES).toHaveLength(total)
   })
 
-  it('numbers the named games alphabetically by title, with the free slots after them', () => {
-    const named = MINIGAMES.filter((game) => !game.reserved)
+  it('numbers the named games alphabetically by title within their own kind, with the free slots after them', () => {
     const key = (title: string) => title.toLowerCase().replace(/[^a-z0-9]/g, '')
-    const sorted = [...named].sort((a, b) => (key(a.title) < key(b.title) ? -1 : key(a.title) > key(b.title) ? 1 : 0))
-    expect(named.map((game) => game.id)).toEqual(sorted.map((game) => game.id))
-    // The list is in number order, the named games are 1 to 38 and the free slots take the rest.
-    expect(named.map((game) => game.number)).toEqual(named.map((_, i) => i + 1))
-    expect(MINIGAMES.slice(named.length).every((game) => game.reserved)).toBe(true)
+    let offset = 0
+    for (const kind of KINDS) {
+      const block = minigamesOfKind(kind)
+      const named = block.filter((game) => !game.reserved)
+      const sorted = [...named].sort((a, b) => (key(a.title) < key(b.title) ? -1 : key(a.title) > key(b.title) ? 1 : 0))
+      expect(named.map((game) => game.id)).toEqual(sorted.map((game) => game.id))
+      // Within its own kind's block, the named games come first, numbered from where that block starts.
+      expect(named.map((game) => game.number)).toEqual(named.map((_, i) => offset + i + 1))
+      expect(block.slice(named.length).every((game) => game.reserved)).toBe(true)
+      offset += MINIGAME_TARGET[kind]
+    }
   })
 
   it('makes the first forty games free-for-all, and the six after them one-vs-all', () => {

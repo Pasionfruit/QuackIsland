@@ -1,11 +1,9 @@
 /**
  * Stopping a round, for everybody, and who is allowed to start it again.
  *
- * **A pause is shared, and it is the host's.** Only the host can stop the
- * round - guests in a party work no button on the minigame screen - and when
- * they do, every browser stops and says so. `state.ts` holds that rule; the
- * pure `mayControl` below is kept for whoever paused, and is no longer what the
- * screen asks.
+ * **A pause is shared, and any player may start it.** Every browser stops and
+ * says who pressed it. `state.ts` carries that message and uses the pure
+ * `mayControl` rule below for the card.
  *
  * **Whoever stopped it is the one who starts it again.** Resume, restart and
  * leaving are theirs; everybody else is told to wait and told who for. Two

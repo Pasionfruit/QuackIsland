@@ -291,21 +291,23 @@ the way the button does. Once a round is counting or playing, stepping back
 would throw away a round you are in the middle of — so it stops the round and
 puts a card over it, offering **resume**, **restart the round** and a way out.
 
-### A pause is shared, and it is the host's
+### A pause is shared, and any player may start it
 
-**Only the host works the minigame screen.** Guests in a party press no button
-on it at all: no back on the briefing or the empty round, no pause, nothing on
-the pause card, no dashboard or replay on the podium, and escape does nothing
-for them. They still read the briefing's two tabs, which change nothing but
-their own view. `iMayControl` is `paused && host`; `pauseMinigame` refuses a
-guest; and a pause message is applied only if it came from the host (the lowest
-id in the room, `isHost`), so an older build's guest cannot stop the round.
+**Every player may press Escape during a round.** Browsing, choosing a game,
+starting it, replaying it, and leaving a round remain host-owned. The player
+who paused owns the pause card: `pauseMinigame` carries their id and name and
+`iMayControl` lets them resume, restart, or leave when the party is not playing
+Volcano Island.
 
-**It stops for everybody**, and the card says so on every screen. Everybody but
-the host gets the same card with nothing to press and *waiting for the host*.
+**It stops for everybody**, and the card says who paused it on every screen.
+Everybody else sees who they are waiting for.
 
-**If the host leaves**, hosting passes to the next lowest id on its own, and the
-buttons go with it - so a card is never stranded with nobody to take it down.
+The relay sender id is authoritative for a received pause. If a player
+reconnects while an Island round is opening, their pause still reaches the
+party even if their browser carried an earlier id in its message.
+
+**If the pauser leaves**, the buttons become available to anyone still in the
+lobby, so a card is never stranded with nobody to take it down.
 
 It is a plain broadcast rather than `hostChoice`, applied by everybody who hears
 it - the sender included, which is harmless because `pauseRun` and `resumeRun`
@@ -372,7 +374,7 @@ the island's 3D bus.
 | `rankStandings`, `poseFor`, `Standing`, `Placed`, `Pose`, `PodiumResult` | Who stands where on the podium and how they take it. All pure. |
 | `replayMinigame` | The podium's replay: the same game again, for everybody. The host's. |
 | `openDashboard`, `openMinigame`, `playMinigame`, `tickMinigame`, `backOut`, `closeMinigames` | Moving the screen about. |
-| `pauseMinigame`, `resumeMinigame`, `restartMinigame`, `isPausable`, `pauseRun`, `resumeRun`, `restartRun` | Stopping a round, starting it again, and starting it over. The host's alone. |
+| `pauseMinigame`, `resumeMinigame`, `restartMinigame`, `isPausable`, `pauseRun`, `resumeRun`, `restartRun` | Stopping a round, starting it again, and starting it over. Any player may pause; the pauser controls the card. |
 | `CountOver`, `countLength`, `screenCounts`, `MinigameBuild.ownCountdown` | A game that counts itself in later - Pet Race - with the screen's own look and voice. |
 | `mayControl`, `iMayControl`, `useMayControl`, `nameOfPauser`, `Pauser` | Who the card belongs to, and what to call them. |
 | `encodePause`, `decodePause`, `PAUSE_TAG`, `PauseAct`, `PauseMessage` | A pause on the wire. |
@@ -517,8 +519,8 @@ party panel, bottom left.
 - **Host: open a game.** The guest should land on the same briefing, able to
   read both tabs, with *waiting for the host to start* where the play button is.
 - **Host: press play.** Both should count down and start together.
-- **Guest: press escape, on the briefing and in a round.** Nothing should
-  happen. A guest has no back, pause or podium button anywhere on the screen.
+- **Guest: press escape, on the briefing and in a round.** The briefing stays
+  put; a running round pauses for everyone and names the guest on both cards.
 - **Host: open a different game.** The guest who walked out should be picked
   back up by it.
 - **Host: leave the round.** The guest should be taken out of it too.
@@ -528,9 +530,10 @@ party panel, bottom left.
 
 ## Gate record
 
-Generation 2 keeps a paused minigame inside an active Volcano Island party:
-the host may resume, but cannot restart the round or return to the catalogue.
-Standalone minigames retain their existing pause choices. Pending human review.
+Generation 3 lets any player pause an active minigame and shows every player
+who did so. Relay identity keeps a reconnecting guest's pause shared with the
+party. The pauser may resume; in a Volcano Island party nobody can restart the
+round or return to the catalogue. Pending human review.
 
 ## Measured
 

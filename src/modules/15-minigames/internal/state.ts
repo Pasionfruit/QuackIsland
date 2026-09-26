@@ -15,11 +15,12 @@
  */
 import { useEffect, useRef } from 'react'
 import { createStore, useStore } from '../../00-core'
-import { getMyName, getNet, getPeers, isHost, sendToRoom, subscribeRoom, useNet, usePeers } from '../../09-net'
+import { getMyName, getNet, getPeers, sendToRoom, subscribeRoom, useNet, usePeers } from '../../09-net'
 import { hostChoice } from '../../13-modes'
 import {
   decodePause,
   encodePause,
+  mayControl,
   type PauseAct,
   type Pauser,
 } from './pause'
@@ -42,6 +43,7 @@ import {
   type MinigameRun,
 } from './registry'
 import type { MinigameId } from './catalogue'
+import { useTheOneSync } from './party'
 import type { Standing } from './podium'
 
 export type MinigameScreenState =
@@ -80,7 +82,7 @@ export function useMayControl(): boolean {
   const net = useNet()
   usePeers()
   if (open.at !== 'game') return false
-  return open.run.paused && net.host
+  return open.run.paused && mayControl(open.run.pausedBy, net.id ?? 'you', here())
 }
 
 /**
@@ -100,10 +102,15 @@ export function usePauseSync(): void {
     return subscribeRoom((from, raw) => {
       const said = decodePause(raw)
       if (!said) return
-      // Only the host works the round. A guest's pause - from an older build,
-      // or anybody trying - is not one.
-      if (!isHost(from, here().filter((id) => id !== from))) return
-      apply(said.act, said.by)
+      // The relay's sender id is authoritative. A reconnect can leave a
+      // browser's carried party id one message behind, and rejecting that
+      // pause would leave the other players running. Keep the supplied name
+      // for the card, but use the relay id for pause ownership.
+      const by = said.by.id === from ? said.by : { ...said.by, id: from }
+      const now = screen.get()
+      if (now.at !== 'game') return
+      if (said.act !== 'pause' && !mayControl(now.run.pausedBy, by.id, here())) return
+      apply(said.act, by)
     })
   }, [])
 }
@@ -245,15 +252,13 @@ function here(): string[] {
 /**
  * Whether this browser may work the buttons on the card that is up.
  *
- * **The host, and nobody else.** Guests in a party work no button on the
- * minigame screen: not pause, not the card, not back. Hosting passes to whoever
- * is left if the host goes, so a card is never stranded without anybody to
- * take it down.
+ * The player who paused controls the card. If they leave, anybody remaining
+ * can take it down, so a round is never stranded behind a pause card.
  */
 export function iMayControl(): boolean {
   const now = screen.get()
   if (now.at !== 'game') return false
-  return now.run.paused && getNet().host
+  return now.run.paused && mayControl(now.run.pausedBy, getNet().id ?? 'you', here())
 }
 
 /**
@@ -277,12 +282,12 @@ function announce(act: PauseAct, by: Pauser): void {
 /**
  * Stops the round where it stands, for everybody, and says who did it.
  *
- * The host's alone. Guests in a party work no button on the minigame screen,
- * pause included - see `iMayControl`.
+ * Any player may pause. The pausing player's name travels with the shared
+ * message so every browser can say who stopped the round.
  */
 export function pauseMinigame(): void {
   const now = screen.get()
-  if (now.at !== 'game' || !isPausable(now.run) || now.run.paused || !getNet().host) return
+  if (now.at !== 'game' || !isPausable(now.run) || now.run.paused) return
   announce('pause', me())
 }
 
@@ -366,6 +371,7 @@ export function rememberDashboard(at: DashboardAt): void {
  */
 export function useMinigameSync(): void {
   call.useSync()
+  useTheOneSync()
   usePauseSync()
   const net = useNet()
   const current = call.use()

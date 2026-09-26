@@ -43,6 +43,7 @@ export {
   listenForMinigameRound,
   markMinigameRoundReady,
   recordFinalMinigame,
+  retryMinigameRoundPreload,
   requestMinigameRoundSync,
   continueToMinigameRewards,
   resetMinigameRound,

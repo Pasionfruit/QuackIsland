@@ -5,10 +5,10 @@
  * there is something running, taking you back without asking would throw away a
  * round you are in the middle of - so it stops instead, and asks.
  *
- * **It stops for everybody, and only the host can stop it.** Guests in a party
- * work no buttons on this screen at all - see `iMayControl`.
+ * **It stops for everybody, and any player can stop it.** See `iMayControl`
+ * for the rule that gives the card to the player who paused.
  *
- * **The buttons are the host's.** Everybody else gets the same card with the
+ * **The buttons are the pauser's.** Everybody else gets the same card with the
  * same three words on it and nothing to press, and a line telling them who
  * they are waiting for - which is better than three dead buttons and no
  * explanation. If the host leaves, whoever hosts next gets the buttons.
@@ -45,11 +45,11 @@ export function Paused({ isHost, pausedBy, me, mayControl }: { isHost: boolean; 
             ? isHost
               ? islandParty
                 ? 'You paused the Volcano Island round for everybody. Resume when the party is ready.'
-                : 'You stopped the round for everybody. Leaving takes them all back with you.'
-              : 'You stopped the round for everybody. Leaving lets them carry on without you.'
+                : 'You paused the game for everybody. Leaving takes them all back with you.'
+              : 'You paused the game for everybody. Leaving lets them carry on without you.'
             : gone
-              ? `${who} stopped the round and has since left, so it is yours to start again.`
-              : `${who} stopped the round. Only the host can start it again.`}
+              ? `${who} paused the game and has since left, so it is yours to start again.`
+              : `${who} paused the game. Only ${who} can resume it.`}
         </div>
 
         {mayControl ? (
@@ -75,7 +75,7 @@ export function Paused({ isHost, pausedBy, me, mayControl }: { isHost: boolean; 
           </>
         ) : (
           <div style={waiting} data-waiting>
-            waiting for the host
+            waiting for {who || 'the player who paused'}
           </div>
         )}
       </div>

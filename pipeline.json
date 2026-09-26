@@ -211,7 +211,8 @@
         "59-volcano-tile-actions",
         "60-volcano-map-landmarks",
         "61-op-finder",
-        "62-volcano-minimap"
+        "62-volcano-minimap",
+        "63-volcano-pause"
       ],
       "generation": 1,
       "contract": {
@@ -1586,6 +1587,16 @@
           "status": "done"
         },
         {
+          "id": "15.14",
+          "title": "Let every player pause a shared minigame and identify the pauser",
+          "status": "done"
+        },
+        {
+          "id": "15.15",
+          "title": "Use relay player identity when synchronizing a guest's shared pause",
+          "status": "done"
+        },
+        {
           "id": "15.7",
           "title": "The games themselves, one build at a time, three stages each",
           "status": "planned"
@@ -1594,7 +1605,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-26T00:47:04.349Z"
+          "at": "2026-09-26T01:08:04.743Z"
         },
         "human": {
           "status": "pending"
@@ -5022,7 +5033,7 @@
       "id": "54-minigame-round",
       "phase": "P7",
       "title": "Volcano minigame round: after every completed board round, select one free-for-all minigame, brief every player, allow host-run practice attempts, run one final attempt, and publish final placements",
-      "status": "in_progress",
+      "status": "ready_for_review",
       "dependsOn": [
         "00-core",
         "09-net",
@@ -5095,12 +5106,17 @@
           "id": "54.11",
           "title": "Island-style practice and final controls with catalogue back navigation suppressed",
           "status": "done"
+        },
+        {
+          "id": "54.12",
+          "title": "Recover a missed player-ready acknowledgement without changing the selected minigame",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-25T17:28:19.584Z"
+          "at": "2026-09-26T01:01:34.446Z"
         },
         "human": {
           "status": "pending"
@@ -5857,9 +5873,10 @@
     {
       "id": "63-volcano-pause",
       "phase": "P8",
-      "title": "Volcano pause: a host-controlled shared pause card that owns Escape during a board party",
+      "title": "Volcano pause: a player-owned shared pause card that owns Escape during a board party",
       "status": "ready_for_review",
       "dependsOn": [
+        "00-core",
         "09-net",
         "10-party",
         "13-modes",
@@ -5875,7 +5892,7 @@
       "blocks": [
         {
           "id": "63.1",
-          "title": "Shared host pause state with late-join synchronization",
+          "title": "Shared player pause state with pauser attribution",
           "status": "done"
         },
         {
@@ -5887,12 +5904,17 @@
           "id": "63.3",
           "title": "Tests, contract and review notes",
           "status": "done"
+        },
+        {
+          "id": "63.4",
+          "title": "Player-owned shared pause messages and pauser attribution",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-26T00:31:28.114Z"
+          "at": "2026-09-26T00:56:35.000Z"
         },
         "human": {
           "status": "pending",
@@ -5905,7 +5927,7 @@
       "nonGoals": [
         "No edits to the frozen board-movement or minigame modules",
         "No board simulation, turn, or network protocol changes",
-        "No guest authority to pause or resume"
+        "No guest authority to restart a minigame or end the party"
       ],
       "budgets": {
         "drawCallsMax": 0,

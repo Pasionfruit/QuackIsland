@@ -80,6 +80,7 @@ import {
   listenForMinigameRound,
   markMinigameRoundReady,
   recordFinalMinigame,
+  retryMinigameRoundPreload,
   resetMinigameRound,
   startFinalMinigame,
   startMinigamePractice,
@@ -156,6 +157,19 @@ describe('host minigame-round coordination', () => {
     expect(continueToMinigameRewards()).toBe(false)
     expect(acknowledgeMinigameRound(complete.sessionId)).toBe(true)
     stop()
+  })
+
+  it('re-announces a briefing so a missed readiness acknowledgement can recover', () => {
+    syncMinigameRoundLifecycle()
+    const initial = getMinigameRound()
+    expect(retryMinigameRoundPreload()).toBe(true)
+    expect(getMinigameRound()).toMatchObject({
+      phase: 'briefing',
+      sessionId: initial.sessionId,
+      minigameId: initial.minigameId,
+      revision: initial.revision + 1,
+    })
+    expect(mocks.send).toHaveBeenCalledTimes(2)
   })
 
   it('preloads a selected game on a guest before the play call arrives', () => {

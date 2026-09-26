@@ -154,22 +154,31 @@ describe('stopping the round', () => {
     expect(pauses()).toEqual([])
   })
 
-  it('is not something a guest can do', () => {
+  it('lets a guest pause the game and tells everybody who did it', () => {
     asGuest()
     intoARound()
     act(() => pauseMinigame())
     const open = getMinigameScreen()
-    expect(open.at === 'game' && open.run.paused).toBe(false)
-    expect(pauses()).toEqual([])
+    expect(open.at === 'game' && open.run.pausedBy).toEqual({ id: 'p3', name: 'ali' })
+    expect(pauses()).toEqual([encodePause({ act: 'pause', by: { id: 'p3', name: 'ali' } })])
   })
 
-  it('ignores a pause from a guest, whatever it says', () => {
+  it('accepts a pause from another guest and keeps their name', () => {
     lobby.peers = [{ id: 'p2', name: 'bea', ping: null }, { id: 'p9', name: 'cy', ping: null }]
     mountListener()
     intoARound()
     hear(encodePause({ act: 'pause', by: { id: 'p9', name: 'cy' } }), 'p9')
     const open = getMinigameScreen()
-    expect(open.at === 'game' && open.run.paused).toBe(false)
+    expect(open.at === 'game' && open.run.pausedBy).toEqual({ id: 'p9', name: 'cy' })
+  })
+
+  it('uses the relay sender id when a guest reconnects before their pause arrives', () => {
+    lobby.peers = [{ id: 'p2', name: 'bea', ping: null }, { id: 'p9', name: 'cy', ping: null }]
+    mountListener()
+    intoARound()
+    hear(encodePause({ act: 'pause', by: { id: 'previous-p9', name: 'cy' } }), 'p9')
+    const open = getMinigameScreen()
+    expect(open.at === 'game' && open.run.pausedBy).toEqual({ id: 'p9', name: 'cy' })
   })
 
   it('gives a guest no buttons on a pause the host put up', () => {
@@ -186,7 +195,7 @@ describe('stopping the round', () => {
     expect(pauses()).toEqual([])
   })
 
-  it('hands the buttons to whoever hosts next once the host has left', () => {
+  it('hands the buttons to whoever remains once the pauser has left', () => {
     asGuest()
     mountListener()
     intoARound()
@@ -252,7 +261,7 @@ describe('the card', () => {
     expect(where.querySelector('[data-restart]')).not.toBeNull()
     expect(where.querySelector('[data-leave]')).not.toBeNull()
     expect(where.querySelector('[data-waiting]')).toBeNull()
-    expect(where.textContent).toContain('You stopped the round')
+    expect(where.textContent).toContain('You paused the game')
   })
 
   it('keeps a Volcano Island party in its paused round', () => {
@@ -270,8 +279,8 @@ describe('the card', () => {
     expect(where.querySelector('[data-resume]')).toBeNull()
     expect(where.querySelector('[data-restart]')).toBeNull()
     expect(where.querySelector('[data-leave]')).toBeNull()
-    expect(where.querySelector('[data-waiting]')?.textContent).toContain('waiting for the host')
-    expect(where.textContent).toContain('Only the host can start it again')
+    expect(where.querySelector('[data-waiting]')?.textContent).toContain('waiting for bea')
+    expect(where.textContent).toContain('bea paused the game')
   })
 
   it('says so when the buttons have come back because somebody left', () => {

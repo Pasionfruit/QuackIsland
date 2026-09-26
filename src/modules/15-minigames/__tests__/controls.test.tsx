@@ -147,7 +147,7 @@ describe('a guest', () => {
     expect(getMinigameScreen().at).toBe('game')
   })
 
-  it('cannot pause a round with escape', () => {
+  it('pauses a round with escape and tells everybody which guest did it', () => {
     asGuest()
     mount()
     act(() => {
@@ -156,7 +156,7 @@ describe('a guest', () => {
       tickMinigame(FADE.in + COUNT_FROM + 0.5)
     })
     escape()
-    expect(getMinigameScreen()).toMatchObject({ at: 'game', run: { phase: 'playing', paused: false } })
+    expect(getMinigameScreen()).toMatchObject({ at: 'game', run: { phase: 'playing', paused: true, pausedBy: { id: 'p3', name: 'ali' } } })
   })
 })
 

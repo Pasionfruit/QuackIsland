@@ -43,7 +43,7 @@ let stopListening: (() => void) | null = null
 let requestedSession = ''
 let actionSequence = 0
 let pendingSnapshot: MinigameRoundSnapshot | null = null
-let announcedReadySession = ''
+let announcedReadyKey = ''
 
 export function getMinigameRound(): MinigameRoundSnapshot {
   return store.get()
@@ -86,7 +86,7 @@ function accept(snapshot: MinigameRoundSnapshot): void {
   if (previous.sessionId !== snapshot.sessionId) {
     acknowledged.set('')
     readyPlayers.set([])
-    announcedReadySession = ''
+    announcedReadyKey = ''
   }
   store.set(snapshot)
   if (pendingSnapshot?.sessionId === snapshot.sessionId && pendingSnapshot.revision <= snapshot.revision) {
@@ -210,9 +210,25 @@ export function markMinigameRoundReady(): boolean {
     return true
   }
 
-  if (announcedReadySession === current.sessionId) return true
-  announcedReadySession = current.sessionId
+  const readyKey = `${current.sessionId}:${current.revision}`
+  if (announcedReadyKey === readyKey) return true
+  announcedReadyKey = readyKey
   sendToRoom({ ...encodeMinigameRoundReady(current.sessionId, current.boardRound) })
+  return true
+}
+
+/**
+ * Re-announces the unchanged briefing when an acknowledgement was missed.
+ * A new revision makes every client re-check its mounted briefing and send its
+ * small ready message again; it never starts the game or changes the selection.
+ */
+export function retryMinigameRoundPreload(): boolean {
+  if (!getNet().host) return false
+  const current = store.get()
+  if (current.phase !== 'briefing') return false
+  const next = { ...current, revision: current.revision + 1 }
+  accept(next)
+  announce(next)
   return true
 }
 
@@ -280,6 +296,8 @@ export function syncMinigameRoundLifecycle(): void {
 function startAttempt(kind: 'practice' | 'final'): boolean {
   if (!getNet().host) return false
   const current = store.get()
+  // Readiness protects the usual launch path, but a retry can repair a missed
+  // acknowledgement without changing this authoritative start operation.
   if (current.phase === 'briefing' && !isMinigameRoundReadyToStart()) return false
   const next = beginMinigameAttempt(current, kind, localAction(kind))
   if (next === current || next.minigameId === '') return false
@@ -329,5 +347,5 @@ export function resetMinigameRound(): void {
   actionSequence = 0
   pendingSnapshot = null
   readyPlayers.set([])
-  announcedReadySession = ''
+  announcedReadyKey = ''
 }

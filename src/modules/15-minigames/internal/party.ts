@@ -69,6 +69,17 @@ export function useTheOne(): string | null {
   return now === NO_ONE ? null : now
 }
 
+/**
+ * Keeps who-is-the-1 in step with the lobby for as long as the interface is
+ * up - mount it once, unconditionally, from something that is always
+ * mounted. Without this, a guest's own copy never hears the host's pick at
+ * all: `theOne` is a `hostChoice` like any other, and a `hostChoice` only
+ * actually syncs once something calls its `useSync`.
+ */
+export function useTheOneSync(): void {
+  theOne.useSync()
+}
+
 /** The host says who the 1 is. A guest calling it changes nothing. */
 export function chooseTheOne(id: string): void {
   theOne.set(id)

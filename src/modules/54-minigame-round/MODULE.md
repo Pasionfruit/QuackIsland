@@ -33,7 +33,7 @@ simulation and controls.
 | `encodeMinigameRoundMessage` / `decodeMinigameRoundMessage` | Bounded room protocol |
 | `encodeMinigameRoundReady` / `decodeMinigameRoundReady` | Separate bounded briefing-loaded acknowledgement protocol |
 | `allConnectedMinigamePlayersReady` | Pure preload barrier for the current connected roster |
-| `markMinigameRoundReady` / `isMinigameRoundReadyToStart` | Runtime preload acknowledgement and host launch guard |
+| `markMinigameRoundReady` / `isMinigameRoundReadyToStart` / `retryMinigameRoundPreload` | Runtime preload acknowledgement, host launch guard, and missed-acknowledgement recovery |
 
 The completed snapshot contains the board session and round, selected game,
 locked two-to-eight-player roster, practice count, normalized placements, and
@@ -64,8 +64,11 @@ Once the briefing is actually mounted, each connected player sends a bounded
 ready acknowledgement. Practice and Start final remain disabled on the host
 until every currently connected member of the locked round roster is ready.
 Disconnected members are excluded from this preload barrier, matching the
-existing rule that a disconnected player cannot hold the party forever. The
-ready channel contains only the session and round and adds no polling loop.
+existing rule that a disconnected player cannot hold the party forever. If an
+acknowledgement is missed, the host can use **Retry loading** to re-announce
+the same briefing under a new revision, which makes each mounted client send
+its acknowledgement again. The ready channel contains only the session and
+round and adds no polling loop.
 
 `53-board-movement` is acknowledged only after its public visual-settlement
 signal confirms the final player's last hop has landed and this module has
@@ -151,7 +154,9 @@ Run `npm run dev:multi`, then use a normal and private browser window.
    standalone Play button must be absent. The guest should see `Waiting for the
    host`; only the host has the polished Practice and Start final cards. The
    cards must remain disabled with `Loading the minigame for every player...`
-   until the guest's briefing is mounted.
+   until the guest's briefing is mounted. If it remains there, use **Retry
+   loading**; both browsers should then acknowledge the existing briefing and
+   enable the cards.
 4. Press Practice. Both browsers should enter the same game through its normal
    countdown and show a Practice badge stating that results do not count.
 5. Finish the practice. Replay and Minigame dashboard must be absent and Escape

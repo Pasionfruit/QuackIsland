@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { resetParty, hostGame, startGame } from '../../10-party'
 import { chooseMode, resetMode } from '../../13-modes'
 import { closeMinigames, getMinigameScreen } from '../../15-minigames'
-import { setVolcanoPause } from '../internal/state'
+import { clearVolcanoPause } from '../internal/state'
 import { VolcanoPause } from '../internal/VolcanoPauseView'
 
 let root: Root | null = null
@@ -15,7 +15,7 @@ beforeEach(() => {
   resetParty()
   resetMode()
   closeMinigames()
-  setVolcanoPause('running')
+  clearVolcanoPause()
   chooseMode('island')
   hostGame()
   startGame()
@@ -40,6 +40,7 @@ describe('Volcano pause view', () => {
     act(() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true })))
     const pause = document.querySelector('[data-volcano-pause]')
     expect(pause?.textContent).toContain('Paused')
+    expect(pause?.textContent).toContain('paused the party')
     expect(getMinigameScreen().at).toBe('closed')
 
     act(() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true })))

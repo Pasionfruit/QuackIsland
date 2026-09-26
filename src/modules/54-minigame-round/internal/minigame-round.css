@@ -134,6 +134,23 @@
   box-shadow: none;
 }
 
+.minigame-round__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: 0.7rem;
+}
+
+.minigame-round__retry {
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 999px;
+  background: rgba(6, 35, 58, 0.66);
+  color: #fff;
+  padding: 0.35rem 0.7rem;
+  font: 700 0.73rem/1 system-ui, sans-serif;
+}
+
 .minigame-round button.minigame-round__final {
   color: #fff7dc;
   border-color: rgba(255, 220, 164, 0.72);

@@ -44,8 +44,8 @@ describe('picking a game at random', () => {
   })
 
   it('never lands on a free slot, and has nothing to pick when nothing is built', () => {
-    expect(randomPlayable(['reserved-41', 'duck-hunt'], () => 0)).toBe('duck-hunt')
-    expect(randomPlayable(['reserved-41'], () => 0)).toBe(null)
+    expect(randomPlayable(['reserved-42', 'duck-hunt'], () => 0)).toBe('duck-hunt')
+    expect(randomPlayable(['reserved-42'], () => 0)).toBe(null)
     expect(randomPlayable([], () => 0)).toBe(null)
   })
 

@@ -61,15 +61,13 @@ export function MinigameScreen() {
   const paused = run?.paused === true
 
   useEffect(() => {
-    // The screen is the host's to work, escape included. A guest's escape is
-    // the same nothing every button is for them - see `iMayControl`.
-    if (!showing || !net.host) return
+    if (!showing) return
     const onKey = (e: KeyboardEvent) => {
       if (e.code !== 'Escape') return
       // Nothing running: escape is still the way back. Something running:
       // stop it and ask, rather than throwing away a round in progress.
       // Already stopped: escape takes the card down again.
-      if (!pausable) backOut()
+      if (!pausable && net.host) backOut()
       else if (!paused) pauseMinigame()
       else if (mayControl) resumeMinigame()
     }

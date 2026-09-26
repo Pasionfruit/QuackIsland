@@ -864,13 +864,26 @@ const ENTRIES = [
     done: { environment: false, controls: false, assets: false },
   },
   {
-    id: 'reserved-41',
+    id: 'jackal',
     number: 41,
-    title: 'Free slot',
+    title: 'Jackal',
     kind: 'one-vs-all',
-    description: [],
-    controls: [],
-    reserved: true,
+    description: [
+      "One player becomes the Sniper, alone at the top of a tower with a laser-sighted rifle - everyone else is a Runner, rushing the tower from spawn through crates, trees and barrels for cover. The Sniper's aim is always visible as a beam, so runners can see exactly where the danger is and move between cover to avoid it.",
+      "The Sniper has the number of players times 1.5 bullets before being forced to reload, and can unscope to move freely and reposition, at the cost of precision while doing it. Each runner has 2 lives - getting hit costs one, and losing the last one is out.",
+      'The Sniper wins by eliminating every runner before any of them reaches the base. The Runners win the moment even one of them reaches it.',
+    ],
+    controls: [
+      { input: 'Sniper: Mouse', does: 'Aim' },
+      { input: 'Sniper: Left click', does: 'Shoot' },
+      { input: 'Sniper: Right click', does: 'Scope / unscope' },
+      { input: 'Sniper: WASD', does: 'Move around the tower' },
+      { input: 'Runner: WASD', does: 'Move' },
+      { input: 'Runner: Mouse', does: 'Camera' },
+      { input: 'Runner: Space', does: 'Jump / vault over cover' },
+    ],
+    reserved: false,
+    // Not yet built - see `64-jackal`.
     done: { environment: false, controls: false, assets: false },
   },
   {

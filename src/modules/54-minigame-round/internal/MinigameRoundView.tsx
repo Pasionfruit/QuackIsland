@@ -10,6 +10,7 @@ import {
   markMinigameRoundReady,
   listenForMinigameRound,
   recordFinalMinigame,
+  retryMinigameRoundPreload,
   startFinalMinigame,
   startMinigamePractice,
   syncMinigameRoundLifecycle,
@@ -114,7 +115,7 @@ export function MinigameRound() {
     if (screen.at !== 'game' || screen.run.id !== round.minigameId || screen.run.phase !== 'briefing') {
       openMinigame(round.minigameId)
     }
-  }, [round.minigameId, round.phase, round.sessionId, screen])
+  }, [round.minigameId, round.phase, round.revision, round.sessionId, screen])
 
   useEffect(() => {
     if (
@@ -224,7 +225,12 @@ export function MinigameRound() {
               </button>
             </div>
             {!everyoneLoaded && (
-              <span className="minigame-round__waiting">Loading the minigame for every player...</span>
+              <div className="minigame-round__loading">
+                <span className="minigame-round__waiting">Loading the minigame for every player...</span>
+                <button type="button" className="minigame-round__retry" onClick={retryMinigameRoundPreload}>
+                  Retry loading
+                </button>
+              </div>
             )}
           </>
         ) : (

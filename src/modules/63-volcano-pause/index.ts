@@ -1,9 +1,13 @@
-/** Shared, host-controlled pausing for the board portion of Volcano Island. */
+/** Shared player-owned pausing for the board portion of Volcano Island. */
 export {
+  clearVolcanoPause,
   getVolcanoPause,
-  setVolcanoPause,
+  mayResumeVolcanoGame,
+  pauseVolcanoGame,
+  resumeVolcanoGame,
   useVolcanoPause,
   useVolcanoPauseSync,
+  type VolcanoPauser,
   type VolcanoPauseState,
 } from './internal/state'
 export { CONTROL_CODES, isVolcanoBoardParty, shouldBlockKey } from './internal/guards'
