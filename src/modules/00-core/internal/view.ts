@@ -7,7 +7,7 @@
  */
 import { createStore, useStore } from './store'
 
-export type CameraMode = 'orbit' | 'player'
+export type CameraMode = 'orbit' | 'player' | 'board'
 
 const store = createStore<CameraMode>('orbit')
 

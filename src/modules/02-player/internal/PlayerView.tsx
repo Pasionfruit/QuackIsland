@@ -12,7 +12,7 @@
 import { useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import { Group, Vector3 } from 'three'
-import { PRIORITY, getDayTime, setCameraMode, tideAt, useGameFrame } from '../../00-core'
+import { PRIORITY, getCameraMode, getDayTime, setCameraMode, tideAt, useGameFrame } from '../../00-core'
 import { SEA_LEVEL, heightAt, worldBounds } from '../../01-terrain'
 import {
   IDLE_INPUT,
@@ -404,13 +404,15 @@ export function Player({
 
     // Both views come out of one function, so they cannot end up disagreeing
     // about which way `yaw` points.
-    const place = placeCamera(view, rig, state, PLAYER.eyeHeight, ground.current)
-    camWant.set(place.x, place.y, place.z)
-    camLook.set(place.lookX, place.lookY, place.lookZ)
+    if (getCameraMode() === 'player') {
+      const place = placeCamera(view, rig, state, PLAYER.eyeHeight, ground.current)
+      camWant.set(place.x, place.y, place.z)
+      camLook.set(place.lookX, place.lookY, place.lookZ)
 
-    const ease = view === 'first' ? CAM_EASE_FIRST : CAM_EASE
-    camera.position.lerp(camWant, 1 - Math.exp(-delta * ease))
-    camera.lookAt(camLook)
+      const ease = view === 'first' ? CAM_EASE_FIRST : CAM_EASE
+      camera.position.lerp(camWant, 1 - Math.exp(-delta * ease))
+      camera.lookAt(camLook)
+    }
   }, PRIORITY.camera)
 
   return (

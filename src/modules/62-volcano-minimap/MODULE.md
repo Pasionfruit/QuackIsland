@@ -48,12 +48,15 @@ place in the current turn order.
 1. Start a two-player Volcano Island game and finish turn order.
 2. A compact **Summit route** spiral should appear at the top right, with a
    differently coloured dot for each player at start.
-3. Roll for one player. The dice should tumble in 3D and settle on the shared
-   result; that player's dot should then move around the spiral in both browsers.
+3. Roll for one player. The dice should tumble in 3D, settle on the shared
+   result, and show its total plus each die value; that player's dot should then
+   move around the spiral in both browsers.
 4. Move both players to the same tile. Both dots should remain visible, one a
    little above and one a little below the route.
 5. End the party. The minimap should disappear and it must never block clicks
    on the board UI.
+6. Select **Summit route**. The map should collapse while the roll result stays
+   visible; select it again to restore the route.
 
 ## Validation
 

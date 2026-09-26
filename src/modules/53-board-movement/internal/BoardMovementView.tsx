@@ -1,7 +1,7 @@
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Vector3 } from 'three'
-import { PRIORITY, useGameFrame } from '../../00-core'
+import { PRIORITY, getCameraMode, setCameraMode, useGameFrame } from '../../00-core'
 import { movePlayerTo } from '../../02-player'
 import { getNet, useNet, usePeers } from '../../09-net'
 import { getParty, useParty } from '../../10-party'
@@ -86,10 +86,13 @@ export function BoardMovement(): null {
       snapshot.sessionId !== null &&
       !isBoardRoundAcknowledged(snapshot.sessionId, snapshot.round)
     if (!active) {
+      if (getCameraMode() === 'board') setCameraMode('player')
       cameraAnimation.current = { sessionId: null, playerId: null, position: 0 }
       cameraEngaged.current = false
       return
     }
+
+    if (getCameraMode() !== 'board') setCameraMode('board')
 
     const visualSettled = isBoardMovementVisualSettled(snapshot)
     const playerId = boardCameraSubject(snapshot, visualSettled)

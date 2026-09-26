@@ -31,7 +31,7 @@ Import from `../00-core`. Never reach into `internal/`.
 | `setTimeOfDay(name)` / `getTimeOfDay()` | Jump to, and name, a section |
 | `CYCLE_SECONDS`, `SECTION_SECONDS` | 3600 and 900 |
 | `LIGHTING`, `TIMES_OF_DAY`, `TIME_LABELS` | The presets and their order |
-| `setCameraMode(m)` / `useCameraMode()` | Who drives the camera: `'orbit'` or `'player'` |
+| `setCameraMode(m)` / `useCameraMode()` | Who drives the camera: `'orbit'`, `'player'`, or `'board'` |
 
 **Units are metres. +Y is up. Right-handed. -Z is north. Sea level is exactly
 `y = 0`.** Terrain is expected to go negative below it.
@@ -71,8 +71,9 @@ that is the seam that keeps the sun singular.
 ## Camera arbitration
 
 Same reasoning: one camera. The built-in debug orbit stands down when a module
-calls `setCameraMode('player')`, and resumes when it is set back to `'orbit'`.
-A module that takes the camera must hand it back on unmount.
+calls `setCameraMode('player')` or `setCameraMode('board')`, and resumes when
+it is set back to `'orbit'`. A module that takes the camera must hand it back
+on unmount.
 
 ## The tide
 
