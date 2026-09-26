@@ -34,7 +34,7 @@ describe('the stand-ins', () => {
       still += lasts(seed * 31, false)
     }
     expect(dodging).toBeGreaterThan(still * 3)
-    expect(dodging / 8).toBeGreaterThan(40)
+    expect(dodging / 8).toBeGreaterThan(35)
   }, 30000)
 
   it('play a game down to one standing, shoving some of the others into the balls', () => {

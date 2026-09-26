@@ -300,8 +300,13 @@ function tryPush(round: Round, p: Player): void {
 }
 
 /** Where the layer below `layer` would hold you up, if any tile of it is there and whole. */
+/**
+ * Where a whole tile would catch a fall from `layer` at `(x, z)` - starting
+ * with `layer` itself, so a jump off solid ground lands you back on the same
+ * tile you left rather than skipping straight to the one below it.
+ */
 function landingBelow(round: Round, x: number, z: number, layer: 0 | 1 | 2): 0 | 1 | 2 | null {
-  for (let candidate = layer + 1; candidate < LAYERS.length; candidate++) {
+  for (let candidate = layer; candidate < LAYERS.length; candidate++) {
     const l = candidate as 0 | 1 | 2
     const { row, col } = tileAt(x, z)
     if (inFootprint(l, row, col) && !broken(round.tiles, l, row, col, round.elapsed)) return l

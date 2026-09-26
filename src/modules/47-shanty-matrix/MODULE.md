@@ -41,15 +41,15 @@ A ball:
 | deck | It rolls across the planks at its own speed. **Anybody within its radius plus most of a body's is hit.** |
 | outgoing | It flies off the far side, drops, and splashes into the sea. |
 
-**It gets fiercer over 90 seconds** (`fierceness`):
+**It gets fiercer over 56 seconds** (`fierceness`):
 
-| | at the start | at 90 s and after |
+| | at the start | at 56 s and after |
 | --- | --- | --- |
 | Gap between volleys | about 1.7 s | about 0.55 s |
 | Speed | 7-11 m/s | 12-20 m/s |
-| Balls a volley | one | two or three (from 25 s: sometimes two; from 55 s: up to three) |
+| Balls a volley | one | two or three (from 16 s: sometimes two; from 34 s: up to three) |
 
-The barrage stops at **two minutes** (`LIMIT`), and whoever is still standing then
+The barrage stops at **1:15** (`LIMIT`), and whoever is still standing then
 shares first.
 
 ## Bodies
@@ -150,8 +150,8 @@ All of it from the seed, so the same game plays out the same way. Tested.
 
 ### What they play like
 
-Over 30 seeds and two to eight stand-ins: **a game lasts about 44 seconds**, from
-5 s (two stand-ins, one shoved into the first ball) to nearly 90 s. **Alone on the
+Over 30 seeds and two to eight stand-ins: **a game lasts about 38 seconds**, from
+4 s (two stand-ins, one shoved into the first ball) to nearly 59 s. **Alone on the
 deck, a stand-in lasts far longer than somebody standing still** - more than
 three times as long. Tested. **Most of their falls follow a shove**: they dodge
 well on their own, so shoving is what decides it. A human dodges worse, and will

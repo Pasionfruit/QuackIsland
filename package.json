@@ -54,7 +54,10 @@
     "gate:volcano-map-landmarks": "node scripts/gate.mjs 60-volcano-map-landmarks",
     "brief:op-finder": "node scripts/brief.mjs 61-op-finder",
     "test:op-finder": "vitest run src/modules/61-op-finder",
-    "gate:op-finder": "node scripts/gate.mjs 61-op-finder"
+    "gate:op-finder": "node scripts/gate.mjs 61-op-finder",
+    "brief:volcano-minimap": "node scripts/brief.mjs 62-volcano-minimap",
+    "test:volcano-minimap": "vitest run src/modules/62-volcano-minimap",
+    "gate:volcano-minimap": "node scripts/gate.mjs 62-volcano-minimap"
   },
   "dependencies": {
     "@react-three/fiber": "^9.7.0",

@@ -49,6 +49,8 @@ export const CAMERA_BACK = 9
 export const PITCH = { min: 0.15, max: 1.3 } as const
 /** A tile's thickness. */
 const THICK = 0.7
+/** Kept clear of a solid layer's underside, or the camera ends up inside it. */
+const CEILING_MARGIN = 0.4
 /** A hair narrower than a full cell, so the grid lines show. */
 const GAP = 0.14
 /** How long somebody is still drawn, tumbling, after they go under. */
@@ -75,6 +77,13 @@ function Rig({ live, look }: { live: RefObject<Round>; look: RefObject<LookRef> 
       target.y + Math.sin(pitch) * distance + (watching ? span * 0.3 : 0),
       target.z + Math.cos(yaw) * Math.cos(pitch) * distance,
     )
+    // On any layer but the top, a solid one sits overhead - keep the eye
+    // below its underside, or the view is spent looking at the inside of
+    // the floor above rather than at the layer you are actually on.
+    if (!watching && me && me.layer > 0) {
+      const ceiling = LAYERS[me.layer - 1].y - THICK - CEILING_MARGIN
+      eye.y = Math.min(eye.y, ceiling)
+    }
     if (!at.current) at.current = eye.clone()
     else at.current.lerp(eye, 1 - Math.exp(-Math.min(delta, 0.1) * (watching ? 3 : 16)))
     camera.position.copy(at.current)

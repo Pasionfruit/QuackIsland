@@ -41,7 +41,7 @@ export const SHOT = {
     end: [12, 20] as readonly [number, number],
   },
   /** Seconds until the barrage is at its fiercest. */
-  ramp: 90,
+  ramp: 56,
   /** Seconds between the balls of one volley. */
   stagger: 0.18,
   /** How far a ball flies on past the far rail before it is gone, metres. */
@@ -51,7 +51,7 @@ export const SHOT = {
 } as const
 
 /** When the barrage stops: whoever is still standing then shares first. */
-export const LIMIT = 120
+export const LIMIT = 75
 
 export interface Shot {
   /** Its place in the barrage, from 0. */
@@ -91,9 +91,9 @@ export function fierceness(t: number): number {
 
 /** How many balls a volley at `t` has, from a roll of the dice `roll` in [0, 1). */
 export function volleySize(t: number, roll: number): number {
-  if (t < 25) return 1
-  if (t < 55) return roll < 0.4 ? 2 : 1
-  if (t < 85) return roll < 0.25 ? 3 : roll < 0.75 ? 2 : 1
+  if (t < 16) return 1
+  if (t < 34) return roll < 0.4 ? 2 : 1
+  if (t < 53) return roll < 0.25 ? 3 : roll < 0.75 ? 2 : 1
   return roll < 0.5 ? 3 : 2
 }
 

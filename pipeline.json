@@ -210,7 +210,8 @@
         "58-breaking-the-ice",
         "59-volcano-tile-actions",
         "60-volcano-map-landmarks",
-        "61-op-finder"
+        "61-op-finder",
+        "62-volcano-minimap"
       ],
       "generation": 1,
       "contract": {
@@ -1050,7 +1051,8 @@
         "56-volcano-victory",
         "57-volcano-postgame",
         "59-volcano-tile-actions",
-        "60-volcano-map-landmarks"
+        "60-volcano-map-landmarks",
+        "62-volcano-minimap"
       ],
       "generation": 1,
       "contract": {
@@ -1280,7 +1282,8 @@
         "56-volcano-victory",
         "57-volcano-postgame",
         "59-volcano-tile-actions",
-        "60-volcano-map-landmarks"
+        "60-volcano-map-landmarks",
+        "62-volcano-minimap"
       ],
       "generation": 1,
       "contract": {
@@ -4289,7 +4292,7 @@
         },
         {
           "id": "47.3",
-          "title": "The end: last one standing, the last to go overboard next, at two minutes everybody standing shares",
+          "title": "The end: last one standing, the last to go overboard next, at 1:15 everybody standing shares",
           "status": "done"
         },
         {
@@ -4321,7 +4324,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-22T01:29:48.280Z"
+          "at": "2026-09-25T23:59:48.873Z"
         },
         "human": {
           "status": "pending"
@@ -4837,7 +4840,8 @@
         "55-reward-dice",
         "56-volcano-victory",
         "59-volcano-tile-actions",
-        "60-volcano-map-landmarks"
+        "60-volcano-map-landmarks",
+        "62-volcano-minimap"
       ],
       "generation": 5,
       "contract": {
@@ -5654,7 +5658,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-25T17:28:52.033Z"
+          "at": "2026-09-26T00:01:54.954Z"
         },
         "human": {
           "status": "pending",
@@ -5766,6 +5770,66 @@
         "No sound beyond the shared cues other minigames already use",
         "No client-side prediction beyond a guest's own optimistic local answer",
         "No score kept between rounds"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "62-volcano-minimap",
+      "phase": "P8",
+      "title": "Volcano minimap: a compact route line with stable player-colour position dots",
+      "status": "in_progress",
+      "dependsOn": [
+        "00-core",
+        "10-party",
+        "13-modes",
+        "53-board-movement"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": null,
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "62.1",
+          "title": "Pure route-position and stable player-colour helpers",
+          "status": "done"
+        },
+        {
+          "id": "62.2",
+          "title": "Read-only Volcano Island minimap overlay",
+          "status": "done"
+        },
+        {
+          "id": "62.3",
+          "title": "Tests, contract and review notes",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "pending",
+          "at": null
+        },
+        "human": {
+          "status": "pending",
+          "at": null,
+          "note": null
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No changes to board movement, authority, player positions or network messages",
+        "No interactive controls or input interception",
+        "No world-space geometry, external assets or textures"
       ],
       "budgets": {
         "drawCallsMax": 0,

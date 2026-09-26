@@ -148,6 +148,22 @@ describe('cracking underfoot', () => {
 })
 
 describe('falling', () => {
+  it('a jump off solid ground lands you back on the same tile, not the layer below', () => {
+    const round = createRound(1, [{ id: 'a', mine: true }], 1)
+    const p = round.players[0]
+    p.x = 0
+    p.z = 0
+    const startY = p.y
+    const startLayer = p.layer
+    run(round, 0.05, new Map([['a', { ...STILL, jumps: 1 }]]))
+    expect(p.grounded).toBe(false) // airborne the instant the jump starts
+    run(round, 3, new Map([['a', STILL]])) // plenty of time for the arc to complete
+    expect(p.grounded).toBe(true)
+    expect(p.layer).toBe(startLayer)
+    expect(p.y).toBeCloseTo(startY, 5)
+    expect(p.alive).toBe(true)
+  })
+
   it('lands you on the layer below when a tile gives way, rather than eliminating you at once', () => {
     const round = createRound(1, [{ id: 'a', mine: true }], 1)
     const p = round.players[0]

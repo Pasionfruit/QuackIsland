@@ -41,10 +41,10 @@ describe('the barrage', () => {
 
   it('gets fiercer: shorter gaps, quicker balls, and more at once', () => {
     const shots = barrageFor(SEED)
-    const early = shots.filter((s) => s.fire < 25)
-    const late = shots.filter((s) => s.fire > 90)
+    const early = shots.filter((s) => s.fire < 16)
+    const late = shots.filter((s) => s.fire > SHOT.ramp)
     const perSecond = (list: typeof shots, span: number) => list.length / span
-    expect(perSecond(late, LIMIT - 90)).toBeGreaterThan(perSecond(early, 25) * 2.5)
+    expect(perSecond(late, LIMIT - SHOT.ramp)).toBeGreaterThan(perSecond(early, 16) * 2.5)
     const mean = (list: typeof shots) => list.reduce((a, s) => a + s.speed, 0) / list.length
     expect(mean(late)).toBeGreaterThan(mean(early) * 1.4)
     expect(fierceness(0)).toBe(0)
@@ -85,7 +85,7 @@ describe('a ball', () => {
 
   it('is among those active from when it is fired until it is gone, and no other time', () => {
     const shots = barrageFor(SEED)
-    for (const t of [0, 1, 5, 17.3, 44, 90, 119]) {
+    for (const t of [0, 1, 5, 17.3, 44, 56, 74]) {
       const active = new Set(activeShots(SEED, t).map((s) => s.k))
       for (const s of shots) expect(active.has(s.k)).toBe(ballAt(s, t) !== null)
     }
