@@ -5519,8 +5519,9 @@
       ],
       "gate": {
         "machine": {
-          "status": "green",
-          "at": "2026-09-25T15:58:01.623Z"
+          "status": "red",
+          "at": "2026-09-26T02:02:21.265Z",
+          "failed": "test"
         },
         "human": {
           "status": "pending",
