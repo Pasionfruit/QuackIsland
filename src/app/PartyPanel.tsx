@@ -13,9 +13,9 @@
  * how - and the composition root is the one place allowed to.
  */
 import { useNet, usePeers } from '../modules/09-net'
-import { ME, disbandParty, useParty, waitingFor } from '../modules/10-party'
+import { ME, canStart, disbandParty, setReady, startGame, useParty, waitingFor } from '../modules/10-party'
 import { modeById, useGameMode } from '../modules/13-modes'
-import { gardenModeById, useGardenMode } from '../modules/14-garden'
+import { gardenModeById, needsPlayers, useGardenMode } from '../modules/14-garden'
 import { MINIGAMES, openDashboard } from '../modules/15-minigames'
 
 export function PartyPanel() {
@@ -31,6 +31,9 @@ export function PartyPanel() {
   const everyone = [...peers.map((p) => p.id), ME]
   const waiting = waitingFor(everyone, party.ready)
   const way = mode === 'garden' ? gardenModeById(gardenMode).title : null
+  const ready = party.ready.has(ME)
+  const needed = mode === 'garden' ? needsPlayers(gardenMode) : 1
+  const startable = canStart(party.phase, net.host, everyone, party.ready) && game.built && everyone.length >= needed
 
   if (mode === 'island' && party.phase === 'playing') return null
 
@@ -54,6 +57,33 @@ export function PartyPanel() {
                 ? 'everybody ready'
                 : `waiting on ${waiting}`}
           </div>
+
+          {party.phase === 'gathering' ? (
+            <div style={partyControls}>
+              <button
+                type="button"
+                onClick={() => setReady(!ready)}
+                style={{ ...button, ...readyButton(ready, waiting) }}
+              >
+                {ready ? 'cancel ready' : 'ready up'}
+              </button>
+              {net.host ? (
+                <button
+                  type="button"
+                  onClick={startGame}
+                  disabled={!startable}
+                  style={{ ...button, ...startButton(startable) }}
+                >
+                  start party
+                </button>
+              ) : null}
+              <span style={{ opacity: 0.48 }}>
+                {waiting === 0
+                  ? net.host ? 'everybody ready' : 'waiting for the host'
+                  : `${waiting} of ${everyone.length} still to ready up`}
+              </span>
+            </div>
+          ) : null}
 
           {/* The way out. The host's alone, because it sends everybody home
               and a guest ending everyone's party is not a thing to offer. */}
@@ -116,4 +146,32 @@ const button: React.CSSProperties = {
   font: 'inherit',
   padding: '3px 8px',
   cursor: 'pointer',
+}
+
+const partyControls: React.CSSProperties = {
+  display: 'grid',
+  gap: 5,
+  margin: '7px 0',
+}
+
+function readyButton(ready: boolean, waiting: number): React.CSSProperties {
+  const lit = ready || waiting > 0
+  const danger = ready
+  const colour = danger ? '#c8443c' : '#e0a05a'
+  return {
+    width: '100%',
+    background: lit ? colour : 'rgba(255,255,255,0.06)',
+    color: lit ? '#20222a' : '#f2ece2',
+    borderColor: lit ? (danger ? '#ff8d84' : '#ffcf8a') : 'rgba(255,255,255,0.14)',
+  }
+}
+
+function startButton(startable: boolean): React.CSSProperties {
+  return {
+    width: '100%',
+    background: startable ? '#9fd8b0' : 'rgba(255,255,255,0.06)',
+    color: startable ? '#183528' : '#f2ece2',
+    opacity: startable ? 1 : 0.5,
+    cursor: startable ? 'pointer' : 'default',
+  }
 }

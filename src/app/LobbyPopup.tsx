@@ -33,18 +33,13 @@ import {
   normaliseCode,
   renameSelf,
   useNet,
-  usePeers,
 } from '../modules/09-net'
 import {
-  ME,
-  canStart,
   hostGame,
   setReady,
-  startGame,
   useParty,
-  waitingFor,
 } from '../modules/10-party'
-import { MODES, chooseMode, modeById, useGameMode, useModeSync } from '../modules/13-modes'
+import { MODES, chooseMode, useGameMode, useModeSync } from '../modules/13-modes'
 import {
   GARDEN_MODES,
   chooseGardenMode,
@@ -160,7 +155,6 @@ function fallbackCopy(text: string): boolean {
 export function LobbyPopup() {
   const [open, setOpen] = useState(false)
   const net = useNet()
-  const peers = usePeers()
   const party = useParty()
   const mode = useGameMode()
   const gardenMode = useGardenMode()
@@ -191,13 +185,6 @@ export function LobbyPopup() {
    */
   const locked = party.phase === 'playing'
 
-  const game = modeById(mode)
-  const everyone = [...peers.map((p) => p.id), ME]
-  const ready = party.ready.has(ME)
-  const waiting = waitingFor(everyone, party.ready)
-  const needed = mode === 'garden' ? needsPlayers(gardenMode) : 1
-  const enough = everyone.length >= needed
-  const startable = canStart(party.phase, net.host, everyone, party.ready) && game.built && enough
 
   /**
    * Being in a lobby *is* gathering.
@@ -254,20 +241,6 @@ export function LobbyPopup() {
   }, [open])
 
   const canJoinTheirs = normaliseCode(theirs) !== null
-
-  const startNote = !joined
-    ? 'create a lobby, or join one, to play with anybody'
-    : party.phase === 'playing'
-      ? 'the game is running'
-      : !game.built
-        ? 'that game has nowhere to go yet'
-        : !enough
-          ? `${needed} players needed for ${gardenMode}`
-          : waiting > 0
-            ? `waiting on ${waiting} to ready up`
-            : net.host
-              ? 'everybody is ready'
-              : 'everybody is ready - the host starts it'
 
   const status = lobbyStatus(net.status, net.room, net.peers, net.host, party.phase)
   const dot =
@@ -337,21 +310,6 @@ export function LobbyPopup() {
               style={{ ...field, flex: 1, minWidth: 40 }}
             />
           </div>
-
-          {/* 2. Ready. Only in a party: on your own there is nobody to be
-                 ready for, and a button that means nothing is worse than no
-                 button at all. */}
-          {joined ? (
-            <>
-              <div style={rule} />
-<ReadyButton ready={ready} waiting={waiting} />
-              <div style={{ opacity: 0.45, marginTop: 4 }}>
-                {waiting === 0
-                  ? 'everybody is ready'
-                  : `${waiting} of ${everyone.length} still to ready up`}
-              </div>
-            </>
-          ) : null}
 
           <div style={rule} />
 
@@ -494,59 +452,9 @@ export function LobbyPopup() {
             )
           })}
 
-          <div style={rule} />
-
-          {/* 5. Start. The host's alone: starting moves everybody, and that is
-                 not something to hand to whoever happens to be in the room. */}
-          {net.host ? (
-            <button
-              type="button"
-              onClick={startGame}
-              disabled={!startable}
-              style={{
-                ...button,
-                width: '100%',
-                padding: '6px 8px',
-                background: startable ? '#e0a05a' : 'rgba(255,255,255,0.06)',
-                color: startable ? '#20222a' : '#f2ece2',
-                opacity: startable ? 1 : 0.5,
-                cursor: startable ? 'pointer' : 'default',
-              }}
-            >
-              {party.phase === 'playing' ? 'playing' : 'start the party'}
-            </button>
-          ) : (
-            <div style={{ opacity: 0.5, textAlign: 'center' }}>
-              {party.phase === 'playing' ? 'the game is running' : 'the host starts the party'}
-            </div>
-          )}
-
-          <div style={{ opacity: 0.45, marginTop: 5 }}>{startNote}</div>
         </div>
       ) : null}
     </div>
-  )
-}
-
-function ReadyButton({ ready, waiting }: { ready: boolean; waiting: number }) {
-  const look = readyLook(ready, waiting)
-  const glow = look.danger ? '#c8443c' : '#e0a05a'
-  return (
-    <button
-      type="button"
-      onClick={() => setReady(!ready)}
-      style={{
-        ...button,
-        width: '100%',
-        padding: '6px 8px',
-        background: look.lit ? glow : 'rgba(255,255,255,0.06)',
-        color: look.lit ? '#20222a' : '#f2ece2',
-        borderColor: look.lit ? (look.danger ? '#ff8d84' : '#ffcf8a') : 'rgba(255,255,255,0.14)',
-        boxShadow: look.lit ? `0 0 10px ${glow}8c` : 'none',
-      }}
-    >
-      {look.label}
-    </button>
   )
 }
 

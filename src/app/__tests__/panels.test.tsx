@@ -157,9 +157,8 @@ describe('the panels mount', () => {
   })
 
   it('puts the steps in the order you do them in', () => {
-    // Name, then ready, then the code, then the game, then start. The order is
-    // the workflow, so it is worth a test: a lobby that asks you to pick a
-    // game before it has told you how to get into one reads backwards.
+    // The lobby owns name, room, and game selection. Party controls live in
+    // the Party HUD so they remain visible after the lobby closes.
     const html = openLobby().innerHTML
     const at = (needle: string) => {
       const i = html.indexOf(needle)
@@ -169,17 +168,13 @@ describe('the panels mount', () => {
     expect(at('you are')).toBeLessThan(at('start your own'))
     expect(at('start your own')).toBeLessThan(at('or join someone'))
     expect(at('or join someone')).toBeLessThan(at('GAME'))
-    expect(at('GAME')).toBeLessThan(at('start the party'))
   })
 
-  it('hides the ready button until you are actually in a party', () => {
-    // On your own there is nobody to be ready for, and a button that means
-    // nothing is worse than no button at all.
+  it('keeps party controls out of the lobby popup', () => {
     const labels = [...openLobby().querySelectorAll('button')].map((b) => b.textContent)
     expect(labels).not.toContain('ready up')
     expect(labels).not.toContain('ready')
-    // The host's start button is there either way: alone, you are the host.
-    expect(labels).toContain('start the party')
+    expect(labels).not.toContain('start party')
   })
 
   it('says where you are in the lobby bar', () => {
@@ -703,7 +698,8 @@ describe('changing the game before the party starts', () => {
       hostGame()
       startGame()
     })
-    const html = openLobby().innerHTML
-    expect(html).toContain('settled for this round')
+    // An active Volcano Island party hides the lobby entirely; game selection
+    // is therefore no longer exposed after the host starts the round.
+    expect(mount(<LobbyPopup />)).toBe('')
   })
 })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAZE, mazeFor } from '../internal/maze'
+import { MAZE, cellCentre, mazeFor } from '../internal/maze'
 import {
   CATCH,
   HEAR_WINDOW,
@@ -88,6 +88,42 @@ describe('footsteps', () => {
     const index = round.players.findIndex((p) => p.role === 'hunter')
     for (let i = 0; i < 20; i++) walkHunter(round, index, { forward: 1, right: 0 }, 0.1)
     expect(round.players[index].steppedAt).toBe(-Infinity)
+  })
+})
+
+describe('running through walls', () => {
+  it("the Hunter runs straight through a closed wall; a Hider is stopped by it", () => {
+    const seed = 1
+    const maze = mazeFor(seed)
+    let closed: { x: number; y: number } | null = null
+    outer: for (let y = 0; y < maze.size; y++) {
+      for (let x = 0; x < maze.size - 1; x++) {
+        if (!maze.openEast[y][x]) {
+          closed = { x, y }
+          break outer
+        }
+      }
+    }
+    if (!closed) throw new Error('no closed east-west wall in this maze')
+    const from = cellCentre(closed)
+    const beyond = cellCentre({ x: closed.x + 1, y: closed.y })
+
+    const round = createRound(seed, roster(2), 'p0')
+    const hi = round.players.findIndex((p) => p.role === 'hunter')
+    const hd = round.players.findIndex((p) => p.role === 'hider')
+    for (const index of [hi, hd]) {
+      round.players[index].x = from.x
+      round.players[index].z = from.z
+      // Facing +x: `aimDirection`'s own forward is (-sin(yaw), -cos(yaw)), so
+      // -pi/2 points straight at the next cell over, right into the wall.
+      round.players[index].yaw = -Math.PI / 2
+    }
+    for (let i = 0; i < 40; i++) {
+      walkHunter(round, hi, { forward: 1, right: 0 }, 0.1)
+      walkHider(round, hd, { forward: 1, right: 0 }, 0.1)
+    }
+    expect(round.players[hi].x).toBeGreaterThan(beyond.x - 0.5)
+    expect(round.players[hd].x).toBeLessThan(from.x + MAZE.cell / 2)
   })
 })
 
@@ -192,6 +228,35 @@ describe('report', () => {
       report(round, index, at, 0, 0, 0.1, false)
     }
     expect(round.players[index].steppedAt).toBeGreaterThan(before)
+  })
+
+  it('takes a guest Hunter straight through a wall it claims to have crossed, but stops a guest Hider at the same one', () => {
+    const seed = 1
+    const maze = mazeFor(seed)
+    let closed: { x: number; y: number } | null = null
+    outer: for (let y = 0; y < maze.size; y++) {
+      for (let x = 0; x < maze.size - 1; x++) {
+        if (!maze.openEast[y][x]) {
+          closed = { x, y }
+          break outer
+        }
+      }
+    }
+    if (!closed) throw new Error('no closed east-west wall in this maze')
+    const from = cellCentre(closed)
+    const beyond = cellCentre({ x: closed.x + 1, y: closed.y })
+    const round = createRound(seed, roster(2), 'p0')
+    const hi = round.players.findIndex((p) => p.role === 'hunter')
+    const hd = round.players.findIndex((p) => p.role === 'hider')
+    for (const index of [hi, hd]) {
+      round.players[index].x = from.x
+      round.players[index].z = from.z
+    }
+    // Claims a jump straight to the far side, given plenty of time to have covered it.
+    report(round, hi, { x: beyond.x, z: beyond.z }, 0, 0, 5, false)
+    report(round, hd, { x: beyond.x, z: beyond.z }, 0, 0, 5, false)
+    expect(round.players[hi].x).toBeCloseTo(beyond.x, 6)
+    expect(round.players[hd].x).toBeLessThan(from.x + MAZE.cell / 2)
   })
 })
 

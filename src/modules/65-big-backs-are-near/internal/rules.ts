@@ -18,7 +18,7 @@
  * one. No three.js, no React, no clock of its own. Everything here is pure.
  */
 import { PLAYER } from '../../02-player'
-import { hiderSpawn, hunterSpawn, lineClear, mazeFor, slide, type Maze, type Point, type Vec3 } from './maze'
+import { hiderSpawn, hunterSpawn, lineClear, mazeFor, slide, slideThroughWalls, type Maze, type Point, type Vec3 } from './maze'
 
 export type Role = 'hunter' | 'hider'
 
@@ -209,8 +209,13 @@ export interface Intent {
   sprint?: boolean
 }
 
-/** Moves a body of `radius` relative to where it looks, sliding round the maze - the shared arithmetic both roles move with. */
-function moveRelative(maze: Maze, p: { x: number; z: number; yaw: number }, intent: Intent, pace: number): Point {
+/**
+ * Moves a body of `radius` relative to where it looks - the shared arithmetic
+ * both roles move with. A Hider slides round whatever corn row is in the
+ * way; the Hunter runs straight through it (`phase`), stopped only by the
+ * maze's own outer bounds - see `slideThroughWalls`.
+ */
+function moveRelative(maze: Maze, p: { x: number; z: number; yaw: number }, intent: Intent, pace: number, phase: boolean): Point {
   let f = clamp(intent.forward, -1, 1)
   let r = clamp(intent.right, -1, 1)
   const length = Math.hypot(f, r)
@@ -223,7 +228,9 @@ function moveRelative(maze: Maze, p: { x: number; z: number; yaw: number }, inte
   const fz = -Math.cos(p.yaw)
   const rx = Math.cos(p.yaw)
   const rz = -Math.sin(p.yaw)
-  return slide(maze, p, (fx * f + rx * r) * pace, (fz * f + rz * r) * pace, BODY.radius)
+  const dx = (fx * f + rx * r) * pace
+  const dz = (fz * f + rz * r) * pace
+  return phase ? slideThroughWalls(maze, p, dx, dz, BODY.radius) : slide(maze, p, dx, dz, BODY.radius)
 }
 
 /**
@@ -251,21 +258,26 @@ export function walkHider(round: Round, index: number, intent: Intent, dt: numbe
   if (!p || p.role !== 'hider' || !canAct(round, p)) return
   const step = Math.min(Math.max(dt, 0), 0.25)
   const pace = HIDER.speed * step
-  const at = moveRelative(mazeFor(round.seed), p, intent, pace)
+  const at = moveRelative(mazeFor(round.seed), p, intent, pace, false)
   const moved = Math.hypot(at.x - p.x, at.z - p.z)
   p.x = at.x
   p.z = at.z
   registerStep(p, round, moved)
 }
 
-/** Moves the Hunter for `dt` seconds. Sprinting is faster, and mutes hearing entirely for as long as it is held. */
+/**
+ * Moves the Hunter for `dt` seconds. Sprinting is faster, and mutes hearing
+ * entirely for as long as it is held. **Runs straight through every corn
+ * row** - only a Hider needs the maze's own one true route; the Hunter is
+ * the one thing in it a Hider's own knowledge of the maze can't out-corner.
+ */
 export function walkHunter(round: Round, index: number, intent: Intent, dt: number): void {
   const p = round.players[index]
   if (!p || p.role !== 'hunter' || !canAct(round, p)) return
   const step = Math.min(Math.max(dt, 0), 0.25)
   p.sprinting = !!intent.sprint
   const pace = (p.sprinting ? HUNTER.sprintSpeed : HUNTER.moveSpeed) * step
-  const at = moveRelative(mazeFor(round.seed), p, intent, pace)
+  const at = moveRelative(mazeFor(round.seed), p, intent, pace, true)
   p.x = at.x
   p.z = at.z
 }
@@ -275,10 +287,12 @@ export function walkHunter(round: Round, index: number, intent: Intent, dt: numb
  * already run `walkHunter`/`walkHider`, the same as Jackal's guests do. The
  * host takes the position only as far as it could have walked since it last
  * heard, and re-collides it against its own maze - the same shape as
- * Jackal's own `report`. A guest Hider's footstep bookkeeping runs here too,
- * off the actually-allowed distance, so a footstep the Hunter hears is
- * exactly as host-derivable for a networked Hider as for a bot or the host's
- * own body.
+ * Jackal's own `report`, except a guest Hunter is re-collided the same
+ * wall-free way its own `walkHunter` moves it, not pushed back out of a corn
+ * row it was actually entitled to cross. A guest Hider's footstep bookkeeping
+ * runs here too, off the actually-allowed distance, so a footstep the Hunter
+ * hears is exactly as host-derivable for a networked Hider as for a bot or
+ * the host's own body.
  */
 export function report(round: Round, index: number, at: Point, yaw: number, pitch: number, since: number, sprint: boolean): void {
   const p = round.players[index]
@@ -292,7 +306,8 @@ export function report(round: Round, index: number, at: Point, yaw: number, pitc
   if (want <= 1e-6) return
   const allowed = Math.max(0, since) * speed * 1.5 + 0.3
   const go = Math.min(want, allowed)
-  const to = slide(mazeFor(round.seed), p, (dx / want) * go, (dz / want) * go, BODY.radius)
+  const maze = mazeFor(round.seed)
+  const to = p.role === 'hunter' ? slideThroughWalls(maze, p, (dx / want) * go, (dz / want) * go, BODY.radius) : slide(maze, p, (dx / want) * go, (dz / want) * go, BODY.radius)
   const moved = Math.hypot(to.x - p.x, to.z - p.z)
   p.x = to.x
   p.z = to.z

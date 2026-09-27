@@ -46,11 +46,23 @@ generation algorithm there to lift.
 
 **A corn row is a block, not a height-aware obstacle** (`Block { x0, z0, x1,
 z1, height }`, no `kind`): there is no jump or vault anywhere in this game,
-so collision is uniformly solid and a wall (`height = 2.4` m, well above eye
-height `1.7` m) always blocks a line of sight too - `blocked`/`collide`/
-`slide` are flat 2D, and `rayHit`/`lineClear` are still full 3D slab math at
-a fixed eye height, used both by the Hunter's own sight cutoff and by a
-catch's line-of-sight check.
+so a wall (`height = 2.4` m, well above eye height `1.7` m) always blocks a
+line of sight regardless of role - `rayHit`/`lineClear` are full 3D slab
+math at a fixed eye height, used both by the Hunter's own sight cutoff and
+by a catch's line-of-sight check, and they never look at who is asking.
+
+**Collision, though, is not the same for both roles.** A Hider slides round
+whatever corn row is in the way (`blocked`/`collide`/`slide`, flat 2D, no
+different from any other wall-bound game here). **The Hunter runs straight
+through every one** (`slideThroughWalls`/`clampToField`): only the maze's
+own outer bounds still stop them, the same clamp `collide` already applied
+to keep anybody from wandering off the map. This makes the Hunter's own
+movement the one place in the sim that is deliberately not maze-shaped - a
+Hider's own knowledge of the one true route between two cells is never
+enough to out-corner them, the same way a horror-movie killer's pace never
+seems to match how they still catch up. It changes nothing about vision or
+catching: a corn row still blocks a line of sight and a catch's own check
+the same as ever (see below) - this is a movement rule only.
 
 **Spawns**: the Hunter starts at the maze's own middle cell (`hunterSpawn`).
 The Hiders start together in a pen near one edge (`hiderPen`, a clutch of
@@ -222,7 +234,8 @@ testing, not because anybody else needs them.
 | Export | What it is |
 | --- | --- |
 | `MAZE`, `MIDDLE`, `mazeFor`, `Maze`, `Block`, `Cell`, `Point`, `Vec3` | The maze for a seed. Cached; the same seed, the same maze. |
-| `blocked`, `collide`, `slide` | A body against the maze - flat, no height parameter; nothing here ever jumps. All pure. |
+| `blocked`, `collide`, `slide` | A Hider (or anybody else's ordinary collision) against the maze - flat, no height parameter; nothing here ever jumps. All pure. |
+| `clampToField`, `slideThroughWalls` | The Hunter's own movement: kept inside the maze's own outer bounds, every corn row ignored. All pure. |
 | `rayHit`, `lineClear`, `isOpen`, `exits` | A ray, or a straight line, against the maze and its own corridor graph. All pure. |
 | `stepsTo`, `stepsFrom`, `deadEnds`, `nearestCells` | The BFS distance-field machinery bots steer by, and dead-end/nearby-cell lookups for hiding cells and the pen. |
 | `hunterSpawn`, `hiderPen`, `hiderSpawn`, `cellAt`, `cellCentre` | Where everybody starts, and the maze's own grid/world conversions. |
@@ -246,6 +259,10 @@ testing, not because anybody else needs them.
 - **A corn row always blocks a line of sight**, straight down a closed
   corridor and diagonally past a closed corner - no pinhole at a
   wall-to-wall junction. Tested.
+- **The Hunter's own movement ignores every corn row**, stopped only by the
+  maze's own outer bounds; a Hider's own movement is still stopped by one,
+  the same as ever - and this holds for a guest's claimed move too, not just
+  the host's own body. Tested, locally and through `report`.
 - **A Hider is meaningfully slower than even the Hunter's own walk**, and
   the Hunter's sprint is faster still. Tested.
 - **A footstep fires only while actually moving**, resets the accumulator,
@@ -342,6 +359,9 @@ the 1 is (or rolls the dice) - then **play**.
 - **Catch a bot in the open.** One fewer "free" on the HUD. **Confirm a bot
   close by on the other side of a corn row is not caught** - proximity
   alone is not enough.
+- **Walk straight at a corn row.** You should pass clean through it rather
+  than sliding along it - the maze's outer edge should still stop you, but
+  nothing in between does.
 - **Catch every bot.** The round should end at once - no wait.
 
 **Solo, swap to a Hider** by clicking a bot's name on the party tab before
@@ -350,6 +370,8 @@ pressing play (or two browsers, below, is the real test of this):
 - **WASD should move you relative to the camera**, the mouse turns the
   camera. Standing still should never trigger anything on your own end -
   there is nothing to see from a Hider's own screen either way.
+- **Walk into a corn row.** Unlike the Hunter, you should be stopped by it,
+  same as any other wall-bound game here.
 - **Get caught.** A quiet "watching" tag should appear and the camera should
   pull back to a wide shot.
 

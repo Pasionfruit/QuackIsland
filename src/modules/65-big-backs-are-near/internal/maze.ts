@@ -304,6 +304,23 @@ export function slide(maze: Maze, from: Point, dx: number, dz: number, radius: n
   return at
 }
 
+/** Kept inside the maze's own outer bounds, ignoring every corn row still standing - the world's edge is not a wall to run through. */
+export function clampToField(maze: Maze, p: Point, radius: number): Point {
+  const half = (maze.size * MAZE.cell) / 2
+  return { x: clamp(p.x, -half + radius, half - radius), z: clamp(p.z, -half + radius, half - radius) }
+}
+
+/**
+ * Moves a body from `from` by (`dx`, `dz`) straight through every corn row -
+ * only the maze's own outer bounds still stop it. The Hunter moves this way:
+ * an unstoppable presence a Hider's own maze knowledge can't out-corner them
+ * with, cutting through rather than following the one true route between two
+ * points the way a Hider must.
+ */
+export function slideThroughWalls(maze: Maze, from: Point, dx: number, dz: number, radius: number): Point {
+  return clampToField(maze, { x: from.x + dx, z: from.z + dz }, radius)
+}
+
 /** The span of `t` for which `o + d t` lies between `lo` and `hi`, or null if never. */
 function slab(o: number, d: number, lo: number, hi: number): [number, number] | null {
   if (Math.abs(d) < 1e-12) return o < lo || o > hi ? null : [-Infinity, Infinity]

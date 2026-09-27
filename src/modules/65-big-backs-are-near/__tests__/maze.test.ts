@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAZE, blocked, cellAt, exits, hiderPen, hiderSpawn, hunterSpawn, lineClear, mazeFor, stepsTo } from '../internal/maze'
+import { MAZE, blocked, cellAt, cellCentre, clampToField, exits, hiderPen, hiderSpawn, hunterSpawn, lineClear, mazeFor, slide, slideThroughWalls, stepsTo } from '../internal/maze'
 
 const SEEDS = [1, 2, 42, 99]
 
@@ -85,6 +85,39 @@ describe('walls', () => {
         expect(blocked(maze, { x: cx, z: cz }, 0.4)).toBe(true)
       }
     }
+  })
+})
+
+describe('phasing through a wall', () => {
+  it('slideThroughWalls crosses a closed wall that slide stops dead at', () => {
+    const maze = mazeFor(3)
+    let checked = 0
+    for (let y = 0; y < maze.size; y++) {
+      for (let x = 0; x < maze.size - 1; x++) {
+        if (maze.openEast[y][x]) continue
+        const from = cellCentre({ x, y })
+        const toward = cellCentre({ x: x + 1, y })
+        const dx = toward.x - from.x
+        const dz = toward.z - from.z
+        const blockedResult = slide(maze, from, dx, dz, 0.4)
+        const phased = slideThroughWalls(maze, from, dx, dz, 0.4)
+        // `slide` cannot reach the next cell's centre through a closed wall;
+        // `slideThroughWalls` lands exactly there, same as an open corridor would.
+        expect(Math.abs(blockedResult.x - toward.x)).toBeGreaterThan(0.5)
+        expect(phased.x).toBeCloseTo(toward.x, 6)
+        expect(phased.z).toBeCloseTo(toward.z, 6)
+        checked++
+      }
+    }
+    expect(checked).toBeGreaterThan(0)
+  })
+
+  it('still keeps to the maze\'s own outer bounds, wall or no wall', () => {
+    const maze = mazeFor(3)
+    const half = (maze.size * MAZE.cell) / 2
+    const far = clampToField(maze, { x: 9999, z: -9999 }, 0.4)
+    expect(far.x).toBeCloseTo(half - 0.4, 6)
+    expect(far.z).toBeCloseTo(-half + 0.4, 6)
   })
 })
 
