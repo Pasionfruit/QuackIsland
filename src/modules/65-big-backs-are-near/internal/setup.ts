@@ -61,5 +61,10 @@ export function newRound({ seed = nextSeed(), roster = gameRoster(), me = myId()
 
 /** A maze with nobody in it yet, for a guest to hold until the host's first snapshot. */
 export function waitingRound(): Round {
-  return createRound(0, [], null, 0)
+  // An empty real round is a Hunter win, but this is only a guest placeholder
+  // until the host snapshot arrives. It must not trigger the shared Finish UI.
+  const waiting = createRound(0, [], null, 0)
+  waiting.over = false
+  waiting.winner = null
+  return waiting
 }

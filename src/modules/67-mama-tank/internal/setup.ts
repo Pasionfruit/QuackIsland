@@ -61,5 +61,10 @@ export function newRound({ seed = nextSeed(), roster = gameRoster(), me = myId()
 
 /** A field with nobody in it yet, for a guest to hold until the host's first snapshot. */
 export function waitingRound(): Round {
-  return createRound(0, [], null, 0)
+  // An empty real round is a Mama win, but this is only a guest placeholder
+  // before the host snapshot fills it. Do not make the UI announce a Finish.
+  const waiting = createRound(0, [], null, 0)
+  waiting.over = false
+  waiting.winner = null
+  return waiting
 }

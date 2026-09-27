@@ -61,5 +61,11 @@ export function newRound({ seed = nextSeed(), roster = gameRoster(), me = myId()
 
 /** A lane with nobody in it yet, for a guest to hold until the host's first snapshot. */
 export function waitingRound(): Round {
-  return createRound(0, [], null, 0)
+  // An empty *real* round is a Sniper win. This is not a real round yet: it is
+  // the guest's brief waiting state, so it must never raise Finish before the
+  // host's first snapshot fills the lane.
+  const waiting = createRound(0, [], null, 0)
+  waiting.over = false
+  waiting.winner = null
+  return waiting
 }
