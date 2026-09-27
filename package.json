@@ -66,7 +66,10 @@
     "gate:jackal": "node scripts/gate.mjs 64-jackal",
     "brief:big-backs-are-near": "node scripts/brief.mjs 65-big-backs-are-near",
     "test:big-backs-are-near": "vitest run src/modules/65-big-backs-are-near",
-    "gate:big-backs-are-near": "node scripts/gate.mjs 65-big-backs-are-near"
+    "gate:big-backs-are-near": "node scripts/gate.mjs 65-big-backs-are-near",
+    "brief:mama-tank": "node scripts/brief.mjs 67-mama-tank",
+    "test:mama-tank": "vitest run src/modules/67-mama-tank",
+    "gate:mama-tank": "node scripts/gate.mjs 67-mama-tank"
   },
   "dependencies": {
     "@react-three/fiber": "^9.7.0",

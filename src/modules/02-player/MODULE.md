@@ -6,12 +6,11 @@ A body you walk around the island with, in third person: WASD to move, **shift
 to run**, space to jump, and the mouse for the camera.
 
 **Hold left and drag to look. Hold right and drag to slide the view off the
-player. Wheel to pull back. F, or the button in the panel, snaps back.** The
-camera only ever moves while a button is genuinely held and the mouse is
-moving, so a plain click - either button - leaves the view exactly where it
-was. There is no pointer lock, on purpose: a lock makes every stray mouse
-movement turn the camera, which is the opposite of what a click should do. It resolves height through
-`01-terrain`, so it stands on exactly the ground being drawn.
+player. Wheel to pull back. F, or the button in the panel, snaps back.** In the
+lobby, click the canvas once for free look and press Escape to release it. The
+Player settings tab has a saved 20%–300% sensitivity control that applies to
+every mouse-look path. It resolves height through `01-terrain`, so it stands on
+exactly the ground being drawn.
 
 Walk into the sea and it **swims**: past a certain depth the body tips flat,
 floats at the surface, turns to face the way it is going, and stands back up
@@ -26,7 +25,7 @@ three.js in it, so how the player moves is tested in Node rather than by eye.
 | Export | Meaning |
 | --- | --- |
 | `Player` | The R3F component. Registered in `src/app/scene.ts` |
-| `PlayerProps` | `{ spawnX?, spawnZ?, surfaceAt?, groundAt?, bounds?, collide?, inputBlocked? }` |
+| `PlayerProps` | `{ spawnX?, spawnZ?, surfaceAt?, groundAt?, bounds?, collide?, inputBlocked?, freeLook? }` |
 | `toggleViewMode()` / `setViewMode(m)` / `useViewMode()` | First or third person |
 | `placeCamera(mode, rig, player, eyeHeight, groundAt?)` | Where the camera goes. Pure |
 | `lookDirection(yaw, pitch)` | The way it looks. Pure, shared by both views |
@@ -49,6 +48,8 @@ three.js in it, so how the player moves is tested in Node rather than by eye.
 | `refocusCamera()` | Snap the view back onto the player and reset the zoom |
 | `isCameraOffPlayer()` | Whether the view has been slid away |
 | `CAM_DISTANCE_MIN` / `MAX` | The zoom limits, in metres |
+| `getCameraSensitivity()` / `setCameraSensitivity(n)` / `useCameraSensitivity()` | The saved camera-look multiplier, from 20% through 300% |
+| `FACE_EMOTES` / `setFaceEmote(emote)` / `useFaceEmote()` | The current face expression, used by the lobby emote wheel |
 
 `groundAt` is passed in rather than imported, so a test can hand it flat ground
 or a slope. The component passes `heightAt` from `01-terrain`.

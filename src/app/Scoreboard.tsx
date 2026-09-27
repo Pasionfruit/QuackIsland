@@ -9,12 +9,14 @@
 import { useEffect, useState } from 'react'
 import { useNet, usePeers } from '../modules/09-net'
 import { ME, useParty } from '../modules/10-party'
+import { useLobbyPistols } from '../modules/66-lobby-pistols'
 
 export function Scoreboard() {
   const [open, setOpen] = useState(false)
   const net = useNet()
   const peers = usePeers()
   const party = useParty()
+  const pistols = useLobbyPistols()
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -67,11 +69,13 @@ export function Scoreboard() {
         <div style={{ ...row, opacity: 0.4 }}>
           <span style={nameCell}>player</span>
           <span style={pingCell}>ping</span>
+          <span style={kdrCell}>K/D</span>
           <span style={readyCell}>ready</span>
         </div>
 
-        {rows.map((r) => (
-          <div key={r.id} style={row}>
+        {rows.map((r) => {
+          const scoreId = r.id === ME ? net.id ?? r.id : r.id
+          return <div key={r.id} style={row}>
             <span style={{ ...nameCell, color: r.id === ME ? '#ffcf8a' : '#f2ece2' }}>
               {r.name}
               {r.host ? <span style={{ opacity: 0.45 }}> host</span> : null}
@@ -79,6 +83,9 @@ export function Scoreboard() {
             <span style={pingCell}>
               {/* Your own ping to yourself is not a thing, so it says so. */}
               {r.id === ME ? '—' : r.ping === null ? '…' : `${Math.round(r.ping)} ms`}
+            </span>
+            <span style={kdrCell}>
+              {(pistols.scores[scoreId]?.kills ?? 0)} / {(pistols.scores[scoreId]?.deaths ?? 0)}
             </span>
             <span
               style={{
@@ -89,7 +96,7 @@ export function Scoreboard() {
               {party.ready.has(r.id) ? 'ready' : 'not yet'}
             </span>
           </div>
-        ))}
+        })}
 
         {net.status !== 'joined' ? (
           <div style={{ opacity: 0.4, marginTop: 6 }}>
@@ -126,4 +133,5 @@ const card: React.CSSProperties = {
 const row: React.CSSProperties = { display: 'flex', gap: 10 }
 const nameCell: React.CSSProperties = { flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }
 const pingCell: React.CSSProperties = { width: 64, textAlign: 'right', opacity: 0.7 }
+const kdrCell: React.CSSProperties = { width: 42, textAlign: 'right', opacity: 0.82 }
 const readyCell: React.CSSProperties = { width: 58, textAlign: 'right' }

@@ -1,0 +1,87 @@
+.lobby-pistol-hud {
+  position: fixed;
+  left: max(18px, env(safe-area-inset-left));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 40;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 9px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 12px;
+  background: rgba(17, 25, 39, 0.76);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.26);
+  color: #eef4ff;
+  font: 700 13px/1 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+
+.lobby-pistol-hud strong { color: #f2bd42; }
+.lobby-pistol-hud span { font-size: 16px; letter-spacing: 0.02em; }
+.lobby-pistol-hud b { color: #fff; }
+
+.lobby-pistol-crosshair,
+.lobby-pistol-crosshair::before,
+.lobby-pistol-crosshair::after {
+  position: fixed;
+  z-index: 41;
+  display: block;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.lobby-pistol-crosshair {
+  left: 50%;
+  top: 50%;
+  margin: -8px 0 0 -8px;
+  border: 1.5px solid rgba(255, 255, 255, 0.94);
+  border-radius: 50%;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.85);
+}
+
+.lobby-pistol-crosshair::before,
+.lobby-pistol-crosshair::after {
+  content: '';
+  left: -1px;
+  top: -1px;
+}
+
+.lobby-pistol-crosshair::before { border-left: 1.5px solid #fff; border-right: 1.5px solid #fff; }
+.lobby-pistol-crosshair::after { border-top: 1.5px solid #fff; border-bottom: 1.5px solid #fff; }
+
+.lobby-emote-wheel {
+  position: fixed;
+  z-index: 60;
+  left: 50%;
+  top: 50%;
+  width: min(330px, calc(100vw - 32px));
+  transform: translate(-50%, -50%);
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 18px;
+  background: rgba(17, 25, 39, 0.9);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42);
+  color: #eef4ff;
+  font: 700 12px/1.2 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+.lobby-emote-wheel > strong { color: #f2bd42; }
+.lobby-emote-wheel > span { display: block; margin: 6px 0 13px; color: rgba(238, 244, 255, 0.62); font-size: 10px; }
+.lobby-emote-wheel > div { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.lobby-emote-wheel button {
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #eef4ff;
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: 0.03em;
+}
+.lobby-emote-wheel button:hover,
+.lobby-emote-wheel button.selected { border-color: #f2bd42; background: rgba(242, 189, 66, 0.2); color: #fff3c9; }

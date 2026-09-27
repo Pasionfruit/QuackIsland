@@ -9,7 +9,7 @@
  * which is the direction a heading of zero looks along.
  *
  * Everything is shared. The geometries and materials are built once for the
- * session, so a hundred avatars cost a hundred pairs of meshes and not one
+ * session, so a hundred avatars cost a hundred small meshes and not one
  * extra buffer, and the face is baked into a single geometry so a whole body
  * is two draw calls.
  */
@@ -23,13 +23,20 @@ import {
 } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { PLAYER } from './controller'
+import { type FaceEmote } from './emote'
 
 export const AVATAR = {
   bodyColour: '#e0563f',
   faceColour: '#2a1712',
 
+  /** The body stops here; the head is a separate, movable round piece. */
+  bodyHeight: 1.42,
+  /** Centre and radius of the head, above the feet. */
+  headY: PLAYER.height - PLAYER.radius,
+  headRadius: PLAYER.radius,
+
   /** Height above the feet at which the eyes sit, in metres. */
-  eyeY: 1.3,
+  eyeY: 1.47,
   /** How far each eye is from the middle, left and right. */
   eyeSpread: 0.155,
   eyeRadius: 0.075,
@@ -41,7 +48,7 @@ export const AVATAR = {
    * highest points on a "u" - sit just under the eyes rather than level with
    * them or lost far below.
    */
-  mouthY: 1.21,
+  mouthY: 1.37,
   /** The radius of that circle: small, so the smile is a small "u". */
   mouthRadius: 0.07,
   /**
@@ -101,45 +108,78 @@ export const AVATAR = {
   armOut: 0.34,
 } as const
 
-/** The curve of the body at a given sideways offset, at face height. */
-function surfaceZ(x: number): number {
-  // The face lives on the straight part of the capsule, between the two caps,
-  // so the body is a plain cylinder here and this is exact.
-  const inside = PLAYER.radius * PLAYER.radius - x * x
+/** The front curve of the round head at a point on the face. */
+function surfaceZ(x: number, y: number): number {
+  const dy = y - AVATAR.headY
+  const inside = AVATAR.headRadius * AVATAR.headRadius - x * x - dy * dy
   return inside > 0 ? Math.sqrt(inside) : 0
 }
 
-/** Where the eyes and every dot of the smile sit, in body space. */
-export function facePoints(): { x: number; y: number; z: number; radius: number }[] {
-  const points: { x: number; y: number; z: number; radius: number }[] = []
+export interface FacePoint {
+  x: number
+  y: number
+  z: number
+  radius: number
+}
 
-  for (const side of [-1, 1]) {
-    const x = side * AVATAR.eyeSpread
-    points.push({
-      x,
-      y: AVATAR.eyeY,
-      z: surfaceZ(x) - AVATAR.eyeRadius * AVATAR.faceSink,
-      radius: AVATAR.eyeRadius,
-    })
+function point(x: number, y: number, radius: number): FacePoint {
+  return { x, y, z: surfaceZ(x, y) - radius * AVATAR.faceSink, radius }
+}
+
+function arc(y: number, radius: number, invert = false, dots: number = AVATAR.mouthDots, dotRadius: number = AVATAR.mouthDotRadius): FacePoint[] {
+  const points: FacePoint[] = []
+  for (let i = 0; i < dots; i++) {
+    const angle = Math.PI + (Math.PI * i) / (dots - 1)
+    const x = Math.cos(angle) * radius
+    const atY = y + Math.sin(angle) * radius * (invert ? -1 : 1)
+    points.push(point(x, atY, dotRadius))
   }
-
-  // The bottom of a circle, swept from left to right: at a quarter turn past
-  // half a turn the arc is at its lowest, which is what makes it a smile
-  // rather than a frown.
-  const start = Math.PI + (Math.PI - AVATAR.mouthArc) / 2
-  for (let i = 0; i < AVATAR.mouthDots; i++) {
-    const angle = start + (AVATAR.mouthArc * i) / (AVATAR.mouthDots - 1)
-    const x = Math.cos(angle) * AVATAR.mouthRadius
-    const y = AVATAR.mouthY + Math.sin(angle) * AVATAR.mouthRadius
-    points.push({
-      x,
-      y,
-      z: surfaceZ(x) - AVATAR.mouthDotRadius * AVATAR.faceSink,
-      radius: AVATAR.mouthDotRadius,
-    })
-  }
-
   return points
+}
+
+function ring(y: number, radius: number, dots: number = 8, dotRadius: number = AVATAR.mouthDotRadius): FacePoint[] {
+  const points: FacePoint[] = []
+  for (let i = 0; i < dots; i++) {
+    const angle = (Math.PI * 2 * i) / dots
+    points.push(point(Math.cos(angle) * radius, y + Math.sin(angle) * radius, dotRadius))
+  }
+  return points
+}
+
+function eyes(radius: number = AVATAR.eyeRadius, y: number = AVATAR.eyeY, spread: number = AVATAR.eyeSpread): FacePoint[] {
+  return [-1, 1].map((side) => point(side * spread, y, radius))
+}
+
+/** Where an expression's eyes and mouth sit, in head space. */
+export function facePoints(emote: FaceEmote = 'smile'): FacePoint[] {
+  if (emote === 'mad') {
+    return [
+      ...eyes(),
+      point(-0.2, 1.56, 0.022), point(-0.155, 1.545, 0.022), point(-0.11, 1.53, 0.022),
+      point(0.11, 1.53, 0.022), point(0.155, 1.545, 0.022), point(0.2, 1.56, 0.022),
+      ...Array.from({ length: 5 }, (_, i) => point(-0.08 + i * 0.04, 1.32, 0.022)),
+    ]
+  }
+  if (emote === 'scared') return [...eyes(0.098, 1.48), ...ring(1.34, 0.064)]
+  if (emote === 'laugh') {
+    return [
+      point(-0.19, 1.47, 0.021), point(-0.155, 1.46, 0.021), point(-0.12, 1.47, 0.021),
+      point(0.12, 1.47, 0.021), point(0.155, 1.46, 0.021), point(0.19, 1.47, 0.021),
+      ...arc(1.36, 0.09, false, 8, 0.032),
+    ]
+  }
+  if (emote === 'sad') return [...eyes(), ...arc(1.34, AVATAR.mouthRadius, true)]
+  if (emote === 'surprised') return [...eyes(0.09, 1.48), ...ring(1.34, 0.055, 8, 0.026)]
+  if (emote === 'mog') {
+    return [
+      ...eyes(0.052, 1.465, 0.14),
+      point(-0.19, 1.54, 0.02), point(-0.15, 1.555, 0.02), point(-0.11, 1.54, 0.02),
+      point(0.11, 1.54, 0.02), point(0.15, 1.555, 0.02), point(0.19, 1.54, 0.02),
+      ...Array.from({ length: 7 }, (_, i) => point(-0.105 + i * 0.035, 1.32, 0.02)),
+    ]
+  }
+
+  return [...eyes(), ...arc(AVATAR.mouthY, AVATAR.mouthRadius)]
 }
 
 /**
@@ -162,15 +202,15 @@ export function armPoints(): { x: number; y: number; roll: number }[] {
 }
 
 /** Built on first use and then shared by every body in the world. */
-let shared: { body: BufferGeometry; face: BufferGeometry; ink: MeshStandardMaterial } | null = null
+let shared: { body: BufferGeometry; head: BufferGeometry; faces: Record<FaceEmote, BufferGeometry>; ink: MeshStandardMaterial } | null = null
 
 function parts() {
   if (shared) return shared
 
-  const trunk = new CapsuleGeometry(PLAYER.radius, PLAYER.height - PLAYER.radius * 2, 6, 12)
+  const trunk = new CapsuleGeometry(PLAYER.radius, AVATAR.bodyHeight - PLAYER.radius * 2, 6, 12)
   // The capsule is built about its own middle and the controller keeps the
   // feet at zero, so lift it once here rather than everywhere it is used.
-  trunk.translate(0, PLAYER.height / 2, 0)
+  trunk.translate(0, AVATAR.bodyHeight / 2, 0)
 
   // The arms are merged into the trunk rather than hung off it as their own
   // meshes: nothing animates them separately, so two more meshes would be two
@@ -185,18 +225,24 @@ function parts() {
   const body = mergeGeometries(limbs, false) as BufferGeometry
   for (const limb of limbs) limb.dispose()
 
-  const pieces: BufferGeometry[] = []
-  for (const point of facePoints()) {
-    const sphere = new SphereGeometry(point.radius, 10, 8)
-    sphere.translate(point.x, point.y, point.z)
-    pieces.push(sphere)
+  const faces = {} as Record<FaceEmote, BufferGeometry>
+  for (const emote of ['smile', 'mad', 'scared', 'laugh', 'sad', 'surprised', 'mog'] as const) {
+    const pieces: BufferGeometry[] = []
+    for (const point of facePoints(emote)) {
+      const sphere = new SphereGeometry(point.radius, 10, 8)
+      sphere.translate(point.x, point.y, point.z)
+      pieces.push(sphere)
+    }
+    faces[emote] = mergeGeometries(pieces, false) as BufferGeometry
+    for (const piece of pieces) piece.dispose()
   }
-  const face = mergeGeometries(pieces, false) as BufferGeometry
-  for (const piece of pieces) piece.dispose()
+
+  const head = new SphereGeometry(AVATAR.headRadius, 12, 10)
 
   shared = {
     body,
-    face,
+    head,
+    faces,
     ink: new MeshStandardMaterial({ color: AVATAR.faceColour, roughness: 0.7 }),
   }
   return shared
@@ -230,7 +276,7 @@ function skinFor(colour: string): MeshStandardMaterial {
  * player. Geometry is shared whatever colour it is painted.
  */
 export function createAvatar(colour: string = AVATAR.bodyColour): Group {
-  const { body, face, ink } = parts()
+  const { body, head: headGeometry, faces, ink } = parts()
   const skin = skinFor(colour)
 
   const pill = new Mesh(body, skin)
@@ -238,17 +284,43 @@ export function createAvatar(colour: string = AVATAR.bodyColour): Group {
   // It stands on sand it also shades, so it takes its own shadow too.
   pill.receiveShadow = true
 
-  const smile = new Mesh(face, ink)
+  const smile = new Mesh(faces.smile, ink)
+  smile.name = 'avatar-face'
   // Left out of the shadow pass on purpose: the face is a few centimetres of
   // detail pressed against a body that is already casting, and nothing it
   // could add would be visible.
   smile.castShadow = false
 
+  // The face is attached to a real head, so turning and nodding moves a whole
+  // coloured head with its features rather than only a floating smile.
+  const head = new Group()
+  head.name = 'avatar-head'
+  head.position.y = AVATAR.headY
+  const skull = new Mesh(headGeometry, skin)
+  skull.castShadow = true
+  skull.receiveShadow = true
+  head.add(skull)
+  smile.position.y = -AVATAR.headY
+  head.add(smile)
+
   const avatar = new Group()
   avatar.add(pill)
-  avatar.add(smile)
+  avatar.add(head)
   avatar.name = 'avatar'
   return avatar
+}
+
+/** Turns the visible head and face without moving the player's body. */
+export function setAvatarHeadLook(avatar: Group, yaw: number, pitch: number): void {
+  const head = avatar.getObjectByName('avatar-head')
+  if (!head) return
+  head.rotation.set(Math.max(-1.35, Math.min(1.35, pitch)), yaw, 0)
+}
+
+/** Replaces the one face mesh's shared geometry with the requested expression. */
+export function setAvatarEmote(avatar: Group, emote: FaceEmote): void {
+  const face = avatar.getObjectByName('avatar-face') as Mesh | undefined
+  if (face) face.geometry = parts().faces[emote]
 }
 
 /**

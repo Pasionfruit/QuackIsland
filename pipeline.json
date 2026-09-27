@@ -214,7 +214,9 @@
         "62-volcano-minimap",
         "63-volcano-pause",
         "64-jackal",
-        "65-big-backs-are-near"
+        "65-big-backs-are-near",
+        "66-lobby-pistols",
+        "67-mama-tank"
       ],
       "generation": 1,
       "contract": {
@@ -431,7 +433,9 @@
         "61-op-finder",
         "62-volcano-minimap",
         "64-jackal",
-        "65-big-backs-are-near"
+        "65-big-backs-are-near",
+        "66-lobby-pistols",
+        "67-mama-tank"
       ],
       "generation": 1,
       "contract": {
@@ -484,12 +488,22 @@
           "id": "02.9",
           "title": "Temporary arms, and a stun that knocks the body on its back",
           "status": "done"
+        },
+        {
+          "id": "02.11",
+          "title": "Saved camera sensitivity control shared by drag and free-look camera input",
+          "status": "done"
+        },
+        {
+          "id": "02.12",
+          "title": "Shared avatar face expressions for the lobby emote wheel",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-22T01:58:26.859Z"
+          "at": "2026-09-27T22:36:35.011Z"
         },
         "human": {
           "status": "pending"
@@ -981,7 +995,9 @@
         "62-volcano-minimap",
         "63-volcano-pause",
         "64-jackal",
-        "65-big-backs-are-near"
+        "65-big-backs-are-near",
+        "66-lobby-pistols",
+        "67-mama-tank"
       ],
       "generation": 1,
       "contract": {
@@ -1077,7 +1093,8 @@
         "59-volcano-tile-actions",
         "60-volcano-map-landmarks",
         "62-volcano-minimap",
-        "63-volcano-pause"
+        "63-volcano-pause",
+        "66-lobby-pistols"
       ],
       "generation": 1,
       "contract": {
@@ -1541,7 +1558,9 @@
         "61-op-finder",
         "63-volcano-pause",
         "64-jackal",
-        "65-big-backs-are-near"
+        "65-big-backs-are-near",
+        "66-lobby-pistols",
+        "67-mama-tank"
       ],
       "generation": 1,
       "contract": {
@@ -6205,6 +6224,170 @@
         "No claim/verify wire message: a catch is host-derived every tick off trusted positions",
         "No team scores or a standard N-way podium: a custom results card off `round.winner`",
         "No network-level redaction of the Hunter's near-sightedness - it is client-side rendering and a genuinely limited sensory channel, not per-peer information hiding"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "66-lobby-pistols",
+      "phase": "P3",
+      "title": "Lobby pistols: shared non-lethal knockdowns with a local K/D HUD",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "10-party",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": "src/modules/66-lobby-pistols/contract.snapshot.d.ts",
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "66.1",
+          "title": "Lobby-only pistol aim, room hit message, and non-lethal player knockdown",
+          "status": "done"
+        },
+        {
+          "id": "66.2",
+          "title": "Procedural player pistols and bottom-left K/D HUD",
+          "status": "done"
+        },
+        {
+          "id": "66.3",
+          "title": "Pure rule tests, contract, and review notes",
+          "status": "done"
+        },
+        {
+          "id": "66.4",
+          "title": "First-person-only pistol and crosshair refinement",
+          "status": "done"
+        },
+        {
+          "id": "66.5",
+          "title": "Tab scoreboard K/D, synchronized backward fall, and lobby shot/fall cues",
+          "status": "done"
+        },
+        {
+          "id": "66.6",
+          "title": "Click-once lobby free look and a movable headed avatar face",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-27T22:26:08.517Z"
+        },
+        "human": {
+          "status": "pending",
+          "at": null,
+          "note": null
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No player death, elimination, respawn, or combat outside the lobby",
+        "No new avatar or weapon assets; pistols are procedural geometry",
+        "No server-side combat authority or persistent player statistics"
+      ],
+      "budgets": {
+        "drawCallsMax": 24,
+        "trianglesMax": 500
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "67-mama-tank",
+      "phase": "P6",
+      "title": "Minigame 43, Mama Tank: one player drives Mama Tank, a giant tank starting on a hill, everybody else drives a mini tank attacking from below; both sides share WASD/mouse/left-click and can shoot, Mama Tank one-shots or runs over a mini tank, the mini tanks win as a team the instant their combined hits on Mama Tank reach twice the player count, otherwise Mama Tank wins",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "02-player",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": "src/modules/67-mama-tank/contract.snapshot.d.ts",
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "67.1",
+          "title": "The field: an open square arena with scattered uniform-height rock cover and a cosmetic, non-collidable hill at the centre, modelled closely on He's One Shot's own arena",
+          "status": "done"
+        },
+        {
+          "id": "67.2",
+          "title": "Mama Tank: WASD/mouse/left-click, a slow heavy cannon with a long cooldown, a slightly slower move speed, run-over elimination of any standing mini tank in reach with a clear line of sight",
+          "status": "done"
+        },
+        {
+          "id": "67.3",
+          "title": "Mini tanks: WASD/mouse/left-click, a quicker light cannon, single-hit elimination, no lives",
+          "status": "done"
+        },
+        {
+          "id": "67.4",
+          "title": "The end: hitsOnMama reaching hitsNeeded wins it for the mini tanks, every mini tank down or the clock running out wins it for Mama Tank, Mama Tank leaving wins it for the mini tanks unambiguously - decided the same step, no outro",
+          "status": "done"
+        },
+        {
+          "id": "67.5",
+          "title": "Bots: mini-tank stand-ins only that advance behind cover, fire when able, and nudge away from Mama Tank's current aim",
+          "status": "done"
+        },
+        {
+          "id": "67.6",
+          "title": "Networking: one shared move report for both roles, one shot-claim message shared by whichever role fired, run-over is host-derived every tick with no claim or wire message at all",
+          "status": "done"
+        },
+        {
+          "id": "67.7",
+          "title": "Contract, tests including a lossy-network multi-shooter convergence check over a real generated field, MODULE.md",
+          "status": "done"
+        },
+        {
+          "id": "67.8",
+          "title": "The assets: models, sprites and sound in place of primitives and the avatar",
+          "status": "planned"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-09-27T22:44:46.996Z"
+        },
+        "human": {
+          "status": "pending",
+          "at": null,
+          "note": null
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No models: bodies are procedural tank geometry, cover is procedural rock geometry",
+        "No jump, no y/vy for either role - flat 2D movement and collision throughout, including across the hill's own footprint",
+        "No real terrain/slope collision: the hill is a cosmetic mound only",
+        "No role-dependent cover height: cover is one uniform height, tall enough to block both roles' shots",
+        "No lag-compensating rewind for a claimed shot: judged against the victim's current position only",
+        "No team scores or a standard N-way podium: a custom results card off `round.winner`"
       ],
       "budgets": {
         "drawCallsMax": 0,

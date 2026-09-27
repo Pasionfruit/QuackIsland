@@ -260,6 +260,12 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'players',
   },
+  'mama-tank': {
+    title: 'Mama Tank',
+    screen: 'MamaScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
   'highest-in-the-room': {
     title: 'Highest In The Room',
     screen: 'TowerScreen',
@@ -765,6 +771,84 @@ export function nearPlay({ mode = 'play', sprint = false } = {}) {
     // mute; drop back to a walk the moment a ping is actually heard, since
     // sprinting would silence the very sound being followed.
     press('ShiftLeft', ${JSON.stringify(!!sprint)} || pings.length === 0)
+    return state
+  })()`
+}
+
+/**
+ * An expression that, in a page showing Mama Tank, stands in for the pointer
+ * lock the same way `jackalPlay` does, then - whichever role `me` is playing,
+ * since both can shoot here - aims at its only kind of legal target (a mini
+ * tank's only target is Mama Tank; Mama Tank's targets are standing mini
+ * tanks) that it has a clear line to, and fires when roughly on target and
+ * its own cooldown is up. With `advance` it also holds W to close distance,
+ * so a run over the field actually happens under an automated run rather
+ * than only a stationary duel. With no target in sight at all - a mini tank
+ * spawned with a rock between it and Mama Tank, say - a mini tank heads for
+ * the middle instead, where Mama Tank always starts, rather than sitting
+ * still forever; Mama Tank just holds position, since the round decides
+ * itself once nobody is left to shoot at. Evaluates to a small state object
+ * for logging.
+ */
+export function mamaPlay({ mode = 'play', advance = true } = {}) {
+  return `(async () => {
+    const arena = await import('/src/modules/67-mama-tank/internal/arena.ts')
+    const rules = await import('/src/modules/67-mama-tank/internal/rules.ts')
+    const screen = await import('/src/modules/67-mama-tank/internal/MamaScreen.tsx')
+    const w = (window.__mmt ??= { held: new Set() })
+    const press = (code, down) => {
+      if (down === w.held.has(code)) return
+      down ? w.held.add(code) : w.held.delete(code)
+      window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, key: code.slice(3).toLowerCase() }))
+    }
+    if (!w.locked) {
+      Object.defineProperty(document, 'pointerLockElement', { configurable: true, get: () => document.querySelector('[data-board]') })
+      document.dispatchEvent(new Event('pointerlockchange'))
+      w.locked = true
+    }
+    const g = ${gameState('mama-tank')}
+    if (!g || g.players.length === 0) return null
+    const me = g.players.find((p) => p.mine)
+    const state = { clock: +g.elapsed.toFixed(2), over: g.over, winner: g.winner, role: me.role, hitsOnMama: g.hitsOnMama, hitsNeeded: g.hitsNeeded, alive: me.alive, fired: false, target: null }
+    const eliminated = me.role === 'mini' && !me.alive
+    if (${JSON.stringify(mode)} === 'lock' || g.over || eliminated) {
+      for (const code of [...w.held]) press(code, false)
+      return state
+    }
+    const A = arena.arenaFor(g.seed)
+    const eye = rules.eyeOf(me)
+    let target = null
+    let best = Infinity
+    for (const p of g.players) {
+      if (!rules.isStanding(p) || !rules.isLegalTarget(me.role, p)) continue
+      const d = Math.hypot(p.x - me.x, p.z - me.z)
+      const pDims = p.role === 'mama' ? rules.MAMA : rules.MINI
+      if (d < best && arena.lineClear(A, eye, { x: p.x, y: pDims.height / 2, z: p.z })) { best = d; target = p }
+    }
+    if (target) {
+      const targetDims = target.role === 'mama' ? rules.MAMA : rules.MINI
+      const wantYaw = Math.atan2(-(target.x - me.x), -(target.z - me.z))
+      const wantPitch = Math.atan2(targetDims.height / 2 - eye.y, best)
+      state.target = target.id
+      const turn = Math.max(-0.35, Math.min(0.35, rules.wrapAngle(wantYaw - me.yaw)))
+      const mx = Math.round(-turn / screen.SENSITIVITY)
+      const my = Math.round((me.pitch - wantPitch) / screen.SENSITIVITY)
+      if (mx || my) document.dispatchEvent(new MouseEvent('mousemove', { movementX: mx, movementY: my, bubbles: true }))
+      const board = document.querySelector('[data-board]')
+      if (Math.abs(rules.wrapAngle(wantYaw - me.yaw)) < 0.05 && rules.canShoot(g, me)) {
+        board.dispatchEvent(new PointerEvent('pointerdown', { button: 0, bubbles: true }))
+        board.dispatchEvent(new PointerEvent('pointerup', { button: 0, bubbles: true }))
+        state.fired = true
+      }
+    } else if (me.role === 'mini' && ${JSON.stringify(!!advance)}) {
+      const wantYaw = Math.atan2(-(0 - me.x), -(0 - me.z))
+      const turn = Math.max(-0.35, Math.min(0.35, rules.wrapAngle(wantYaw - me.yaw)))
+      const mx = Math.round(-turn / screen.SENSITIVITY)
+      if (mx) document.dispatchEvent(new MouseEvent('mousemove', { movementX: mx, movementY: 0, bubbles: true }))
+    }
+    const closingIn = !!target && best > 2
+    const wandering = !target && me.role === 'mini' && Math.hypot(me.x, me.z) > 2
+    press('KeyW', ${JSON.stringify(!!advance)} && (closingIn || wandering))
     return state
   })()`
 }

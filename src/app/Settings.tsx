@@ -43,11 +43,15 @@ import {
 } from '../modules/00-core'
 import {
   PLAYER_COLOURS,
+  CAMERA_SENSITIVITY_MAX,
+  CAMERA_SENSITIVITY_MIN,
   isCameraOffPlayer,
   refocusCamera,
+  setCameraSensitivity,
   setPlayerColour,
   stunPlayer,
   toggleViewMode,
+  useCameraSensitivity,
   usePlayerColour,
   useViewMode,
 } from '../modules/02-player'
@@ -408,6 +412,7 @@ function AudioTab() {
 
 function PlayerTab() {
   const colour = usePlayerColour()
+  const sensitivity = useCameraSensitivity()
   const peers = usePeers()
   const purse = usePurse()
 
@@ -470,6 +475,25 @@ function PlayerTab() {
           {PLAYER_COLOURS.find((c) => c.hex.toLowerCase() === colour.toLowerCase())?.label ?? 'custom'} -
           everybody in your lobby sees it
         </div>
+      </Section>
+
+      <Section title="CAMERA">
+        <label style={{ display: 'grid', gap: 7, color: '#c8c3ba' }}>
+          <span style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span>look sensitivity</span>
+            <strong style={{ color: '#ffcf8a' }}>{Math.round(sensitivity * 100)}%</strong>
+          </span>
+          <input
+            type="range"
+            min={CAMERA_SENSITIVITY_MIN}
+            max={CAMERA_SENSITIVITY_MAX}
+            step={0.05}
+            value={sensitivity}
+            onChange={(event) => setCameraSensitivity(Number(event.currentTarget.value))}
+            aria-label="Camera sensitivity"
+          />
+        </label>
+        <div style={note}>Changes mouse look in every player view.</div>
       </Section>
 
       <Section title="WALLET">

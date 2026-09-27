@@ -908,14 +908,26 @@ const ENTRIES = [
     done: { environment: true, controls: true, assets: false },
   },
   {
-    id: 'reserved-43',
+    id: 'mama-tank',
     number: 43,
-    title: 'Free slot',
+    title: 'Mama Tank',
     kind: 'one-vs-all',
-    description: [],
-    controls: [],
-    reserved: true,
-    done: { environment: false, controls: false, assets: false },
+    description: [
+      "One player becomes Mama Tank, a giant tank that starts on a hill overlooking the field - everyone else drives a mini tank, attacking from below. Mama Tank's cannon one-shots a mini tank on a hit, and driving straight over one eliminates it too - there is no cover from the tracks the way there is from the shell.",
+      "Unlike Volcano Island's other one-vs-all games, both sides share the exact same controls - WASD to move, mouse to aim, left click to fire - and both can shoot. A mini tank's own cannon is quick but light; Mama Tank's is slow and heavy, one shot at a time, so mini tanks get real windows to close in between reloads while Mama Tank's own bulk trades speed for firepower.",
+      "The mini tanks win as a team the instant their combined hits on Mama Tank reach twice the number of players. Otherwise - every mini tank eliminated, or the clock running out first - Mama Tank wins.",
+    ],
+    controls: [
+      { input: 'Mama Tank: WASD', does: 'Move' },
+      { input: 'Mama Tank: Mouse', does: 'Aim' },
+      { input: 'Mama Tank: Left click', does: 'Fire the cannon' },
+      { input: 'Mini tank: WASD', does: 'Move (same scheme as Mama Tank)' },
+      { input: 'Mini tank: Mouse', does: 'Aim' },
+      { input: 'Mini tank: Left click', does: 'Fire the cannon' },
+    ],
+    reserved: false,
+    // Built: see `67-mama-tank`.
+    done: { environment: true, controls: true, assets: false },
   },
   {
     id: 'reserved-44',

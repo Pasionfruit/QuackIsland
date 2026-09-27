@@ -12,6 +12,8 @@
  * packet produces `null`, never an exception and never a duck at NaN.
  */
 
+import { isFaceEmote, type FaceEmote } from '../../02-player'
+
 /** Characters a code is drawn from: no O/0, no I/1, no confusable pairs. */
 export const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 export const CODE_LENGTH = 5
@@ -68,6 +70,14 @@ export interface DuckState {
   swimming: boolean
   /** Metres per second, so a remote duck can be animated later. */
   speed: number
+  /** World heading of the player's look, independent from the body's movement heading. */
+  headYaw?: number
+  /** Look up/down, in radians. Positive is down. */
+  headPitch?: number
+  /** 0 upright, 1 fully knocked backward. */
+  fall?: number
+  /** The currently selected lobby face. */
+  emote?: FaceEmote
 }
 
 export interface Peer {
@@ -256,6 +266,10 @@ function round(state: DuckState): DuckState {
     lean: to(state.lean),
     swimming: state.swimming,
     speed: to(state.speed),
+    headYaw: to(state.headYaw ?? state.facing),
+    headPitch: to(state.headPitch ?? 0),
+    fall: to(Math.min(1, Math.max(0, state.fall ?? 0))),
+    emote: state.emote ?? 'smile',
   }
 }
 
@@ -298,6 +312,12 @@ export function decodeMessage(raw: unknown): DuckMessage | null {
     lean: Math.min(1, Math.max(0, finite(raws.lean))),
     swimming: raws.swimming === true,
     speed: Math.min(100, Math.max(0, finite(raws.speed))),
+    // Older tabs do not send these fields. Their face simply stays centred on
+    // the body until they refresh, which keeps mixed-version lobbies usable.
+    headYaw: wrapAngle(finite(raws.headYaw ?? raws.facing)),
+    headPitch: Math.min(1.35, Math.max(-1.35, finite(raws.headPitch))),
+    fall: Math.min(1, Math.max(0, finite(raws.fall))),
+    emote: isFaceEmote(raws.emote) ? raws.emote : 'smile',
   }
   // Somewhere in the world, not out at a million metres where the float
   // precision goes and the camera follows it.
@@ -315,4 +335,12 @@ export function decodeMessage(raw: unknown): DuckMessage | null {
 
 function finite(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0
+}
+
+function wrapAngle(angle: number): number {
+  const turn = Math.PI * 2
+  let wrapped = angle % turn
+  if (wrapped > Math.PI) wrapped -= turn
+  if (wrapped < -Math.PI) wrapped += turn
+  return wrapped
 }

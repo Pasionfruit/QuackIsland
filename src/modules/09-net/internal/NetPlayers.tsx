@@ -12,10 +12,11 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { Group } from 'three'
 import { PRIORITY, useGameFrame } from '../../00-core'
-import { PLAYER, bodyPose, createAvatar, getPlayerState } from '../../02-player'
+import { PLAYER, bodyPose, createAvatar, getFaceEmote, getPlayerLook, getPlayerState, setAvatarEmote, setAvatarHeadLook, stunFall } from '../../02-player'
 import { addWalker as addPrintWalker, removeWalker as removePrintWalker } from '../../03-footprints'
 import { addWalker as addSoundWalker, removeWalker as removeSoundWalker } from '../../08-audio'
 import { followWorld, peerAt, peerTracks, publish, sweep } from './client'
+import { shortestAngle } from './interpolate'
 
 /** One remote body: an outer group that faces, an inner one that tips. */
 interface Rig {
@@ -23,6 +24,8 @@ interface Rig {
   tilt: Group
   /** Holds the body, so a peer who changes colour can be repainted in place. */
   feet: Group
+  /** The avatar's face pivots independently when its owner looks around. */
+  avatar: Group
   colour: string | null
 }
 
@@ -79,6 +82,7 @@ export function NetPlayers() {
     // Send ours.
     const me = getPlayerState()
     if (me) {
+      const look = getPlayerLook()
       publish({
         x: me.x,
         y: me.y,
@@ -87,6 +91,10 @@ export function NetPlayers() {
         lean: me.lean,
         swimming: me.swimming,
         speed: me.speed,
+        headYaw: look.yaw,
+        headPitch: look.pitch,
+        fall: stunFall(me.stun, me.stunFor),
+        emote: getFaceEmote(),
       })
     }
 
@@ -129,9 +137,8 @@ export function NetPlayers() {
       there.facing = state.facing
       there.speed = state.speed
       there.swimming = state.swimming
-      // Remote players are not simulated, so there is no fall to report. A peer
-      // is on the ground whenever they are not swimming, which is what makes
-      // their footsteps fire and stops a phantom landing thud on arrival.
+      // Remote players are not simulated, but a falling state arrives from
+      // their owner. They are otherwise grounded whenever not swimming.
       there.grounded = !state.swimming
       there.vy = 0
 
@@ -140,7 +147,8 @@ export function NetPlayers() {
       if (rig && rig.colour !== colour) {
         // They picked a new colour in settings: swap the body, keep the rig.
         rig.feet.clear()
-        rig.feet.add(createAvatar(colour ?? undefined))
+        rig.avatar = createAvatar(colour ?? undefined)
+        rig.feet.add(rig.avatar)
         rig.colour = colour
       }
       if (!rig) {
@@ -150,18 +158,21 @@ export function NetPlayers() {
         // and the middle of it is what should pivot.
         const feet = new Group()
         feet.position.y = -PLAYER.height / 2
-        feet.add(createAvatar(colour ?? undefined))
+        const avatar = createAvatar(colour ?? undefined)
+        feet.add(avatar)
         tilt.add(feet)
         root.add(tilt)
         parent.add(root)
-        rig = { root, tilt, feet, colour }
+        rig = { root, tilt, feet, avatar, colour }
         rigs.set(id, rig)
       }
 
-      const { rise, tip } = bodyPose(state.lean, PLAYER.height, PLAYER.radius)
+      const { rise, tip } = bodyPose(state.lean, PLAYER.height, PLAYER.radius, state.fall ?? 0)
       rig.root.position.set(state.x, state.y + rise, state.z)
       rig.root.rotation.y = state.facing
       rig.tilt.rotation.x = tip * (Math.PI / 2)
+      setAvatarHeadLook(rig.avatar, shortestAngle(state.facing, state.headYaw ?? state.facing), state.headPitch ?? 0)
+      setAvatarEmote(rig.avatar, state.emote ?? 'smile')
     }
   }, PRIORITY.camera)
 

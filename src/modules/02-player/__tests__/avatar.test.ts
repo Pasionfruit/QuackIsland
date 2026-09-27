@@ -1,7 +1,8 @@
 import { Box3, Mesh, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 import { PLAYER } from '../internal/controller'
-import { AVATAR, armPoints, bodyPose, createAvatar, facePoints } from '../internal/avatar'
+import { AVATAR, armPoints, bodyPose, createAvatar, facePoints, setAvatarEmote, setAvatarHeadLook } from '../internal/avatar'
+import { FACE_EMOTES } from '../internal/emote'
 
 /**
  * A body is exactly the kind of thing that goes wrong silently - inside out,
@@ -41,12 +42,13 @@ describe('the body', () => {
     expect(size.z).toBeLessThan(PLAYER.radius * 2 + 0.1)
   })
 
-  it('is two draw calls, over geometry every body shares', () => {
+  it('is three draw calls, over geometry every body shares', () => {
     const one = meshes(createAvatar())
     const two = meshes(createAvatar())
-    expect(one).toHaveLength(2)
+    expect(one).toHaveLength(3)
     expect(one[0].geometry).toBe(two[0].geometry)
     expect(one[1].geometry).toBe(two[1].geometry)
+    expect(one[2].geometry).toBe(two[2].geometry)
     expect(one[0].material).toBe(two[0].material)
   })
 
@@ -57,10 +59,31 @@ describe('the body', () => {
     expect(two.position.x).toBe(0)
   })
 
-  it('casts a shadow from the body and not from the face', () => {
-    const [pill, smile] = meshes(createAvatar())
+  it('casts a shadow from the body and head, but not the face', () => {
+    const [pill, head, smile] = meshes(createAvatar())
     expect(pill.castShadow).toBe(true)
+    expect(head.castShadow).toBe(true)
     expect(smile.castShadow).toBe(false)
+  })
+
+  it('turns the whole head and face without turning the body', () => {
+    const avatar = createAvatar()
+    setAvatarHeadLook(avatar, 0.7, -0.4)
+    const head = avatar.getObjectByName('avatar-head')
+    expect(head?.position.y).toBeCloseTo(AVATAR.headY, 9)
+    expect(head?.rotation.y).toBeCloseTo(0.7, 9)
+    expect(head?.rotation.x).toBeCloseTo(-0.4, 9)
+    expect(avatar.rotation.y).toBe(0)
+  })
+
+  it('changes the one face mesh for each chosen expression', () => {
+    const avatar = createAvatar()
+    const face = avatar.getObjectByName('avatar-face') as Mesh
+    const smile = face.geometry
+    setAvatarEmote(avatar, 'mog')
+    expect(face.geometry).not.toBe(smile)
+    setAvatarEmote(avatar, 'smile')
+    expect(face.geometry).toBe(smile)
   })
 })
 
@@ -73,11 +96,11 @@ describe('the face', () => {
     for (const p of points) expect(p.z).toBeGreaterThan(0)
   })
 
-  it('sits against the body rather than floating in front of it', () => {
+  it('sits against the round head rather than floating in front of it', () => {
     for (const p of points) {
-      // How far the curve of the body stands at this point, sideways offset
-      // and all, against how far out the face piece was put.
-      const surface = Math.sqrt(PLAYER.radius * PLAYER.radius - p.x * p.x)
+      // How far the head curve stands at this point, sideways and vertically,
+      // against how far out the face piece was put.
+      const surface = Math.sqrt(AVATAR.headRadius ** 2 - p.x * p.x - (p.y - AVATAR.headY) ** 2)
       expect(surface - p.z).toBeCloseTo(p.radius * AVATAR.faceSink, 6)
       // A dome on the surface: half of every piece shows, whatever size it is,
       // so nothing floats off the front and nothing is swallowed.
@@ -87,12 +110,10 @@ describe('the face', () => {
     }
   })
 
-  it('keeps clear of the rounded ends, where the body stops being a cylinder', () => {
-    const straightFrom = PLAYER.radius
-    const straightTo = PLAYER.height - PLAYER.radius
+  it('stays inside the round head', () => {
     for (const p of points) {
-      expect(p.y - p.radius).toBeGreaterThan(straightFrom)
-      expect(p.y + p.radius).toBeLessThan(straightTo)
+      const distance = Math.hypot(p.x, p.y - AVATAR.headY)
+      expect(distance + p.radius).toBeLessThan(AVATAR.headRadius)
     }
   })
 
@@ -126,6 +147,17 @@ describe('the face', () => {
       const b = mouth[i]
       const gap = Math.hypot(b.x - a.x, b.y - a.y)
       expect(gap).toBeLessThan(a.radius + b.radius)
+    }
+  })
+
+  it('keeps every lobby expression on the round head', () => {
+    for (const emote of FACE_EMOTES) {
+      const expression = facePoints(emote)
+      expect(expression.length).toBeGreaterThan(4)
+      for (const p of expression) {
+        expect(p.z).toBeGreaterThan(0)
+        expect(Math.hypot(p.x, p.y - AVATAR.headY) + p.radius).toBeLessThan(AVATAR.headRadius)
+      }
     }
   })
 })

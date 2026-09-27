@@ -24,18 +24,11 @@ import {
   type PlayerState,
 } from './controller'
 import { clampPitch, getViewMode, placeCamera, toggleViewMode } from './camera'
-import { bodyPose, createAvatar } from './avatar'
+import { bodyPose, createAvatar, setAvatarEmote, setAvatarHeadLook } from './avatar'
 import { usePlayerColour } from './colour'
+import { useFaceEmote } from './emote'
+import { getCameraSensitivity } from './sensitivity'
 
-const CAM_EASE = 12
-/**
- * How fast the camera catches up in first person.
- *
- * Much faster than third person, and close enough to instant to feel it: the
- * camera is the head, and a head that lags behind the body reads as seasickness
- * rather than as smoothing.
- */
-const CAM_EASE_FIRST = 60
 /** Radians per pixel dragged. */
 const SENSITIVITY = 0.0042
 /** Metres per pixel dragged, at the closest zoom. Scaled up as you pull back. */
@@ -94,6 +87,11 @@ export function stunPlayer(seconds: number): void {
 /** Whether the player is currently on the floor. */
 export function isStunned(): boolean {
   return (live?.stun ?? 0) > 0
+}
+
+/** The camera look that a networked avatar needs to turn and nod its face. */
+export function getPlayerLook(): { yaw: number; pitch: number } {
+  return { yaw: rig.yaw, pitch: rig.pitch }
 }
 
 /** Camera state, kept outside React so dragging costs no re-renders. */
@@ -165,6 +163,11 @@ export interface PlayerProps {
    * of a minigame.
    */
   inputBlocked?: () => boolean
+  /**
+   * Whether this is the lobby, where a single click should capture the mouse
+   * for free look instead of making the player keep dragging it.
+   */
+  freeLook?: () => boolean
 }
 
 export function Player({
@@ -175,6 +178,7 @@ export function Player({
   bounds: given,
   collide,
   inputBlocked,
+  freeLook,
 }: PlayerProps) {
   const camera = useThree((s) => s.camera)
   const domElement = useThree((s) => s.gl.domElement)
@@ -183,7 +187,10 @@ export function Player({
   // Built once per colour: the same meshes for as long as you keep the colour
   // chosen in settings, and a fresh body painted the new one when you change it.
   const colour = usePlayerColour()
+  const emote = useFaceEmote()
   const avatar = useMemo(() => createAvatar(colour), [colour])
+
+  useEffect(() => setAvatarEmote(avatar, emote), [avatar, emote])
 
   const state = useMemo(() => createPlayer(spawnX, spawnZ, heightAt), [spawnX, spawnZ])
   const keys = useRef<PlayerInput>({ ...IDLE_INPUT })
@@ -203,24 +210,37 @@ export function Player({
     }
   }, [state])
 
-  // Look, pan and zoom. Everything is drag-driven: the camera moves only while
-  // a button is down and the mouse is actually moving, so a plain click - left
-  // or right - leaves the view exactly where it was.
+  const freeLookNow = useRef(freeLook)
+  freeLookNow.current = freeLook
+
+  // Look, pan and zoom. The lobby captures the pointer on one left click, so
+  // its camera keeps turning with the mouse until Escape releases it. Other
+  // worlds retain their deliberate drag controls.
   useEffect(() => {
     let button = -1
 
     const onDown = (e: MouseEvent) => {
+      if (e.button === 0 && freeLookNow.current?.()) {
+        void domElement.requestPointerLock()
+        e.preventDefault()
+        return
+      }
       if (e.button !== 0 && e.button !== 2) return
       button = e.button
       e.preventDefault()
     }
 
     const onMove = (e: MouseEvent) => {
-      if (button === 0) {
-        rig.yaw -= e.movementX * SENSITIVITY
+      if (freeLookNow.current?.() && document.pointerLockElement === domElement) {
+        const sensitivity = SENSITIVITY * getCameraSensitivity()
+        rig.yaw -= e.movementX * sensitivity
+        rig.pitch = clampPitch(getViewMode(), rig.pitch + e.movementY * sensitivity)
+      } else if (button === 0) {
+        const sensitivity = SENSITIVITY * getCameraSensitivity()
+        rig.yaw -= e.movementX * sensitivity
         // Clamped to whichever view is running: first person can look nearly
         // straight up, third person cannot without burying the camera.
-        rig.pitch = clampPitch(getViewMode(), rig.pitch + e.movementY * SENSITIVITY)
+        rig.pitch = clampPitch(getViewMode(), rig.pitch + e.movementY * sensitivity)
       } else if (button === 2 && getViewMode() === 'third') {
         // Slide the view across the ground, in the camera's own directions, so
         // dragging right always moves the view right whichever way you face.
@@ -266,6 +286,7 @@ export function Player({
       domElement.removeEventListener('contextmenu', onContext)
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onUp)
+      if (document.pointerLockElement === domElement) document.exitPointerLock()
     }
   }, [domElement])
 
@@ -401,6 +422,8 @@ export function Player({
     if (tilt.current) {
       tilt.current.rotation.x = tip * (Math.PI / 2)
     }
+    const headYaw = Math.atan2(Math.sin(rig.yaw - state.facing), Math.cos(rig.yaw - state.facing))
+    setAvatarHeadLook(avatar, headYaw, rig.pitch)
 
     // Both views come out of one function, so they cannot end up disagreeing
     // about which way `yaw` points.
@@ -409,8 +432,9 @@ export function Player({
       camWant.set(place.x, place.y, place.z)
       camLook.set(place.lookX, place.lookY, place.lookZ)
 
-      const ease = view === 'first' ? CAM_EASE_FIRST : CAM_EASE
-      camera.position.lerp(camWant, 1 - Math.exp(-delta * ease))
+      // The view is attached to the player in both perspectives. Smoothing
+      // this position made the screen trail behind a moving lobby player.
+      camera.position.copy(camWant)
       camera.lookAt(camLook)
     }
   }, PRIORITY.camera)

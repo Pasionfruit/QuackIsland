@@ -32,6 +32,7 @@ import { VolcanoTileActions } from '../modules/59-volcano-tile-actions'
 import { VolcanoMapLandmarks } from '../modules/60-volcano-map-landmarks'
 import { VolcanoMinimap } from '../modules/62-volcano-minimap'
 import { VolcanoPause } from '../modules/63-volcano-pause'
+import { LobbyPistols } from '../modules/66-lobby-pistols'
 import { isSettingsOpen } from './settingsOpen'
 
 /**
@@ -56,6 +57,7 @@ const PlayerOnSea = () =>
     bounds: currentBounds(),
     collide: pushOutOfRocks,
     inputBlocked: somethingOverTheWorld,
+    freeLook: lobbyFreeLook,
   })
 
 /**
@@ -71,6 +73,11 @@ function somethingOverTheWorld(): boolean {
   if (isSettingsOpen()) return true
   if (getMinigameScreen().at !== 'closed') return true
   return getGameMode() === 'garden' && getParty().phase === 'playing'
+}
+
+/** The shared island lobby uses click-once mouse look; games keep drag controls. */
+function lobbyFreeLook(): boolean {
+  return !isSettingsOpen() && getMinigameScreen().at === 'closed' && getParty().phase !== 'playing'
 }
 
 /**
@@ -211,6 +218,7 @@ export const SCENE: SceneEntry[] = [
   { id: '60-volcano-map-landmarks', order: 600, enabled: true, Component: VolcanoMapLandmarks },
   { id: '62-volcano-minimap', order: 620, enabled: true, Component: VolcanoMinimap },
   { id: '63-volcano-pause', order: 630, enabled: true, Component: VolcanoPause },
+  { id: '66-lobby-pistols', order: 660, enabled: true, Component: LobbyPistols },
 ]
 
 // Toggling a module on or off has to reach the canvas, which is a different

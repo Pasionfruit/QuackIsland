@@ -99,7 +99,7 @@ describe('the panels mount', () => {
     const expected = {
       island: ['TIME OF DAY', 'WEATHER'],
       audio: ['SOUND EFFECTS', 'MUSIC'],
-      player: ['COLOUR', 'WALLET'],
+      player: ['COLOUR', 'CAMERA', 'WALLET'],
       developer: ['VIEW', 'MODULES', 'PERFORMANCE'],
     } as const
     for (const tab of SETTINGS_TABS) {

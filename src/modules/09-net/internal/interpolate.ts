@@ -68,6 +68,9 @@ function blend(a: DuckState, b: DuckState, t: number): DuckState {
     // Through the short side, or a duck crossing north spins all the way round.
     facing: a.facing + shortestAngle(a.facing, b.facing) * t,
     lean: lerp(a.lean, b.lean, t),
+    headYaw: (a.headYaw ?? a.facing) + shortestAngle(a.headYaw ?? a.facing, b.headYaw ?? b.facing) * t,
+    headPitch: lerp(a.headPitch ?? 0, b.headPitch ?? 0, t),
+    fall: lerp(a.fall ?? 0, b.fall ?? 0, t),
     // Not interpolable, so it takes whichever snapshot is nearer.
     swimming: t < 0.5 ? a.swimming : b.swimming,
     speed: lerp(a.speed, b.speed, t),

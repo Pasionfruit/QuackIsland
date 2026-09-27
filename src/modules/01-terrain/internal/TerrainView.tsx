@@ -7,10 +7,10 @@
  */
 import { useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { BufferAttribute, BufferGeometry, Mesh, type MeshStandardMaterial } from 'three'
+import { BufferAttribute, BufferGeometry, type MeshStandardMaterial } from 'three'
 import { PRIORITY, useGameFrame } from '../../00-core'
 import { buildChunkGeometry, chunkCentre, lodForDistance } from './chunk'
-import { TERRAIN, heightAt } from './island'
+import { TERRAIN } from './island'
 import { createSandMaterial } from './sand-material'
 
 function geometryFor(cx: number, cz: number, lod: number): BufferGeometry {
@@ -30,28 +30,7 @@ interface ChunkState {
   lod: number
 }
 
-/** A ball that sits exactly on the ground, for checking the height contract by eye. */
-function GroundProbe() {
-  const ref = useRef<Mesh>(null)
-  useGameFrame((state) => {
-    const mesh = ref.current
-    if (!mesh) return
-    // Follow the camera's ground position, so driving the view around the
-    // island is also a test of heightAt across every chunk and LOD border.
-    const x = state.camera.position.x
-    const z = state.camera.position.z
-    mesh.position.set(x, heightAt(x, z) + 1.2, z)
-  }, PRIORITY.world)
-
-  return (
-    <mesh ref={ref} castShadow>
-      <sphereGeometry args={[1.2, 16, 12]} />
-      <meshStandardMaterial color="#e0563f" roughness={0.4} />
-    </mesh>
-  )
-}
-
-export function Terrain({ wireframe = false, probe = true }: { wireframe?: boolean; probe?: boolean }) {
+export function Terrain({ wireframe = false }: { wireframe?: boolean }) {
   const camera = useThree((s) => s.camera)
   const material = useMemo(() => createSandMaterial(), [])
 
@@ -110,7 +89,6 @@ export function Terrain({ wireframe = false, probe = true }: { wireframe?: boole
       {geometries.map(({ key, g }) => (
         <mesh key={key} geometry={g} material={material} receiveShadow castShadow={false} />
       ))}
-      {probe ? <GroundProbe /> : null}
     </group>
   )
 }
