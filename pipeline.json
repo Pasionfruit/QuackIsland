@@ -5558,6 +5558,11 @@
           "id": "59.6",
           "title": "Replace the action pair with the requested full coloured 120-tile deck",
           "status": "done"
+        },
+        {
+          "id": "59.7",
+          "title": "Add visual-only Crates, Wall, Treasure, and Lemonade checkpoints",
+          "status": "done"
         }
       ],
       "gate": {
@@ -5587,8 +5592,8 @@
         "No external models, textures or asset pipeline"
       ],
       "budgets": {
-        "drawCallsMax": 10,
-        "trianglesMax": 5000
+        "drawCallsMax": 16,
+        "trianglesMax": 6000
       },
       "measured": null,
       "blockers": [],

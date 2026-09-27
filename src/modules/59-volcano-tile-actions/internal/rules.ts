@@ -39,6 +39,16 @@ const definitions: Record<VolcanoTileActionKind, { count: number; label: string;
 
 export const VOLCANO_TILE_KINDS = Object.freeze(Object.keys(definitions) as VolcanoTileActionKind[])
 
+/** Visual-only route landmarks. They intentionally do not enter tile resolution. */
+export const VOLCANO_CHECKPOINTS = Object.freeze([
+  { tileIndex: 24, kind: 'crates_barrels', label: 'Crates and Barrels — 50:50' },
+  { tileIndex: 50, kind: 'wall', label: 'Wall — 2 dice, need 7 or more' },
+  { tileIndex: 78, kind: 'treasure', label: 'Treasure — minigame reward' },
+  { tileIndex: 105, kind: 'lemonade', label: 'Lemonade Stand — 2 or Volcano' },
+] as const)
+
+export type VolcanoCheckpoint = (typeof VOLCANO_CHECKPOINTS)[number]
+
 function shuffle<T>(values: T[], rng: () => number): T[] {
   for (let index = values.length - 1; index > 0; index--) {
     const other = Math.floor(rng() * (index + 1))

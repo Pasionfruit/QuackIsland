@@ -22,6 +22,9 @@ the requested total.
   visibly lands. The resulting positions are part of the normal board snapshot.
 - Ten instanced procedural marker sets colour the board; there is no tile HUD,
   dialog, network message, external asset, or unseeded randomness.
+- Visual-only route landmarks sit at tiles 24 (Crates and Barrels), 50 (Wall),
+  78 (Treasure), and 105 (Lemonade Stand). Their stated future rules are not
+  implemented and the landmarks do not affect current board play.
 
 ## Public contract
 

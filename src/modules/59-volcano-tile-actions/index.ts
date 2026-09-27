@@ -8,11 +8,13 @@
 export {
   VOLCANO_TILE_ACTIONS,
   VOLCANO_TILE_KINDS,
+  VOLCANO_CHECKPOINTS,
   buildVolcanoTileActions,
   resolveVolcanoTileAction,
   volcanoTileActionAt,
   type VolcanoTileAction,
   type VolcanoTileActionKind,
+  type VolcanoCheckpoint,
 } from './internal/rules'
 
 export { VolcanoTileActions } from './internal/VolcanoTileActionsView'
