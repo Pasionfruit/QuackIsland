@@ -3,8 +3,8 @@
  * claim - and a full lobby playing it out over a lossy relay.
  */
 import { describe, expect, it } from 'vitest'
-import { TOWER_Z } from '../internal/arena'
-import { BODY, GUN, claim, createRound, fire, judgeEnd, look, report, runnersOf, sniperOf, tick, walkRunner, type Round } from '../internal/rules'
+import { SPAWN_Z, TOWER_Z, arenaFor, lineClear } from '../internal/arena'
+import { BODY, GUN, claim, createRound, eyeOf, fire, judgeEnd, look, report, runnersOf, sniperOf, tick, walkRunner, type Round } from '../internal/rules'
 import { waitingRound } from '../internal/setup'
 import { applySnapshot, decodeMove, decodeShot, decodeSnapshot, encodeMove, encodeShot, encodeSnapshot } from '../internal/wire'
 
@@ -123,7 +123,24 @@ describe("the host disputes a claim it would not make itself", () => {
     tick(round, 0.25)
     tick(round, GUN.cooldown - 0.25 + 0.01)
 
-    // Straight down the lane, aimed correctly - a real hit, to show the true aim does connect.
+    // Straight down the lane, aimed correctly - a real hit, to show the true
+    // aim does connect. Moved to wherever this seed's lane is actually clear
+    // along the centreline - close to the tower runs the shot into the
+    // tower's own shaft instead, so this is checked with `lineClear` rather
+    // than assumed from the generator's own placement rules.
+    const arena = arenaFor(round.seed)
+    const fromEye = eyeOf(sniper)
+    let clearZ: number | null = null
+    for (let z = TOWER_Z + 16; z < SPAWN_Z - 4; z += 0.5) {
+      if (lineClear(arena, fromEye, { x: 0, y: BODY.height / 2, z })) {
+        clearZ = z
+        break
+      }
+    }
+    if (clearZ === null) throw new Error('no clear line down the centreline for this seed')
+    runner.x = 0
+    runner.z = clearZ
+    runner.y = 0
     const dx = runner.x - sniper.x
     const dz = runner.z - sniper.z
     const yaw = Math.atan2(-dx, -dz)

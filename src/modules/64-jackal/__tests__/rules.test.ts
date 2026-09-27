@@ -2,7 +2,7 @@
  * The Sniper, the Runners, the laser, the gun, hits, base, and the end.
  */
 import { describe, expect, it } from 'vitest'
-import { FIELD, TOWER_Z } from '../internal/arena'
+import { FIELD, SPAWN_Z, TOWER_Z, arenaFor, lineClear } from '../internal/arena'
 import {
   BODY,
   GUN,
@@ -14,6 +14,7 @@ import {
   claim,
   cooldownLeft,
   createRound,
+  eyeOf,
   fire,
   isStanding,
   judgeEnd,
@@ -52,6 +53,30 @@ function wait(r: Round, seconds: number) {
 /** Waits out the gun. */
 function recharge(r: Round) {
   wait(r, GUN.cooldown + 0.01)
+}
+
+/**
+ * Puts a runner directly down the lane's own centreline from the Sniper's
+ * fixed spawn, at whichever distance is actually clear of this seed's trees -
+ * standing too close to the tower runs a steep enough shot straight into the
+ * tower's own shaft instead (a body-height shot from 13 m up clips it below
+ * about 13 m out), so this starts well past that and checks with `lineClear`
+ * rather than assuming a distance is safe from the generator's placement
+ * rules alone.
+ */
+function standClear(r: Round, ri: number) {
+  const arena = arenaFor(r.seed)
+  const from = eyeOf({ x: 0, y: FIELD.towerHeight, z: TOWER_Z })
+  for (let z = TOWER_Z + 16; z < SPAWN_Z - 4; z += 0.5) {
+    if (lineClear(arena, from, { x: 0, y: BODY.height / 2, z })) {
+      const p = r.players[ri]
+      p.x = 0
+      p.z = z
+      p.y = 0
+      return
+    }
+  }
+  throw new Error('no clear line down the centreline for this seed')
 }
 
 /** Aims the sniper at a runner's chest - the sniper is up a tower, so the pitch has real height to make up, not just the two bodies' own. */
@@ -101,7 +126,9 @@ describe('the laser', () => {
     const r = round()
     const si = sniperIndex(r)
     const runner = runnersOf(r)[0]
-    aimAt(r, si, r.players.indexOf(runner))
+    const ri = r.players.indexOf(runner)
+    standClear(r, ri)
+    aimAt(r, si, ri)
     const line = laserOf(r)!
     expect(line).not.toBeNull()
     expect(line.hit).toBe(runner.id)
@@ -166,6 +193,7 @@ describe('the gun', () => {
     const si = sniperIndex(r)
     const runner = runnersOf(r)[0]
     const ri = r.players.indexOf(runner)
+    standClear(r, ri)
     aimAt(r, si, ri)
     const before = runner.lives
     const shot = fire(r, si)!
@@ -278,6 +306,7 @@ describe('a guest is checked before it is trusted', () => {
     const s = r.players[si]
     const runner = runnersOf(r)[0]
     const ri = r.players.indexOf(runner)
+    standClear(r, ri)
     const dx = runner.x - s.x
     const dz = runner.z - s.z
     const yaw = Math.atan2(-dx, -dz)

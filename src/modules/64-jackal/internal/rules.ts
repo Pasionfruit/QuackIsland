@@ -41,8 +41,8 @@ export const BODY = {
 } as const
 
 export const RUNNER = {
-  /** Metres a second: a determined rush, quicker than the island's own walk. */
-  speed: 6.4,
+  /** Metres a second: a jog, not a sprint - cover is what has to save you, not your legs. */
+  speed: 4.5,
 } as const
 
 export const SNIPER = {
@@ -68,7 +68,7 @@ export const GUN = {
   /** Seconds between shots. */
   cooldown: 0.4,
   /** How far a shot reaches: further than the lane is long. */
-  range: 140,
+  range: 220,
   /** Seconds a forced reload takes, once the last bullet is spent. */
   reload: 2.4,
 } as const

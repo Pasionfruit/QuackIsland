@@ -6,12 +6,13 @@
  * to duck behind and a sniper's laser to be blocked by. **Everything here is
  * pure.**
  *
- * Cover comes in three kinds: crates and barrels are short enough that a jump
- * clears them - Space vaults, nothing more is needed - and trees are tall
- * enough that nothing does, so they always block a shot too. The tower itself
- * is a block like any other, with a small bounded platform on top the sniper
- * is clamped to (never fall-off-able) and a base zone at its foot that a
- * runner reaching it wins the round by touching.
+ * Cover is trees, and only trees - tall enough that nothing ever vaults one,
+ * so every piece of cover always blocks a shot too (crates and barrels are
+ * gone from what `arenaFor` grows; their heights live on in `FIELD` only
+ * because the vaulting math and its tests still want a short block to check
+ * against). The tower itself is a block like any other, with a small bounded
+ * platform on top the sniper is clamped to (never fall-off-able) and a base
+ * zone at its foot that a runner reaching it wins the round by touching.
  */
 import { createRng, hashSeed } from '../../00-core'
 
@@ -19,7 +20,7 @@ export const FIELD = {
   /** Half the lane's width. */
   halfWidth: 16,
   /** How far the spawn line sits from the tower, along -Z. */
-  length: 70,
+  length: 110,
   /** The boundary wall round the lane. */
   wallHeight: 6,
   wallThickness: 1,
@@ -35,13 +36,18 @@ export const FIELD = {
   spawnClear: 4,
   towerClear: 2.5,
   /** How many pieces of cover to try for. */
-  cover: 46,
+  cover: 72,
   /** The least gap between two pieces of cover: room to pass. */
   gap: 1.8,
-  /** Short cover: under a jump's apex, so Space vaults it. */
+  /**
+   * Short cover, under a jump's apex so Space vaults it: no longer grown by
+   * `arenaFor` (the lane is trees only now), kept only as a height a synthetic
+   * block can still be given - `collide`/`inTheWay` don't care where a block
+   * came from, and the vaulting tests still want a short one to check against.
+   */
   crateHeight: 1.05,
   barrelHeight: 0.9,
-  /** Tall cover: over anybody's jump, so it always blocks a shot and is never vaulted. */
+  /** Tall cover: over anybody's jump, so it always blocks a shot and is never vaulted. Every tree in the lane is this height. */
   treeHeight: 3.4,
 } as const
 
@@ -110,11 +116,10 @@ export function arenaFor(seed: number): Arena {
 
   const random = createRng(hashSeed(seed, 'jackal:arena'))
   const cover: Block[] = []
-  for (let attempt = 0; attempt < 1400 && cover.length < FIELD.cover; attempt++) {
-    const roll = random()
-    const kind: CoverKind = roll < 0.4 ? 'crate' : roll < 0.7 ? 'barrel' : 'tree'
-    const height = kind === 'crate' ? FIELD.crateHeight : kind === 'barrel' ? FIELD.barrelHeight : FIELD.treeHeight
-    const size = kind === 'tree' ? 0.9 + random() * 0.5 : kind === 'crate' ? 1.1 + random() * 1.1 : 0.9 + random() * 0.4
+  for (let attempt = 0; attempt < 2000 && cover.length < FIELD.cover; attempt++) {
+    const kind: CoverKind = 'tree'
+    const height = FIELD.treeHeight
+    const size = 0.9 + random() * 0.5
     const cx = (random() * 2 - 1) * (halfWidth - FIELD.gap - size / 2)
     const cz = (random() * 2 - 1) * (length / 2 - FIELD.gap - size / 2)
     // Clear of the spawn line and the tower's foot, both ends of the rush.

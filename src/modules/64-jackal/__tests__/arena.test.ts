@@ -2,7 +2,7 @@
  * The lane: cover, the tower, the base, a ray against a block, and vaulting.
  */
 import { describe, expect, it } from 'vitest'
-import { FIELD, SPAWN_Z, TOWER_Z, arenaFor, atBase, blocked, clampToPlatform, collide, lineClear, rayHit, runnerSpawn, sniperSpawn, type Block } from '../internal/arena'
+import { FIELD, SPAWN_Z, TOWER_Z, arenaFor, atBase, blocked, clampToPlatform, collide, lineClear, rayHit, runnerSpawn, sniperSpawn, type Arena, type Block } from '../internal/arena'
 import { JUMP } from '../internal/rules'
 
 const SEED = 20260925
@@ -38,10 +38,18 @@ describe('the lane', () => {
     }
   })
 
-  it('is short for a crate or a barrel and tall for a tree', () => {
-    expect(findKind(SEED, 'crate').height).toBeLessThan(JUMP.max)
-    expect(findKind(SEED, 'barrel').height).toBeLessThan(JUMP.max)
+  it('grows cover as trees only, all of them tall enough nothing vaults one', () => {
+    for (const seed of [1, 2, 3, SEED]) {
+      const cover = arenaFor(seed).blocks.filter((b) => b.kind !== 'wall' && b.kind !== 'tower')
+      expect(cover.length).toBeGreaterThan(0)
+      for (const b of cover) expect(b.kind).toBe('tree')
+    }
     expect(findKind(SEED, 'tree').height).toBeGreaterThan(JUMP.max + 1)
+  })
+
+  it('still knows a crate or a barrel as short, even though the lane no longer grows one', () => {
+    expect(FIELD.crateHeight).toBeLessThan(JUMP.max)
+    expect(FIELD.barrelHeight).toBeLessThan(JUMP.max)
   })
 
   it('starts every runner clear of cover, spread along the spawn line, facing the tower', () => {
@@ -74,23 +82,26 @@ describe('the lane', () => {
 
   it('stops a ray at a block in the way, and lets one through the open', () => {
     const arena = arenaFor(SEED)
-    const crate = findKind(SEED, 'crate')
-    const cx = (crate.x0 + crate.x1) / 2
-    const cz = (crate.z0 + crate.z1) / 2
-    const from = { x: cx, y: crate.height / 2, z: cz + 6 }
-    const halfDepth = (crate.z1 - crate.z0) / 2
+    const tree = findKind(SEED, 'tree')
+    const cx = (tree.x0 + tree.x1) / 2
+    const cz = (tree.z0 + tree.z1) / 2
+    const from = { x: cx, y: tree.height / 2, z: cz + 6 }
+    const halfDepth = (tree.z1 - tree.z0) / 2
     expect(rayHit(arena, from, { x: 0, y: 0, z: -1 }, 100)).toBeCloseTo(6 - halfDepth, 6)
-    expect(lineClear(arena, from, { x: cx, y: crate.height / 2, z: cz })).toBe(false)
+    expect(lineClear(arena, from, { x: cx, y: tree.height / 2, z: cz })).toBe(false)
     expect(lineClear(arena, { x: cx, y: 20, z: cz + 6 }, { x: cx, y: 20, z: cz - 6 })).toBe(true)
   })
 
   it('vaults a crate or a barrel above its own height, but never a tree', () => {
     const arena = arenaFor(SEED)
-    for (const kind of ['crate', 'barrel'] as const) {
-      const b = findKind(SEED, kind)
-      const at = { x: (b.x0 + b.x1) / 2, z: (b.z0 + b.z1) / 2 }
-      expect(blocked(arena, at, 0.4, 0)).toBe(true)
-      expect(blocked(arena, at, 0.4, JUMP.max)).toBe(false)
+    // Crates and barrels are no longer grown into the lane, but `blocked`'s
+    // height rule doesn't care where a block came from - a synthetic one of
+    // that height still has to behave the same way.
+    for (const height of [FIELD.crateHeight, FIELD.barrelHeight]) {
+      const b: Block = { x0: -0.5, x1: 0.5, z0: -0.5, z1: 0.5, height, kind: 'crate' }
+      const withCover: Arena = { seed: arena.seed, blocks: [...arena.blocks, b] }
+      expect(blocked(withCover, { x: 0, z: 0 }, 0.4, 0)).toBe(true)
+      expect(blocked(withCover, { x: 0, z: 0 }, 0.4, JUMP.max)).toBe(false)
     }
     const tree = findKind(SEED, 'tree')
     const at = { x: (tree.x0 + tree.x1) / 2, z: (tree.z0 + tree.z1) / 2 }
@@ -100,9 +111,9 @@ describe('the lane', () => {
 
   it('pushes a body out of a box the short way, and clamps to the field', () => {
     const arena = arenaFor(SEED)
-    const crate = findKind(SEED, 'crate')
-    const inside = collide(arena, { x: crate.x0 + 0.02, z: (crate.z0 + crate.z1) / 2 }, 0.4, 0)
-    expect(inside.x).toBeCloseTo(crate.x0 - 0.4, 6)
+    const tree = findKind(SEED, 'tree')
+    const inside = collide(arena, { x: tree.x0 + 0.02, z: (tree.z0 + tree.z1) / 2 }, 0.4, 0)
+    expect(inside.x).toBeCloseTo(tree.x0 - 0.4, 6)
     expect(blocked(arena, inside, 0.4, 0)).toBe(false)
     const out = collide(arena, { x: 500, z: 500 }, 0.4, 0)
     expect(Math.abs(out.x)).toBeLessThanOrEqual(FIELD.halfWidth)

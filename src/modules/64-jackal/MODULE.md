@@ -2,10 +2,10 @@
 
 ## What this is
 
-**Minigame 41, one-vs-all, "Jackal".** The host picks one player to be the
+**Minigame 42, one-vs-all, "Jackal".** The host picks one player to be the
 **Sniper**, alone at the top of a tower with a laser-sighted rifle; everybody
-else is a **Runner**, spawned at the far end of a lane and rushing the tower
-through crates, barrels and trees. The Sniper's aim is a beam traced every
+else is a **Runner**, spawned at the far end of a long lane and rushing the
+tower through a tree line for cover. The Sniper's aim is a beam traced every
 tick, hit or miss, so it is always visible - a runner can see exactly where
 the danger is and duck behind cover. The Sniper carries `round(playerCount *
 1.5)` bullets before being forced into a reload, and can unscope to move at
@@ -29,7 +29,7 @@ is boxes.
 | One player is the Sniper, positioned at the top of a tower | `resolveSniper`, `sniperSpawn`, `clampToPlatform` |
 | Everyone else rushes toward its base | `runnerSpawn`, `atBase`, `RUNNER.speed` |
 | The Sniper's aiming laser is always visible | `laserOf` - traced every tick, hit or miss, off the synced position alone |
-| Move quickly between crates, trees, barrels and other cover | `arenaFor`, `Block`, `blocked`/`collide`/`slide` with a height-aware pass-over |
+| Move quickly between trees for cover | `arenaFor`, `Block`, `blocked`/`collide`/`slide` with a height-aware pass-over |
 | `number-of-players * 1.5` bullets before a forced reload | `createRound`'s `bullets`, `fire`/`claim`'s auto-reload |
 | Unscope to reposition their aim | `toggleScope`, `SNIPER.scopedMoveFrac` |
 | Each runner has 2 lives | `LIVES_START`, `applyHit` (private to `rules.ts`) |
@@ -41,23 +41,19 @@ is boxes.
 ## The lane
 
 Not a square arena like `32-hes-one-shot` - a bounded rectangle, 32 m wide
-and 70 m long (`FIELD`), a runner spawn line at the south end (`+Z`,
+and 110 m long (`FIELD`), a runner spawn line at the south end (`+Z`,
 `SPAWN_Z`) and the tower at the north end (`-Z`, `TOWER_Z`), grown from the
-seed the same way: crates, barrels and trees scattered between the two,
-kept `FIELD.gap` apart so there is always room to walk between any two
-pieces, and clear of both the spawn line and the tower's own foot.
+seed: trees scattered between the two, kept `FIELD.gap` apart so there is
+always room to walk between any two, and clear of both the spawn line and
+the tower's own foot.
 
-**Three kinds of cover, two heights:**
-
-- **Crates and barrels** (`FIELD.crateHeight`, `FIELD.barrelHeight`) sit
-  under a jump's apex (`JUMP.max`, about 1.44 m) - Space vaults them, nothing
-  more is needed. `blocked`/`collide`/`slide` take the body's own height off
-  the ground and simply drop a block from the collision test once that
-  height clears the block's own - the same call that decides whether a shot
-  is blocked (`rayHit`, which never looks at a body's height) decides nothing
-  about vaulting; they are deliberately two different questions.
-- **Trees** (`FIELD.treeHeight`, 3.4 m) are tall enough that nothing jumps
-  them, and so they always block a shot too.
+**Cover is trees, and only trees** (`FIELD.treeHeight`, 3.4 m) - tall enough
+that nothing ever jumps one, so every piece of cover always blocks a shot
+too. `blocked`/`collide`/`slide` still take the body's own height off the
+ground into account (the same height-aware pass-over Space's jump would use
+against anything shorter), but there is nothing short left in the lane to
+actually vault - `FIELD.crateHeight`/`FIELD.barrelHeight` live on only as
+heights the vaulting math and its own tests can still be checked against.
 
 **The tower** is a block like any other (`kind: 'tower'`), tall enough that
 a shot from the ground can't reach across it, with a small bounded platform
@@ -95,10 +91,14 @@ brief's control list exactly.
 
 WASD moves relative to where the camera looks, the mouse is the camera
 (third person, behind and above the body - the same rig `58-breaking-the-ice`
-uses for its own runners), and **Space jumps** (`walkRunner`): a jump that
-clears a crate or a barrel and never a tree, purely by comparing the body's
-own height off the ground against whatever is in its way - there is no
-separate vault action or key.
+uses for its own runners, and unlike the Sniper's own first-person view, a
+Runner's own body is drawn for them too, since there is something behind
+their shoulder to actually see), a **deliberately unhurried pace**
+(`RUNNER.speed`, 4.5 m/s - cover is what has to save a runner, not their
+legs), and **Space jumps** (`walkRunner`): a jump that clears nothing in
+the current lane (every tree is taller than a jump reaches) but still exists
+as a control, purely by comparing the body's own height off the ground
+against whatever is in its way - there is no separate vault action or key.
 
 **Getting hit costs a life and buys `INVULN.window` (1.5 s) of safety** -
 not a knockback, not a respawn: the runner keeps going from exactly where
@@ -225,11 +225,13 @@ testing, not because anybody else needs them.
 
 - **The same seed makes the same lane**, cover kept `FIELD.gap` apart and
   clear of the spawn line and the tower's foot. Tested over four seeds.
-- **A crate or a barrel is under a jump's apex; a tree is well over it.**
-  Tested.
+- **Every piece of cover the lane actually grows is a tree, well over a
+  jump's apex.** Tested; a crate or a barrel's own height is still checked
+  against the vaulting math directly, since nothing generates one any more.
 - **A body above a block's own height is no longer blocked by it; a ray
-  never is.** Tested for both short cover (passable once high enough) and
-  tall cover (never passable).
+  never is.** Tested for both a short height (passable once high enough,
+  checked directly rather than against a generated block) and a tree's own
+  height (never passable).
 - **Every runner starts clear of cover, spread along the spawn line, facing
   the tower.** Tested over three seeds and player counts 1-7.
 - **The Sniper is clamped to the tower's platform and never leaves it,
@@ -284,7 +286,7 @@ testing, not because anybody else needs them.
   since a Sniper's targets move far slower across the lane than a shooter
   in that arena's own crossfire.
 - **The nearest-cover hint only looks at distance**, not whether that cover
-  is actually between the runner and the beam - it can point at a crate the
+  is actually between the runner and the beam - it can point at a tree the
   Sniper cannot presently see anyway, or past one that already is.
 - **Pointer lock cannot be tested headless.** The run-localrot skill stands
   in for the lock itself; everything after it is the real code path.
@@ -302,8 +304,8 @@ rolls the dice) - then **play**.
 **Solo, as the Sniper** (the default alone):
 
 - **The beam should be visible at once**, from the tower down the lane,
-  bending to meet the first bot, crate or tree in its way - move the mouse
-  and it should follow immediately, every frame, whether or not you fire.
+  bending to meet the first bot or tree in its way - move the mouse and it
+  should follow immediately, every frame, whether or not you fire.
 - **Right click should scope in**: the view narrows and WASD should barely
   move you. Right click again to come back out.
 - **Shoot a bot in the open.** One life gone (its own HUD is not visible to
@@ -311,18 +313,23 @@ rolls the dice) - then **play**.
   between you and it should stop the shot outright.
 - **Empty the magazine.** The HUD should read `RELOADING…` and left click
   should do nothing until it clears, a couple of seconds later.
-- **Watch a bot vault a crate or a barrel** as it closes the distance, and
-  never a tree.
 - **Eliminate every bot.** The round should end at once - "The tower
-  holds!" - with no wait.
+  holds!" - with no wait. The lane is longer now (110 m) and a Runner's own
+  pace is deliberately slow, so expect this to take a while longer than it
+  used to.
 
 **Solo, swap to a Runner** by clicking a bot's name on the party tab before
 pressing play (or roll the dice until a bot lands as the Sniper if the
 build gives you no other way in solo - two browsers is the real test of
 this, below):
 
-- **WASD should move you relative to the camera**, the mouse turns the
-  camera, and Space should clear a crate or barrel and never a tree.
+- **WASD should move you relative to the camera, at a jog rather than a
+  rush** - the mouse turns the camera, and Space jumps but there is no tree
+  short enough to clear.
+- **You should see your own body** from behind and above (third person, not
+  first) - this is the one Runner-facing change from before: nothing renders
+  for a Sniper's own body (their camera is their eyes), but a Runner's own
+  avatar is drawn the same as anybody else's.
 - **Get hit.** A life gone, a brief white glow round the screen, and you
   should keep moving from right where you stood.
 - **Reach the base.** The round should end at once for everybody -

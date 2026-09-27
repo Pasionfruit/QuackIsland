@@ -245,7 +245,13 @@ function Laser({ live }: { live: RefObject<Round> }) {
   )
 }
 
-/** Somebody else's body: the island's avatar in their colour, hidden once they are down, and a ring over the Sniper's head. */
+/**
+ * A body: the island's avatar in its colour, hidden once they are down, and a
+ * ring over the Sniper's head. Drawn for everybody except your own Sniper -
+ * that camera is your own eyes, so your own body would just be in the way -
+ * but a Runner's own third-person camera is watching from behind their own
+ * shoulder, so a Runner's own body is drawn too, the same as anyone else's.
+ */
 function BodyView({ index, live, colours, isSniper }: { index: number; live: RefObject<Round>; colours: readonly string[]; isSniper: boolean }) {
   const group = useRef<Group>(null)
   const turn = useRef<Group>(null)
@@ -257,7 +263,7 @@ function BodyView({ index, live, colours, isSniper }: { index: number; live: Ref
     const round = live.current
     const p = round.players[index]
     if (!group.current || !turn.current || !p) return
-    group.current.visible = !p.left && !p.mine && p.alive
+    group.current.visible = !p.left && !(p.mine && p.role === 'sniper') && p.alive
     group.current.position.set(p.x, p.y, p.z)
     turn.current.rotation.y = p.yaw + Math.PI
     if (flash.current) {
@@ -314,7 +320,9 @@ export function JackalScene({ live, look, me }: { live: RefObject<Round>; look: 
       <Ground />
       {round.players.length > 0 ? <LaneView seed={round.seed} /> : null}
       {round.players.length > 0 ? <Laser key={`${round.id}:laser`} live={live} /> : null}
-      {round.players.map((p, index) => (p.mine ? null : <BodyView key={`${round.id}:${p.id}`} index={index} live={live} colours={colours} isSniper={p.role === 'sniper'} />))}
+      {round.players.map((p, index) =>
+        p.mine && p.role === 'sniper' ? null : <BodyView key={`${round.id}:${p.id}`} index={index} live={live} colours={colours} isSniper={p.role === 'sniper'} />,
+      )}
     </>
   )
 }

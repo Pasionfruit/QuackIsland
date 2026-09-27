@@ -254,6 +254,12 @@ export const GAMES = {
     anchor: `document.querySelector('[data-board]')`,
     people: 'players',
   },
+  'big-backs-are-near': {
+    title: 'Big Backs are Near',
+    screen: 'NearScreen',
+    anchor: `document.querySelector('[data-board]')`,
+    people: 'players',
+  },
   'highest-in-the-room': {
     title: 'Highest In The Room',
     screen: 'TowerScreen',
@@ -662,6 +668,103 @@ export function jackalPlay({ mode = 'play' } = {}) {
         state.fired = true
       }
     }
+    return state
+  })()`
+}
+
+/**
+ * An expression that, in a page showing Big Backs are Near, stands in for the
+ * pointer lock the same way `jackalPlay` does, then - only while `me` is the
+ * Hunter - turns toward the loudest fresh footstep it can currently hear
+ * (`rules.hearFootsteps`) and walks at it; hearing nothing, it heads for the
+ * nearest still-free Hider by the maze's own corridors instead
+ * (`maze.stepsTo`/`exits`, ground truth, the same "cheats to make an
+ * automated run converge" precedent as `jackalPlay`'s perfect aim or
+ * `oneShotPlay`'s perfect turn - a real Hunter has no such map). With `sprint`
+ * it also holds Shift, to exercise "sprinting mutes hearing" under an
+ * automated run. Evaluates to a small state object for logging.
+ */
+export function nearPlay({ mode = 'play', sprint = false } = {}) {
+  return `(async () => {
+    const maze = await import('/src/modules/65-big-backs-are-near/internal/maze.ts')
+    const rules = await import('/src/modules/65-big-backs-are-near/internal/rules.ts')
+    const screen = await import('/src/modules/65-big-backs-are-near/internal/NearScreen.tsx')
+    const w = (window.__bbn ??= { held: new Set() })
+    const press = (code, down) => {
+      if (down === w.held.has(code)) return
+      down ? w.held.add(code) : w.held.delete(code)
+      window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, key: code.slice(3).toLowerCase() }))
+    }
+    if (!w.locked) {
+      Object.defineProperty(document, 'pointerLockElement', { configurable: true, get: () => document.querySelector('[data-board]') })
+      document.dispatchEvent(new Event('pointerlockchange'))
+      w.locked = true
+    }
+    const g = ${gameState('big-backs-are-near')}
+    if (!g || g.players.length === 0) return null
+    const me = g.players.find((p) => p.mine)
+    const pings = me.role === 'hunter' ? rules.hearFootsteps(g) : []
+    const state = {
+      clock: +g.elapsed.toFixed(2),
+      over: g.over,
+      winner: g.winner,
+      role: me.role,
+      pings: pings.length,
+      muted: rules.hearingRadius(me) <= 0,
+      free: rules.hidersOf(g).filter((p) => p.alive && !p.left).length,
+      target: null,
+    }
+    if (${JSON.stringify(mode)} === 'lock' || g.over || me.role !== 'hunter') {
+      for (const code of [...w.held]) press(code, false)
+      return state
+    }
+
+    let wantYaw = me.yaw
+    const M = maze.mazeFor(g.seed)
+    const here = maze.cellAt(me)
+    const size = M.size
+    if (pings.length > 0) {
+      const loudest = pings.reduce((a, b) => (a.distance < b.distance ? a : b))
+      wantYaw = rules.wrapAngle(me.yaw + loudest.bearing)
+      state.target = loudest.hiderId
+    } else {
+      const free = rules.hidersOf(g).filter((p) => p.alive && !p.left)
+      let goal = null
+      let bestD = Infinity
+      for (const h of free) {
+        const there = maze.cellAt(h)
+        const field = maze.stepsTo(M, [there])
+        const d = field[here.y * size + here.x]
+        if (d < bestD) {
+          bestD = d
+          goal = there
+        }
+      }
+      if (goal) {
+        const field = maze.stepsTo(M, [goal])
+        let next = here
+        let nd = field[here.y * size + here.x]
+        for (const c of maze.exits(M, here)) {
+          const cd = field[c.y * size + c.x]
+          if (cd < nd) {
+            nd = cd
+            next = c
+          }
+        }
+        const to = maze.cellCentre(next)
+        wantYaw = Math.atan2(-(to.x - me.x), -(to.z - me.z))
+        state.target = 'wandering'
+      }
+    }
+    const turn = Math.max(-0.6, Math.min(0.6, rules.wrapAngle(wantYaw - me.yaw)))
+    const mx = Math.round(-turn / screen.SENSITIVITY)
+    if (mx) document.dispatchEvent(new MouseEvent('mousemove', { movementX: mx, movementY: 0, bubbles: true }))
+    press('KeyW', true)
+    // Sprint whenever there is no footstep to track (ground-truth wandering,
+    // where speed is free) or the test harness is forcing it to check the
+    // mute; drop back to a walk the moment a ping is actually heard, since
+    // sprinting would silence the very sound being followed.
+    press('ShiftLeft', ${JSON.stringify(!!sprint)} || pings.length === 0)
     return state
   })()`
 }
