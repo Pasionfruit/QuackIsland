@@ -94,6 +94,12 @@ falloff-by-distance) and a plain, non-positional sound cue
 `useJackalSounds` already uses - a diff-based "did this change" effect, not
 a new audio subsystem).
 
+**Seeker pulse.** Every seven seconds, the Hunter's crosshair briefly shows
+a yellow arrow toward each standing Hider, even beyond hearing range. The
+ordinary red footstep dots remain tied to fresh, nearby footsteps. Both use
+the Hunter camera's forward/right axes, so a marker on the right points to a
+Hider on the right of the current view.
+
 **Sprinting mutes hearing entirely** (`hearingRadius`: `sprinting ? 0 :
 HUNTER.hearing`). **This is the one deliberate mechanic beyond a literal
 reading of the brief.** Read as written, Sprint has no downside at all -
@@ -354,6 +360,9 @@ the 1 is (or rolls the dice) - then **play**.
 - **Move near a bot and stop**: while it is moving, the crosshair should
   ring with a directional ping and a footstep sound should play; the moment
   it is standing still, both should stop dead, however close you are.
+- **Wait seven seconds.** Yellow arrows should briefly point toward every
+  free bot, including one beyond the red footstep-dot range. Turn the camera:
+  an arrow and its Hider should stay on the same side of the view.
 - **Hold Shift.** The "sprinting — can't hear" tag should appear at once,
   and a bot moving nearby should produce no ping at all while it is held.
 - **Catch a bot in the open.** One fewer "free" on the HUD. **Confirm a bot

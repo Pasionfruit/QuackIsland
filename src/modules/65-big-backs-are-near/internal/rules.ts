@@ -329,8 +329,23 @@ export interface Ping {
   hiderId: string
   /** Metres away. */
   distance: number
-  /** Radians, world yaw from the Hunter to the Hider - the HUD turns this into a bearing round the crosshair. */
+  /** Radians clockwise from the Hunter's camera-forward direction. */
   bearing: number
+}
+
+/** The Hunter briefly gets a direction to every standing Hider at this cadence. */
+export const SEEKER_PULSE = { every: 7, duration: 0.9 } as const
+
+/** A screen-relative direction from the Hunter toward a Hider. */
+function directionTo(hunter: Player, hider: Player): Ping {
+  const dx = hider.x - hunter.x
+  const dz = hider.z - hunter.z
+  // Camera forward is (-sin(yaw), -cos(yaw)); its screen-right is
+  // (cos(yaw), -sin(yaw)). Deriving the angle from those axes keeps a dot
+  // at the actual screen side of its Hider for every camera heading.
+  const forward = -dx * Math.sin(hunter.yaw) - dz * Math.cos(hunter.yaw)
+  const right = dx * Math.cos(hunter.yaw) - dz * Math.sin(hunter.yaw)
+  return { hiderId: hider.id, distance: Math.hypot(dx, dz), bearing: wrapAngle(Math.atan2(right, forward)) }
 }
 
 /**
@@ -364,13 +379,23 @@ export function hearFootsteps(round: Round): Ping[] {
     if (!isStanding(p)) continue
     const since = round.elapsed - p.steppedAt
     if (since < 0 || since > HEAR_WINDOW) continue
-    const dx = p.x - hunter.x
-    const dz = p.z - hunter.z
-    const distance = Math.hypot(dx, dz)
-    if (distance > radius) continue
-    out.push({ hiderId: p.id, distance, bearing: wrapAngle(Math.atan2(-dx, -dz) - hunter.yaw) })
+    const ping = directionTo(hunter, p)
+    if (ping.distance > radius) continue
+    out.push(ping)
   }
   return out
+}
+
+/**
+ * Every seven seconds, briefly point the Hunter toward each standing Hider.
+ * These are deliberately independent of footsteps and hearing range: the
+ * flash keeps a stalled round moving while the regular red dots still reward
+ * listening for nearby movement.
+ */
+export function seekerPulse(round: Round): Ping[] {
+  const hunter = hunterOf(round)
+  if (!hunter || !isStanding(hunter) || round.elapsed % SEEKER_PULSE.every >= SEEKER_PULSE.duration) return []
+  return hidersOf(round).filter(isStanding).map((hider) => directionTo(hunter, hider))
 }
 
 /**

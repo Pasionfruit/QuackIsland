@@ -17,7 +17,7 @@ import { usePlayerColour } from '../../02-player'
 import { getNet, rosterColour, useNet, usePeers } from '../../09-net'
 import { CUES, TopTimer, playCue, replayMinigame, useFinish, type MinigameRun } from '../../15-minigames'
 import { NearScene, PITCH, type LookRef } from './NearScene'
-import { COLOURS, HUNTER, PITCH_LIMIT, ROUND, hearFootsteps, hearingRadius, hidersOf, summarize, type Round } from './rules'
+import { COLOURS, HUNTER, PITCH_LIMIT, ROUND, hearFootsteps, hearingRadius, hidersOf, seekerPulse, summarize, type Ping, type Round } from './rules'
 import { myId, newRound, waitingRound } from './setup'
 import { useNearNet } from './useNearNet'
 
@@ -188,6 +188,7 @@ export function NearScreen({ run }: { run: MinigameRun }) {
   const hiders = hidersOf(round)
   const free = hiders.filter((p) => p.alive && !p.left).length
   const pings = ready && mine && iAmHunter && !round.over ? hearFootsteps(round) : []
+  const pulses = ready && mine && iAmHunter && !round.over ? seekerPulse(round) : []
   const sprintMuted = mine ? hearingRadius(mine) <= 0 : false
   const caught = mine ? mine.role === 'hider' && !mine.alive : false
 
@@ -233,7 +234,7 @@ export function NearScreen({ run }: { run: MinigameRun }) {
       <div ref={board} style={{ ...boardStyle, cursor: locked ? 'none' : 'crosshair' }} onPointerDown={onPointerDown} onPointerUp={() => (dragging.current = false)} data-board>
         <Stage live={live} look={look} me={me} />
 
-        {ready && mine && !round.over && iAmHunter ? <HunterHud pings={pings} muted={sprintMuted} freeLeft={free} /> : null}
+        {ready && mine && !round.over && iAmHunter ? <HunterHud pings={pings} pulses={pulses} muted={sprintMuted} freeLeft={free} /> : null}
         {ready && mine && !round.over && !iAmHunter ? <HiderHud caught={caught} /> : null}
 
         {ready && !locked && !lockRefused && !round.over ? <div style={hint}>click to take the mouse - WASD to move</div> : null}
@@ -244,17 +245,27 @@ export function NearScreen({ run }: { run: MinigameRun }) {
   )
 }
 
-/** The Hunter's own HUD: a crosshair ringed by a ping for every fresh, in-range footstep, and a "can't hear" tag while sprinting. */
-function HunterHud({ pings, muted, freeLeft }: { pings: { hiderId: string; distance: number; bearing: number }[]; muted: boolean; freeLeft: number }) {
+/** The Hunter's own HUD: nearby footsteps as red dots, plus a brief yellow direction flash to every free Hider every seven seconds. */
+function HunterHud({ pings, pulses, muted, freeLeft }: { pings: Ping[]; pulses: Ping[]; muted: boolean; freeLeft: number }) {
   return (
     <div style={crosshairWrap}>
-      <svg width={56} height={56} viewBox="-28 -28 28 28" style={{ overflow: 'visible' }}>
+      <svg width={96} height={96} viewBox="-48 -48 96 96" style={{ overflow: 'visible' }} aria-label="Hunter directions">
         <circle r={20} fill="none" stroke="rgba(0,0,0,0.25)" strokeWidth={3} />
         <circle r={1.8} fill="#fff" />
         {pings.map((p) => {
           const opacity = Math.max(0.15, 1 - p.distance / HUNTER.hearing)
           const r = 34
           return <circle key={p.hiderId} cx={Math.sin(p.bearing) * r} cy={-Math.cos(p.bearing) * r} r={5} fill={LOOK.danger} opacity={opacity} data-ping />
+        })}
+        {pulses.map((p) => {
+          const x = Math.sin(p.bearing) * 43
+          const y = -Math.cos(p.bearing) * 43
+          const rotation = p.bearing * 180 / Math.PI
+          return (
+            <g key={p.hiderId} transform={`translate(${x} ${y}) rotate(${rotation})`} data-seeker-arrow>
+              <path d="M 0 -9 L 7 7 L 0 3 L -7 7 Z" fill="#ffd35c" stroke="#6e4210" strokeWidth={1.5} />
+            </g>
+          )
         })}
       </svg>
       <div style={ammoTag}>{freeLeft} free</div>

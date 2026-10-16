@@ -43,7 +43,7 @@ is boxes.
 Not a square arena like `32-hes-one-shot` - a bounded rectangle, 32 m wide
 and 110 m long (`FIELD`), a runner spawn line at the south end (`+Z`,
 `SPAWN_Z`) and the tower at the north end (`-Z`, `TOWER_Z`), grown from the
-seed: trees scattered between the two, kept `FIELD.gap` apart so there is
+seed: 48 trees scattered between the two, kept `FIELD.gap` apart so there is
 always room to walk between any two, and clear of both the spawn line and
 the tower's own foot.
 
@@ -306,6 +306,8 @@ rolls the dice) - then **play**.
 - **The beam should be visible at once**, from the tower down the lane,
   bending to meet the first bot or tree in its way - move the mouse and it
   should follow immediately, every frame, whether or not you fire.
+- **The lane should leave clear sightlines and routes** between the 48 trees;
+  its seeded cover is deliberately lighter than the previous dense forest.
 - **Right click should scope in**: the view narrows and WASD should barely
   move you. Right click again to come back out.
 - **Shoot a bot in the open.** One life gone (its own HUD is not visible to

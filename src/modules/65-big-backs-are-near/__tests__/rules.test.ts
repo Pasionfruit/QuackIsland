@@ -6,6 +6,7 @@ import {
   HIDER,
   HUNTER,
   ROUND,
+  SEEKER_PULSE,
   STRIDE,
   canAct,
   catches,
@@ -20,6 +21,7 @@ import {
   leave,
   report,
   resolveHunter,
+  seekerPulse,
   tick,
   walkHider,
   walkHunter,
@@ -156,6 +158,43 @@ describe('hearing', () => {
     round.players[hu].sprinting = true
     expect(hearingRadius(round.players[hu])).toBe(0)
     expect(hearFootsteps(round)).toHaveLength(0)
+  })
+
+  it('puts a Hider dot on the matching side of the Hunter camera', () => {
+    const round = createRound(9, roster(2), 'p0')
+    const hider = round.players.find((p) => p.role === 'hider')!
+    const hunter = round.players.find((p) => p.role === 'hunter')!
+    hunter.x = 0
+    hunter.z = 0
+    hunter.yaw = 0
+    hider.x = 1
+    hider.z = 0
+    hider.steppedAt = round.elapsed
+    expect(hearFootsteps(round)[0].bearing).toBeCloseTo(Math.PI / 2)
+
+    hunter.yaw = Math.PI / 2
+    hider.x = -1
+    hider.z = 0
+    expect(hearFootsteps(round)[0].bearing).toBeCloseTo(0)
+  })
+})
+
+describe('seeker pulse', () => {
+  it('briefly points to every standing Hider, including one outside hearing range, every seven seconds', () => {
+    const round = createRound(9, roster(3), 'p0')
+    const hunter = hunterOf(round)!
+    const hiders = hidersOf(round)
+    hiders[0].x = hunter.x + HUNTER.hearing + 5
+    hiders[0].z = hunter.z
+    hiders[1].x = hunter.x
+    hiders[1].z = hunter.z - 2
+
+    expect(seekerPulse(round)).toHaveLength(2)
+    expect(seekerPulse(round).find((ping) => ping.hiderId === hiders[0].id)?.bearing).toBeCloseTo(Math.PI / 2)
+    round.elapsed = SEEKER_PULSE.duration
+    expect(seekerPulse(round)).toHaveLength(0)
+    round.elapsed = SEEKER_PULSE.every
+    expect(seekerPulse(round)).toHaveLength(2)
   })
 })
 

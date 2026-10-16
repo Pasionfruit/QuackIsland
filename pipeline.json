@@ -6061,7 +6061,7 @@
       "id": "64-jackal",
       "phase": "P6",
       "title": "Minigame 41, Jackal: one player is the Sniper atop a tower with a laser-sighted rifle, everybody else a Runner rushing it through cover; the Sniper wins by eliminating every runner, the Runners win the instant one reaches the base",
-      "status": "in_progress",
+      "status": "ready_for_review",
       "dependsOn": [
         "00-core",
         "02-player",
@@ -6072,7 +6072,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/64-jackal/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -6115,13 +6115,17 @@
           "id": "64.8",
           "title": "The assets: models, sprites and sound in place of primitives and capsules",
           "status": "planned"
+        },
+        {
+          "id": "64.9",
+          "title": "Thinner tree cover for clearer Jackal lanes",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
-          "status": "red",
-          "at": "2026-09-26T05:39:36.024Z",
-          "failed": "test"
+          "status": "green",
+          "at": "2026-09-28T00:02:48.322Z"
         },
         "human": {
           "status": "pending",
@@ -6148,7 +6152,7 @@
       "id": "65-big-backs-are-near",
       "phase": "P6",
       "title": "Minigame 41, Big Backs are Near: one player is the near-sighted Hunter dropped at the middle of a large procedural corn maze, everybody else a Hider scattered from a pen near one edge; the Hunter wins by catching or outlasting every Hider, the Hiders win as a team the instant the clock runs out with one still free",
-      "status": "in_progress",
+      "status": "ready_for_review",
       "dependsOn": [
         "00-core",
         "02-player",
@@ -6159,7 +6163,7 @@
       "generation": 1,
       "contract": {
         "version": "0.1.0",
-        "snapshot": null,
+        "snapshot": "src/modules/65-big-backs-are-near/contract.snapshot.d.ts",
         "exports": []
       },
       "blocks": [
@@ -6202,13 +6206,17 @@
           "id": "65.8",
           "title": "The assets: models, sprites and sound in place of primitives and the avatar",
           "status": "planned"
+        },
+        {
+          "id": "65.9",
+          "title": "Correct screen-relative seeker markers and seven-second all-Hider direction flashes",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
-          "status": "red",
-          "at": "2026-09-26T17:58:38.269Z",
-          "failed": "test"
+          "status": "green",
+          "at": "2026-09-28T00:03:52.514Z"
         },
         "human": {
           "status": "pending",

@@ -36,7 +36,7 @@ export const FIELD = {
   spawnClear: 4,
   towerClear: 2.5,
   /** How many pieces of cover to try for. */
-  cover: 72,
+  cover: 48,
   /** The least gap between two pieces of cover: room to pass. */
   gap: 1.8,
   /**
