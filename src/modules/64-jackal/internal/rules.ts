@@ -16,6 +16,7 @@
  * No three.js, no React, no clock of its own. Everything here is pure.
  */
 import { PLAYER } from '../../02-player'
+import { castOneVsAll, resolveTheOne } from '../../68-minigame-kit'
 import {
   FIELD,
   SPAWN_Z,
@@ -150,19 +151,15 @@ export function eyeOf(p: Point & { y?: number }): Vec3 {
 }
 
 /**
- * Who is the Sniper for this round: whoever the host picked as the 1, if they
- * are actually in the roster, or the roster's own first entry otherwise - the
- * same default the briefing itself falls back to before the host has picked.
+ * Who is the Sniper for this round: the one-vs-all base case's `resolveTheOne`
+ * - whoever the host picked as the 1, if they are actually in the roster, or
+ * the roster's first human otherwise.
  */
-export function resolveSniper(roster: readonly Entrant[], chosen: string | null): string {
-  if (chosen !== null && roster.some((e) => e.id === chosen)) return chosen
-  return roster[0]?.id ?? ''
-}
+export const resolveSniper: (roster: readonly Entrant[], chosen: string | null) => string = resolveTheOne
 
 export function createRound(seed: number, entrants: readonly Entrant[], chosen: string | null, id = 1): Round {
-  const sniperId = resolveSniper(entrants, chosen)
+  const { oneId: sniperId, rest: runners } = castOneVsAll(entrants, chosen)
   const bullets = magazineSize(entrants.length)
-  const runners = entrants.filter((e) => e.id !== sniperId)
   return {
     seed,
     id,

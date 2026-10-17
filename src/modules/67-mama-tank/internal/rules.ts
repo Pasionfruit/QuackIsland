@@ -31,6 +31,7 @@
  * cosmetic set piece only; nothing here ever climbs it. Everything here is
  * pure.
  */
+import { castOneVsAll, resolveTheOne } from '../../68-minigame-kit'
 import { arenaFor, collide, lineClear, mamaSpawn, miniSpawn, rayHit, slab, slide, type Point, type Vec3 } from './arena'
 
 export type Role = 'mama' | 'mini'
@@ -145,19 +146,14 @@ export interface Entrant {
 }
 
 /**
- * Who drives Mama Tank this round: whoever the host picked as the 1, if they
- * are actually in the roster, or the roster's own first entry otherwise - the
- * same default the briefing itself falls back to before the host has picked.
- * Identical shape to Jackal's `resolveSniper`/Big Backs' `resolveHunter`.
+ * Who drives Mama Tank this round: the one-vs-all base case's
+ * `resolveTheOne` - whoever the host picked as the 1, if they are actually in
+ * the roster, or the roster's first human otherwise.
  */
-export function resolveMama(roster: readonly Entrant[], chosen: string | null): string {
-  if (chosen !== null && roster.some((e) => e.id === chosen)) return chosen
-  return roster[0]?.id ?? ''
-}
+export const resolveMama: (roster: readonly Entrant[], chosen: string | null) => string = resolveTheOne
 
 export function createRound(seed: number, entrants: readonly Entrant[], chosen: string | null, id = 1): Round {
-  const mamaId = resolveMama(entrants, chosen)
-  const minis = entrants.filter((e) => e.id !== mamaId)
+  const { oneId: mamaId, rest: minis } = castOneVsAll(entrants, chosen)
   return {
     seed,
     id,

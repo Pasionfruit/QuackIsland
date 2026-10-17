@@ -5,39 +5,21 @@
  * colour order - up to eight. Stand-ins fill in only when there is nobody else,
  * the same rule as the other minigames.
  */
-import { CONVENTIONS, hashSeed } from '../../00-core'
-import { getNet, getPeers } from '../../09-net'
+import { lobbyRoster, ME, myId, seedDealer, type Seat } from '../../68-minigame-kit'
 import { createRound, type Round } from './rules'
 
-export const ME = 'you'
+export { ME, myId }
+
 export const SOLO_FIGHTERS = 4
 /** Eight colours, eight starting spots on the ring. */
 export const MAX_FIGHTERS = 8
 
-export function myId(): string {
-  return getNet().id ?? ME
+export function roundRoster(): Seat[] {
+  return lobbyRoster({ solo: SOLO_FIGHTERS, max: MAX_FIGHTERS, standIn: (seat) => `fighter ${seat}` })
 }
-
-export function roundRoster(): { id: string; bot: boolean }[] {
-  const net = getNet()
-  const mine = myId()
-  const others = getPeers().map((p) => p.id)
-  if (net.status !== 'joined' || others.length === 0) {
-    return [
-      { id: mine, bot: false },
-      ...Array.from({ length: SOLO_FIGHTERS - 1 }, (_, i) => ({ id: `fighter ${i + 2}`, bot: true })),
-    ]
-  }
-  return [mine, ...others].slice(0, MAX_FIGHTERS).map((id) => ({ id, bot: false }))
-}
-
-let dealt = 0
 
 /** A seed for the stand-ins' timing, and an id to tell rounds apart. Nothing secret. */
-export function nextSeed(): number {
-  dealt += 1
-  return hashSeed(CONVENTIONS.worldSeed, `punch-buggy:${getNet().room ?? 'solo'}:${dealt}:${Date.now()}`)
-}
+export const nextSeed = seedDealer('punch-buggy')
 
 export interface RoundSetup {
   seed?: number

@@ -6,21 +6,15 @@
  * the moment the host deals the race. Stand-in racers fill the corners only
  * when there is nobody else - the same rule Zombie Tag keeps.
  */
-import { CONVENTIONS, hashSeed } from '../../00-core'
 import { getNet, getPeers } from '../../09-net'
+import { ME, myId, seedDealer } from '../../68-minigame-kit'
 import { MAZES } from './maze'
 import { createRace, type Race } from './race'
 
-/** What this browser's racer is called when there is no lobby to name it. */
-export const ME = 'you'
+export { ME, myId }
 
 /** How many racers there are when nobody else is: one per corner. */
 export const SOLO_RACERS = 4
-
-/** What this browser is called in a race: its lobby id, or `ME` when alone. */
-export function myId(): string {
-  return getNet().id ?? ME
-}
 
 /**
  * Everybody in the lobby, host first, or you and three stand-ins.
@@ -41,8 +35,6 @@ export function raceRoster(): { id: string; bot: boolean }[] {
   return [mine, ...others].map((id) => ({ id, bot: false }))
 }
 
-/** Races dealt this session. */
-let dealt = 0
 /** The maze the last race was in, so the next one is a different one. */
 let lastLayout: number | null = null
 
@@ -53,10 +45,7 @@ let lastLayout: number | null = null
  * made different per race by the lobby, how many races came before, and when
  * - so the letters a spin deals cannot be learned from one race to the next.
  */
-export function nextSeed(): number {
-  dealt += 1
-  return hashSeed(CONVENTIONS.worldSeed, `messy-maze:${getNet().room ?? 'solo'}:${dealt}:${Date.now()}`)
-}
+export const nextSeed = seedDealer('messy-maze')
 
 /**
  * Which maze the next race is in.

@@ -69,7 +69,10 @@
     "gate:big-backs-are-near": "node scripts/gate.mjs 65-big-backs-are-near",
     "brief:mama-tank": "node scripts/brief.mjs 67-mama-tank",
     "test:mama-tank": "vitest run src/modules/67-mama-tank",
-    "gate:mama-tank": "node scripts/gate.mjs 67-mama-tank"
+    "gate:mama-tank": "node scripts/gate.mjs 67-mama-tank",
+    "brief:minigame-kit": "node scripts/brief.mjs 68-minigame-kit",
+    "test:minigame-kit": "vitest run src/modules/68-minigame-kit",
+    "gate:minigame-kit": "node scripts/gate.mjs 68-minigame-kit"
   },
   "dependencies": {
     "@react-three/fiber": "^9.7.0",

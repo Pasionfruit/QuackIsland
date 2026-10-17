@@ -6,29 +6,17 @@
  * Stand-ins fill in only when there is nobody else, the same rule as the other
  * minigames.
  */
-import { getNet, getPeers } from '../../09-net'
+import { lobbyRoster, ME, myId, type Seat } from '../../68-minigame-kit'
 import { createGame, type Game } from './rules'
 
-export const ME = 'you'
+export { ME, myId }
+
 export const SOLO_CUTTERS = 4
 /** Eight colours. */
 export const MAX_CUTTERS = 8
 
-export function myId(): string {
-  return getNet().id ?? ME
-}
-
-export function gameRoster(): { id: string; bot: boolean }[] {
-  const net = getNet()
-  const mine = myId()
-  const others = getPeers().map((p) => p.id)
-  if (net.status !== 'joined' || others.length === 0) {
-    return [
-      { id: mine, bot: false },
-      ...Array.from({ length: SOLO_CUTTERS - 1 }, (_, i) => ({ id: `cutter ${i + 2}`, bot: true })),
-    ]
-  }
-  return [mine, ...others].slice(0, MAX_CUTTERS).map((id) => ({ id, bot: false }))
+export function gameRoster(): Seat[] {
+  return lobbyRoster({ solo: SOLO_CUTTERS, max: MAX_CUTTERS, standIn: (seat) => `cutter ${seat}` })
 }
 
 /**

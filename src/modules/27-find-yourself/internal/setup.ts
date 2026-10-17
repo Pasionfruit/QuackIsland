@@ -5,43 +5,25 @@
  * colour order - up to eight. Stand-ins fill in only when there is nobody else,
  * the same rule as the other minigames.
  */
-import { CONVENTIONS, hashSeed } from '../../00-core'
-import { getNet, getPeers } from '../../09-net'
+import { lobbyRoster, ME, myId, seedDealer, type Seat } from '../../68-minigame-kit'
 import { createGame, type Game } from './rules'
 
-export const ME = 'you'
+export { ME, myId }
+
 export const SOLO_FINDERS = 4
 /** Eight colours. */
 export const MAX_FINDERS = 8
 
-export function myId(): string {
-  return getNet().id ?? ME
+export function gameRoster(): Seat[] {
+  return lobbyRoster({ solo: SOLO_FINDERS, max: MAX_FINDERS, standIn: (seat) => `player ${seat}` })
 }
-
-export function gameRoster(): { id: string; bot: boolean }[] {
-  const net = getNet()
-  const mine = myId()
-  const others = getPeers().map((p) => p.id)
-  if (net.status !== 'joined' || others.length === 0) {
-    return [
-      { id: mine, bot: false },
-      ...Array.from({ length: SOLO_FINDERS - 1 }, (_, i) => ({ id: `player ${i + 2}`, bot: true })),
-    ]
-  }
-  return [mine, ...others].slice(0, MAX_FINDERS).map((id) => ({ id, bot: false }))
-}
-
-let dealt = 0
 
 /**
  * A seed for the faces and the shuffles, and so an id to tell games apart. Not
  * a secret: every browser animates the same shuffle from it, and a browser that
  * can animate a shuffle can follow it.
  */
-export function nextSeed(): number {
-  dealt += 1
-  return hashSeed(CONVENTIONS.worldSeed, `find-yourself:${getNet().room ?? 'solo'}:${dealt}:${Date.now()}`)
-}
+export const nextSeed = seedDealer('find-yourself')
 
 export interface GameSetup {
   seed?: number

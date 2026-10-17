@@ -15,21 +15,15 @@
  * over, until the host says so. **Run-over needs no wire message at all**:
  * it is host-derived every tick straight off positions already trusted.
  *
- * The same lessons as every other synced minigame: a guest keeps listening
- * after the round ends; somebody who leaves the lobby is out; a pause stops
- * the round for everybody. Alone, the clock stops.
+ * The loop itself - the host/guest split, the pause, leavers, the clock
+ * easing, how often each end speaks - is the arena base case,
+ * `useArenaNet` in `68-minigame-kit`. What is here is only Mama Tank's rules
+ * for it.
  */
-import { useEffect, useRef } from 'react'
-import { getNet, getPeers, sendToRoom, subscribeRoom } from '../../09-net'
+import { useArenaNet, type ArenaRules } from '../../68-minigame-kit'
 import { botSteer } from './ai'
 import { claim, fire, judgeEnd, leave, look, report, runOver, tick, walk, type Claim, type Round, type Shot } from './rules'
-import { myId } from './setup'
 import { applySnapshot, decodeMove, decodeShot, decodeSnapshot, encodeMove, encodeShot, encodeSnapshot, type Snapshot } from './wire'
-
-const SEND_MS = 66
-const REPORT_MS = 50
-/** Past this far apart, a guest's clock jumps to the host's rather than easing. */
-const SNAP_SECONDS = 0.4
 
 /** What your hands are doing this frame. */
 export interface Hands {
@@ -52,119 +46,49 @@ export interface MamaNet {
   advance(round: Round, dt: number, hands: Hands | null, paused: boolean): Advanced
 }
 
-type Heard = { from: string; round: number } & ({ kind: 'move'; x: number; z: number; yaw: number; pitch: number } | ({ kind: 'shot' } & Claim))
+type Heard = { round: number } & ({ kind: 'move'; x: number; z: number; yaw: number; pitch: number } | ({ kind: 'shot' } & Claim))
+
+export const MAMA_ARENA: ArenaRules<Round, Hands, Heard, Snapshot, Shot> = {
+  encodeSnapshot,
+  decodeSnapshot,
+  applySnapshot,
+  decodeGuest(raw) {
+    const move = decodeMove(raw)
+    if (move) return { kind: 'move', ...move }
+    const shot = decodeShot(raw)
+    return shot ? { kind: 'shot', ...shot } : null
+  },
+  reportMove: (round, mine) => encodeMove(round.id, { x: mine.x, z: mine.z, yaw: mine.yaw, pitch: mine.pitch }),
+  tick,
+  drive(round, me, hands, dt, authoritative, say) {
+    const mine = round.players[me]
+    look(round, me, hands.yaw, hands.pitch)
+    walk(round, me, hands, dt)
+    if (!hands.fire) return null
+    const shot = fire(round, me, authoritative)
+    if (shot && !authoritative) {
+      const victim = shot.hit >= 0 ? round.players[shot.hit].id : null
+      say(encodeShot(round.id, { x: mine.x, z: mine.z, yaw: mine.yaw, pitch: mine.pitch, victim }))
+    }
+    return shot
+  },
+  bots: botSteer,
+  hear(round, player, said, sinceLast) {
+    if (said.kind === 'shot') claim(round, player, said)
+    else report(round, player, said, said.yaw, said.pitch, sinceLast())
+  },
+  // Whoever Mama Tank has driven over this frame, off positions already settled above.
+  settle: runOver,
+  leave,
+  judgeEnd,
+}
 
 export function useMamaNet(): MamaNet {
-  const heard = useRef<Heard[]>([])
-  const heardAt = useRef(new Map<string, number>())
-  const latest = useRef<{ snap: Snapshot; at: number } | null>(null)
-  const applied = useRef<Snapshot | null>(null)
-  const sentAt = useRef(0)
-  const reportedAt = useRef(0)
-
-  useEffect(() => {
-    return subscribeRoom((from, raw) => {
-      if (getNet().host) {
-        const move = decodeMove(raw)
-        if (move) {
-          heard.current.push({ from, kind: 'move', ...move })
-          return
-        }
-        const shot = decodeShot(raw)
-        if (shot) heard.current.push({ from, kind: 'shot', ...shot })
-        return
-      }
-      const snap = decodeSnapshot(raw)
-      if (snap) latest.current = { snap, at: performance.now() }
-    })
-  }, [])
-
-  const advance = (round: Round, dt: number, hands: Hands | null, paused: boolean): Advanced => {
-    const net = getNet()
-    const now = performance.now()
-    let shot: Shot | null = null
-
-    // A pause is shared: the round stops dead for everybody, the host's own
-    // simulation included, so a round never carries on behind the card. See
-    // `15-minigames/internal/pause.ts`.
-    if (paused) return { changed: false, shot }
-
-    if (net.host) {
-      if (round.players.length === 0) return { changed: false, shot }
-      tick(round, dt)
-      const me = round.players.findIndex((p) => p.mine)
-      const mine = round.players[me]
-      if (mine && hands && !round.over) {
-        look(round, me, hands.yaw, hands.pitch)
-        walk(round, me, hands, dt)
-        if (hands.fire) shot = fire(round, me, true)
-      }
-      botSteer(round, dt)
-      // In the order they arrived, so a guest's last step comes before a shot it took from there.
-      for (const said of heard.current.splice(0)) {
-        const player = round.players.findIndex((p) => p.id === said.from)
-        if (player < 0 || said.round !== round.id) continue
-        if (said.kind === 'shot') {
-          claim(round, player, said)
-          continue
-        }
-        const key = `${round.id}:${said.from}`
-        const last = heardAt.current.get(key) ?? 0
-        report(round, player, said, said.yaw, said.pitch, round.elapsed - last)
-        heardAt.current.set(key, round.elapsed)
-      }
-      // Whoever Mama Tank has driven over this frame, off positions already settled above.
-      runOver(round)
-      if (net.status === 'joined') {
-        const here = new Set(getPeers().map((p) => p.id))
-        round.players.forEach((p, index) => {
-          if (!p.bot && !p.mine && !p.left && !here.has(p.id)) leave(round, index)
-        })
-      }
-      judgeEnd(round)
-      if (net.status === 'joined' && now - sentAt.current >= SEND_MS) {
-        sentAt.current = now
-        sendToRoom(encodeSnapshot(round))
-      }
-      return { changed: true, shot }
-    }
-
-    // A guest. The host's word first, then the clock, then our own hands.
-    const heardFrom = latest.current
-    const before = round.id
-    if (heardFrom && heardFrom.snap !== applied.current) {
-      applied.current = heardFrom.snap
-      applySnapshot(round, heardFrom.snap, myId())
-    }
-    if (round.players.length === 0) return { changed: false, shot }
-
-    tick(round, dt)
-    if (heardFrom && !round.over) {
-      const hostElapsed = heardFrom.snap.elapsed + (now - heardFrom.at) / 1000
-      const ours = round.elapsed
-      round.elapsed =
-        before !== round.id || Math.abs(hostElapsed - ours) > SNAP_SECONDS ? hostElapsed : ours + (hostElapsed - ours) * Math.min(1, Math.min(Math.max(dt, 0), 0.25) * 4)
-    }
-
-    const me = round.players.findIndex((p) => p.mine)
-    const mine = round.players[me]
-    if (mine && hands && !round.over) {
-      look(round, me, hands.yaw, hands.pitch)
-      walk(round, me, hands, dt)
-      if (hands.fire) {
-        shot = fire(round, me, false)
-        if (shot) {
-          const victim = shot.hit >= 0 ? round.players[shot.hit].id : null
-          sendToRoom(encodeShot(round.id, { x: mine.x, z: mine.z, yaw: mine.yaw, pitch: mine.pitch, victim }))
-        }
-      }
-    }
-    if (mine && !round.over && now - reportedAt.current >= REPORT_MS) {
-      reportedAt.current = now
-      sendToRoom(encodeMove(round.id, { x: mine.x, z: mine.z, yaw: mine.yaw, pitch: mine.pitch }))
-    }
-    return { changed: true, shot }
+  const link = useArenaNet(MAMA_ARENA)
+  return {
+    advance(round, dt, hands, paused) {
+      const { changed, out } = link.advance(round, dt, hands, paused)
+      return { changed, shot: out }
+    },
   }
-
-  return { advance }
 }

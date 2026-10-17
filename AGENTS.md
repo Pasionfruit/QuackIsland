@@ -87,6 +87,22 @@ From `pipeline.json`, and not up for renegotiation inside a module:
   `PRIORITY` export in `00-core`. Do not invent your own numbers.
 - Assets resolve through `assetUrl()` from `00-core`, never a hardcoded path.
 
+## Minigames start from the kit
+
+`68-minigame-kit` holds the standard base cases, so a minigame is only its
+rules, its scene and its screen. Put it in your `dependsOn` and build on it:
+
+- **Every game:** `lobbyRoster`, `myId` and `seedDealer`. Do not write a roster
+  or seed dealer of your own.
+- **One-vs-all:** `oneVsAllSetup` is the whole of `setup.ts`. `castOneVsAll`
+  picks the 1 in `createRound`. `oneVsAllProblems` is the check your
+  `setup.test.ts` asserts is `[]`.
+- **Real-time arena:** hand `useArenaNet` your `ArenaRules` instead of writing a
+  host/guest loop. Build `wire.ts` from the kit's pose, claim and header codecs.
+
+If the kit is missing something you need, report it as a finding. Do not copy
+the old per-game pattern back in.
+
 ## Geometry is built in code
 
 There is no asset pipeline and there is not going to be one. Every shape in this

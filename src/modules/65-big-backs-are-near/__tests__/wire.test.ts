@@ -64,7 +64,7 @@ describe('a snapshot', () => {
     expect(decodeSnapshot({ ...good, t: 'nope' })).toBeNull()
     expect(decodeSnapshot({ ...good, p: [] })).toBeNull()
     expect(decodeSnapshot({ ...good, w: 3 })).toBeNull()
-    expect(decodeSnapshot({ ...good, h: 'nobody-here' })).toBeNull()
+    expect(decodeSnapshot({ ...good, o1: 'nobody-here' })).toBeNull()
     const p = good.p as unknown[][]
     const withField = (i: number, v: unknown) => ({ ...good, p: [p[0].map((x, j) => (j === i ? v : x))] })
     expect(decodeSnapshot(withField(1, 999999))).toBeNull()

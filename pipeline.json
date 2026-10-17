@@ -216,7 +216,8 @@
         "64-jackal",
         "65-big-backs-are-near",
         "66-lobby-pistols",
-        "67-mama-tank"
+        "67-mama-tank",
+        "68-minigame-kit"
       ],
       "generation": 1,
       "contract": {
@@ -997,7 +998,8 @@
         "64-jackal",
         "65-big-backs-are-near",
         "66-lobby-pistols",
-        "67-mama-tank"
+        "67-mama-tank",
+        "68-minigame-kit"
       ],
       "generation": 1,
       "contract": {
@@ -1560,7 +1562,8 @@
         "64-jackal",
         "65-big-backs-are-near",
         "66-lobby-pistols",
-        "67-mama-tank"
+        "67-mama-tank",
+        "68-minigame-kit"
       ],
       "generation": 1,
       "contract": {
@@ -1679,7 +1682,8 @@
       "dependsOn": [
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -1764,7 +1768,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -1849,7 +1854,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -1930,7 +1936,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -2010,7 +2017,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -2094,7 +2102,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -2178,7 +2187,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -2267,7 +2277,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -2346,7 +2357,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -2426,7 +2438,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -2505,7 +2518,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -2585,7 +2599,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -2664,7 +2679,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -2748,7 +2764,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -2838,7 +2855,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -2922,7 +2940,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -3006,7 +3025,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -3100,7 +3120,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -3184,7 +3205,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -3284,7 +3306,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -3368,7 +3391,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -3458,7 +3482,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -3547,7 +3572,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -3641,7 +3667,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -3719,7 +3746,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -3802,7 +3830,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -3881,7 +3910,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -3970,7 +4000,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -4058,7 +4089,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -4158,7 +4190,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -4247,7 +4280,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -4335,7 +4369,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -4418,7 +4453,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -4506,7 +4542,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -4595,7 +4632,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -4684,7 +4722,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -5719,7 +5758,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -5816,7 +5856,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -6066,7 +6107,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -6125,7 +6167,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-28T00:02:48.322Z"
+          "at": "2026-10-16T22:31:58.595Z"
         },
         "human": {
           "status": "pending",
@@ -6157,7 +6199,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -6216,7 +6259,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-28T00:03:52.514Z"
+          "at": "2026-10-16T22:32:55.533Z"
         },
         "human": {
           "status": "pending",
@@ -6325,7 +6368,8 @@
         "00-core",
         "02-player",
         "09-net",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "dependents": [],
       "generation": 1,
@@ -6379,7 +6423,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-27T22:44:46.996Z"
+          "at": "2026-10-16T22:33:52.132Z"
         },
         "human": {
           "status": "pending",
@@ -6396,6 +6440,123 @@
         "No role-dependent cover height: cover is one uniform height, tall enough to block both roles' shots",
         "No lag-compensating rewind for a claimed shot: judged against the victim's current position only",
         "No team scores or a standard N-way podium: a custom results card off `round.winner`"
+      ],
+      "budgets": {
+        "drawCallsMax": 0,
+        "trianglesMax": 0
+      },
+      "measured": null,
+      "blockers": []
+    },
+    {
+      "id": "68-minigame-kit",
+      "phase": "P6",
+      "title": "Minigame kit: the standard base cases every minigame builds on - roster and seed dealing, the one-vs-all deal and placeholder, shared wire codecs, and the real-time arena host/guest net loop",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "09-net",
+        "15-minigames"
+      ],
+      "dependents": [
+        "16-zombie-tag",
+        "17-messy-maze",
+        "18-probable-stop",
+        "19-duck-hunt",
+        "20-punch-buggy",
+        "21-i-see-the-light",
+        "22-let-him-cook",
+        "23-lady-luck",
+        "24-make-the-cut",
+        "25-wack-attack",
+        "26-sprint-triathlon",
+        "27-find-yourself",
+        "28-feeding-time",
+        "29-time-it",
+        "30-synchronize-steps",
+        "31-helping-dad",
+        "32-hes-one-shot",
+        "33-keyboard-warrior",
+        "34-sharing-is-caring",
+        "35-chef-caricature",
+        "36-musical-mayhem",
+        "37-wheres-midnight",
+        "38-pet-race",
+        "39-ill-just-wait",
+        "40-whats-your-rpm",
+        "41-one-piece",
+        "42-i-just-work-here",
+        "43-highest-in-the-room",
+        "44-color-coded",
+        "45-binary-bs",
+        "46-youre-the-bomb",
+        "47-shanty-matrix",
+        "48-spidey-senses",
+        "49-needs-a-walmart",
+        "50-milf-fishing",
+        "51-perfect-game",
+        "58-breaking-the-ice",
+        "61-op-finder",
+        "64-jackal",
+        "65-big-backs-are-near",
+        "67-mama-tank"
+      ],
+      "generation": 1,
+      "contract": {
+        "version": "0.1.0",
+        "snapshot": "src/modules/68-minigame-kit/contract.snapshot.d.ts",
+        "exports": []
+      },
+      "blocks": [
+        {
+          "id": "68.1",
+          "title": "Roster, identity and seed dealer, written once: lobbyRoster, myId, seedDealer, entrantsOf",
+          "status": "done"
+        },
+        {
+          "id": "68.2",
+          "title": "One-vs-all base case: resolveTheOne (never a stand-in), castOneVsAll, holding (a placeholder that never reads as over), oneVsAllSetup, and oneVsAllProblems as a self-check for game tests",
+          "status": "done"
+        },
+        {
+          "id": "68.3",
+          "title": "Wire base: integer units and guards, pose and claim codecs, one-vs-all snapshot header, playerRows and mergePlayers",
+          "status": "done"
+        },
+        {
+          "id": "68.4",
+          "title": "Arena net loop: createArenaLink (pure, testable with a fake room) and useArenaNet, driven by a game's ArenaRules",
+          "status": "done"
+        },
+        {
+          "id": "68.5",
+          "title": "Migrate 64-jackal, 65-big-backs-are-near and 67-mama-tank fully onto the kit; move every other minigame setup.ts onto the kit roster/identity/seed",
+          "status": "done"
+        },
+        {
+          "id": "68.6",
+          "title": "Tests, MODULE.md, gate",
+          "status": "done"
+        }
+      ],
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-10-16T22:30:49.217Z"
+        },
+        "human": {
+          "status": "pending",
+          "at": null,
+          "note": null
+        },
+        "history": []
+      },
+      "freeze": null,
+      "nonGoals": [
+        "No gameplay, no scene, no UI: it plays and draws nothing",
+        "No registration: a game still registers itself with 15-minigames",
+        "No change to any game's wire format beyond Big Backs moving its 1 id from h to the shared o1 key",
+        "No migration of free-for-all net loops or wire files yet - they adopt the kit one module at a time when next touched"
       ],
       "budgets": {
         "drawCallsMax": 0,

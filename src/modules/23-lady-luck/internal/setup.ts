@@ -5,29 +5,17 @@
  * colour order - up to eight. Stand-ins fill in only when there is nobody else,
  * the same rule as the other minigames.
  */
-import { getNet, getPeers } from '../../09-net'
+import { lobbyRoster, ME, myId, type Seat } from '../../68-minigame-kit'
 import { createGame, type Game } from './rules'
 
-export const ME = 'you'
+export { ME, myId }
+
 export const SOLO_HUNTERS = 4
 /** Eight colours. */
 export const MAX_HUNTERS = 8
 
-export function myId(): string {
-  return getNet().id ?? ME
-}
-
-export function gameRoster(): { id: string; bot: boolean }[] {
-  const net = getNet()
-  const mine = myId()
-  const others = getPeers().map((p) => p.id)
-  if (net.status !== 'joined' || others.length === 0) {
-    return [
-      { id: mine, bot: false },
-      ...Array.from({ length: SOLO_HUNTERS - 1 }, (_, i) => ({ id: `hunter ${i + 2}`, bot: true })),
-    ]
-  }
-  return [mine, ...others].slice(0, MAX_HUNTERS).map((id) => ({ id, bot: false }))
+export function gameRoster(): Seat[] {
+  return lobbyRoster({ solo: SOLO_HUNTERS, max: MAX_HUNTERS, standIn: (seat) => `hunter ${seat}` })
 }
 
 /**

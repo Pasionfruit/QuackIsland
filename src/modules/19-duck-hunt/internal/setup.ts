@@ -5,43 +5,25 @@
  * is the colour order - player 0 is red with a dot, player 1 blue with a
  * triangle. Stand-ins fill in only when there is nobody else.
  */
-import { CONVENTIONS, hashSeed } from '../../00-core'
-import { getNet, getPeers } from '../../09-net'
+import { lobbyRoster, ME, myId, seedDealer, type Seat } from '../../68-minigame-kit'
 import { createGame, type Game } from './game'
 
-export const ME = 'you'
+export { ME, myId }
+
 export const SOLO_PLAYERS = 4
 /** Eight colours, eight shapes: the most a game can tell apart. */
 export const MAX_PLAYERS = 8
 
-export function myId(): string {
-  return getNet().id ?? ME
-}
-
 /** Everybody in the lobby, host first - at most eight - or you and three stand-ins. */
-export function gameRoster(): { id: string; bot: boolean }[] {
-  const net = getNet()
-  const mine = myId()
-  const others = getPeers().map((p) => p.id)
-  if (net.status !== 'joined' || others.length === 0) {
-    return [
-      { id: mine, bot: false },
-      ...Array.from({ length: SOLO_PLAYERS - 1 }, (_, i) => ({ id: `player ${i + 2}`, bot: true })),
-    ]
-  }
-  return [mine, ...others].slice(0, MAX_PLAYERS).map((id) => ({ id, bot: false }))
+export function gameRoster(): Seat[] {
+  return lobbyRoster({ solo: SOLO_PLAYERS, max: MAX_PLAYERS, standIn: (seat) => `player ${seat}` })
 }
-
-let dealt = 0
 
 /**
  * A seed for the next game's balloons. From the world seed, like everything
  * reproducible - where a balloon will be is no secret; it does not aim for you.
  */
-export function nextSeed(): number {
-  dealt += 1
-  return hashSeed(CONVENTIONS.worldSeed, `duck-hunt:${getNet().room ?? 'solo'}:${dealt}:${Date.now()}`)
-}
+export const nextSeed = seedDealer('duck-hunt')
 
 export interface GameSetup {
   seed?: number

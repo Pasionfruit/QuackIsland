@@ -32,7 +32,11 @@ const roster = (n: number): Entrant[] => Array.from({ length: n }, (_, i) => ({ 
 
 describe('resolveHunter', () => {
   it('is whoever was chosen, if they are in the roster', () => {
-    expect(resolveHunter(roster(4), 'p2')).toBe('p2')
+    expect(resolveHunter(roster(4).map((e) => ({ ...e, bot: false })), 'p2')).toBe('p2')
+  })
+
+  it('is never a stand-in, even one somehow chosen', () => {
+    expect(resolveHunter(roster(4), 'p2')).toBe('p0')
   })
 
   it('falls back to the roster\'s first entry when nobody was chosen', () => {

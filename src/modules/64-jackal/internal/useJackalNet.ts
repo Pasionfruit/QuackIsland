@@ -14,21 +14,15 @@
  * only if the host's own trace agrees - see `claim` in `rules.ts`. Nobody
  * loses a life, and the round is not over, until the host says so.
  *
- * The same lessons as the other minigames: a guest keeps listening after the
- * round ends; somebody who leaves the lobby is out; a pause stops the round
- * for everybody. Alone, the clock stops.
+ * The loop itself - the host/guest split, the pause, leavers, the clock
+ * easing, how often each end speaks - is the arena base case,
+ * `useArenaNet` in `68-minigame-kit`. What is here is only Jackal's rules
+ * for it.
  */
-import { useEffect, useRef } from 'react'
-import { getNet, getPeers, sendToRoom, subscribeRoom } from '../../09-net'
+import { useArenaNet, type ArenaRules } from '../../68-minigame-kit'
 import { botSteer } from './ai'
 import { claim, fire, judgeEnd, leave, look, moveSniper, report, tick, toggleScope, walkRunner, type Claim, type Round } from './rules'
-import { myId } from './setup'
 import { applySnapshot, decodeMove, decodeShot, decodeSnapshot, encodeMove, encodeShot, encodeSnapshot, type Snapshot } from './wire'
-
-const SEND_MS = 66
-const REPORT_MS = 50
-/** Past this far apart, a guest's clock jumps to the host's rather than easing. */
-const SNAP_SECONDS = 0.4
 
 /** What your hands are doing this frame. */
 export interface Hands {
@@ -55,126 +49,52 @@ export interface JackalNet {
   advance(round: Round, dt: number, hands: Hands | null, paused: boolean): Advanced
 }
 
-type Heard = { from: string; round: number } & ({ kind: 'move'; x: number; z: number; y: number; yaw: number; pitch: number; scoped: boolean } | ({ kind: 'shot' } & Claim))
+type Heard = { round: number } & ({ kind: 'move'; x: number; z: number; y: number; yaw: number; pitch: number; scoped: boolean } | ({ kind: 'shot' } & Claim))
+
+export const JACKAL_ARENA: ArenaRules<Round, Hands, Heard, Snapshot, { hit: number }> = {
+  encodeSnapshot,
+  decodeSnapshot,
+  applySnapshot,
+  decodeGuest(raw) {
+    const move = decodeMove(raw)
+    if (move) return { kind: 'move', ...move }
+    const shot = decodeShot(raw)
+    return shot ? { kind: 'shot', ...shot } : null
+  },
+  reportMove: (round, mine) => encodeMove(round.id, { x: mine.x, z: mine.z, yaw: mine.yaw, pitch: mine.pitch, y: mine.y, scoped: mine.scoped }),
+  tick,
+  drive(round, me, hands, dt, authoritative, say) {
+    const mine = round.players[me]
+    look(round, me, hands.yaw, hands.pitch)
+    if (mine.role !== 'sniper') {
+      walkRunner(round, me, hands, dt)
+      return null
+    }
+    toggleScope(round, me, hands.scoped)
+    moveSniper(round, me, hands, dt)
+    if (!hands.fire) return null
+    const shot = fire(round, me, authoritative)
+    if (shot && !authoritative) {
+      const victim = shot.hit >= 0 ? round.players[shot.hit].id : null
+      say(encodeShot(round.id, { x: mine.x, z: mine.z, yaw: mine.yaw, pitch: mine.pitch, victim }))
+    }
+    return shot
+  },
+  bots: botSteer,
+  hear(round, player, said, sinceLast) {
+    if (said.kind === 'shot') claim(round, player, said)
+    else report(round, player, said, said.yaw, said.pitch, sinceLast(), said.y, said.scoped)
+  },
+  leave,
+  judgeEnd,
+}
 
 export function useJackalNet(): JackalNet {
-  const heard = useRef<Heard[]>([])
-  const heardAt = useRef(new Map<string, number>())
-  const latest = useRef<{ snap: Snapshot; at: number } | null>(null)
-  const applied = useRef<Snapshot | null>(null)
-  const sentAt = useRef(0)
-  const reportedAt = useRef(0)
-
-  useEffect(() => {
-    return subscribeRoom((from, raw) => {
-      if (getNet().host) {
-        const move = decodeMove(raw)
-        if (move) {
-          heard.current.push({ from, kind: 'move', ...move })
-          return
-        }
-        const shot = decodeShot(raw)
-        if (shot) heard.current.push({ from, kind: 'shot', ...shot })
-        return
-      }
-      const snap = decodeSnapshot(raw)
-      if (snap) latest.current = { snap, at: performance.now() }
-    })
-  }, [])
-
-  const advance = (round: Round, dt: number, hands: Hands | null, paused: boolean): Advanced => {
-    const net = getNet()
-    const now = performance.now()
-    let shot: { hit: number } | null = null
-
-    // A pause is shared: the round stops dead for everybody, the host's own
-    // simulation included, so a round never carries on behind the card. See
-    // `15-minigames/internal/pause.ts`.
-    if (paused) return { changed: false, shot }
-
-    if (net.host) {
-      if (round.players.length === 0) return { changed: false, shot }
-      tick(round, dt)
-      const me = round.players.findIndex((p) => p.mine)
-      const mine = round.players[me]
-      if (mine && hands && !round.over) {
-        look(round, me, hands.yaw, hands.pitch)
-        if (mine.role === 'sniper') {
-          toggleScope(round, me, hands.scoped)
-          moveSniper(round, me, hands, dt)
-          if (hands.fire) shot = fire(round, me, true)
-        } else {
-          walkRunner(round, me, hands, dt)
-        }
-      }
-      botSteer(round, dt)
-      for (const said of heard.current.splice(0)) {
-        const player = round.players.findIndex((p) => p.id === said.from)
-        if (player < 0 || said.round !== round.id) continue
-        if (said.kind === 'shot') {
-          claim(round, player, said)
-          continue
-        }
-        const key = `${round.id}:${said.from}`
-        const last = heardAt.current.get(key) ?? 0
-        report(round, player, said, said.yaw, said.pitch, round.elapsed - last, said.y, said.scoped)
-        heardAt.current.set(key, round.elapsed)
-      }
-      if (net.status === 'joined') {
-        const here = new Set(getPeers().map((p) => p.id))
-        round.players.forEach((p, index) => {
-          if (!p.bot && !p.mine && !p.left && !here.has(p.id)) leave(round, index)
-        })
-      }
-      judgeEnd(round)
-      if (net.status === 'joined' && now - sentAt.current >= SEND_MS) {
-        sentAt.current = now
-        sendToRoom(encodeSnapshot(round))
-      }
-      return { changed: true, shot }
-    }
-
-    // A guest. The host's word first, then the clock, then our own hands.
-    const heardFrom = latest.current
-    const before = round.id
-    if (heardFrom && heardFrom.snap !== applied.current) {
-      applied.current = heardFrom.snap
-      applySnapshot(round, heardFrom.snap, myId())
-    }
-    if (round.players.length === 0) return { changed: false, shot }
-
-    tick(round, dt)
-    if (heardFrom && !round.over) {
-      const hostElapsed = heardFrom.snap.elapsed + (now - heardFrom.at) / 1000
-      const ours = round.elapsed
-      round.elapsed =
-        before !== round.id || Math.abs(hostElapsed - ours) > SNAP_SECONDS ? hostElapsed : ours + (hostElapsed - ours) * Math.min(1, Math.min(Math.max(dt, 0), 0.25) * 4)
-    }
-
-    const me = round.players.findIndex((p) => p.mine)
-    const mine = round.players[me]
-    if (mine && hands && !round.over) {
-      look(round, me, hands.yaw, hands.pitch)
-      if (mine.role === 'sniper') {
-        toggleScope(round, me, hands.scoped)
-        moveSniper(round, me, hands, dt)
-        if (hands.fire) {
-          shot = fire(round, me, false)
-          if (shot) {
-            const victim = shot.hit >= 0 ? round.players[shot.hit].id : null
-            sendToRoom(encodeShot(round.id, { x: mine.x, z: mine.z, yaw: mine.yaw, pitch: mine.pitch, victim }))
-          }
-        }
-      } else {
-        walkRunner(round, me, hands, dt)
-      }
-    }
-    if (mine && !round.over && now - reportedAt.current >= REPORT_MS) {
-      reportedAt.current = now
-      sendToRoom(encodeMove(round.id, { x: mine.x, z: mine.z, yaw: mine.yaw, pitch: mine.pitch, y: mine.y, scoped: mine.scoped }))
-    }
-    return { changed: true, shot }
+  const link = useArenaNet(JACKAL_ARENA)
+  return {
+    advance(round, dt, hands, paused) {
+      const { changed, out } = link.advance(round, dt, hands, paused)
+      return { changed, shot: out }
+    },
   }
-
-  return { advance }
 }

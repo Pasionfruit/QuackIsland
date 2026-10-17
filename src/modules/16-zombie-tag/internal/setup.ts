@@ -7,11 +7,11 @@
  * stand-in runners only fill seats nobody is sitting in.
  */
 import { getNet, getPeers } from '../../09-net'
+import { ME, myId } from '../../68-minigame-kit'
 import { ARENA, playerSpawns, zombieSpawns } from './arena'
 import { createRound, type Round, type Spawn } from './round'
 
-/** What this browser's own body is called when there is no lobby to name it. */
-export const ME = 'you'
+export { ME, myId }
 
 /**
  * How many bodies are in the arena when nobody else is.
@@ -24,10 +24,6 @@ export const ME = 'you'
 export const SOLO_RUNNERS = 4
 
 /** What this browser is called in a round: its lobby id, or `ME` when alone. */
-export function myId(): string {
-  return getNet().id ?? ME
-}
-
 export interface RoundSetup {
   /** Everybody playing, by id. The first is the host. */
   ids?: readonly string[]

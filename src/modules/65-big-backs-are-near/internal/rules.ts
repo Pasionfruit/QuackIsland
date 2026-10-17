@@ -18,6 +18,7 @@
  * one. No three.js, no React, no clock of its own. Everything here is pure.
  */
 import { PLAYER } from '../../02-player'
+import { castOneVsAll, resolveTheOne } from '../../68-minigame-kit'
 import { hiderSpawn, hunterSpawn, lineClear, mazeFor, slide, slideThroughWalls, type Maze, type Point, type Vec3 } from './maze'
 
 export type Role = 'hunter' | 'hider'
@@ -115,19 +116,14 @@ export interface Entrant {
 }
 
 /**
- * Who is the Hunter for this round: whoever the host picked as the 1, if
- * they are actually in the roster, or the roster's own first entry otherwise
- * - the same default the briefing itself falls back to before the host has
- * picked. Identical shape to Jackal's `resolveSniper`.
+ * Who is the Hunter for this round: the one-vs-all base case's
+ * `resolveTheOne` - whoever the host picked as the 1, if they are actually in
+ * the roster, or the roster's first human otherwise.
  */
-export function resolveHunter(roster: readonly Entrant[], chosen: string | null): string {
-  if (chosen !== null && roster.some((e) => e.id === chosen)) return chosen
-  return roster[0]?.id ?? ''
-}
+export const resolveHunter: (roster: readonly Entrant[], chosen: string | null) => string = resolveTheOne
 
 export function createRound(seed: number, entrants: readonly Entrant[], chosen: string | null, id = 1): Round {
-  const hunterId = resolveHunter(entrants, chosen)
-  const hiders = entrants.filter((e) => e.id !== hunterId)
+  const { oneId: hunterId, rest: hiders } = castOneVsAll(entrants, chosen)
   return {
     seed,
     id,

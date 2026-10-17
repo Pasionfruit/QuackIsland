@@ -6,17 +6,13 @@
  * the other minigames - so there is somebody to outlast.
  */
 import { getNet, getPeers } from '../../09-net'
+import { ME, myId } from '../../68-minigame-kit'
 import { createGame, type Game } from './game'
 
-/** What this browser's player is called when there is no lobby to name it. */
-export const ME = 'you'
+export { ME, myId }
 
 /** How many players there are when nobody else is. */
 export const SOLO_PLAYERS = 4
-
-export function myId(): string {
-  return getNet().id ?? ME
-}
 
 /** Everybody in the lobby, host first, or you and three stand-ins. */
 export function gameRoster(): { id: string; bot: boolean }[] {

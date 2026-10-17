@@ -5,39 +5,21 @@
  * colour order - up to eight. Stand-ins fill in only when there is nobody else,
  * the same rule as the other minigames.
  */
-import { CONVENTIONS, hashSeed } from '../../00-core'
-import { getNet, getPeers } from '../../09-net'
+import { lobbyRoster, ME, myId, seedDealer, type Seat } from '../../68-minigame-kit'
 import { createRound, type Round } from './rules'
 
-export const ME = 'you'
+export { ME, myId }
+
 export const SOLO_PLAYERS = 4
 /** Eight colours, eight starting spots on the ring. */
 export const MAX_PLAYERS = 8
 
-export function myId(): string {
-  return getNet().id ?? ME
+export function roundRoster(): Seat[] {
+  return lobbyRoster({ solo: SOLO_PLAYERS, max: MAX_PLAYERS, standIn: (seat) => `player ${seat}` })
 }
-
-export function roundRoster(): { id: string; bot: boolean }[] {
-  const net = getNet()
-  const mine = myId()
-  const others = getPeers().map((p) => p.id)
-  if (net.status !== 'joined' || others.length === 0) {
-    return [
-      { id: mine, bot: false },
-      ...Array.from({ length: SOLO_PLAYERS - 1 }, (_, i) => ({ id: `player ${i + 2}`, bot: true })),
-    ]
-  }
-  return [mine, ...others].slice(0, MAX_PLAYERS).map((id) => ({ id, bot: false }))
-}
-
-let dealt = 0
 
 /** A seed for the stand-ins, and an id to tell rounds apart. Nothing secret. */
-export function nextSeed(): number {
-  dealt += 1
-  return hashSeed(CONVENTIONS.worldSeed, `sharing-is-caring:${getNet().room ?? 'solo'}:${dealt}:${Date.now()}`)
-}
+export const nextSeed = seedDealer('sharing-is-caring')
 
 export interface RoundSetup {
   seed?: number
