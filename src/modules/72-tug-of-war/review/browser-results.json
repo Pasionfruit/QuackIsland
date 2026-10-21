@@ -1,0 +1,111 @@
+{
+  "checks": [
+    "Countdown ignores input; held/repeated keys count once; solo beats four bots with released key taps",
+    "Stand-ins type sequences and can pull to a team victory",
+    "Three separate browsers agree on seeded roster and guest solo; shared pause freezes time and ignores input without buffering",
+    "Personal key display advances immediately before snapshots; wrong key resets progress without adding pull",
+    "Host and guest teammates type personal sequences to a team win replicated to all three browsers",
+    "Guest solo wins using keyboard intents; all clients receive final winner",
+    "Solo departure awards team victory"
+  ],
+  "screenshots": [
+    "solo-playing.png",
+    "solo-wins.png",
+    "team-wins.png",
+    "team-playing.png",
+    "guest-solo.png",
+    "compact-800.png"
+  ],
+  "performance": {
+    "fps": 57,
+    "frameMs": 17.69,
+    "drawCalls": 53,
+    "triangles": 3944,
+    "programs": 3,
+    "geometries": 53,
+    "textures": 3
+  },
+  "rosters": [
+    {
+      "id": 3333516159,
+      "seed": 3333516159,
+      "soloId": "p9",
+      "players": [
+        {
+          "id": "p8",
+          "mine": true,
+          "bot": false
+        },
+        {
+          "id": "p9",
+          "mine": false,
+          "bot": false
+        },
+        {
+          "id": "p10",
+          "mine": false,
+          "bot": false
+        }
+      ]
+    },
+    {
+      "id": 3333516159,
+      "seed": 3333516159,
+      "soloId": "p9",
+      "players": [
+        {
+          "id": "p8",
+          "mine": false,
+          "bot": false
+        },
+        {
+          "id": "p9",
+          "mine": true,
+          "bot": false
+        },
+        {
+          "id": "p10",
+          "mine": false,
+          "bot": false
+        }
+      ]
+    },
+    {
+      "id": 3333516159,
+      "seed": 3333516159,
+      "soloId": "p9",
+      "players": [
+        {
+          "id": "p8",
+          "mine": false,
+          "bot": false
+        },
+        {
+          "id": "p9",
+          "mine": false,
+          "bot": false
+        },
+        {
+          "id": "p10",
+          "mine": true,
+          "bot": false
+        }
+      ]
+    }
+  ],
+  "compact": {
+    "width": 800,
+    "scroll": 800,
+    "canvas": {
+      "x": 0,
+      "y": 177,
+      "width": 610,
+      "height": 246,
+      "top": 177,
+      "right": 610,
+      "bottom": 423,
+      "left": 0
+    }
+  },
+  "errors": []
+}

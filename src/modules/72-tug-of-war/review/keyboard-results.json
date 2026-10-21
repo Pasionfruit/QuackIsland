@@ -1,0 +1,22 @@
+{
+  "checks": [
+    "Native CDP keypress pulls once",
+    "Typing in the player-name field does not pull",
+    "390px layout fits without horizontal scrolling"
+  ],
+  "layout": {
+    "width": 390,
+    "scroll": 390,
+    "canvas": {
+      "x": 0,
+      "y": 174,
+      "width": 390,
+      "height": 382,
+      "top": 174,
+      "right": 390,
+      "bottom": 556,
+      "left": 0
+    }
+  },
+  "errors": []
+}
