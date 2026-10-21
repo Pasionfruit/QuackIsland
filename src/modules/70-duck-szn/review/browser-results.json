@@ -1,0 +1,84 @@
+{
+  "at": "2026-10-21T15:29:02.869Z",
+  "checks": [
+    {
+      "name": "countdown ignores walking and firing",
+      "ok": true,
+      "evidence": {
+        "elapsed": 0,
+        "shots": 0
+      }
+    },
+    {
+      "name": "solo roster, WASD, mouse and firing cooldown",
+      "ok": true,
+      "evidence": {
+        "role": "hunter",
+        "people": 5,
+        "travelled": 2.51944000020028,
+        "yaw": -0.08800000000000004,
+        "pitch": 0.033,
+        "shots": 1
+      }
+    },
+    {
+      "name": "host-selected guest hunter and matching round",
+      "ok": true,
+      "evidence": {
+        "id": 25597257,
+        "seed": 25597257,
+        "hunterId": "p4"
+      }
+    },
+    {
+      "name": "duck hiding and movement reach the other browser",
+      "ok": true,
+      "evidence": {
+        "crouch": true,
+        "x": 1.1118604065674962,
+        "z": 9.920766554685613
+      }
+    },
+    {
+      "name": "guest hunter shot eliminates host duck",
+      "ok": true,
+      "evidence": {
+        "winner": "hunter",
+        "shots": 1,
+        "kills": 1
+      }
+    },
+    {
+      "name": "shared pause and resume",
+      "ok": true,
+      "evidence": {
+        "before": [
+          0.23230000001192094,
+          0.23341872207580863
+        ],
+        "after": [
+          0.23230000001192094,
+          0.23341872207580863
+        ]
+      }
+    },
+    {
+      "name": "departing guest hunter awards the ducks the round",
+      "ok": true,
+      "evidence": {
+        "winner": "duck"
+      }
+    },
+    {
+      "name": "real sixty-second solo survival ending",
+      "ok": true,
+      "evidence": {
+        "elapsed": 60,
+        "winner": "duck",
+        "survivors": 4
+      }
+    }
+  ],
+  "error": null,
+  "consoleErrors": []
+}

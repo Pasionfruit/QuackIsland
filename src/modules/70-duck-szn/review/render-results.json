@@ -1,0 +1,18 @@
+{
+  "at": "2026-10-21T15:30:46.654Z",
+  "perf": {
+    "fps": 60,
+    "frameMs": 16.67,
+    "drawCalls": 69,
+    "triangles": 3828,
+    "programs": 2,
+    "geometries": 69,
+    "textures": 3
+  },
+  "layout": {
+    "width": 800,
+    "documentWidth": 800,
+    "boardHeight": 413
+  },
+  "consoleErrors": []
+}
