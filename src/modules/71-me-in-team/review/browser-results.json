@@ -1,0 +1,101 @@
+{
+  "at": "2026-10-21T16:33:47.648Z",
+  "checks": [
+    {
+      "name": "countdown blocks input",
+      "ok": true,
+      "evidence": {
+        "elapsed": 0,
+        "z": 18
+      }
+    },
+    {
+      "name": "solo roster, stand-in chain, WASD and camera",
+      "ok": true,
+      "evidence": {
+        "people": 5,
+        "maxLink": 1.9418480129614368,
+        "yaw": -0.112,
+        "pitch": 0.6060000000000001,
+        "perf": {
+          "fps": 60,
+          "frameMs": 16.67,
+          "drawCalls": 62,
+          "triangles": 2998,
+          "programs": 4,
+          "geometries": 63,
+          "textures": 3
+        }
+      }
+    },
+    {
+      "name": "three browsers agree on round and own bodies",
+      "ok": true,
+      "evidence": {
+        "id": 183097730,
+        "soloId": "p5",
+        "people": 3
+      }
+    },
+    {
+      "name": "chain blocks the solo between teammates",
+      "ok": true,
+      "evidence": {
+        "runnerZ": 1.46,
+        "chainZ": [
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "name": "a guest pulls an idle teammate through the authoritative chain",
+      "ok": true,
+      "evidence": {
+        "idleBefore": 1,
+        "idleAfter": -1.1130039792264783,
+        "length": 2.6
+      }
+    },
+    {
+      "name": "shared pause freezes all three clients",
+      "ok": true,
+      "evidence": {
+        "clocks": [
+          6.298900000035751,
+          6.297002958994136,
+          6.296682419670893
+        ]
+      }
+    },
+    {
+      "name": "host-selected guest solo collects flags and escapes with real input",
+      "ok": true,
+      "evidence": {
+        "soloId": "p6",
+        "elapsed": 11.347499999999979,
+        "checkpoint": 3,
+        "winner": "solo"
+      }
+    },
+    {
+      "name": "team departure re-forms chain and solo departure ends the round",
+      "ok": true,
+      "evidence": {
+        "remainingTeam": 1,
+        "winner": "team"
+      }
+    },
+    {
+      "name": "real sixty-second team hold ending",
+      "ok": true,
+      "evidence": {
+        "elapsed": 60,
+        "winner": "team",
+        "checkpoint": 0
+      }
+    }
+  ],
+  "error": null,
+  "consoleErrors": []
+}
