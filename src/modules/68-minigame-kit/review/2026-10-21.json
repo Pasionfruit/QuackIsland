@@ -1,0 +1,490 @@
+{
+    "date":  "2026-10-21",
+    "commit":  "c62cadb",
+    "oneVsAll":  {
+                     "at":  "2026-10-21T14:28:06.819Z",
+                     "checks":  [
+                                    {
+                                        "name":  "jackal solo roster",
+                                        "ok":  true,
+                                        "evidence":  {
+                                                         "seed":  1274597344,
+                                                         "people":  5,
+                                                         "humanRole":  "sniper",
+                                                         "botMoves":  true,
+                                                         "names":  [
+                                                                       null,
+                                                                       null,
+                                                                       null,
+                                                                       null,
+                                                                       null
+                                                                   ]
+                                                     }
+                                    },
+                                    {
+                                        "name":  "big-backs-are-near solo roster",
+                                        "ok":  true,
+                                        "evidence":  {
+                                                         "seed":  2243641347,
+                                                         "people":  5,
+                                                         "humanRole":  "hunter",
+                                                         "botMoves":  true,
+                                                         "names":  [
+                                                                       null,
+                                                                       null,
+                                                                       null,
+                                                                       null,
+                                                                       null
+                                                                   ]
+                                                     }
+                                    },
+                                    {
+                                        "name":  "mama-tank solo roster",
+                                        "ok":  true,
+                                        "evidence":  {
+                                                         "seed":  304416674,
+                                                         "people":  5,
+                                                         "humanRole":  "mama",
+                                                         "botMoves":  true,
+                                                         "names":  [
+                                                                       null,
+                                                                       null,
+                                                                       null,
+                                                                       null,
+                                                                       null
+                                                                   ]
+                                                     }
+                                    },
+                                    {
+                                        "name":  "jackal lobby round",
+                                        "ok":  true,
+                                        "evidence":  {
+                                                         "seed":  1873526057,
+                                                         "guestRole":  "sniper",
+                                                         "phaseEvidence":  [
+                                                                               "briefing",
+                                                                               "fading",
+                                                                               "counting",
+                                                                               "playing"
+                                                                           ],
+                                                         "pauseClocks":  [
+                                                                             0.4165999999999985,
+                                                                             0.4134923768289777
+                                                                         ],
+                                                         "resumed":  0.9164999999999958
+                                                     }
+                                    },
+                                    {
+                                        "name":  "jackal gameplay",
+                                        "ok":  true,
+                                        "evidence":  {
+                                                         "fired":  2,
+                                                         "hit":  true,
+                                                         "last":  {
+                                                                      "clock":  81.87,
+                                                                      "over":  true,
+                                                                      "winner":  "sniper",
+                                                                      "role":  "sniper",
+                                                                      "bullets":  1,
+                                                                      "reloading":  false,
+                                                                      "fired":  false,
+                                                                      "target":  null
+                                                                  },
+                                                         "agree":  true,
+                                                         "end":  {
+                                                                     "over":  true,
+                                                                     "winner":  "sniper",
+                                                                     "players":  [
+                                                                                     [
+                                                                                         "p5",
+                                                                                         false,
+                                                                                         false,
+                                                                                         0,
+                                                                                         false
+                                                                                     ],
+                                                                                     [
+                                                                                         "p6",
+                                                                                         true,
+                                                                                         false,
+                                                                                         2,
+                                                                                         false
+                                                                                     ]
+                                                                                 ]
+                                                                 }
+                                                     }
+                                    },
+                                    {
+                                        "name":  "jackal guest leaves",
+                                        "ok":  true,
+                                        "evidence":  {
+                                                         "departed":  {
+                                                                          "id":  "p6",
+                                                                          "mine":  false,
+                                                                          "bot":  false,
+                                                                          "left":  true,
+                                                                          "role":  "runner",
+                                                                          "x":  0,
+                                                                          "z":  53.5,
+                                                                          "lives":  2,
+                                                                          "alive":  true,
+                                                                          "reachedBase":  false
+                                                                      },
+                                                         "remaining":  1
+                                                     }
+                                    },
+                                    {
+                                        "name":  "big-backs-are-near lobby round",
+                                        "ok":  true,
+                                        "evidence":  {
+                                                         "seed":  4289396228,
+                                                         "guestRole":  "hunter",
+                                                         "phaseEvidence":  [
+                                                                               "briefing",
+                                                                               "fading",
+                                                                               "counting",
+                                                                               "playing"
+                                                                           ],
+                                                         "pauseClocks":  [
+                                                                             0.36660000000000587,
+                                                                             0.386221519998409
+                                                                         ],
+                                                         "resumed":  0.8666000000000057
+                                                     }
+                                    },
+                                    {
+                                        "name":  "big-backs-are-near gameplay",
+                                        "ok":  true,
+                                        "evidence":  {
+                                                         "fired":  0,
+                                                         "hit":  true,
+                                                         "last":  {
+                                                                      "clock":  23.95,
+                                                                      "over":  true,
+                                                                      "winner":  "hunter",
+                                                                      "role":  "hunter",
+                                                                      "pings":  0,
+                                                                      "muted":  true,
+                                                                      "free":  0,
+                                                                      "target":  null
+                                                                  },
+                                                         "agree":  true,
+                                                         "end":  {
+                                                                     "over":  true,
+                                                                     "winner":  "hunter",
+                                                                     "players":  [
+                                                                                     [
+                                                                                         "p5",
+                                                                                         false,
+                                                                                         false,
+                                                                                         null,
+                                                                                         null
+                                                                                     ],
+                                                                                     [
+                                                                                         "p9",
+                                                                                         true,
+                                                                                         false,
+                                                                                         null,
+                                                                                         null
+                                                                                     ]
+                                                                                 ]
+                                                                 }
+                                                     }
+                                    },
+                                    {
+                                        "name":  "big-backs-are-near guest leaves",
+                                        "ok":  true,
+                                        "evidence":  {
+                                                         "departed":  {
+                                                                          "id":  "p9",
+                                                                          "mine":  false,
+                                                                          "bot":  false,
+                                                                          "left":  true,
+                                                                          "role":  "hider",
+                                                                          "x":  -37.800000000000004,
+                                                                          "z":  37.800000000000004,
+                                                                          "alive":  true
+                                                                      },
+                                                         "remaining":  1
+                                                     }
+                                    },
+                                    {
+                                        "name":  "mama-tank lobby round",
+                                        "ok":  true,
+                                        "evidence":  {
+                                                         "seed":  2275195496,
+                                                         "guestRole":  "mama",
+                                                         "phaseEvidence":  [
+                                                                               "briefing",
+                                                                               "fading",
+                                                                               "counting",
+                                                                               "playing"
+                                                                           ],
+                                                         "pauseClocks":  [
+                                                                             0.3666999999999827,
+                                                                             0.3703483646712858
+                                                                         ],
+                                                         "resumed":  0.8667999999999882
+                                                     }
+                                    },
+                                    {
+                                        "name":  "mama-tank gameplay",
+                                        "ok":  true,
+                                        "evidence":  {
+                                                         "fired":  25,
+                                                         "hit":  true,
+                                                         "last":  {
+                                                                      "clock":  70.85,
+                                                                      "over":  true,
+                                                                      "winner":  "mini",
+                                                                      "role":  "mama",
+                                                                      "hitsOnMama":  4,
+                                                                      "hitsNeeded":  4,
+                                                                      "alive":  true,
+                                                                      "fired":  false,
+                                                                      "target":  null
+                                                                  },
+                                                         "agree":  true,
+                                                         "end":  {
+                                                                     "over":  true,
+                                                                     "winner":  "mini",
+                                                                     "players":  [
+                                                                                     [
+                                                                                         "p5",
+                                                                                         true,
+                                                                                         false,
+                                                                                         null,
+                                                                                         null
+                                                                                     ],
+                                                                                     [
+                                                                                         "p10",
+                                                                                         true,
+                                                                                         false,
+                                                                                         null,
+                                                                                         null
+                                                                                     ]
+                                                                                 ],
+                                                                     "hits":  4
+                                                                 }
+                                                     }
+                                    },
+                                    {
+                                        "name":  "mama-tank guest leaves",
+                                        "ok":  true,
+                                        "evidence":  {
+                                                         "departed":  {
+                                                                          "id":  "p10",
+                                                                          "mine":  false,
+                                                                          "bot":  false,
+                                                                          "left":  true,
+                                                                          "role":  "mini",
+                                                                          "x":  -26.37,
+                                                                          "z":  25.38,
+                                                                          "alive":  true
+                                                                      },
+                                                         "remaining":  1
+                                                     }
+                                    }
+                                ],
+                     "errors":  [
+
+                                ],
+                     "console":  [
+
+                                 ]
+                 },
+    "freeForAllSolo":  {
+                           "checks":  [
+                                          {
+                                              "game":  "duck-hunt",
+                                              "rounds":  [
+                                                             {
+                                                                 "id":  2286875872,
+                                                                 "seed":  2286875872,
+                                                                 "people":  [
+                                                                                {
+                                                                                    "id":  "you",
+                                                                                    "mine":  true,
+                                                                                    "bot":  false
+                                                                                },
+                                                                                {
+                                                                                    "id":  "player 2",
+                                                                                    "mine":  false,
+                                                                                    "bot":  true
+                                                                                },
+                                                                                {
+                                                                                    "id":  "player 3",
+                                                                                    "mine":  false,
+                                                                                    "bot":  true
+                                                                                },
+                                                                                {
+                                                                                    "id":  "player 4",
+                                                                                    "mine":  false,
+                                                                                    "bot":  true
+                                                                                }
+                                                                            ],
+                                                                 "hud":  "player\n-\nnot in a lobby\nâ–¾\nPARTY\nVolcano Island\nopen the lobby, top left\nminigames Â· 46\ntab for everyone\nDuck Hunt\n45s\nshoot\nonly\nyou\n0\nplayer 2\n0\nplayer 3\n0\nplayer 4\n0\n2"
+                                                             },
+                                                             {
+                                                                 "id":  4125265984,
+                                                                 "seed":  4125265984,
+                                                                 "people":  [
+                                                                                {
+                                                                                    "id":  "you",
+                                                                                    "mine":  true,
+                                                                                    "bot":  false
+                                                                                },
+                                                                                {
+                                                                                    "id":  "player 2",
+                                                                                    "mine":  false,
+                                                                                    "bot":  true
+                                                                                },
+                                                                                {
+                                                                                    "id":  "player 3",
+                                                                                    "mine":  false,
+                                                                                    "bot":  true
+                                                                                },
+                                                                                {
+                                                                                    "id":  "player 4",
+                                                                                    "mine":  false,
+                                                                                    "bot":  true
+                                                                                }
+                                                                            ],
+                                                                 "hud":  "player\n-\nnot in a lobby\nâ–¾\nPARTY\nVolcano Island\nopen the lobby, top left\nminigames Â· 46\ntab for everyone\nDuck Hunt\n45s\nshoot\nonly\nyou\n0\nplayer 2\n0\nplayer 3\n0\nplayer 4\n0\n2"
+                                                             }
+                                                         ]
+                                          },
+                                          {
+                                              "game":  "punch-buggy",
+                                              "rounds":  [
+                                                             {
+                                                                 "id":  3575739058,
+                                                                 "seed":  3575739058,
+                                                                 "people":  [
+                                                                                {
+                                                                                    "id":  "you",
+                                                                                    "mine":  true,
+                                                                                    "bot":  false
+                                                                                },
+                                                                                {
+                                                                                    "id":  "fighter 2",
+                                                                                    "mine":  false,
+                                                                                    "bot":  true
+                                                                                },
+                                                                                {
+                                                                                    "id":  "fighter 3",
+                                                                                    "mine":  false,
+                                                                                    "bot":  true
+                                                                                },
+                                                                                {
+                                                                                    "id":  "fighter 4",
+                                                                                    "mine":  false,
+                                                                                    "bot":  true
+                                                                                }
+                                                                            ],
+                                                                 "hud":  "player\n-\nnot in a lobby\nâ–¾\nPARTY\nVolcano Island\nopen the lobby, top left\nminigames Â· 46\ntab for everyone\nPunch Buggy\n30s\n4 standing\nclick to punch\n2"
+                                                             },
+                                                             {
+                                                                 "id":  3935864798,
+                                                                 "seed":  3935864798,
+                                                                 "people":  [
+                                                                                {
+                                                                                    "id":  "you",
+                                                                                    "mine":  true,
+                                                                                    "bot":  false
+                                                                                },
+                                                                                {
+                                                                                    "id":  "fighter 2",
+                                                                                    "mine":  false,
+                                                                                    "bot":  true
+                                                                                },
+                                                                                {
+                                                                                    "id":  "fighter 3",
+                                                                                    "mine":  false,
+                                                                                    "bot":  true
+                                                                                },
+                                                                                {
+                                                                                    "id":  "fighter 4",
+                                                                                    "mine":  false,
+                                                                                    "bot":  true
+                                                                                }
+                                                                            ],
+                                                                 "hud":  "player\n-\nnot in a lobby\nâ–¾\nPARTY\nVolcano Island\nopen the lobby, top left\nminigames Â· 46\ntab for everyone\nPunch Buggy\n30s\n4 standing\nclick to punch\n2"
+                                                             }
+                                                         ]
+                                          }
+                                      ],
+                           "errors":  [
+
+                                      ]
+                       },
+    "finishObserverAndGuestMama":  {
+                                       "checks":  [
+                                                      {
+                                                          "game":  "jackal",
+                                                          "check":  "Finish observer armed before open",
+                                                          "flashes":  [
+
+                                                                      ],
+                                                          "phases":  [
+                                                                         "briefing",
+                                                                         "fading",
+                                                                         "counting",
+                                                                         "playing"
+                                                                     ]
+                                                      },
+                                                      {
+                                                          "game":  "big-backs-are-near",
+                                                          "check":  "Finish observer armed before open",
+                                                          "flashes":  [
+
+                                                                      ],
+                                                          "phases":  [
+                                                                         "briefing",
+                                                                         "fading",
+                                                                         "counting",
+                                                                         "playing"
+                                                                     ]
+                                                      },
+                                                      {
+                                                          "game":  "mama-tank",
+                                                          "check":  "Finish observer armed before open",
+                                                          "flashes":  [
+
+                                                                      ],
+                                                          "phases":  [
+                                                                         "briefing",
+                                                                         "fading",
+                                                                         "counting",
+                                                                         "playing"
+                                                                     ]
+                                                      },
+                                                      {
+                                                          "game":  "mama-tank",
+                                                          "check":  "guest Mama hit accepted by host",
+                                                          "fired":  1,
+                                                          "end":  {
+                                                                      "over":  true,
+                                                                      "winner":  "mama",
+                                                                      "hitsOnMama":  0,
+                                                                      "players":  [
+                                                                                      {
+                                                                                          "id":  "p12",
+                                                                                          "role":  "mini",
+                                                                                          "alive":  false,
+                                                                                          "hits":  0
+                                                                                      },
+                                                                                      {
+                                                                                          "id":  "p13",
+                                                                                          "role":  "mama",
+                                                                                          "alive":  true,
+                                                                                          "hits":  0
+                                                                                      }
+                                                                                  ]
+                                                                  }
+                                                      }
+                                                  ],
+                                       "errors":  [
+
+                                                  ]
+                                   }
+}

@@ -98,3 +98,13 @@ the same way for every game:
    the rest.
 3. Spot-check a few free-for-all games alone and in a lobby: roster size,
    stand-in names, a fresh round each time.
+
+## Browser review evidence
+
+The 2026-10-21 browser checks are recorded in
+[`review/2026-10-21.md`](review/2026-10-21.md), with captured state and representative
+screenshots alongside it. All three one-vs-all games were exercised solo and in
+two separate browsers, including guest actions, shared pause, disconnects and
+an observer armed before opening each screen to detect a premature Finish.
+Duck Hunt and Punch Buggy were spot-checked solo and in a lobby. The machine
+gate was rerun successfully; human review remains pending.

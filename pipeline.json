@@ -6537,12 +6537,17 @@
           "id": "68.6",
           "title": "Tests, MODULE.md, gate",
           "status": "done"
+        },
+        {
+          "id": "68.7",
+          "title": "Browser review: solo and two-browser one-vs-all rounds, guest actions, pause, disconnects, Finish-flash observers and free-for-all spot checks; evidence in review/2026-10-21.md; human review remains pending",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-10-16T22:30:49.217Z"
+          "at": "2026-10-21T14:26:17.000Z"
         },
         "human": {
           "status": "pending",
