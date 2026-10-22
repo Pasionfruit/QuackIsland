@@ -2,7 +2,7 @@
   "id": "70-duck-szn",
   "title": "Duck Szn: a one-minute first-person hunter-versus-ducks game",
   "status": "in_progress",
-  "dependsOn": ["00-core", "09-net", "15-minigames", "68-minigame-kit"],
+  "dependsOn": ["00-core", "02-player", "09-net", "15-minigames", "68-minigame-kit"],
   "budgets": {"drawCallsMax": 100, "trianglesMax": 15000, "assetTrianglesDefault": 3000, "assetTextureMaxPx": 0},
   "blockers": ["User requested edits stay inside the new module. Pipeline, catalogue and composition registration are deferred."],
   "measured": {"drawCalls": 69, "triangles": 3828, "previewJsGzipKb": 327.87, "fps": 60},

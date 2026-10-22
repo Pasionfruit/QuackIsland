@@ -1,5 +1,10 @@
 # 71-me-in-team
 
+The app-wide character update uses `02-player.createAvatar` for every player,
+fitted to the existing scene's height and -Z forward convention. Chains, player
+colours, movement and ownership rings retain their behavior. `02-player` is
+declared in the proposed local dependency entry.
+
 ME in Team is a procedural, third-person, one-vs-all blocking game. Code,
 preview, tests and review evidence are scoped to this directory. Dependencies
 (public contracts): `00-core`, `09-net`, `15-minigames`, `68-minigame-kit`.

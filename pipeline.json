@@ -499,12 +499,17 @@
           "id": "02.12",
           "title": "Shared avatar face expressions for the lobby emote wheel",
           "status": "done"
+        },
+        {
+          "id": "02.13",
+          "title": "Shared procedural duck avatar across the home page, multiplayer and minigames",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-27T22:36:35.011Z"
+          "at": "2026-10-21T17:53:28.053Z"
         },
         "human": {
           "status": "pending"
@@ -515,7 +520,7 @@
       "nonGoals": [
         "No collision with anything but the ground - there is nothing else yet",
         "No swimming; below sea level you simply walk the seabed",
-        "No animation rig; the body is a capsule",
+        "No skeletal animation rig; procedural duck body, head and expression meshes",
         "No first-person view, no mouse look",
         "No physics engine - gravity and a ground snap, nothing more"
       ],
@@ -1042,12 +1047,17 @@
           "id": "09.7",
           "title": "Per-peer ping and an opaque room channel for other modules",
           "status": "done"
+        },
+        {
+          "id": "09.8",
+          "title": "Preserve duck face expressions through remote-player interpolation",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-09-22T01:59:13.540Z"
+          "at": "2026-10-21T17:55:59.265Z"
         },
         "human": {
           "status": "pending"

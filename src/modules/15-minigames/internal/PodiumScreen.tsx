@@ -17,7 +17,7 @@
  * right, which is the host's - the same as play is. A guest gets a line saying
  * who they are waiting for where the host gets the button.
  *
- * Drawn, not modelled: the bodies are the island's red pill in flat SVG,
+ * The interface figures echo the island's duck model in SVG,
  * painted the colour each player was in the game. A podium is a moment rather
  * than a scene, and a DOM page costs no draw calls at all.
  */
@@ -147,9 +147,7 @@ function Figure({ player, size }: { player: Placed; size: string }) {
     <div style={{ ...figure, width: size }} data-pose={pose} data-player={player.id}>
       <div className="localrot-podium-move" style={{ animation: MOVES[pose], transformOrigin: '50% 100%', width: '100%' }}>
         <svg viewBox="0 0 100 140" style={{ display: 'block', width: '100%', height: 'auto' }} aria-hidden>
-          <Arms pose={pose} colour={player.colour!} />
-          <rect x={25} y={20} width={50} height={116} rx={25} fill={player.colour} />
-          <Face pose={pose} />
+          <DuckFigure pose={pose} colour={player.colour!}/>
         </svg>
       </div>
       <Name player={player} />
@@ -157,42 +155,45 @@ function Figure({ player, size }: { player: Placed; size: string }) {
   )
 }
 
-/** Up for joy; hanging for everything else. */
-function Arms({ pose, colour }: { pose: Pose; colour: string }) {
+/** Raised wings, webbed feet and a broad bill match the world's duck silhouette. */
+function DuckFigure({ pose, colour }: { pose: Pose; colour: string }) {
   const up = pose === 'joy'
-  const arm = { stroke: colour, strokeWidth: 12, strokeLinecap: 'round' as const }
-  return up ? (
+  return (
     <>
-      <line x1={30} y1={70} x2={8} y2={28} {...arm} />
-      <line x1={70} y1={70} x2={92} y2={28} {...arm} />
-    </>
-  ) : (
-    <>
-      <line x1={29} y1={68} x2={17} y2={104} {...arm} />
-      <line x1={71} y1={68} x2={83} y2={104} {...arm} />
+      <ellipse cx={50} cy={135} rx={34} ry={4} fill="rgba(0,0,0,.12)"/>
+      <path d="M19 97 Q5 86 6 69 Q24 73 31 92 M69 92 Q76 73 94 69 Q95 86 81 97" fill={colour}/>
+      <path d="M31 118 v9 l-12 8 9-1 6 4 6-4 10 1-10-8 v-9 M61 118 v9 l-10 8 10-1 6 4 6-4 9 1-12-8 v-9" fill="#ed9b36"/>
+      <ellipse cx={50} cy={96} rx={31} ry={31} fill={colour}/>
+      <ellipse cx={50} cy={99} rx={22} ry={24} fill="#fff0cc"/>
+      {up ? <>
+        <path d="M28 97 Q8 84 5 49 Q21 52 32 78 Z M72 97 Q92 84 95 49 Q79 52 68 78 Z" fill={colour}/>
+        <path d="M25 88 Q11 74 9 56 M75 88 Q89 74 91 56" stroke="rgba(0,0,0,.12)" strokeWidth={3} fill="none"/>
+      </> : <>
+        <ellipse cx={24} cy={97} rx={10} ry={22} transform="rotate(-15 24 97)" fill={colour}/>
+        <ellipse cx={76} cy={97} rx={10} ry={22} transform="rotate(15 76 97)" fill={colour}/>
+        <path d="M17 96 l7 12 M83 96 l-7 12" stroke="rgba(0,0,0,.12)" strokeWidth={3}/>
+      </>}
+      <ellipse cx={50} cy={53} rx={23} ry={27} fill={colour}/>
+      <ellipse cx={44} cy={40} rx={11} ry={7} fill="rgba(255,255,255,.13)"/>
+      <Face pose={pose}/>
     </>
   )
 }
 
-/** Eyes and a mouth, in the ink the island's avatar uses for its face. */
+/** Duck eyes and bill, with an open bill when cheering. */
 function Face({ pose }: { pose: Pose }) {
   const ink = '#2a1712'
   const line = { stroke: ink, strokeWidth: 4.5, strokeLinecap: 'round' as const, fill: 'none' }
-  if (pose === 'joy') {
-    return (
-      <>
-        <path d="M35 52 q6 -9 12 0" {...line} />
-        <path d="M53 52 q6 -9 12 0" {...line} />
-        <path d="M37 62 h26 q0 18 -13 18 q-13 0 -13 -18z" fill={ink} />
-        <path d="M43 75 q7 -6 14 0 q-7 5 -14 0z" fill="#e8705a" />
-      </>
-    )
-  }
   return (
     <>
-      <circle cx={41} cy={50} r={4.5} fill={ink} />
-      <circle cx={59} cy={50} r={4.5} fill={ink} />
-      {pose === 'happy' ? <path d="M39 63 q11 11 22 0" {...line} /> : <path d="M40 67 h20" {...line} />}
+      {pose==='joy' ? <><path d="M35 48 q5 -7 10 0" {...line}/><path d="M55 48 q5 -7 10 0" {...line}/></> : <>
+        <ellipse cx={40} cy={48} rx={5.5} ry={7} fill="#fffbea"/><ellipse cx={60} cy={48} rx={5.5} ry={7} fill="#fffbea"/>
+        <circle cx={41} cy={49} r={3.5} fill={ink}/><circle cx={59} cy={49} r={3.5} fill={ink}/>
+      </>}
+      <ellipse cx={50} cy={pose==='joy'?69:64} rx={20} ry={pose==='joy'?10:5} fill="#a95f30"/>
+      <ellipse cx={50} cy={pose==='joy'?74:67} rx={19} ry={4} fill="#e49534"/>
+      <ellipse cx={50} cy={61} rx={22} ry={7} fill="#f4b54b"/>
+      <circle cx={44} cy={59} r={1.2} fill="#a56731"/><circle cx={56} cy={59} r={1.2} fill="#a56731"/>
     </>
   )
 }
@@ -203,11 +204,13 @@ function Flop({ player, delay }: { player: Placed; delay: number }) {
     <div style={flopWrap} data-pose="flop" data-player={player.id}>
       <div className="localrot-podium-move" style={{ animation: `localrot-flop 0.7s cubic-bezier(.55,0,.8,.4) ${delay}s both`, transformOrigin: '92% 90%' }}>
         <svg viewBox="0 0 150 64" style={{ display: 'block', width: 'calc(min(120px, 15vh) * 1.1)', height: 'auto' }} aria-hidden>
-          {/* Arms flung out ahead, where the face went down. */}
-          <line x1={24} y1={30} x2={4} y2={16} stroke={player.colour} strokeWidth={10} strokeLinecap="round" />
-          <line x1={24} y1={50} x2={4} y2={60} stroke={player.colour} strokeWidth={10} strokeLinecap="round" />
-          <rect x={12} y={16} width={132} height={44} rx={22} fill={player.colour} />
-          <rect x={12} y={16} width={132} height={44} rx={22} fill="rgba(0,0,0,0.12)" />
+          <path d="M112 28 L143 11 136 35 146 47 119 49" fill={player.colour}/>
+          <ellipse cx={80} cy={38} rx={45} ry={23} fill={player.colour}/>
+          <ellipse cx={74} cy={32} rx={28} ry={12} fill="rgba(0,0,0,.12)"/>
+          <circle cx={32} cy={32} r={22} fill={player.colour}/>
+          <ellipse cx={15} cy={40} rx={14} ry={7} fill="#ed9b36"/>
+          <path d="M28 29 l8 5 M36 29 l-8 5" stroke="#243e40" strokeWidth={3} strokeLinecap="round"/>
+          <path d="M105 52 l9 10 5-6 8 4-4-9" fill="#ed9b36"/>
         </svg>
       </div>
       <div className="localrot-podium-move" style={{ ...stars, animation: `localrot-stars 1.4s linear ${delay + 0.7}s infinite both` }} aria-hidden>

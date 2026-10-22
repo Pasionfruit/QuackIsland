@@ -1,5 +1,9 @@
 # 70-duck-szn
 
+The app-wide character update uses `02-player.createAvatar` for ducks and the
+hunter, preserving their original heights, facing, crouch and hunter equipment.
+`02-player` is declared in the proposed local dependency entry.
+
 Duck Szn is a first-person, one-vs-all hunt in a procedural marsh. One human is
 the Hunter; everyone else is a duck. The Hunter has 60 seconds to tag every
 duck with one hit each. If any active duck survives at 60 seconds, the ducks

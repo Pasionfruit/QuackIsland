@@ -1,5 +1,12 @@
 # 15-minigames
 
+The app-wide duck update replaces the podium's capsule figures with matching
+duck illustrations: broad bills, wings, tails and webbed feet. Colour, ranking,
+names and result animations are retained. First place raises its wings; fourth
+and below use a fallen duck pose. This DOM interface adds no WebGL canvas.
+The four-place art fixture is captured in
+`../02-player/review/screenshots/podium-ducks.png`.
+
 ## What this is
 
 The minigames Volcano Island is made of: **forty-six of them**, forty

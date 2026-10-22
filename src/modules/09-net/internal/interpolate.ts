@@ -73,6 +73,7 @@ function blend(a: DuckState, b: DuckState, t: number): DuckState {
     fall: lerp(a.fall ?? 0, b.fall ?? 0, t),
     // Not interpolable, so it takes whichever snapshot is nearer.
     swimming: t < 0.5 ? a.swimming : b.swimming,
+    emote: (t < 0.5 ? a.emote : b.emote) ?? 'smile',
     speed: lerp(a.speed, b.speed, t),
   }
 }

@@ -1,5 +1,10 @@
 # 09-net
 
+The app-wide duck review found that movement interpolation omitted the emote
+field even though packets carried it. The interpolated state now uses the
+nearer snapshot's expression, falling back to smile for older packets. Two
+regression tests cover the discrete choice and backwards compatibility.
+
 ## What this is
 
 Lobbies. Type a code, and everyone with the same code is on the same island and
@@ -225,7 +230,7 @@ Two browsers, two lobbies, and `DEPLOY.md` has the commands.
 - **Have a third browser join a different code.** It must see nobody.
 - **Stop the relay while joined.** The status should go offline and the game
   should carry on.
-- **Check the perf HUD with several peers.** Each body is two draw calls, the
+- **Check the perf HUD with several peers.** Each body is three draw calls, the
   same as yours.
 - **Play without joining anything at all.** Everything should be exactly as it
   was.

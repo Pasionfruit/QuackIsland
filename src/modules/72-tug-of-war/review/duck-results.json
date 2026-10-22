@@ -1,0 +1,42 @@
+{
+  "game": {
+    "fps": 63,
+    "frameMs": 15.91,
+    "drawCalls": 38,
+    "triangles": 9362,
+    "programs": 5,
+    "geometries": 34,
+    "textures": 3
+  },
+  "models": {
+    "geometries": [
+      {
+        "colour": "#dbb469",
+        "triangles": 1400,
+        "finite": true
+      },
+      {
+        "colour": "#73a9ad",
+        "triangles": 1400,
+        "finite": true
+      },
+      {
+        "colour": "#d69383",
+        "triangles": 1400,
+        "finite": true
+      }
+    ],
+    "drawCalls": 12,
+    "triangles": 4272
+  },
+  "eightPlayer": {
+    "fps": 60,
+    "frameMs": 16.67,
+    "drawCalls": 50,
+    "triangles": 13616,
+    "programs": 5,
+    "geometries": 43,
+    "textures": 3
+  },
+  "errors": []
+}

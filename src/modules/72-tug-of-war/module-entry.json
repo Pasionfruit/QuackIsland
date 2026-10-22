@@ -2,7 +2,7 @@
   "id":"72-tug-of-war",
   "title":"Tug-of-war: one key-mashing solo versus a sequence-typing team",
   "status":"in_progress",
-  "dependsOn":["00-core","09-net","15-minigames","68-minigame-kit"],
+  "dependsOn":["00-core","02-player","09-net","15-minigames","68-minigame-kit"],
   "budgets":{"drawCallsMax":100,"trianglesMax":15000,"assetTrianglesDefault":3000,"assetTextureMaxPx":0},
   "blockers":["Catalogue, pipeline and composition registration are deferred under the user's module-only scope."],
   "blocks":[
@@ -10,8 +10,9 @@
     {"id":"72.2","title":"Validated intents and shared arena loop","status":"done"},
     {"id":"72.3","title":"Procedural scene, keyboard input and HUD","status":"done"},
     {"id":"72.4","title":"Standalone preview, verification and review evidence","status":"done"},
-    {"id":"72.5","title":"Registration and two-key human gate","status":"pending"}
+    {"id":"72.5","title":"Registration and two-key human gate","status":"pending"},
+    {"id":"72.6","title":"Detailed procedural duck characters and visual review","status":"done"}
   ],
-  "measured":{"players":5,"drawCalls":53,"triangles":3944,"fps":57,"source":"review/browser-results.json"},
+  "measured":{"players":5,"drawCalls":38,"triangles":9362,"fps":60,"duckTriangles":1400,"eightPlayerArtFixture":{"drawCalls":50,"triangles":13616},"source":"review/duck-results.json"},
   "gate":{"machine":{"status":"pending","reason":"Unknown module until authorized pipeline registration"},"human":{"status":"pending"}}
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useThree } from '@react-three/fiber'
 import { Group, InstancedMesh, Object3D, PerspectiveCamera } from 'three'
 import { createRng, getCameraMode, hashSeed, PRIORITY, setCameraMode, useGameFrame } from '../../00-core'
+import { createAvatar } from '../../02-player'
 import { arenaFor, EDGE } from './arena'
 import { direction, eye, PALETTE, standing, type Player, type Round } from './rules'
 
@@ -33,6 +34,7 @@ function Reeds({ seed }: { seed: number }) {
 }
 function Body({ player, colour }: { player: Player; colour: string }) {
   const group = useRef<Group>(null)
+  const avatar=useMemo(()=>createAvatar(colour),[colour])
   useGameFrame(() => {
     if (!group.current) return
     group.current.position.set(player.x, 0, player.z)
@@ -40,18 +42,12 @@ function Body({ player, colour }: { player: Player; colour: string }) {
     group.current.scale.y = player.crouch ? 0.4 : 1
   }, PRIORITY.world)
   if (player.role === 'hunter') return <group ref={group}>
-    <mesh position={[0, 0.92, 0]}><boxGeometry args={[0.55, 0.75, 0.34]} /><meshStandardMaterial color="#47665c" /></mesh>
-    <mesh position={[0, 1.49, 0]}><sphereGeometry args={[0.23, 8, 6]} /><meshStandardMaterial color="#e9c39b" /></mesh>
+    <group rotation={[0,Math.PI,0]}><primitive object={avatar}/></group>
     <mesh position={[0, 1.72, 0]}><cylinderGeometry args={[0.27, 0.32, 0.17, 8]} /><meshStandardMaterial color="#d38b4c" /></mesh>
-    {[-0.17, 0.17].map((x) => <mesh key={x} position={[x, 0.32, 0]}><boxGeometry args={[0.2, 0.64, 0.25]} /><meshStandardMaterial color="#3d514b" /></mesh>)}
     <mesh position={[0.3, 1.08, -0.4]}><boxGeometry args={[0.1, 0.12, 0.8]} /><meshStandardMaterial color="#3d4947" /></mesh>
   </group>
   return <group ref={group}>
-    <mesh position={[0, 0.35, 0]}><sphereGeometry args={[0.32, 10, 7]} /><meshStandardMaterial color={colour} /></mesh>
-    <mesh position={[0, 0.73, -0.08]}><sphereGeometry args={[0.22, 10, 7]} /><meshStandardMaterial color={colour} /></mesh>
-    <mesh position={[0, 0.69, -0.31]}><boxGeometry args={[0.23, 0.09, 0.22]} /><meshStandardMaterial color="#dc9453" /></mesh>
-    {[-0.09, 0.09].map((x) => <mesh key={x} position={[x, 0.8, -0.27]}><sphereGeometry args={[0.025, 5, 4]} /><meshStandardMaterial color="#273d3b" /></mesh>)}
-    {[-0.16, 0.16].map((x) => <mesh key={x} position={[x, 0.04, -0.07]}><boxGeometry args={[0.14, 0.06, 0.24]} /><meshStandardMaterial color="#d69558" /></mesh>)}
+    <group rotation={[0,Math.PI,0]} scale={.54}><primitive object={avatar}/></group>
   </group>
 }
 function Camera({ round }: { round: Round }) {

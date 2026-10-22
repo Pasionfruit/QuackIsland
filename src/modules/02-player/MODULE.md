@@ -71,7 +71,7 @@ reason — see **Why the water module does not own swimming** below.
 `inputBlocked` is passed in for the same reason again: whether a minigame or a
 board has the keyboard is not this module's business. While it says yes, keys
 going down are ignored and not swallowed, the body stands still, and keys held
-when it started are let go - so the pill does not walk and jump on the island,
+when it started are let go - so the duck does not walk and jump on the island,
 footsteps and all, behind a minigame using the same WASD and Space. Keys coming
 up are always heard, so nothing is left held down when the screen closes.
 
@@ -146,9 +146,8 @@ up are always heard, so nothing is left held down when the screen closes.
 - **No diving and no treading water.** Swimming is horizontal only: you are held
   at the surface and cannot go under or climb out onto anything but the beach.
 - **No drowning, stamina, or any other state that could kill you.**
-- **No animation.** The body is one rigid piece: no walk cycle, no limbs, no
-  blink. The face is baked into its geometry, so anything that moves it means
-  a different way of building the body, not more code here.
+- **No skeletal animation.** Three rigid meshes provide the body, movable head
+  and expression. Walking and wing flapping are not rigged.
 - **No first-person body.** The whole body is hidden in first person rather
   than a separate pair of hands being drawn — see the limitation below.
 - No first person, and no aiming beyond turning the camera.
@@ -185,58 +184,34 @@ world; without `seaLevel` it never swims and simply walks the sea bed; without
 
 ## The body
 
-A capsule the colour of a red pill, `PLAYER.height` tall and `PLAYER.radius`
-across, with a face on the front. It is built out of primitives in
-`internal/avatar.ts` — there is no model and no loader.
+The shared character is a procedural 3D duck. It has a broad bill with a lower
+jaw and nostrils, eyes with highlights, a pale breast, folded wings with feather
+tips, a raised tail fan and three-toed webbed feet. Player colours tint the
+feathers while feet and bill stay orange. There are no downloads or model assets.
 
-That is a deliberate step back from a glTF duck that used to stand here. A
-model is a whole category of silent failure: upside down, backwards, a hundred
-times too big, feet that ship detached, a download that never arrives. All of
-it still renders something, so only looking catches it. None of that can happen
-to a capsule and four numbers.
+`createAvatar(colour?)` still returns an independent `Group`, facing +Z with
+feet at y=0 and a neutral height of 1.8 metres. The controller, collision radius,
+movement, camera height and network packet shape keep their existing contracts.
+The longer bill and tail are cosmetic and do not enlarge gameplay hitboxes.
 
-**The face is what says which way is forward.** A featureless pill cannot show
-its heading, and the heading is the one thing you must be able to read — a body
-that walks sideways looks like a controls bug. So it gets two eyes and a smile,
-on +Z, which is where a heading of zero looks.
+Each duck is three draw calls: body, movable head, and expression. Body/head
+geometry is cached per colour, with vertex colours for the bill, feet, breast
+and feathers. Expressions share geometry and material across all colours.
+The neutral duck is 1,400 triangles; every expression is below 3,000 triangles.
+No caller should dispose these cached geometries or materials.
 
-**The face sits on the body, not in front of it.** Every piece is placed
-against the curve of the capsule at its own sideways offset and then pushed in
-by half its own radius, so each one reads as a dome on the surface whatever
-size it is — an eye and a dot of the smile stand equally proud without either
-being given its own number. All of the face is kept on the straight part of the
-capsule, between the two rounded ends, which is what makes that placement exact
-arithmetic rather than a guess. There is a test for each of those.
+`setAvatarHeadLook` rotates the whole head, including the bill and expression;
+yaw and pitch are limited to 1.35 radians so the duck cannot turn its head
+backwards. All seven lobby emotes have duck-specific eyes, brows and bill poses.
+`facePoints` and `armPoints` remain available as compatibility placement guides;
+they no longer build the rendered character.
 
-**The smile is drawn as overlapping dots** on the bottom of a circle, rather
-than as a ring or a flat decal. A flat shape in front of a round body either
-cuts into it or hangs off it at the ends; dots follow the curve. A test checks
-that consecutive dots overlap, so it reads as one line and not as a dotted one.
-
-**A whole body is two draw calls**, and every body in the world shares one set
-of geometry and materials. `createAvatar` takes an optional colour and caches
-one material per colour, so a minigame with eight blue players costs one
-material between them and the geometry is still the geometry. The face is merged into a single geometry when the
-first body is built, so eyes and smile cost one call between them however many
-pieces they are made of. `createAvatar` hands out a fresh `Group` over that
-shared geometry — a local player and a remote one must never share a transform.
-
-The face is left out of the shadow pass on purpose. It is a few centimetres of
-detail pressed against a body that is already casting, and nothing it could add
-would be visible.
-
-**It has arms**, one capsule a side, merged into the trunk rather than hung off
-it as their own meshes. Nothing animates them separately, so two more meshes
-would be two more draw calls for a body standing at exactly one pose — the
-whole body is still two calls with them on. They hang from `AVATAR.shoulderY`
-and swing out by `AVATAR.armOut`, which is a small angle: the silhouette should
-still read as a pill with arms and not as a starfish. `armPoints` is pure and
-tested, so an arm inside the body or floating a hand's width off it is caught
-by arithmetic rather than by looking.
-
-**They are temporary.** They exist so a minigame that pushes people about has a
-body worth looking at while it does, and they are meant to be thrown away the
-day there is a rig and a real animation.
+The home-page player, remote lobby players and existing `createAvatar` minigames
+inherit this design through the public contract. The separate 69?72 game scenes
+also consume this builder, adapting scale and their -Z forward convention.
+The podium interface uses matching duck illustrations, including raised wings
+and a fallen pose. The app-wide request supersedes the earlier module-only
+scope for those character consumers. Frozen modules were not edited.
 
 ## Being knocked over
 
@@ -269,15 +244,10 @@ two zombies landing on the same player cannot cut each other's short.
 
 ## How far it tips when it swims
 
-`lean` in the controller means *lie flat*, and `AVATAR.swimTip` is the fraction
-of that quarter turn the body actually takes. It is `1`: a pill swims the way
-it always did, flat out with its long axis along the way it is going.
-
-The cost of that is that the face points at the sea bed while you swim. Turn
-`swimTip` down — 0.2 or so — to float upright and lean into the stroke instead,
-keeping the face out of the water. The controller is untouched either way, and
-`bodyPose` is what both the local body and every remote one are placed with, so
-they cannot end up floating at different heights.
+`lean` still comes from the movement controller, but `AVATAR.swimTip` is 0.12:
+the duck floats nearly upright with a slight forward lean instead of pitching
+its head into the water. `bodyPose` applies the same placement to local and
+remote ducks. Stuns can still tip the body fully onto its back.
 
 ## First and third person
 
@@ -355,95 +325,24 @@ that the seam is the right way round, and it is in both modules' review lists.
 
 ## How to review
 
-- **Look at the body.** It should have an arm hanging each side, swung out a
-  little, clear of the face and not stuck out in front. Walk about: they do not
-  swing, and are not meant to yet.
-- **Press "knock over" in the debug panel's CAMERA section.** The body should
-  tip over *backwards* — face up, not face down — lie there about a second, and
-  climb back up more slowly than it went down.
-- **Hold WASD and space through the whole stun.** Nothing should move until it
-  is back on its feet, and then everything should work at once.
-- **Knock yourself over on a slope, and off a ledge.** It should still slide
-  and still fall: being stunned stops you steering, not everything else.
-- **Knock yourself over twice in quick succession.** The second must not cut
-  the first short or leave the body stuck on the floor.
-- **Knock yourself over in deep water.** It should float rather than sink, the
-  same as treading water does.
-- **Click once, left and right, without dragging. The camera must not move at
-  all.** This is the whole reason there is no pointer lock.
-- **Hold shift to run.** Nearly twice walking pace, and it must not punch
-  through the ground on a slope or make diagonals faster.
-- **Hold A, then D.** You should move left and right relative to the camera,
-  with the body turning to face the way it is going, at any camera angle.
-- **Hold left and drag** to look, left and right and a little up and down.
-- **Hold right and drag** to slide the view off the player; the world should
-  follow the cursor. **Wheel** to pull back far enough to see the whole island.
-  **F or the button** snaps back to the player.
-- **Look around while walking.** Walking forward must keep going away from the
-  camera as it turns - steering, not stuttering or reversing.
-- **Press V, or the buttons in the panel.** The horizon must not jump and the
-  controls must not invert: walking forward before and after the swap should
-  go the same way.
-- **In first person, look up at the sky and down at your feet.** Both should
-  be reachable. Then swap to third person - the camera must not end up in the
-  ground.
-- **In first person, try to pan and zoom.** Neither should do anything.
-- **Swap while swimming, and while jumping.** Nothing should lurch.
-- **WASD walks relative to the camera**, and the body turns to face where it
-  is going. Walking while turning should feel like steering, not like the world
-  spinning — and holding forward must go in a straight line, not a spiral.
-- **Hold S.** The body should turn around and walk towards the camera, not
-  reverse with its face still pointing away.
-- **Space jumps**, once, from the ground. Holding it does not hover or repeat.
-- **The feet stay on the sand** over every slope, and across chunk and
-  level-of-detail borders. This is the same check as the terrain probe, but
-  under a body that is actually moving.
-- **Run down the steepest dune you can find, and look behind you.** The feet
-  must stay on the sand the whole way and the prints must keep coming. Bouncing
-  down a slope a few centimetres in the air looks almost right and leaves no
-  prints at all, which is how this was found.
-- **Jump while running downhill.** It should still be a proper jump.
-- **Walk into the sea, slowly.** You should wade through the shallows upright,
-  then tip forward and start swimming once it is over your depth — a lie-down,
-  not a snap.
-- **Do that again at high tide and at low tide.** Where you start swimming
-  should move up and down the beach with the water, because it is decided from
-  the tide-adjusted level rather than from a fixed one.
-- **Walk back out.** You should stand up again as you reach the shallows, at
-  about the same depth you started swimming, and not pop upright early or drag
-  on your face up the beach.
-- **Stand exactly at the depth where it changes and walk along the shore.** It
-  must settle on one or the other, not flicker between standing and swimming.
-- **Swim out over deep water.** You should stay at the surface, about half a
-  metre down, however deep the sea bed goes — not sink, not ride on top — and
-  rise and fall with the swell rather than holding one level.
-- **Swim in a direction, then let go of the keys.** The body should stand
-  upright and tread water where it is, not stay face down. Press again and it
-  should tip back over.
-- **Swim while turning the camera.** The body should follow where it is
-  *going*, not where the camera points — the opposite of how it behaves on
-  land. Check A and D too: swimming right should point the body right.
-- **Turn the camera while treading water.** The body must not spin.
-- **Press space while swimming.** Nothing should happen.
-- **Hold shift while swimming.** No sprint; swimming is slower than walking.
-- **Turn the water module off in the panel and walk into the sea.** You must
-  still swim.
-- Walking to the edge of the world stops you rather than dropping you off it.
-- The camera does not clip into the ground when you walk downhill.
-- **Look at the body itself.** Standing on the sand rather than sunk into it or
-  hovering, and about as tall as you would expect a character to be against the
-  dunes.
-- **Look at the face.** Two eyes and a smile, sitting *on* the front of the
-  body — not floating in front of it, not half swallowed by it, and not sliding
-  off the curve at the ends of the smile. Orbit right round: it should go
-  behind the body from the back rather than showing through it.
-- **Walk in a circle and watch the face.** It should lead, at every angle.
-- **Swim.** The body should lie flat, long axis along the way it is going, and
-  stand back up when you stop.
-- **Check the draw calls in the perf HUD** with the player on and off. A body
-  should cost two.
-- Try it at **night** as well as daylight — the body should still read against
-  the sand.
+1. Open `http://localhost:5199/`. Check the body is a duck, with a wide bill,
+   folded feathered wings, a pale breast, raised tail and webbed feet. Orbit
+   the camera and confirm the model points the way it walks.
+2. Use WASD, Shift and Space to walk, run and jump. Feet should settle on the
+   ground. The decorative bill and tail extend beyond the original collision
+   capsule; check tight gaps and groups visually.
+3. Join a lobby in a separate browser profile. Both players should be ducks
+   in their own colours. Walk and look around; use the E emote wheel and check
+   the other browser sees the chosen eyes/bill expression.
+4. Walk into deep water. The duck floats upright and leans slightly while
+   swimming. Walk out and check ground contact. A stun should still knock it
+   onto its back, and first-person view should hide the whole model.
+5. Open several minigames from the dashboard. Their existing avatar calls
+   should show ducks. Check colours, owner markers and head/held-item placement.
+6. Review the podium art for every placement: raised wings, happy/straight
+   faces and fallen ducks, with existing names and replay/dashboard controls.
+7. For the separate game previews, follow `review/README.md`. Screenshots and
+   machine-readable browser results are retained there for comparison.
 
 ## Gate record
 
@@ -452,3 +351,31 @@ Filled in when the human passes it.
 ## Measured
 
 Filled in from the perf HUD at gate time.
+
+## App-wide duck review (October 2026)
+
+`review/app-duck-check.mjs` opens the actual application home page, joins two
+separate browser processes to a lobby, drives native WASD, checks that the guest
+expression reaches the host, and opens registered Zombie Tag in both browsers.
+It also renders a four-place podium art fixture through the public finish API;
+that fixture is a visual review, not a claimed gameplay win. Screenshots and
+read-only scene reports are kept in `review/`. Existing local servers are reused.
+
+`09-net` interpolation now retains the nearer snapshot's emote; missing older
+values fall back to smile. This fixes the remote-expression loss found during
+the duck review. All frozen source files and public frozen contracts remain intact.
+
+Human visual approval is pending. Review from `http://localhost:5199/`, walk and
+jump, inspect the duck from front/back, use the E emote wheel with a second
+browser, swim offshore, and enter minigames. Check the longer decorative bill
+and tail around obstacles and dense groups. Palette colours and standings stay
+recognizable across the 3D world and podium illustrations.
+
+Machine validation: `npm run gate -- 02-player` and `npm run gate -- 09-net`
+both exit 0. Their checks include typecheck, production build, all 2,841 tests,
+boundaries, frozen files, frozen contracts and budgets. The 69–71 standalone
+previews and Tug-of-war's eight-player art fixture render without console or
+runtime errors. Source audit confirms all remaining `createAvatar` consumers
+receive the shared duck. Character-specific capsule placeholders in the newer
+game scenes and podium have been replaced; other animal species and vehicles
+retain their gameplay identities. No human PASS or commit has been created.

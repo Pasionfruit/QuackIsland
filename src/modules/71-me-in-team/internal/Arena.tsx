@@ -2,11 +2,13 @@ import { useEffect, useMemo, useRef, type RefObject } from 'react'
 import { useThree } from '@react-three/fiber'
 import { Group, InstancedMesh, Object3D, PerspectiveCamera, Vector3 } from 'three'
 import { getCameraMode, PRIORITY, setCameraMode, useGameFrame } from '../../00-core'
+import { createAvatar } from '../../02-player'
 import { courseFor, HALF_LENGTH, HALF_WIDTH } from './course'
 import { activeTeam, CHAIN_LENGTH, PALETTE, type Hands, type Player, type Round } from './rules'
 
 function Character({ player, colour, mine }: { player: Player; colour: string; mine: boolean }) {
   const body = useRef<Group>(null)
+  const avatar=useMemo(()=>createAvatar(colour),[colour])
   useGameFrame(() => {
     const g = body.current
     if (!g) return
@@ -16,11 +18,7 @@ function Character({ player, colour, mine }: { player: Player; colour: string; m
     if (Math.hypot(dx, dz) > .03) g.rotation.y = Math.atan2(-dx, -dz)
   }, PRIORITY.world)
   return <group ref={body}>
-    <mesh position={[0, .4, 0]}><sphereGeometry args={[.36, 10, 7]} /><meshStandardMaterial color={colour} /></mesh>
-    <mesh position={[0, .88, -.05]}><sphereGeometry args={[.26, 10, 7]} /><meshStandardMaterial color={colour} /></mesh>
-    <mesh position={[0, .83, -.33]}><boxGeometry args={[.25, .1, .23]} /><meshStandardMaterial color="#dda171" /></mesh>
-    {[-.11, .11].map((x) => <mesh key={x} position={[x, .96, -.27]}><sphereGeometry args={[.027, 5, 4]} /><meshStandardMaterial color="#355359" /></mesh>)}
-    {[-.17, .17].map((x) => <mesh key={x} position={[x, .035, -.07]}><boxGeometry args={[.17, .07, .29]} /><meshStandardMaterial color="#d99a66" /></mesh>)}
+    <group rotation={[0,Math.PI,0]} scale={.7}><primitive object={avatar}/></group>
     {mine && <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, .015, 0]}><ringGeometry args={[.47, .57, 20]} /><meshBasicMaterial color="#fff6cf" /></mesh>}
   </group>
 }

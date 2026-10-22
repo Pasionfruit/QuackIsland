@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useThree } from '@react-three/fiber'
-import type { Group, OrthographicCamera } from 'three'
-import { PRIORITY, useGameFrame } from '../../00-core'
+import { OrthographicCamera, type Group } from 'three'
+import { getCameraMode, setCameraMode, PRIORITY, useGameFrame } from '../../00-core'
+import { createAvatar } from '../../02-player'
 import { COLOURS, doors, REVEAL_SECONDS, type Round } from './rules'
 
 export const doorX = (index: number, count: number) => (index - (count - 1) / 2) * 2.7
@@ -31,6 +32,7 @@ function Hatch({ round, index, point }: { round: Round; index: number; point: (d
 
 function Duck({ round }: { round: Round }) {
   const body = useRef<Group>(null)
+  const avatar=useMemo(()=>createAvatar('#f7d56c'),[])
   useGameFrame((_state, dt) => {
     const g = body.current
     if (!g) return
@@ -43,26 +45,32 @@ function Duck({ round }: { round: Round }) {
     g.rotation.z = falling ? Math.min(0.7, round.phaseTime) : Math.sin(round.elapsed * 3) * 0.025
   }, PRIORITY.world)
   return <group ref={body} position={[0, 0.7, 2.6]}>
-    <mesh><sphereGeometry args={[0.42, 12, 8]} /><meshStandardMaterial color="#f7d56c" /></mesh>
-    <mesh position={[0, 0.48, -0.06]}><sphereGeometry args={[0.32, 12, 8]} /><meshStandardMaterial color="#ffe39a" /></mesh>
-    <mesh position={[0, 0.42, -0.39]}><boxGeometry args={[0.26, 0.1, 0.25]} /><meshStandardMaterial color="#e7984e" /></mesh>
-    {[-0.13, 0.13].map((x) => <mesh key={x} position={[x, 0.55, -0.32]}><sphereGeometry args={[0.035, 6, 4]} /><meshStandardMaterial color="#233e48" /></mesh>)}
-    {[-0.23, 0.23].map((x) => <mesh key={x} position={[x, -0.4, -0.08]}><boxGeometry args={[0.2, 0.07, 0.32]} /><meshStandardMaterial color="#e7984e" /></mesh>)}
+    <group position={[0,-.66,0]} rotation={[0,Math.PI,0]} scale={.8}><primitive object={avatar}/></group>
   </group>
 }
 
+function Adviser({colour}:{colour:string}) {
+  const avatar=useMemo(()=>createAvatar(colour),[colour])
+  return <group position={[0,-.6,0]} scale={.6}><primitive object={avatar}/></group>
+}
+
 export function Stage({ round, advance, point }: { round: Round; advance: (dt: number) => void; point: (door: number) => void }) {
-  const { camera, size } = useThree()
+  const { size, get, set } = useThree()
+  const camera=useMemo(()=>new OrthographicCamera(-1,1,1,-1,.1,100),[])
+  useEffect(()=>{
+    const previousCamera=get().camera,previousMode=getCameraMode()
+    camera.position.set(0,11,13);camera.lookAt(0,0,0)
+    setCameraMode('player');set({camera})
+    return ()=>{set({camera:previousCamera});setCameraMode(previousMode)}
+  },[camera,get,set])
   useEffect(() => {
-    const cam = camera as OrthographicCamera
-    cam.zoom = Math.min(size.width / 18.5, size.height / 13)
-    cam.updateProjectionMatrix()
+    camera.left=-size.width/2;camera.right=size.width/2;camera.top=size.height/2;camera.bottom=-size.height/2
+    camera.zoom = Math.min(size.width / 18.5, size.height / 13)
+    camera.updateProjectionMatrix()
   }, [camera, size.width, size.height])
   useGameFrame((_state, dt) => advance(Math.min(dt, 0.05)), PRIORITY.simulation)
   return <>
     <color attach="background" args={['#c4dce3']} />
-    <ambientLight intensity={1.8} />
-    <directionalLight position={[-6, 12, 8]} intensity={2.4} />
     <mesh position={[0, -0.75, 0]}><boxGeometry args={[18, 0.6, 10]} /><meshStandardMaterial color="#769da3" /></mesh>
     <mesh position={[0, -0.18, 3.9]}><boxGeometry args={[17, 0.3, 3]} /><meshStandardMaterial color="#ecdfc4" /></mesh>
     <mesh position={[0, -0.18, -3.7]}><boxGeometry args={[17, 0.3, 3]} /><meshStandardMaterial color="#ecdfc4" /></mesh>
@@ -71,8 +79,7 @@ export function Stage({ round, advance, point }: { round: Round; advance: (dt: n
     <mesh position={[0, 1.1, -4.8]}><boxGeometry args={[15.5, 0.13, 0.13]} /><meshStandardMaterial color="#56828b" /></mesh>
     {Array.from({ length: doors(round) }, (_, i) => <Hatch key={`${round.stage}:${i}`} round={round} index={i} point={point} />)}
     {round.players.filter((p) => p.role === 'adviser' && !p.left).map((p, i, list) => <group key={p.id} position={[(i - (list.length - 1) / 2) * 1.4, 0.6, -3.6]}>
-      <mesh><capsuleGeometry args={[0.22, 0.4, 3, 8]} /><meshStandardMaterial color={COLOURS[(i + 1) % COLOURS.length]} /></mesh>
-      <mesh position={[0, 0.5, 0]}><sphereGeometry args={[0.21, 8, 6]} /><meshStandardMaterial color="#fae7c8" /></mesh>
+      <Adviser colour={COLOURS[(i + 1) % COLOURS.length]}/>
     </group>)}
     <Duck round={round} />
   </>

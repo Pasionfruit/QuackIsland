@@ -28,7 +28,7 @@ describe('the body', () => {
     expect(box.max.y).toBeCloseTo(PLAYER.height, 2)
   })
 
-  it('is as wide as the controller is round, plus a pair of arms', () => {
+  it('keeps wings close to the collision body, with a duck bill and tail profile', () => {
     const size = boxOf(createAvatar()).getSize(new Vector3())
     // The arms hang outside the trunk, so the silhouette is wider than the
     // capsule the controller collides with - by less than an arm either side,
@@ -39,7 +39,8 @@ describe('the body', () => {
     // allowed to run over - but the arms must not add to it, or they are
     // sticking out in front instead of hanging down.
     expect(size.z).toBeGreaterThanOrEqual(PLAYER.radius * 2)
-    expect(size.z).toBeLessThan(PLAYER.radius * 2 + 0.1)
+    expect(size.z).toBeGreaterThan(PLAYER.height*.9)
+    expect(size.z).toBeLessThan(PLAYER.height*1.15)
   })
 
   it('is three draw calls, over geometry every body shares', () => {
@@ -162,6 +163,35 @@ describe('the face', () => {
   })
 })
 
+describe('duck model compatibility',()=>{
+  it('keeps every expression finite and inside the model budget',()=>{
+    const avatar=createAvatar('#73a9ad')
+    for(const emote of FACE_EMOTES){
+      setAvatarEmote(avatar,emote)
+      let triangles=0
+      for(const mesh of meshes(avatar)){
+        const positions=mesh.geometry.getAttribute('position')
+        expect(Array.from(positions.array).every(Number.isFinite)).toBe(true)
+        expect(mesh.geometry.getAttribute('color').count).toBe(positions.count)
+        triangles+=(mesh.geometry.index?.count??positions.count)/3
+      }
+      expect(triangles).toBeLessThan(3000)
+    }
+  })
+
+  it('turns the bill with the head while the feet stay planted',()=>{
+    const avatar=createAvatar(), body=meshes(avatar)[0]
+    avatar.updateMatrixWorld(true)
+    const feet=boxOf(body)
+    const face=avatar.getObjectByName('avatar-face') as Mesh
+    expect(boxOf(face).max.z).toBeGreaterThan(.9)
+    setAvatarHeadLook(avatar,Math.PI/2,0)
+    avatar.updateMatrixWorld(true)
+    expect(boxOf(face).max.x).toBeGreaterThan(.6)
+    expect(boxOf(body).min.y).toBeCloseTo(feet.min.y,9)
+  })
+})
+
 describe('how it sits in the water', () => {
   it('stands with its middle half a height up', () => {
     const { rise, tip } = bodyPose(0, PLAYER.height, PLAYER.radius)
@@ -169,11 +199,12 @@ describe('how it sits in the water', () => {
     expect(tip).toBe(0)
   })
 
-  it('lies flat when swimming, long axis along the way it is going', () => {
+  it('floats with a slight forward lean, keeping the duck head above the water', () => {
     const { rise, tip } = bodyPose(1, PLAYER.height, PLAYER.radius)
     expect(tip).toBeCloseTo(AVATAR.swimTip, 9)
     // A pill on its side floats a radius up, not half a body.
-    expect(rise).toBeCloseTo(PLAYER.radius, 9)
+    expect(rise).toBeGreaterThan(PLAYER.height*.45)
+    expect(tip).toBeLessThan(.2)
   })
 
   it('ignores a lean outside nought to one', () => {
@@ -189,10 +220,10 @@ describe('how it sits in the water', () => {
     expect(rise).toBeCloseTo(PLAYER.radius, 9)
   })
 
-  it('lies at the same height whichever way it went over', () => {
+  it('lies lower when knocked over than when floating upright', () => {
     const swimming = bodyPose(1, PLAYER.height, PLAYER.radius)
     const floored = bodyPose(0, PLAYER.height, PLAYER.radius, 1)
-    expect(floored.rise).toBeCloseTo(swimming.rise, 9)
+    expect(floored.rise).toBeLessThan(swimming.rise)
   })
 
   it('picks whichever is further over rather than adding them', () => {
@@ -201,8 +232,8 @@ describe('how it sits in the water', () => {
     expect(both.tip).toBeCloseTo(-0.9, 9)
     expect(Math.abs(both.tip)).toBeLessThanOrEqual(1)
 
-    const mostlySwimming = bodyPose(0.9, PLAYER.height, PLAYER.radius, 0.3)
-    expect(mostlySwimming.tip).toBeCloseTo(0.9, 9)
+    const mostlySwimming = bodyPose(0.9, PLAYER.height, PLAYER.radius, 0.03)
+    expect(mostlySwimming.tip).toBeCloseTo(0.9*AVATAR.swimTip, 9)
   })
 
   it('is unchanged for everything that never heard of a stun', () => {

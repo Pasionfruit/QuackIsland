@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef, useState, type FormEvent } from 'react'
-import { Canvas } from '@react-three/fiber'
+import { GameCanvas } from '../../00-core'
 import { getMyName, getNet, getPeers, sendToRoom, subscribeRoom } from '../../09-net'
 import { type MinigameRun, type Standing, useFinish } from '../../15-minigames'
 import { isCount, myId } from '../../68-minigame-kit'
@@ -100,7 +100,7 @@ export function TrustMeBroPanel({ run, initial, standalone = false }: TrustMeBro
     <div className="trust-body">
       <div className="trust-stage-wrap">
         <div className="trust-stage-note"><span className="trust-dot" /> {round.over ? 'THE VERDICT IS IN' : round.phase === 'reveal' ? 'LET’S SEE WHO YOU TRUSTED' : 'ONE SAFE DOOR. A LOT OF OPINIONS.'}</div>
-        <div className="trust-canvas" data-board><Canvas orthographic camera={{ position: [0, 11, 13], zoom: 40, near: 0.1, far: 100 }} dpr={[1, 1.5]}><Stage round={round} advance={advance} point={point} /></Canvas></div>
+        <div className="trust-canvas" data-board><GameCanvas><Stage round={round} advance={advance} point={point} /></GameCanvas></div>
         <div className="trust-door-labels" style={{ gridTemplateColumns: `repeat(${doors(round)}, 1fr)` }}>
           {Array.from({ length: doors(round) }, (_, i) => <button key={i} data-door={i} onPointerEnter={() => point(i)} onClick={() => point(i)} disabled={!choosing || solo} className={`${round.selected === i ? 'selected' : ''} ${result?.safe === i ? 'safe' : ''}`} aria-label={`Point to door ${i + 1}`}><span>DOOR</span><b>{String(i + 1).padStart(2, '0')}</b><div className="trust-point-dots">{round.players.filter((p) => !p.left && p.point === i).map((p) => <i key={p.id} title={nameOf(p.id)} style={{ background: COLOURS[round.players.indexOf(p) % COLOURS.length] }} />)}</div></button>)}
         </div>

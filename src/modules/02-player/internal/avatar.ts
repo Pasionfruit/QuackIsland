@@ -1,29 +1,17 @@
 /**
- * The body you walk around in: a red pill with a face on the front.
- *
- * Built out of primitives rather than loaded from a file. A model is a whole
- * category of silent failure - upside down, backwards, a hundred times too
- * big, a download that never arrives - and none of that can happen to four
- * numbers and a capsule. The one thing a featureless pill cannot do is show
- * which way it is pointing, so it gets a face: two eyes and a smile, on +Z,
- * which is the direction a heading of zero looks along.
- *
- * Everything is shared. The geometries and materials are built once for the
- * session, so a hundred avatars cost a hundred small meshes and not one
- * extra buffer, and the face is baked into a single geometry so a whole body
- * is two draw calls.
+ * The shared duck seen from the home page through multiplayer and minigames.
+ * Procedural geometry, feet at zero and bill toward +Z. Three meshes retain
+ * independent head look and expressions, with cached geometry per colour.
  */
 import {
-  CapsuleGeometry,
   Group,
   Mesh,
   MeshStandardMaterial,
-  SphereGeometry,
   type BufferGeometry,
 } from 'three'
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { PLAYER } from './controller'
 import { type FaceEmote } from './emote'
+import { duckBody, duckExpression, duckHead } from './duckGeometry'
 
 export const AVATAR = {
   bodyColour: '#e0563f',
@@ -80,11 +68,9 @@ export const AVATAR = {
    * How far the body tips forward when swimming, as a fraction of the quarter
    * turn the controller asks for.
    *
-   * A pill swims the way it always did: flat out, face down, long axis along
-   * the way it is going. Turn this down to keep the face out of the water -
-   * 0.2 or so floats it upright and leans it into the stroke instead.
+   * A duck stays almost upright, leaning slightly into its swim.
    */
-  swimTip: 1,
+  swimTip: 0.12,
 
   /**
    * The arms: one capsule a side, and where they hang.
@@ -202,48 +188,18 @@ export function armPoints(): { x: number; y: number; roll: number }[] {
 }
 
 /** Built on first use and then shared by every body in the world. */
-let shared: { body: BufferGeometry; head: BufferGeometry; faces: Record<FaceEmote, BufferGeometry>; ink: MeshStandardMaterial } | null = null
+let shared: { faces: Record<FaceEmote, BufferGeometry>; ink: MeshStandardMaterial } | null = null
 
 function parts() {
   if (shared) return shared
 
-  const trunk = new CapsuleGeometry(PLAYER.radius, AVATAR.bodyHeight - PLAYER.radius * 2, 6, 12)
-  // The capsule is built about its own middle and the controller keeps the
-  // feet at zero, so lift it once here rather than everywhere it is used.
-  trunk.translate(0, AVATAR.bodyHeight / 2, 0)
-
-  // The arms are merged into the trunk rather than hung off it as their own
-  // meshes: nothing animates them separately, so two more meshes would be two
-  // more draw calls for a body that is still standing at exactly one pose.
-  const limbs: BufferGeometry[] = [trunk]
-  for (const arm of armPoints()) {
-    const limb = new CapsuleGeometry(AVATAR.armRadius, AVATAR.armLength - AVATAR.armRadius * 2, 4, 8)
-    limb.rotateZ(arm.roll)
-    limb.translate(arm.x, arm.y, 0)
-    limbs.push(limb)
-  }
-  const body = mergeGeometries(limbs, false) as BufferGeometry
-  for (const limb of limbs) limb.dispose()
-
   const faces = {} as Record<FaceEmote, BufferGeometry>
   for (const emote of ['smile', 'mad', 'scared', 'laugh', 'sad', 'surprised', 'mog'] as const) {
-    const pieces: BufferGeometry[] = []
-    for (const point of facePoints(emote)) {
-      const sphere = new SphereGeometry(point.radius, 10, 8)
-      sphere.translate(point.x, point.y, point.z)
-      pieces.push(sphere)
-    }
-    faces[emote] = mergeGeometries(pieces, false) as BufferGeometry
-    for (const piece of pieces) piece.dispose()
+    faces[emote] = duckExpression(emote)
   }
-
-  const head = new SphereGeometry(AVATAR.headRadius, 12, 10)
-
   shared = {
-    body,
-    head,
     faces,
-    ink: new MeshStandardMaterial({ color: AVATAR.faceColour, roughness: 0.7 }),
+    ink: new MeshStandardMaterial({ vertexColors: true, roughness: 0.7 }),
   }
   return shared
 }
@@ -255,12 +211,12 @@ function parts() {
  * fresh material each time would be a fresh shader program each time. Keyed by
  * the colour string, so eight blue players cost one material between them.
  */
-const skins = new Map<string, MeshStandardMaterial>()
+const skins = new Map<string, { body: BufferGeometry; head: BufferGeometry; material: MeshStandardMaterial }>()
 
-function skinFor(colour: string): MeshStandardMaterial {
+function skinFor(colour: string) {
   const had = skins.get(colour)
   if (had) return had
-  const made = new MeshStandardMaterial({ color: colour, roughness: 0.55 })
+  const made = {body:duckBody(colour),head:duckHead(colour),material:new MeshStandardMaterial({ vertexColors: true, roughness: 0.72 })}
   skins.set(colour, made)
   return made
 }
@@ -273,16 +229,17 @@ function skinFor(colour: string): MeshStandardMaterial {
  *
  * `colour` is for anything that needs to tell bodies apart at a glance: the
  * world only ever has red ones, but a minigame full of them needs a colour per
- * player. Geometry is shared whatever colour it is painted.
+ * player. Geometry is cached per colour, and expressions are shared globally.
  */
 export function createAvatar(colour: string = AVATAR.bodyColour): Group {
-  const { body, head: headGeometry, faces, ink } = parts()
-  const skin = skinFor(colour)
+  const { faces, ink } = parts()
+  const {body,head:headGeometry,material:skin} = skinFor(colour)
 
-  const pill = new Mesh(body, skin)
-  pill.castShadow = true
+  const torso = new Mesh(body, skin)
+  torso.name = 'duck-body'
+  torso.castShadow = true
   // It stands on sand it also shades, so it takes its own shadow too.
-  pill.receiveShadow = true
+  torso.receiveShadow = true
 
   const smile = new Mesh(faces.smile, ink)
   smile.name = 'avatar-face'
@@ -296,15 +253,15 @@ export function createAvatar(colour: string = AVATAR.bodyColour): Group {
   const head = new Group()
   head.name = 'avatar-head'
   head.position.y = AVATAR.headY
+  head.position.z = .3
   const skull = new Mesh(headGeometry, skin)
   skull.castShadow = true
   skull.receiveShadow = true
   head.add(skull)
-  smile.position.y = -AVATAR.headY
   head.add(smile)
 
   const avatar = new Group()
-  avatar.add(pill)
+  avatar.add(torso)
   avatar.add(head)
   avatar.name = 'avatar'
   return avatar
@@ -314,7 +271,7 @@ export function createAvatar(colour: string = AVATAR.bodyColour): Group {
 export function setAvatarHeadLook(avatar: Group, yaw: number, pitch: number): void {
   const head = avatar.getObjectByName('avatar-head')
   if (!head) return
-  head.rotation.set(Math.max(-1.35, Math.min(1.35, pitch)), yaw, 0)
+  head.rotation.set(Math.max(-1.35, Math.min(1.35, pitch)), Math.max(-1.35,Math.min(1.35,yaw)), 0)
 }
 
 /** Replaces the one face mesh's shared geometry with the requested expression. */
@@ -332,8 +289,8 @@ export function setAvatarEmote(avatar: Group, emote: FaceEmote): void {
  * Both the local body and every remote one are placed with this, so a remote
  * player can never float at a different height from the one driving them.
  *
- * **The two tip opposite ways, on purpose.** A swimmer goes face down, which
- * is how anybody swims. A body that has been knocked over goes on its back,
+ * **The two tip opposite ways.** A swimming duck leans slightly forward;
+ * a body that has been knocked over goes on its back,
  * so the face stays pointing at the room - being able to see whose it is is
  * most of what makes a stun readable from across an arena.
  *

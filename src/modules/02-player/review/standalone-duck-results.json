@@ -1,0 +1,30 @@
+{
+  "69-trust-me-bro": {
+    "ducks": 5,
+    "render": [
+      {
+        "calls": 76,
+        "triangles": 12412
+      }
+    ]
+  },
+  "70-duck-szn": {
+    "ducks": 4,
+    "render": [
+      {
+        "calls": 62,
+        "triangles": 11936
+      }
+    ]
+  },
+  "71-me-in-team": {
+    "ducks": 5,
+    "render": [
+      {
+        "calls": 53,
+        "triangles": 13130
+      }
+    ]
+  },
+  "errors": []
+}
