@@ -383,7 +383,7 @@
       "id": "02-player",
       "phase": "P1",
       "title": "A body that walks the island with WASD and jumps",
-      "status": "in_progress",
+      "status": "ready_for_review",
       "dependsOn": [
         "00-core",
         "01-terrain"
@@ -525,7 +525,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-10-25T03:31:48.068Z"
+          "at": "2026-10-25T03:40:40.833Z"
         },
         "human": {
           "status": "pending"
@@ -6648,6 +6648,59 @@
         "machine": {
           "status": "green",
           "at": "2026-10-25T03:15:23.355Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      }
+    },
+    {
+      "id": "74-island-flora",
+      "title": "Procedural palms, grass patches and coconuts on the lobby island",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "01-terrain",
+        "10-party",
+        "12-rocks",
+        "15-minigames"
+      ],
+      "budgets": {
+        "drawCallsMax": 6,
+        "trianglesMax": 100000,
+        "bundleGzipKb": 16
+      },
+      "nonGoals": [
+        "No changes to terrain, rocks or frozen modules",
+        "No models, textures, physics or harvesting"
+      ],
+      "blocks": [
+        {
+          "id": "74.1",
+          "title": "Seeded terrain-aware vegetation and coconut placement",
+          "status": "done"
+        },
+        {
+          "id": "74.2",
+          "title": "Procedural low-poly geometry and instanced scene",
+          "status": "done"
+        },
+        {
+          "id": "74.3",
+          "title": "Scene registration, gate and review notes",
+          "status": "done"
+        }
+      ],
+      "blockers": [],
+      "contract": {
+        "exports": [],
+        "snapshot": "src/modules/74-island-flora/contract.snapshot.d.ts"
+      },
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-10-25T03:52:08.121Z"
         },
         "human": {
           "status": "pending"

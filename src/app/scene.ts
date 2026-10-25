@@ -267,3 +267,4 @@ export const LOBBY_ISLAND = ['01-terrain', '07-shore', '12-rocks', '03-footprint
 export function setLobbyVisible(visible: boolean): void {
   for (const id of LOBBY_ISLAND) setModuleEnabled(id, visible)
 }
+import { IslandFlora } from '../modules/74-island-flora'; SCENE.push({ id: '74-island-flora', order: 740, enabled: true, Component: IslandFlora })
