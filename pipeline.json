@@ -218,7 +218,8 @@
         "66-lobby-pistols",
         "67-mama-tank",
         "68-minigame-kit",
-        "73-aura-debt"
+        "73-aura-debt",
+        "74-island-flora"
       ],
       "generation": 1,
       "contract": {
@@ -307,7 +308,8 @@
         "03-footprints",
         "04-water",
         "07-shore",
-        "12-rocks"
+        "12-rocks",
+        "74-island-flora"
       ],
       "generation": 1,
       "contract": {
@@ -1122,7 +1124,8 @@
         "60-volcano-map-landmarks",
         "62-volcano-minimap",
         "63-volcano-pause",
-        "66-lobby-pistols"
+        "66-lobby-pistols",
+        "74-island-flora"
       ],
       "generation": 1,
       "contract": {
@@ -1268,7 +1271,9 @@
         "00-core",
         "01-terrain"
       ],
-      "dependents": [],
+      "dependents": [
+        "74-island-flora"
+      ],
       "generation": 1,
       "contract": {
         "version": "0.1.0",
@@ -1590,7 +1595,8 @@
         "66-lobby-pistols",
         "67-mama-tank",
         "68-minigame-kit",
-        "73-aura-debt"
+        "73-aura-debt",
+        "74-island-flora"
       ],
       "generation": 1,
       "contract": {
