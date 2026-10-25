@@ -6723,6 +6723,60 @@
         },
         "history": []
       }
+    },
+    {
+      "id": "75-lobby-casino",
+      "title": "Central island casino lounge: blackjack, roulette, five-reel slots, baccarat and craps",
+      "status": "ready_for_review",
+      "dependsOn": [
+        "00-core",
+        "01-terrain",
+        "10-party",
+        "12-rocks",
+        "15-minigames"
+      ],
+      "budgets": {
+        "drawCallsMax": 16,
+        "trianglesMax": 18000,
+        "bundleGzipKb": 24
+      },
+      "nonGoals": [
+        "No terrain edits, external models or AI-generated assets",
+        "No changes to frozen modules",
+        "Decorative lobby props only, as chosen by the user; no betting or game rules"
+      ],
+      "blocks": [
+        {
+          "id": "75.1",
+          "title": "Central layout and procedural casino fixtures",
+          "status": "done"
+        },
+        {
+          "id": "75.2",
+          "title": "Table graphics, lobby scene and agreed interaction scope",
+          "status": "done"
+        },
+        {
+          "id": "75.3",
+          "title": "Registration, tests, gate and review notes",
+          "status": "done"
+        }
+      ],
+      "blockers": [],
+      "contract": {
+        "exports": [],
+        "snapshot": "src/modules/75-lobby-casino/contract.snapshot.d.ts"
+      },
+      "gate": {
+        "machine": {
+          "status": "green",
+          "at": "2026-10-25T04:38:17.320Z"
+        },
+        "human": {
+          "status": "pending"
+        },
+        "history": []
+      }
     }
   ]
 }

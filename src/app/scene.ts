@@ -268,3 +268,4 @@ export function setLobbyVisible(visible: boolean): void {
   for (const id of LOBBY_ISLAND) setModuleEnabled(id, visible)
 }
 import { IslandFlora } from '../modules/74-island-flora'; SCENE.push({ id: '74-island-flora', order: 740, enabled: true, Component: IslandFlora })
+import { LobbyCasino } from '../modules/75-lobby-casino'; SCENE.push({ id: '75-lobby-casino', order: 750, enabled: true, Component: LobbyCasino })
