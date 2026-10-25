@@ -3,9 +3,9 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import type { FaceEmote } from './emote'
 
 /** Coloured primitives are baked into one geometry per moving part. */
-function sculpt() {
+function sculpt(gait = false) {
   const pieces: BufferGeometry[] = []
-  function add(geometry: BufferGeometry, tint: Color|string, position: [number,number,number], scale: [number,number,number]=[1,1,1], rotation: [number,number,number]=[0,0,0]) {
+  function add(geometry: BufferGeometry, tint: Color|string, position: [number,number,number], scale: [number,number,number]=[1,1,1], rotation: [number,number,number]=[0,0,0], leg = 0) {
     const made=geometry.index ? geometry.toNonIndexed() : geometry.clone()
     geometry.dispose()
     made.applyMatrix4(new Matrix4().compose(new Vector3(...position),new Quaternion().setFromEuler(new Euler(...rotation)),new Vector3(...scale)))
@@ -13,7 +13,9 @@ function sculpt() {
     const colour=new Color(tint), count=made.getAttribute('position').count
     const rgb=new Float32Array(count*3)
     for(let i=0;i<count;i++){rgb[i*3]=colour.r;rgb[i*3+1]=colour.g;rgb[i*3+2]=colour.b}
-    made.setAttribute('color',new Float32BufferAttribute(rgb,3));pieces.push(made)
+    made.setAttribute('color',new Float32BufferAttribute(rgb,3))
+    if(gait)made.setAttribute('gaitLeg',new Float32BufferAttribute(new Float32Array(count).fill(leg),1))
+    pieces.push(made)
   }
   function oval(tint: Color|string, position: [number,number,number], scale: [number,number,number], rotation: [number,number,number]=[0,0,0], segments=8,rings=5) {
     add(new SphereGeometry(1,segments,rings),tint,position,scale,rotation)
@@ -30,7 +32,7 @@ function sculpt() {
 
 /** Feet at zero, face toward +Z; controller dimensions and head pivot stay stable. */
 export function duckBody(colour:string):BufferGeometry {
-  const {add,oval,finish}=sculpt(), body=new Color(colour)
+  const {add,oval,finish}=sculpt(true), body=new Color(colour)
   const wing=body.clone().multiplyScalar(.78), feather=body.clone().lerp(new Color('#fff4d6'),.22)
   oval(body,[0,.64,-.05],[.43,.46,.58],[0,0,0],10,7)
   oval('#fff0cc',[0,.7,.36],[.33,.34,.23],[0,0,0],10,6)
@@ -38,14 +40,33 @@ export function duckBody(colour:string):BufferGeometry {
   for(const side of [-1,1]) {
     oval(wing,[side*.37,.72,-.02],[.145,.28,.43],[.24,0,side*.18],8,5)
     for(let i=0;i<3;i++)oval(i%2 ? feather : wing,[side*(.425-i*.025),.62+i*.075,.21+i*.065],[.075,.105,.22],[.38,-side*.15,0],6,3)
-    add(new CylinderGeometry(.05,.065,.2,6),'#e69435',[side*.21,.17,.08])
+    add(new CylinderGeometry(.05,.065,.2,6),'#e69435',[side*.21,.17,.08],[1,1,1],[0,0,0],side)
     const foot=new Shape()
     const outline=[[-.08,-.1],[.08,-.1],[.12,.04],[.205,.25],[.12,.3],[.055,.255],[0,.34],[-.055,.255],[-.145,.3],[-.2,.235],[-.1,.04]]
     outline.forEach(([x,z],i)=>i ? foot.lineTo(x,z) : foot.moveTo(x,z));foot.closePath()
-    add(new ExtrudeGeometry(foot,{depth:.06,bevelEnabled:false}),'#ed9b36',[side*.22,.06,.08],[1,1,1],[Math.PI/2,0,0])
+    add(new ExtrudeGeometry(foot,{depth:.06,bevelEnabled:false}),'#ed9b36',[side*.22,.06,.08],[1,1,1],[Math.PI/2,0,0],side)
   }
   for(const i of [-1,0,1])oval(i===0 ? feather : wing,[i*.13,.83,-.62],[.13,.12,.32],[.48,-i*.2,0],6,3)
-  return finish('duck-body')
+  const geometry=finish('duck-body')
+  const legs=geometry.getAttribute('gaitLeg'), count=legs.count
+  const targets=Array.from({length:4},()=>new Float32Array(count*3))
+  for(let i=0;i<count;i++) {
+    const side=legs.getX(i)
+    if(side===0)continue
+    const leg=side<0 ? 0 : 1
+    targets[leg][i*3+2]=.28
+    targets[leg+2][i*3+1]=.17
+  }
+  // Relative, per-mesh influences keep the shared body/material and three draws.
+  geometry.morphTargetsRelative=true
+  geometry.morphAttributes.position=targets.map((values,i)=>{
+    const attribute=new Float32BufferAttribute(values,3)
+    attribute.name=['left-stride','right-stride','left-lift','right-lift'][i]
+    return attribute
+  })
+  geometry.deleteAttribute('gaitLeg')
+  geometry.computeBoundingBox();geometry.computeBoundingSphere()
+  return geometry
 }
 
 export function duckHead(colour:string):BufferGeometry {

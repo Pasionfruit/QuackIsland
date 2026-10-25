@@ -24,7 +24,8 @@ import {
   type PlayerState,
 } from './controller'
 import { clampPitch, getViewMode, placeCamera, toggleViewMode } from './camera'
-import { bodyPose, createAvatar, setAvatarEmote, setAvatarHeadLook } from './avatar'
+import { bodyPose, createAvatar, setAvatarEmote, setAvatarHeadLook, setAvatarWalk } from './avatar'
+import { advanceWalk, createWalkState, walkPose } from './walk'
 import { usePlayerColour } from './colour'
 import { useFaceEmote } from './emote'
 import { getCameraSensitivity } from './sensitivity'
@@ -195,6 +196,7 @@ export function Player({
   const state = useMemo(() => createPlayer(spawnX, spawnZ, heightAt), [spawnX, spawnZ])
   const keys = useRef<PlayerInput>({ ...IDLE_INPUT })
   const jumpEdge = useRef(false)
+  const walk = useRef(createWalkState())
 
   const bounds = useMemo(() => {
     const b = given ?? worldBounds()
@@ -392,12 +394,16 @@ export function Player({
 
     clock.current = frame.clock.elapsedTime
     still.current = SEA_LEVEL + tideAt(getDayTime())
+    const oldX = state.x, oldZ = state.z
     stepPlayer(state, input, delta, ground.current, {
       bounds,
       seaLevel: still.current,
       surfaceAt: surface,
       collide: solid.current,
     })
+    advanceWalk(walk.current, Math.hypot(state.x - oldX, state.z - oldZ), delta,
+      state.grounded && !state.swimming && state.stun <= 0)
+    setAvatarWalk(avatar, walkPose(walk.current))
 
     // Shared with every remote body, so they cannot sit at different heights.
     // The fall is the whole of the stun animation - see `stunFall`.

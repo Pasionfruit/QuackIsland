@@ -505,12 +505,17 @@
           "id": "02.13",
           "title": "Shared procedural duck avatar across the home page, multiplayer and minigames",
           "status": "done"
+        },
+        {
+          "id": "02.14",
+          "title": "Procedural lobby duck walk and run gait with settling feet",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-10-21T17:53:28.053Z"
+          "at": "2026-10-25T03:24:43.408Z"
         },
         "human": {
           "status": "pending"

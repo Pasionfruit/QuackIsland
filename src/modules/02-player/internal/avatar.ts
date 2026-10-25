@@ -12,6 +12,7 @@ import {
 import { PLAYER } from './controller'
 import { type FaceEmote } from './emote'
 import { duckBody, duckExpression, duckHead } from './duckGeometry'
+import type { WalkPose } from './walk'
 
 export const AVATAR = {
   bodyColour: '#e0563f',
@@ -272,6 +273,18 @@ export function setAvatarHeadLook(avatar: Group, yaw: number, pitch: number): vo
   const head = avatar.getObjectByName('avatar-head')
   if (!head) return
   head.rotation.set(Math.max(-1.35, Math.min(1.35, pitch)), Math.max(-1.35,Math.min(1.35,yaw)), 0)
+}
+
+/** Local locomotion stays cosmetic: no movement, camera, or shared geometry edits. */
+export function setAvatarWalk(avatar: Group, pose: WalkPose): void {
+  const torso = avatar.getObjectByName('duck-body') as Mesh | undefined
+  const weights = torso?.morphTargetInfluences
+  if (weights) {
+    weights[0] = pose.leftStride; weights[1] = pose.rightStride
+    weights[2] = pose.leftLift; weights[3] = pose.rightLift
+  }
+  avatar.rotation.z = pose.roll
+  avatar.position.y = pose.rise
 }
 
 /** Replaces the one face mesh's shared geometry with the requested expression. */

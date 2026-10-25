@@ -344,6 +344,30 @@ that the seam is the right way round, and it is in both modules' review lists.
 7. For the separate game previews, follow `review/README.md`. Screenshots and
    machine-readable browser results are retained there for comparison.
 
+## Lobby walking animation
+
+The locally controlled duck now alternates its webbed feet, lifts the swinging
+foot and gently waddles from side to side while travelling on land. Running
+increases the cadence, capped so the steps remain readable. The gait uses
+resolved horizontal movement, so pushing against a wall or world boundary
+does not keep the feet marching. It blends back to a standing pose when the
+duck stops, jumps, swims or gets stunned. Camera placement and collision stay
+driven by the controller rather than the cosmetic bob.
+
+Four relative morph targets move the feet and short legs within the existing
+body mesh. Geometry and materials remain cached and shared, while each duck
+has independent morph influences. The avatar still costs three draw calls
+and stays below the existing triangle limit. No rig, model or asset download
+is needed. This update drives the local Player component; remote players and
+minigame consumers keep their existing playback behavior.
+
+Validation includes alternating foot positions, toe clearance throughout the
+cycle, shared-geometry isolation, frame-rate consistency, running cadence and
+settling. For human review, walk and run in several directions, stop suddenly,
+walk against a rock, jump, swim and use an emote while moving. Check the feet
+from the front and side, and confirm the camera stays steady. Visual review
+of this animation is pending; no new browser screenshots are claimed.
+
 ## Gate record
 
 Filled in when the human passes it.
