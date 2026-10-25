@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * The course in three dimensions, lit and dressed like the island.
  *
@@ -149,12 +150,12 @@ const Ground = memo(function Ground() {
       {/* The finish, with something over it you can see coming. */}
       {[-1, 1].map((side) => (
         <mesh key={side} castShadow position={[side * (half - 0.4), 2.4, FINISH_Z]}>
-          <boxGeometry args={[0.35, 4.8, 0.35]} />
+          <BeveledBox args={[0.35, 4.8, 0.35]} />
           <meshStandardMaterial color={PALETTE.post} roughness={0.9} />
         </mesh>
       ))}
       <mesh castShadow position={[0, 4.5, FINISH_Z]}>
-        <boxGeometry args={[TRACK.width - 0.5, 1.1, 0.25]} />
+        <BeveledBox args={[TRACK.width - 0.5, 1.1, 0.25]} />
         <meshStandardMaterial color={PALETTE.banner} roughness={0.85} />
       </mesh>
       {/* Fences: a rail each side and a post every four metres. */}
@@ -162,7 +163,7 @@ const Ground = memo(function Ground() {
         <group key={side}>
           {[0.5, 1].map((h) => (
             <mesh key={h} position={[side * half, h, middle]}>
-              <boxGeometry args={[0.1, 0.12, length]} />
+              <BeveledBox args={[0.1, 0.12, length]} />
               <meshStandardMaterial color={PALETTE.fence} roughness={0.9} />
             </mesh>
           ))}
@@ -197,7 +198,7 @@ function Posts({ count, middle, length }: { count: number; middle: number; lengt
   }, [count, middle, length])
   return (
     <instancedMesh ref={mesh} args={[undefined, undefined, count * 2]} castShadow>
-      <boxGeometry args={[1, 1, 1]} />
+      <BeveledBox args={[1, 1, 1]} />
       <meshStandardMaterial color={PALETTE.post} roughness={0.95} />
     </instancedMesh>
   )
@@ -279,11 +280,11 @@ function Treats({ live }: { live: RefObject<Game> }) {
       {course.treats.map((treat, i) => (
         <group key={i} position={[treat.x, 0.55, treat.z]}>
           <mesh castShadow>
-            <boxGeometry args={[0.5, 0.18, 0.3]} />
+            <BeveledBox args={[0.5, 0.18, 0.3]} />
             <meshStandardMaterial color={PALETTE.treat} roughness={0.5} emissive={PALETTE.treat} emissiveIntensity={0.25} />
           </mesh>
           <mesh position={[0, 0.16, 0]}>
-            <boxGeometry args={[0.2, 0.2, 0.2]} />
+            <BeveledBox args={[0.2, 0.2, 0.2]} />
             <meshStandardMaterial color="#fff0c0" roughness={0.5} emissive={PALETTE.treat} emissiveIntensity={0.35} />
           </mesh>
         </group>
@@ -422,6 +423,7 @@ export function PetRaceScene({ live }: { live: RefObject<Game> }) {
   )
   return (
     <>
+      <MinigameArt game="pet-race" halfWidth={TRACK.width/2+1} halfDepth={(TRACK.length+TRACK.runUp+TRACK.runOff)/2} center={[0,0,(-TRACK.length-TRACK.runOff+TRACK.runUp)/2]}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.sky, FOG.near, FOG.far]} />
       <ChaseCamera live={live} />

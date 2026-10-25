@@ -257,3 +257,10 @@ ship (hull, deck, about fifty rail posts and the rails, forecastle, mast, sail, 
 quarterdeck, wheel, eight cannons), six enemy ships, the sea, a pool of eighteen
 balls each with a lane, an arrow, a puff and a splash (only those in use are
 drawn), and the island's avatar per player.
+
+
+## Procedural asset depth pass
+
+Uses the public `76-minigame-art` contract for shanty matrix scenery and lightly beveled existing box assets. Each scene supplies its own play bounds; decorative meshes ignore aiming rays and remain beyond the clear gameplay envelope. Game rules, collision, camera framing, player colours and controls are unchanged. Geometry is procedural, batched to at most three extra draws, with no added textures or lights.
+
+Visual review is pending. Check the actual game, obstacle silhouettes, aiming, the smallest supported window and an eight-player round. Compare themed props in `/src/modules/76-minigame-art/review/gallery.html#shanty-matrix`. Existing screenshots and runtime measurements predate this pass.

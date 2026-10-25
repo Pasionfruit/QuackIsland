@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Probable Stop in three dimensions.
  *
@@ -343,7 +344,7 @@ const Valley = memo(function Valley() {
 function Meadow({ rect }: { rect: Rect }) {
   return (
     <mesh position={[rect.x, -0.5, rect.z]} receiveShadow>
-      <boxGeometry args={[rect.width, 1, rect.depth]} />
+      <BeveledBox args={[rect.width, 1, rect.depth]} />
       <meshStandardMaterial color={PALETTE.meadow} roughness={0.95} />
     </mesh>
   )
@@ -716,7 +717,7 @@ function Bridge({
         }}
         onPointerOut={() => onHover(null)}
       >
-        <boxGeometry args={[PLACE.bridgeWidth + 0.6, 1.6, LENGTH]} />
+        <BeveledBox args={[PLACE.bridgeWidth + 0.6, 1.6, LENGTH]} />
         <meshBasicMaterial visible={false} />
       </mesh>
 
@@ -752,7 +753,7 @@ function Bridge({
       ))}
       {/* A painted board on the peak at the near end, so the path's colour matches its card. */}
       <mesh position={[0, 0.03, PLACE.bridgeNear + 0.75]} receiveShadow>
-        <boxGeometry args={[PLACE.bridgeWidth - 0.2, 0.06, 0.9]} />
+        <BeveledBox args={[PLACE.bridgeWidth - 0.2, 0.06, 0.9]} />
         <meshStandardMaterial color={colour} roughness={0.7} />
       </mesh>
     </group>
@@ -871,6 +872,7 @@ export function ProbableStopScene({
 
   return (
     <>
+      <MinigameArt game="probable-stop" halfWidth={10} halfDepth={14.5} center={[0,0,-5]}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.mist, 60, 200]} />
       <FixedCamera />

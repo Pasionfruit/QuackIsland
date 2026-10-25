@@ -201,3 +201,10 @@ instanced mesh of treads. A player is the pill and a sprite. There is one
 shadow-casting light.
 
 Like the other minigames, it opens a **second WebGL context** while a game is up.
+
+
+## Procedural asset depth pass
+
+Uses the public `76-minigame-art` contract for synchronize steps scenery and lightly beveled existing box assets. Each scene supplies its own play bounds; decorative meshes ignore aiming rays and remain beyond the clear gameplay envelope. Game rules, collision, camera framing, player colours and controls are unchanged. Geometry is procedural, batched to at most three extra draws, with no added textures or lights.
+
+Visual review is pending. Check the actual game, obstacle silhouettes, aiming, the smallest supported window and an eight-player round. Compare themed props in `/src/modules/76-minigame-art/review/gallery.html#synchronize-steps`. Existing screenshots and runtime measurements predate this pass.

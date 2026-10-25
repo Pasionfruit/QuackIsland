@@ -1,0 +1,9 @@
+{
+  "id": "69-trust-me-bro",
+  "title": "Trust Me Bro: shipwreck treasure trial",
+  "status": "ready_for_review",
+  "dependsOn": ["00-core", "02-player", "09-net", "15-minigames", "68-minigame-kit", "76-minigame-art"],
+  "measured": null,
+  "blockers": ["Catalogue and composition registration remain deferred; this entry only records the standalone module's public dependencies."],
+  "gate": {"machine": {"status": "pending"}, "human": {"status": "pending"}}
+}

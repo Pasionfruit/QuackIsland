@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 import { useEffect, useMemo, useRef } from 'react'
 import { useThree } from '@react-three/fiber'
 import { Group, InstancedMesh, Object3D, PerspectiveCamera } from 'three'
@@ -38,7 +39,7 @@ function Rope({ round }: { round: Round }) {
   return <group ref={group}>
     <mesh position={[(end-5)/2,.67,0]} rotation={[0,0,Math.PI/2]}><cylinderGeometry args={[.045,.045,length,7]}/><meshStandardMaterial color="#b79a67"/></mesh>
     <instancedMesh ref={twists} args={[undefined,undefined,48]}><torusGeometry args={[.046,.009,3,6]}/><meshStandardMaterial color="#d9be87"/></instancedMesh>
-    <mesh position={[0,.49,0]} rotation={[0,0,.08]}><boxGeometry args={[.19,.48,.025]}/><meshStandardMaterial color="#d98676"/></mesh>
+    <mesh position={[0,.49,0]} rotation={[0,0,.08]}><BeveledBox args={[.19,.48,.025]}/><meshStandardMaterial color="#d98676"/></mesh>
     <mesh position={[0,.76,0]}><sphereGeometry args={[.075,8,5]}/><meshStandardMaterial color="#f2d2a1"/></mesh>
   </group>
 }
@@ -58,15 +59,16 @@ export function RopeScene({round,advance}:{round:Round;advance:(dt:number)=>void
   const solo=round.players.find((p)=>p.role==='solo'&&!p.left),team=activeTeam(round)
   useGameFrame((_state,dt)=>advance(Math.min(dt,.05)),PRIORITY.simulation)
   return <>
+      <MinigameArt game="tug-of-war" halfWidth={15} halfDepth={15}/>
     <mesh position={[0,-.24,0]}><cylinderGeometry args={[15,15,.48,48]}/><meshStandardMaterial color="#e3dec8"/></mesh>
     {[-1,1].map((side)=><group key={side}>
       <mesh position={[side*6,.015,0]} rotation={[-Math.PI/2,0,0]}><circleGeometry args={[3.2,32]}/><meshBasicMaterial color={side<0?'#dfc29b':'#a9c6bd'}/></mesh>
-      <mesh position={[side*3,.025,0]}><boxGeometry args={[.09,.03,6]}/><meshBasicMaterial color={side<0?'#d6a875':'#81a9a3'}/></mesh>
+      <mesh position={[side*3,.025,0]}><BeveledBox args={[.09,.03,6]}/><meshBasicMaterial color={side<0?'#d6a875':'#81a9a3'}/></mesh>
       <mesh position={[side*9.5,1.4,-4]}><cylinderGeometry args={[.055,.055,2.8,5]}/><meshStandardMaterial color="#a79a7a"/></mesh>
-      <mesh position={[side*9.5+.5,2.35,-4]}><boxGeometry args={[1,.6,.045]}/><meshStandardMaterial color={side<0?'#ddb37b':'#8ab8b0'}/></mesh>
+      <mesh position={[side*9.5+.5,2.35,-4]}><BeveledBox args={[1,.6,.045]}/><meshStandardMaterial color={side<0?'#ddb37b':'#8ab8b0'}/></mesh>
     </group>)}
-    <mesh position={[0,.018,0]}><boxGeometry args={[.045,.02,6]}/><meshBasicMaterial color="#fff8dc"/></mesh>
-    {[0,1,2].map((i)=><mesh key={i} position={[0,.22+i*.32,-5.5-i*.6]}><boxGeometry args={[15,.44,.7]}/><meshStandardMaterial color={i%2?'#b5c6b8':'#c7d0bd'}/></mesh>)}
+    <mesh position={[0,.018,0]}><BeveledBox args={[.045,.02,6]}/><meshBasicMaterial color="#fff8dc"/></mesh>
+    {[0,1,2].map((i)=><mesh key={i} position={[0,.22+i*.32,-5.5-i*.6]}><BeveledBox args={[15,.44,.7]}/><meshStandardMaterial color={i%2?'#b5c6b8':'#c7d0bd'}/></mesh>)}
     {solo&&<Puller round={round} player={solo} index={0}/>}
     {team.map((p,i)=><Puller key={p.id} round={round} player={p} index={i}/>)}
     <Rope round={round}/><Camera teamSize={team.length}/>

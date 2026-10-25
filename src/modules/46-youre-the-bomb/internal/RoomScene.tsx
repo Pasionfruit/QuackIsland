@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * You're The Bomb in three dimensions, from above and behind.
  *
@@ -123,20 +124,20 @@ function Hall() {
         <meshStandardMaterial map={floor()} roughness={0.95} />
       </mesh>
       <mesh position={[-halfX - 0.3, 0.6, 0]} castShadow receiveShadow>
-        <boxGeometry args={[0.6, 1.2, halfZ * 2 + 1.2]} />
+        <BeveledBox args={[0.6, 1.2, halfZ * 2 + 1.2]} />
         <meshStandardMaterial {...wall} />
       </mesh>
       <mesh position={[halfX + 0.3, 0.6, 0]} castShadow receiveShadow>
-        <boxGeometry args={[0.6, 1.2, halfZ * 2 + 1.2]} />
+        <BeveledBox args={[0.6, 1.2, halfZ * 2 + 1.2]} />
         <meshStandardMaterial {...wall} />
       </mesh>
       <mesh position={[0, 0.6, -halfZ - 0.3]} castShadow receiveShadow>
-        <boxGeometry args={[halfX * 2 + 1.2, 1.2, 0.6]} />
+        <BeveledBox args={[halfX * 2 + 1.2, 1.2, 0.6]} />
         <meshStandardMaterial {...wall} />
       </mesh>
       {/* The open south end: a low sill, and the floor carrying on outside where the pin waits. */}
       <mesh position={[0, 0.08, halfZ + 0.15]}>
-        <boxGeometry args={[halfX * 2 + 1.2, 0.16, 0.3]} />
+        <BeveledBox args={[halfX * 2 + 1.2, 0.16, 0.3]} />
         <meshStandardMaterial color={PALETTE.bomb} roughness={0.8} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, halfZ + PIN.from / 2 + 3]}>
@@ -389,6 +390,7 @@ export function RoomScene({ live, scans }: { live: RefObject<Game>; scans: RefOb
   )
   return (
     <>
+      <MinigameArt game="youre-the-bomb" halfWidth={ROOM.halfX} halfDepth={ROOM.halfZ}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.dark, 30, 80]} />
       <hemisphereLight args={['#ffffff', '#3a3450', 1.3]} />

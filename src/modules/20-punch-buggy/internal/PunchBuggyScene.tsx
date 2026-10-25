@@ -1,3 +1,4 @@
+import { MinigameArt } from '../../76-minigame-art'
 /**
  * Punch Buggy in three dimensions, lit and dressed like the island.
  *
@@ -237,6 +238,7 @@ export function PunchBuggyScene({ live, aim }: { live: RefObject<Round>; aim: Re
   )
   return (
     <>
+      <MinigameArt game="punch-buggy" halfWidth={RING.radius} halfDepth={RING.radius}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.background, 60, 180]} />
       <FixedCamera />

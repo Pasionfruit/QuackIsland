@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * OG Black Friday in three dimensions, from above and behind.
  *
@@ -110,14 +111,14 @@ function Store() {
         [(halfX + 4) / 2, halfZ + 0.2, halfX - 4, 0.8, 0.4],
       ].map(([x, z, w, h, d], i) => (
         <mesh key={i} position={[x, h / 2, z]} receiveShadow castShadow>
-          <boxGeometry args={[w, h, d]} />
+          <BeveledBox args={[w, h, d]} />
           <meshStandardMaterial color={PALETTE.wall} roughness={0.9} />
         </mesh>
       ))}
       {/* The door: two panes of glass slid open. */}
       {[-1, 1].map((s) => (
         <mesh key={s} position={[s * 3.2, 1.1, halfZ + 0.2]}>
-          <boxGeometry args={[1.6, 2.2, 0.08]} />
+          <BeveledBox args={[1.6, 2.2, 0.08]} />
           <meshStandardMaterial color="#bfe6ff" transparent opacity={0.35} />
         </mesh>
       ))}
@@ -127,12 +128,12 @@ function Store() {
         return (
           <group key={i} position={[(s.x0 + s.x1) / 2, 0, (s.z0 + s.z1) / 2]}>
             <mesh position={[0, shelf / 2, 0]} castShadow receiveShadow>
-              <boxGeometry args={[s.x1 - s.x0, shelf, s.z1 - s.z0]} />
+              <BeveledBox args={[s.x1 - s.x0, shelf, s.z1 - s.z0]} />
               <meshStandardMaterial color={colour} roughness={0.7} />
             </mesh>
             {/* A pale top for the goods to stand on. */}
             <mesh position={[0, shelf + 0.01, 0]} receiveShadow>
-              <boxGeometry args={[s.x1 - s.x0 - 0.06, 0.02, s.z1 - s.z0 - 0.06]} />
+              <BeveledBox args={[s.x1 - s.x0 - 0.06, 0.02, s.z1 - s.z0 - 0.06]} />
               <meshStandardMaterial color="#f5f5f2" roughness={0.8} />
             </mesh>
           </group>
@@ -141,16 +142,16 @@ function Store() {
       {counters.map((c, i) => (
         <group key={`c${i}`} position={[(c.x0 + c.x1) / 2, 0, (c.z0 + c.z1) / 2]}>
           <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
-            <boxGeometry args={[c.x1 - c.x0, 0.9, c.z1 - c.z0]} />
+            <BeveledBox args={[c.x1 - c.x0, 0.9, c.z1 - c.z0]} />
             <meshStandardMaterial color={PALETTE.counter} roughness={0.6} />
           </mesh>
           <mesh position={[0, 0.91, -0.3]}>
-            <boxGeometry args={[c.x1 - c.x0 - 0.2, 0.02, c.z1 - c.z0 - 1]} />
+            <BeveledBox args={[c.x1 - c.x0 - 0.2, 0.02, c.z1 - c.z0 - 1]} />
             <meshStandardMaterial color={PALETTE.belt} roughness={0.9} />
           </mesh>
           {/* The till, at the door end. */}
           <mesh position={[0, 1.15, (c.z1 - c.z0) / 2 - 0.35]} castShadow>
-            <boxGeometry args={[0.5, 0.45, 0.4]} />
+            <BeveledBox args={[0.5, 0.45, 0.4]} />
             <meshStandardMaterial color="#e9ecef" />
           </mesh>
         </group>
@@ -167,7 +168,7 @@ function Store() {
             <meshStandardMaterial color={PALETTE.counter} />
           </mesh>
           <mesh position={[COUNTERS[i] - 0.1, 2.8, l.z0 + 0.2]}>
-            <boxGeometry args={[0.7, 0.45, 0.2]} />
+            <BeveledBox args={[0.7, 0.45, 0.2]} />
             <meshBasicMaterial color={PALETTE.lane} />
           </mesh>
         </group>
@@ -466,6 +467,7 @@ export function StoreScene({ live }: { live: RefObject<Game> }) {
   )
   return (
     <>
+      <MinigameArt game="needs-a-walmart" halfWidth={STORE.halfX} halfDepth={STORE.halfZ}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={['#cfd8e3', 40, 90]} />
       <hemisphereLight args={['#ffffff', '#c9d2dc', 1.6]} />

@@ -1,0 +1,317 @@
+[
+  {
+    "id": "16-zombie-tag",
+    "scene": "src/modules/16-zombie-tag/internal/ZombieTagScene.tsx",
+    "boxes": 7,
+    "layout": "halfWidth={HALF_W} halfDepth={HALF_H}",
+    "registered": true
+  },
+  {
+    "id": "17-messy-maze",
+    "scene": "src/modules/17-messy-maze/internal/MessyMazeScene.tsx",
+    "boxes": 4,
+    "layout": "halfWidth={HALF} halfDepth={HALF}",
+    "registered": true
+  },
+  {
+    "id": "18-probable-stop",
+    "scene": "src/modules/18-probable-stop/internal/ProbableStopScene.tsx",
+    "boxes": 3,
+    "layout": "halfWidth={10} halfDepth={14.5} center={[0,0,-5]}",
+    "registered": true
+  },
+  {
+    "id": "19-duck-hunt",
+    "scene": "src/modules/19-duck-hunt/internal/DuckHuntScene.tsx",
+    "boxes": 0,
+    "layout": "halfWidth={(ARENA.floor.maxX-ARENA.floor.minX)/2} halfDepth={(ARENA.floor.maxZ-ARENA.floor.minZ)/2} center={[(ARENA.floor.maxX+ARENA.floor.minX)/2,0,(ARENA.floor.maxZ+ARENA.floor.minZ)/2]}",
+    "registered": true
+  },
+  {
+    "id": "20-punch-buggy",
+    "scene": "src/modules/20-punch-buggy/internal/PunchBuggyScene.tsx",
+    "boxes": 0,
+    "layout": "halfWidth={RING.radius} halfDepth={RING.radius}",
+    "registered": true
+  },
+  {
+    "id": "21-i-see-the-light",
+    "scene": "src/modules/21-i-see-the-light/internal/ISeeTheLightScene.tsx",
+    "boxes": 2,
+    "layout": "halfWidth={TRACK.lane*4+.6} halfDepth={TRACK.length/2+3}",
+    "registered": true
+  },
+  {
+    "id": "22-let-him-cook",
+    "scene": "src/modules/22-let-him-cook/internal/LetHimCookScene.tsx",
+    "boxes": 3,
+    "layout": "authored default",
+    "registered": true
+  },
+  {
+    "id": "23-lady-luck",
+    "scene": "src/modules/23-lady-luck/internal/LadyLuckScene.tsx",
+    "boxes": 0,
+    "layout": "halfWidth={HALF.x} halfDepth={HALF.z}",
+    "registered": true
+  },
+  {
+    "id": "24-make-the-cut",
+    "scene": "src/modules/24-make-the-cut/internal/MakeTheCutScene.tsx",
+    "boxes": 0,
+    "layout": "authored default",
+    "registered": true
+  },
+  {
+    "id": "25-wack-attack",
+    "scene": "src/modules/25-wack-attack/internal/WackAttackScene.tsx",
+    "boxes": 2,
+    "layout": "halfWidth={FIELD.half} halfDepth={FIELD.half}",
+    "registered": true
+  },
+  {
+    "id": "26-sprint-triathlon",
+    "scene": "src/modules/26-sprint-triathlon/internal/TriathlonScene.tsx",
+    "boxes": 4,
+    "layout": "halfWidth={TRACK.leg*1.5+1} halfDepth={TRACK.lane*4+1}",
+    "registered": true
+  },
+  {
+    "id": "27-find-yourself",
+    "scene": "src/modules/27-find-yourself/internal/FindYourselfScene.tsx",
+    "boxes": 2,
+    "layout": "authored default",
+    "registered": true
+  },
+  {
+    "id": "28-feeding-time",
+    "scene": "src/modules/28-feeding-time/internal/FeedingTimeScene.tsx",
+    "boxes": 1,
+    "layout": "halfWidth={POND.radiusX+.5} halfDepth={10} center={[0,0,-7]}",
+    "registered": true
+  },
+  {
+    "id": "29-time-it",
+    "scene": "src/modules/29-time-it/internal/TimeItScene.tsx",
+    "boxes": 4,
+    "layout": "authored default",
+    "registered": true
+  },
+  {
+    "id": "30-synchronize-steps",
+    "scene": "src/modules/30-synchronize-steps/internal/SynchronizeStepsScene.tsx",
+    "boxes": 2,
+    "layout": "halfWidth={TOWER.steps*STAIRS.tread/2+1} halfDepth={STAIRS.lane*4+.5}",
+    "registered": true
+  },
+  {
+    "id": "31-helping-dad",
+    "scene": "src/modules/31-helping-dad/internal/HelpingDadScene.tsx",
+    "boxes": 2,
+    "layout": "halfWidth={GRID.cols*GRID.cell/2+.5} halfDepth={GRID.rows*GRID.cell/2+1.5} scale={.45}",
+    "registered": true
+  },
+  {
+    "id": "32-hes-one-shot",
+    "scene": "src/modules/32-hes-one-shot/internal/HesOneShotScene.tsx",
+    "boxes": 4,
+    "layout": "halfWidth={ARENA.half} halfDepth={ARENA.half}",
+    "registered": true
+  },
+  {
+    "id": "33-keyboard-warrior",
+    "scene": "src/modules/33-keyboard-warrior/internal/KeyboardWarriorScene.tsx",
+    "boxes": 1,
+    "layout": "authored default",
+    "registered": true
+  },
+  {
+    "id": "34-sharing-is-caring",
+    "scene": "src/modules/34-sharing-is-caring/internal/SharingIsCaringScene.tsx",
+    "boxes": 0,
+    "layout": "halfWidth={ARENA.radius} halfDepth={ARENA.radius}",
+    "registered": true
+  },
+  {
+    "id": "35-chef-caricature",
+    "scene": "src/modules/35-chef-caricature/internal/ChefCaricatureScene.tsx",
+    "boxes": 3,
+    "layout": "authored default",
+    "registered": true
+  },
+  {
+    "id": "36-musical-mayhem",
+    "scene": "src/modules/36-musical-mayhem/internal/MusicalMayhemScene.tsx",
+    "boxes": 3,
+    "layout": "halfWidth={FLOOR.radius} halfDepth={FLOOR.radius}",
+    "registered": true
+  },
+  {
+    "id": "37-wheres-midnight",
+    "scene": "src/modules/37-wheres-midnight/internal/WheresMidnightScene.tsx",
+    "boxes": 0,
+    "layout": "halfWidth={YARD.fence} halfDepth={YARD.fence}",
+    "registered": true
+  },
+  {
+    "id": "38-pet-race",
+    "scene": "src/modules/38-pet-race/internal/PetRaceScene.tsx",
+    "boxes": 6,
+    "layout": "halfWidth={TRACK.width/2+1} halfDepth={(TRACK.length+TRACK.runUp+TRACK.runOff)/2} center={[0,0,(-TRACK.length-TRACK.runOff+TRACK.runUp)/2]}",
+    "registered": true
+  },
+  {
+    "id": "39-ill-just-wait",
+    "scene": "src/modules/39-ill-just-wait/internal/IllJustWaitScene.tsx",
+    "boxes": 2,
+    "layout": "authored default",
+    "registered": true
+  },
+  {
+    "id": "40-whats-your-rpm",
+    "scene": "src/modules/40-whats-your-rpm/internal/RpmScene.tsx",
+    "boxes": 2,
+    "layout": "authored default",
+    "registered": true
+  },
+  {
+    "id": "42-i-just-work-here",
+    "scene": "src/modules/42-i-just-work-here/internal/OfficeScene.tsx",
+    "boxes": 4,
+    "layout": "halfWidth={OFFICE.halfX} halfDepth={OFFICE.halfZ}",
+    "registered": true
+  },
+  {
+    "id": "43-highest-in-the-room",
+    "scene": "src/modules/43-highest-in-the-room/internal/TowerScene.tsx",
+    "boxes": 3,
+    "layout": "halfWidth={SPACING*4+1} halfDepth={1} scale={.7} followCameraHeight",
+    "registered": true
+  },
+  {
+    "id": "44-color-coded",
+    "scene": "src/modules/44-color-coded/internal/ColorScene.tsx",
+    "boxes": 2,
+    "layout": "halfWidth={HALF} halfDepth={HALF}",
+    "registered": true
+  },
+  {
+    "id": "45-binary-bs",
+    "scene": "src/modules/45-binary-bs/internal/GearScene.tsx",
+    "boxes": 2,
+    "layout": "halfWidth={GEAR.teeth} halfDepth={GEAR.teeth}",
+    "registered": true
+  },
+  {
+    "id": "46-youre-the-bomb",
+    "scene": "src/modules/46-youre-the-bomb/internal/RoomScene.tsx",
+    "boxes": 4,
+    "layout": "halfWidth={ROOM.halfX} halfDepth={ROOM.halfZ}",
+    "registered": true
+  },
+  {
+    "id": "47-shanty-matrix",
+    "scene": "src/modules/47-shanty-matrix/internal/DeckScene.tsx",
+    "boxes": 8,
+    "layout": "halfWidth={DECK.halfX} halfDepth={DECK.halfZ}",
+    "registered": true
+  },
+  {
+    "id": "48-spidey-senses",
+    "scene": "src/modules/48-spidey-senses/internal/NestScene.tsx",
+    "boxes": 4,
+    "layout": "halfWidth={CELLAR.half} halfDepth={CELLAR.half}",
+    "registered": true
+  },
+  {
+    "id": "49-needs-a-walmart",
+    "scene": "src/modules/49-needs-a-walmart/internal/StoreScene.tsx",
+    "boxes": 8,
+    "layout": "halfWidth={STORE.halfX} halfDepth={STORE.halfZ}",
+    "registered": true
+  },
+  {
+    "id": "50-milf-fishing",
+    "scene": "src/modules/50-milf-fishing/internal/PondScene.tsx",
+    "boxes": 2,
+    "layout": "halfWidth={12} halfDepth={7} center={[0,0,-4]}",
+    "registered": true
+  },
+  {
+    "id": "51-perfect-game",
+    "scene": "src/modules/51-perfect-game/internal/BeachScene.tsx",
+    "boxes": 2,
+    "layout": "halfWidth={BEACH.halfX} halfDepth={(BEACH.near-BEACH.far)/2} center={[0,0,(BEACH.near+BEACH.far)/2]}",
+    "registered": true
+  },
+  {
+    "id": "58-breaking-the-ice",
+    "scene": "src/modules/58-breaking-the-ice/internal/IceScene.tsx",
+    "boxes": 1,
+    "layout": "halfWidth={DIM*CELL/2+1} halfDepth={DIM*CELL/2+1}",
+    "registered": true
+  },
+  {
+    "id": "61-op-finder",
+    "scene": "src/modules/61-op-finder/internal/OpFinderScene.tsx",
+    "boxes": 2,
+    "layout": "authored default",
+    "registered": true
+  },
+  {
+    "id": "64-jackal",
+    "scene": "src/modules/64-jackal/internal/JackalScene.tsx",
+    "boxes": 2,
+    "layout": "halfWidth={FIELD.halfWidth+1} halfDepth={FIELD.length/2+8}",
+    "registered": true
+  },
+  {
+    "id": "65-big-backs-are-near",
+    "scene": "src/modules/65-big-backs-are-near/internal/NearScene.tsx",
+    "boxes": 1,
+    "layout": "halfWidth={MAZE.size*MAZE.cell/2+1} halfDepth={MAZE.size*MAZE.cell/2+1}",
+    "registered": true
+  },
+  {
+    "id": "67-mama-tank",
+    "scene": "src/modules/67-mama-tank/internal/MamaScene.tsx",
+    "boxes": 4,
+    "layout": "halfWidth={FIELD.half+FIELD.wallThickness} halfDepth={FIELD.half+FIELD.wallThickness}",
+    "registered": true
+  },
+  {
+    "id": "69-trust-me-bro",
+    "scene": "src/modules/69-trust-me-bro/internal/Stage.tsx",
+    "boxes": 11,
+    "layout": "authored default",
+    "registered": false
+  },
+  {
+    "id": "70-duck-szn",
+    "scene": "src/modules/70-duck-szn/internal/Marsh.tsx",
+    "boxes": 7,
+    "layout": "halfWidth={EDGE+1} halfDepth={EDGE+1}",
+    "registered": false
+  },
+  {
+    "id": "71-me-in-team",
+    "scene": "src/modules/71-me-in-team/internal/Arena.tsx",
+    "boxes": 8,
+    "layout": "halfWidth={HALF_WIDTH+1} halfDepth={HALF_LENGTH+1}",
+    "registered": false
+  },
+  {
+    "id": "72-tug-of-war",
+    "scene": "src/modules/72-tug-of-war/internal/RopeScene.tsx",
+    "boxes": 5,
+    "layout": "halfWidth={15} halfDepth={15}",
+    "registered": false
+  },
+  {
+    "id": "73-aura-debt",
+    "scene": "src/modules/73-aura-debt/internal/Scene.tsx",
+    "boxes": 11,
+    "layout": "authored default",
+    "registered": true
+  }
+]

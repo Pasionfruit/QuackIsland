@@ -254,3 +254,10 @@ Not measured; the budgets in `pipeline.json` are unset. Drawn per frame: the san
 the sea and surf, the rope and posts, the box, eight palms, thirty crabs of about a
 dozen meshes each, the coconut, one instanced mesh of sixty aim dots, and per
 player the island's avatar.
+
+
+## Procedural asset depth pass
+
+Uses the public `76-minigame-art` contract for perfect game scenery and lightly beveled existing box assets. Each scene supplies its own play bounds; decorative meshes ignore aiming rays and remain beyond the clear gameplay envelope. Game rules, collision, camera framing, player colours and controls are unchanged. Geometry is procedural, batched to at most three extra draws, with no added textures or lights.
+
+Visual review is pending. Check the actual game, obstacle silhouettes, aiming, the smallest supported window and an eight-player round. Compare themed props in `/src/modules/76-minigame-art/review/gallery.html#perfect-game`. Existing screenshots and runtime measurements predate this pass.

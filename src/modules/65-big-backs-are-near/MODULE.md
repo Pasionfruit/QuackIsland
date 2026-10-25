@@ -418,3 +418,10 @@ Not measured; the budgets in `pipeline.json` are unset. Drawn per frame:
 - One call a body per other player (the island's avatar), plus a ring over
   the Hunter's own head.
 - One shadow-casting directional light, an ambient and a hemisphere light.
+
+
+## Procedural asset depth pass
+
+Uses the public `76-minigame-art` contract for big backs are near scenery and lightly beveled existing box assets. Each scene supplies its own play bounds; decorative meshes ignore aiming rays and remain beyond the clear gameplay envelope. Game rules, collision, camera framing, player colours and controls are unchanged. Geometry is procedural, batched to at most three extra draws, with no added textures or lights.
+
+Visual review is pending. Check the actual game, obstacle silhouettes, aiming, the smallest supported window and an eight-player round. Compare themed props in `/src/modules/76-minigame-art/review/gallery.html#big-backs-are-near`. Existing screenshots and runtime measurements predate this pass.

@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Highest In The Room in three dimensions, side on.
  *
@@ -118,11 +119,11 @@ function Towers({ live, shown, colours }: { live: RefObject<Game>; shown: RefObj
   return (
     <>
       <instancedMesh ref={blocks} args={[undefined, undefined, MAX_BLOCKS]}>
-        <boxGeometry args={[1, 1, 1]} />
+        <BeveledBox args={[1, 1, 1]} />
         <meshStandardMaterial roughness={0.7} />
       </instancedMesh>
       <instancedMesh ref={stripes} args={[undefined, undefined, 8]}>
-        <boxGeometry args={[1, 1, 1]} />
+        <BeveledBox args={[1, 1, 1]} />
         <meshStandardMaterial color={PALETTE.stripe} roughness={1} />
       </instancedMesh>
     </>
@@ -168,7 +169,7 @@ function Danger({ live }: { live: RefObject<Game> }) {
   })
   return (
     <mesh ref={band} visible={false} renderOrder={5}>
-      <boxGeometry args={[60, 1.2, 3.5]} />
+      <BeveledBox args={[60, 1.2, 3.5]} />
       <meshBasicMaterial color={PALETTE.danger} transparent depthWrite={false} side={DoubleSide} />
     </mesh>
   )
@@ -202,6 +203,7 @@ export function TowerScene({ live }: { live: RefObject<Game> }) {
   }, [game.id])
   return (
     <>
+      <MinigameArt game="highest-in-the-room" halfWidth={SPACING*4+1} halfDepth={1} scale={.7} followCameraHeight/>
       <color attach="background" args={[background]} />
       <hemisphereLight args={['#ffffff', '#b98a5c', 1.6]} />
       {/* No shadows: the towers climb out of any shadow camera's reach, and flat light reads the blocks fine. */}

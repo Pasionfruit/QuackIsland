@@ -94,3 +94,8 @@ for the lot. What a stand-in has in is a pure function of the clock.
 - No photo or camera: your face is the island pill in your colour.
 - No sound of its own beyond a bump as a piece clicks in; no round music yet.
 - Pieces are rectangles, not jigsaw-shaped.
+
+
+## Procedural asset depth pass
+
+The native SVG puzzle portrait now shows the coloured island duck with a layered body, feathered wing, bill, webbed feet and a contact shadow. A distant island, curved palm, coconuts and water ripples give the six cells distinct visual landmarks. No bitmap assets, controls, piece shapes, snapping, scoring or puzzle dimensions changed. Visual review is pending: check all six pieces at their small preview size and with every player colour.

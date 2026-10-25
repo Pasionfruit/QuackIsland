@@ -2,16 +2,58 @@
   "id": "71-me-in-team",
   "title": "ME in Team: one free runner versus a physically chained team",
   "status": "in_progress",
-  "dependsOn": ["00-core", "02-player", "09-net", "15-minigames", "68-minigame-kit"],
-  "budgets": {"drawCallsMax": 100, "trianglesMax": 15000, "assetTrianglesDefault": 3000, "assetTextureMaxPx": 0},
-  "blockers": ["Catalogue, pipeline and composition registration are deferred under the user's module-only scope."],
-  "measured": {"drawCalls": 63, "triangles": 3010, "fps": 60, "previewJsGzipKb": 327.80},
-  "blocks": [
-    {"id": "71.1", "title": "Seeded course, setup, objectives and chain physics", "status": "done"},
-    {"id": "71.2", "title": "Kit loop, validated input and authoritative snapshots", "status": "done"},
-    {"id": "71.3", "title": "Procedural scene, chain links, camera, controls and HUD", "status": "done"},
-    {"id": "71.4", "title": "Standalone preview, tests and browser review", "status": "done"},
-    {"id": "71.5", "title": "Authorized registration, module gate and human review", "status": "pending"}
+  "dependsOn": [
+    "00-core",
+    "02-player",
+    "09-net",
+    "15-minigames",
+    "68-minigame-kit",
+    "76-minigame-art"
   ],
-  "gate": {"machine": {"status": "pending", "note": "npm run gate -- 71-me-in-team reports Unknown module; standalone validation is recorded in MODULE.md"}, "human": {"status": "pending"}}
+  "budgets": {
+    "drawCallsMax": 100,
+    "trianglesMax": 15000,
+    "assetTrianglesDefault": 3000,
+    "assetTextureMaxPx": 0
+  },
+  "blockers": [
+    "Catalogue, pipeline and composition registration are deferred under the user's module-only scope."
+  ],
+  "measured": null,
+  "blocks": [
+    {
+      "id": "71.1",
+      "title": "Seeded course, setup, objectives and chain physics",
+      "status": "done"
+    },
+    {
+      "id": "71.2",
+      "title": "Kit loop, validated input and authoritative snapshots",
+      "status": "done"
+    },
+    {
+      "id": "71.3",
+      "title": "Procedural scene, chain links, camera, controls and HUD",
+      "status": "done"
+    },
+    {
+      "id": "71.4",
+      "title": "Standalone preview, tests and browser review",
+      "status": "done"
+    },
+    {
+      "id": "71.5",
+      "title": "Authorized registration, module gate and human review",
+      "status": "pending"
+    }
+  ],
+  "gate": {
+    "machine": {
+      "status": "pending",
+      "note": "npm run gate -- 71-me-in-team reports Unknown module; standalone validation is recorded in MODULE.md"
+    },
+    "human": {
+      "status": "pending"
+    }
+  }
 }

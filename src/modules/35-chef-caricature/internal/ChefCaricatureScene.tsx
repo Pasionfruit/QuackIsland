@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Chef Caricature in three dimensions.
  *
@@ -172,7 +173,7 @@ function Easel({ live, colours }: { live: RefObject<Game>; colours: readonly str
   return (
     <group position={[BOARD.x, 0, BOARD.z]}>
       <mesh position={[0, BOARD.y, -0.06]} castShadow>
-        <boxGeometry args={[size + 0.36, size + 0.36, 0.1]} />
+        <BeveledBox args={[size + 0.36, size + 0.36, 0.1]} />
         <meshStandardMaterial color={PALETTE.wood} roughness={0.8} />
       </mesh>
       <mesh position={[0, BOARD.y, 0]}>
@@ -181,12 +182,12 @@ function Easel({ live, colours }: { live: RefObject<Game>; colours: readonly str
       </mesh>
       {[-1, 1].map((side) => (
         <mesh key={side} position={[side * (BOARD.half - 0.3), (BOARD.y - BOARD.half) / 2, -0.15]} rotation={[0, 0, side * 0.08]} castShadow>
-          <boxGeometry args={[0.14, BOARD.y - BOARD.half + 0.2, 0.14]} />
+          <BeveledBox args={[0.14, BOARD.y - BOARD.half + 0.2, 0.14]} />
           <meshStandardMaterial color={PALETTE.wood} roughness={0.8} />
         </mesh>
       ))}
       <mesh position={[0, BOARD.y - BOARD.half - 0.25, 0.05]} castShadow>
-        <boxGeometry args={[size * 0.9, 0.1, 0.25]} />
+        <BeveledBox args={[size * 0.9, 0.1, 0.25]} />
         <meshStandardMaterial color={PALETTE.wood} roughness={0.8} />
       </mesh>
     </group>
@@ -403,6 +404,7 @@ export function ChefCaricatureScene({ live }: { live: RefObject<Game> }) {
   )
   return (
     <>
+      <MinigameArt game="chef-caricature" />
       <color attach="background" args={[background]} />
       <hemisphereLight args={['#fff4e0', '#c79a6a', 1.2]} />
       <directionalLight position={[-5, 12, 10]} intensity={2} castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={-10} shadow-camera-right={10} shadow-camera-top={10} shadow-camera-bottom={-4} />

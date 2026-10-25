@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 import { useEffect, useMemo, useRef } from 'react'
 import { useThree } from '@react-three/fiber'
 import { Group, InstancedMesh, Object3D, PerspectiveCamera } from 'three'
@@ -44,7 +45,7 @@ function Body({ player, colour }: { player: Player; colour: string }) {
   if (player.role === 'hunter') return <group ref={group}>
     <group rotation={[0,Math.PI,0]}><primitive object={avatar}/></group>
     <mesh position={[0, 1.72, 0]}><cylinderGeometry args={[0.27, 0.32, 0.17, 8]} /><meshStandardMaterial color="#d38b4c" /></mesh>
-    <mesh position={[0.3, 1.08, -0.4]}><boxGeometry args={[0.1, 0.12, 0.8]} /><meshStandardMaterial color="#3d4947" /></mesh>
+    <mesh position={[0.3, 1.08, -0.4]}><BeveledBox args={[0.1, 0.12, 0.8]} /><meshStandardMaterial color="#3d4947" /></mesh>
   </group>
   return <group ref={group}>
     <group rotation={[0,Math.PI,0]} scale={.54}><primitive object={avatar}/></group>
@@ -79,17 +80,18 @@ export function Marsh({ round, advance }: { round: Round; advance: (dt: number) 
   const ray = shot ? direction(shot.yaw, shot.pitch) : null
   const shotHeight = 1.62
   return <>
+      <MinigameArt game="duck-szn" halfWidth={EDGE+1} halfDepth={EDGE+1}/>
     <color attach="background" args={['#c8d9ce']} /><fog attach="fog" args={['#c8d9ce', 22, 65]} />
-    <mesh position={[0, -0.08, 0]}><boxGeometry args={[60, 0.16, 60]} /><meshStandardMaterial color="#7e9d7a" roughness={1} /></mesh>
+    <mesh position={[0, -0.08, 0]}><BeveledBox args={[60, 0.16, 60]} /><meshStandardMaterial color="#7e9d7a" roughness={1} /></mesh>
     {[-1, 1].map((s) => <mesh key={s} position={[s * 20, 0.005, s * 12]} rotation={[-Math.PI / 2, 0, 0]} scale={[1.6, 1, 1]}><circleGeometry args={[4.2, 16]} /><meshStandardMaterial color="#88b5b1" roughness={0.3} /></mesh>)}
     {a.cover.map((c, i) => <group key={i} position={[c.x, 0, c.z]}>
-      <mesh position={[0, c.h / 2, 0]}><boxGeometry args={[c.w, c.h, c.d]} /><meshStandardMaterial color={c.kind === 'log' ? '#8a8061' : '#8d9c8c'} roughness={1} /></mesh>
-      {c.kind === 'log' ? <mesh position={[0, c.h + 0.015, 0]}><boxGeometry args={[c.w * 0.94, 0.04, c.d * 0.9]} /><meshStandardMaterial color="#b0ac81" /></mesh> : <mesh position={[0, c.h + 0.1, 0]}><boxGeometry args={[c.w * 0.83, 0.2, c.d * 0.83]} /><meshStandardMaterial color="#9ca990" /></mesh>}
+      <mesh position={[0, c.h / 2, 0]}><BeveledBox args={[c.w, c.h, c.d]} /><meshStandardMaterial color={c.kind === 'log' ? '#8a8061' : '#8d9c8c'} roughness={1} /></mesh>
+      {c.kind === 'log' ? <mesh position={[0, c.h + 0.015, 0]}><BeveledBox args={[c.w * 0.94, 0.04, c.d * 0.9]} /><meshStandardMaterial color="#b0ac81" /></mesh> : <mesh position={[0, c.h + 0.1, 0]}><BeveledBox args={[c.w * 0.83, 0.2, c.d * 0.83]} /><meshStandardMaterial color="#9ca990" /></mesh>}
     </group>)}
     <Reeds seed={round.seed} />
     {[-1, 1].map((s) => <group key={s}>
-      <mesh position={[s * (EDGE + 0.25), 0.45, 0]}><boxGeometry args={[0.5, 0.9, EDGE * 2 + 1]} /><meshStandardMaterial color="#667c66" /></mesh>
-      <mesh position={[0, 0.45, s * (EDGE + 0.25)]}><boxGeometry args={[EDGE * 2, 0.9, 0.5]} /><meshStandardMaterial color="#667c66" /></mesh>
+      <mesh position={[s * (EDGE + 0.25), 0.45, 0]}><BeveledBox args={[0.5, 0.9, EDGE * 2 + 1]} /><meshStandardMaterial color="#667c66" /></mesh>
+      <mesh position={[0, 0.45, s * (EDGE + 0.25)]}><BeveledBox args={[EDGE * 2, 0.9, 0.5]} /><meshStandardMaterial color="#667c66" /></mesh>
     </group>)}
     {round.players.filter((p) => standing(p) && p.id !== followed?.id).map((p) => <Body key={p.id} player={p} colour={PALETTE[round.players.indexOf(p) % PALETTE.length]} />)}
     {shot && ray && round.elapsed - shot.at < 0.085 && <lineSegments><bufferGeometry><bufferAttribute attach="attributes-position" args={[new Float32Array([shot.x, shotHeight, shot.z, shot.x + ray.x * 22, shotHeight + ray.y * 22, shot.z + ray.z * 22]), 3]} /></bufferGeometry><lineBasicMaterial color="#fff4c2" transparent opacity={0.7} /></lineSegments>}

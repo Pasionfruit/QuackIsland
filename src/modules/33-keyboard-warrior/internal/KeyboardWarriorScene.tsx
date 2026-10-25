@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Keyboard Warrior in three dimensions.
  *
@@ -231,7 +232,7 @@ function LetterTile({ live, colours }: { live: RefObject<Game>; colours: readonl
   return (
     <group ref={group} visible={false}>
       <mesh ref={tile} castShadow>
-        <boxGeometry args={[TILE.half * 2, TILE.half * 2, 0.28]} />
+        <BeveledBox args={[TILE.half * 2, TILE.half * 2, 0.28]} />
         {/* Lit a little from inside, so it reads as bright card whichever way it turns. */}
         <meshStandardMaterial color={PALETTE.tile} emissive={PALETTE.tile} emissiveIntensity={0.45} roughness={0.5} transparent />
       </mesh>
@@ -265,6 +266,7 @@ export function KeyboardWarriorScene({ live }: { live: RefObject<Game> }) {
   )
   return (
     <>
+      <MinigameArt game="keyboard-warrior" />
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.sky, 25, 70]} />
       <hemisphereLight args={['#ffe9d2', '#b88a5a', 1.2]} />

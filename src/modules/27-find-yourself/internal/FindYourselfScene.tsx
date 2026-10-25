@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Find Yourself in three dimensions.
  *
@@ -86,11 +87,11 @@ const Table = memo(function Table({ cups }: { cups: number }) {
         <meshStandardMaterial color={PALETTE.floor} roughness={1} />
       </mesh>
       <mesh position={[0, TOP / 2 - 0.05, 0]} castShadow receiveShadow>
-        <boxGeometry args={[length, TOP - 0.1, 5]} />
+        <BeveledBox args={[length, TOP - 0.1, 5]} />
         <meshStandardMaterial color={PALETTE.tableEdge} roughness={0.8} />
       </mesh>
       <mesh position={[0, TOP - 0.05, 0]} receiveShadow>
-        <boxGeometry args={[length + 0.3, 0.1, 5.3]} />
+        <BeveledBox args={[length + 0.3, 0.1, 5.3]} />
         <meshStandardMaterial color={PALETTE.table} roughness={0.7} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, TOP + 0.005, 0]} receiveShadow>
@@ -283,6 +284,7 @@ export function FindYourselfScene({ live, hands }: { live: RefObject<Game>; hand
   )
   return (
     <>
+      <MinigameArt game="find-yourself" />
       <color attach="background" args={[background]} />
       <FixedCamera cups={cups} />
       <Lamp />

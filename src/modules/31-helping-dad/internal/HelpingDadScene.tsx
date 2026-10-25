@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Helping Dad in three dimensions.
  *
@@ -114,7 +115,7 @@ const Maze = memo(function Maze({ seed }: { seed: number }) {
   return (
     <group>
       <instancedMesh ref={walls} args={[undefined, undefined, 400]} castShadow receiveShadow>
-        <boxGeometry args={[1, 1, 1]} />
+        <BeveledBox args={[1, 1, 1]} />
         <meshStandardMaterial color={PALETTE.wall} roughness={0.7} />
       </instancedMesh>
       <mesh position={[start.x, 0.01, start.z]} rotation={[-Math.PI / 2, 0, 0]}>
@@ -226,7 +227,7 @@ function Dad({ live }: { live: RefObject<Game> }) {
             <meshStandardMaterial color={PALETTE.cap} roughness={0.8} />
           </mesh>
           <mesh position={[0, 1.77, 0.38]} rotation={[0.25, 0, 0]}>
-            <boxGeometry args={[0.5, 0.04, 0.3]} />
+            <BeveledBox args={[0.5, 0.04, 0.3]} />
             <meshStandardMaterial color={PALETTE.cap} roughness={0.8} />
           </mesh>
         </group>
@@ -319,6 +320,7 @@ export function HelpingDadScene({ live, aim }: { live: RefObject<Game>; aim: Ref
   )
   return (
     <>
+      <MinigameArt game="helping-dad" halfWidth={GRID.cols*GRID.cell/2+.5} halfDepth={GRID.rows*GRID.cell/2+1.5} scale={.45}/>
       <color attach="background" args={[background]} />
       <FixedCamera />
       {/* The ground the maze stands on, which does not turn with it. */}

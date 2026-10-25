@@ -1,3 +1,4 @@
+import { MinigameArt } from '../../76-minigame-art'
 /**
  * Duck Hunt in three dimensions, lit and dressed like the island.
  *
@@ -612,6 +613,7 @@ export function DuckHuntScene({
   const up = game.balloons.filter((b) => !game.popped.has(b.id) && balloonAt(b, game.elapsed) !== null)
   return (
     <>
+      <MinigameArt game="duck-hunt" halfWidth={(ARENA.floor.maxX-ARENA.floor.minX)/2} halfDepth={(ARENA.floor.maxZ-ARENA.floor.minZ)/2} center={[(ARENA.floor.maxX+ARENA.floor.minX)/2,0,(ARENA.floor.maxZ+ARENA.floor.minZ)/2]}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.background, 60, 160]} />
       <FixedCamera />

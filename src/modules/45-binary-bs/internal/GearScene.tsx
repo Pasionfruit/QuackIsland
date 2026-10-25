@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Binary BS in three dimensions, from above.
  *
@@ -131,7 +132,7 @@ function Gear({ live, colours }: { live: RefObject<Game>; colours: readonly stri
               const r = (GEAR.rim + GEAR.teeth) / 2
               return (
                 <mesh key={k} position={[Math.sin(a) * r, -THICK / 2, -Math.cos(a) * r]} rotation={[0, -a, 0]} castShadow>
-                  <boxGeometry args={[Math.min(1.4, (GEAR.rim * step) / TEETH_EACH - 0.5), THICK, GEAR.teeth - GEAR.rim + 0.2]} />
+                  <BeveledBox args={[Math.min(1.4, (GEAR.rim * step) / TEETH_EACH - 0.5), THICK, GEAR.teeth - GEAR.rim + 0.2]} />
                   <meshStandardMaterial color={PALETTE.steelDark} roughness={0.5} metalness={0.3} />
                 </mesh>
               )
@@ -169,7 +170,7 @@ function Mark() {
         <meshBasicMaterial color={PALETTE.mark} side={DoubleSide} />
       </mesh>
       <mesh position={[0, 0, -1.6]}>
-        <boxGeometry args={[0.7, 0.3, 2]} />
+        <BeveledBox args={[0.7, 0.3, 2]} />
         <meshBasicMaterial color={PALETTE.mark} />
       </mesh>
     </group>
@@ -251,6 +252,7 @@ export function GearScene({ live }: { live: RefObject<Game> }) {
   )
   return (
     <>
+      <MinigameArt game="binary-bs" halfWidth={GEAR.teeth} halfDepth={GEAR.teeth}/>
       <color attach="background" args={[background]} />
       <hemisphereLight args={['#ffffff', '#3a3450', 1.4]} />
       <directionalLight

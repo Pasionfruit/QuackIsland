@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Zombie Tag in three dimensions: a walled graveyard, at night.
  *
@@ -195,7 +196,7 @@ function LampPost({ x, z }: { x: number; z: number }) {
         <meshStandardMaterial color={PALETTE.iron} roughness={0.6} metalness={0.4} />
       </mesh>
       <mesh position={[0, post + 0.05, 0]}>
-        <boxGeometry args={[0.42, 0.5, 0.42]} />
+        <BeveledBox args={[0.42, 0.5, 0.42]} />
         <meshStandardMaterial
           color={PALETTE.lampGlow}
           emissive={PALETTE.lampGlow}
@@ -240,14 +241,14 @@ function Plot({ box, index }: { box: Obstacle; index: number }) {
   return (
     <group position={[box.x, 0, box.y]}>
       <mesh position={[0, 0.12, 0]} castShadow receiveShadow>
-        <boxGeometry args={[box.width, 0.24, box.height]} />
+        <BeveledBox args={[box.width, 0.24, box.height]} />
         <meshStandardMaterial color={PALETTE.plot} roughness={0.95} />
       </mesh>
 
       {square ? (
         <group>
           <mesh position={[0, 0.49, 0]} castShadow receiveShadow>
-            <boxGeometry args={[box.width * 0.75, 0.5, box.height * 0.75]} />
+            <BeveledBox args={[box.width * 0.75, 0.5, box.height * 0.75]} />
             <meshStandardMaterial color={PALETTE.stoneDark} roughness={0.9} />
           </mesh>
           <mesh position={[0, 0.74 + 1.3, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
@@ -273,7 +274,7 @@ function Plot({ box, index }: { box: Obstacle; index: number }) {
                   rotation={[wobble(index, i) * 0.14, 0, wobble(i + 3, index) * 0.12]}
                 >
                   <mesh position={[0, shaft / 2, 0]} castShadow receiveShadow>
-                    <boxGeometry args={[width, shaft, 0.3]} />
+                    <BeveledBox args={[width, shaft, 0.3]} />
                     <meshStandardMaterial color={PALETTE.stone} roughness={0.9} />
                   </mesh>
                   {/* A rounded top, so it reads as a headstone and not a slab. */}
@@ -306,19 +307,19 @@ const Room = memo(function Room() {
       {/* A slab rather than a plane, so the arena has a visible edge from a
           tilted view instead of ending in nothing. */}
       <mesh position={[0, -FLOOR.thickness / 2, 0]} receiveShadow>
-        <boxGeometry args={[FLOOR.width, FLOOR.thickness, FLOOR.depth]} />
+        <BeveledBox args={[FLOOR.width, FLOOR.thickness, FLOOR.depth]} />
         <meshStandardMaterial color={PALETTE.grass} roughness={1} />
       </mesh>
 
       {walls().map((wall, i) => (
         <group key={i}>
           <mesh position={[wall.x, FLOOR.wallHeight / 2, wall.z]} castShadow receiveShadow>
-            <boxGeometry args={[wall.width, FLOOR.wallHeight, wall.depth]} />
+            <BeveledBox args={[wall.width, FLOOR.wallHeight, wall.depth]} />
             <meshStandardMaterial color={PALETTE.wall} roughness={0.95} />
           </mesh>
           {/* A capstone along the top, a little proud of the wall. */}
           <mesh position={[wall.x, FLOOR.wallHeight + 0.08, wall.z]} receiveShadow>
-            <boxGeometry args={[wall.width + 0.12, 0.16, wall.depth + 0.12]} />
+            <BeveledBox args={[wall.width + 0.12, 0.16, wall.depth + 0.12]} />
             <meshStandardMaterial color={PALETTE.wallCap} roughness={0.9} />
           </mesh>
         </group>
@@ -419,6 +420,7 @@ export function ZombieTagScene({ round }: { round: Round }) {
 
   return (
     <>
+      <MinigameArt game="zombie-tag" halfWidth={HALF_W} halfDepth={HALF_H}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.fog, 90, 260]} />
       <FixedCamera />

@@ -1,3 +1,4 @@
+import { MinigameArt } from '../../76-minigame-art'
 /**
  * The junkyard at night, drawn.
  *
@@ -406,6 +407,7 @@ export function WheresMidnightScene({ live, view, torch }: { live: RefObject<Gam
   const background = useMemo(() => new Color(PALETTE.night), [])
   return (
     <>
+      <MinigameArt game="wheres-midnight" halfWidth={YARD.fence} halfDepth={YARD.fence}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.night, 26, 78]} />
       <Eye view={view} />

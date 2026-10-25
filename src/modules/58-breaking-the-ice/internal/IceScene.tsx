@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Breaking the Ice in three dimensions: three squares of tiles, smaller and
  * lower the further down they sit, over a long drop to the sea.
@@ -151,7 +152,7 @@ function Layer({ live, layer }: { live: RefObject<Round>; layer: 0 | 1 | 2 }) {
 
   return (
     <instancedMesh ref={mesh} args={[undefined, undefined, cells.length]} castShadow receiveShadow>
-      <boxGeometry args={[1, 1, 1]} />
+      <BeveledBox args={[1, 1, 1]} />
       <meshStandardMaterial roughness={0.4} />
     </instancedMesh>
   )
@@ -218,6 +219,7 @@ export function IceScene({ live, look }: { live: RefObject<Round>; look: RefObje
   const colours = round.players.map((player, index) => rosterColour(player, index, COLOURS, myColour, peers))
   return (
     <>
+      <MinigameArt game="breaking-the-ice" halfWidth={DIM*CELL/2+1} halfDepth={DIM*CELL/2+1}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.fog, 40, 160]} />
       <Rig live={live} look={look} />

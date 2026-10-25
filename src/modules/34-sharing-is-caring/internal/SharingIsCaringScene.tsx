@@ -1,3 +1,4 @@
+import { MinigameArt } from '../../76-minigame-art'
 /**
  * Sharing Is Caring in three dimensions, lit and dressed like the island.
  *
@@ -320,6 +321,7 @@ export function SharingIsCaringScene({ live }: { live: RefObject<Round> }) {
   const mineIndex = round.players.findIndex((p) => p.mine)
   return (
     <>
+      <MinigameArt game="sharing-is-caring" halfWidth={ARENA.radius} halfDepth={ARENA.radius}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.background, 60, 180]} />
       <FixedCamera />

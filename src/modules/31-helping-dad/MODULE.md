@@ -341,3 +341,10 @@ instanced mesh for the walls, the floor, the start and finish pads, Dad, two
 small meshes for each of the five pieces of junk, and four or five small meshes a
 torch; one point light for your torch and one for Dad. The turn costs one group's
 heading a frame.
+
+
+## Procedural asset depth pass
+
+Uses the public `76-minigame-art` contract for helping dad scenery and lightly beveled existing box assets. Each scene supplies its own play bounds; decorative meshes ignore aiming rays and remain beyond the clear gameplay envelope. Game rules, collision, camera framing, player colours and controls are unchanged. Geometry is procedural, batched to at most three extra draws, with no added textures or lights.
+
+Visual review is pending. Check the actual game, obstacle silhouettes, aiming, the smallest supported window and an eight-player round. Compare themed props in `/src/modules/76-minigame-art/review/gallery.html#helping-dad`. Existing screenshots and runtime measurements predate this pass.

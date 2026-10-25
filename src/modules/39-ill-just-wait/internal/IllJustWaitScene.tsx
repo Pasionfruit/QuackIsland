@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * I'll Just Wait in three dimensions.
  *
@@ -141,13 +142,13 @@ function Clock({ radius, rim, read }: { radius: number; rim: string; read: () =>
       <group position={[0, 0, depth / 2 + 0.02]}>
         <group ref={hour}>
           <mesh position={[0, radius * 0.25, 0]}>
-            <boxGeometry args={[radius * 0.065, radius * 0.62, radius * 0.012]} />
+            <BeveledBox args={[radius * 0.065, radius * 0.62, radius * 0.012]} />
             <meshStandardMaterial color={PALETTE.hand} roughness={0.4} />
           </mesh>
         </group>
         <group ref={minute}>
           <mesh position={[0, radius * 0.39, radius * 0.015]}>
-            <boxGeometry args={[radius * 0.032, radius * 0.92, radius * 0.012]} />
+            <BeveledBox args={[radius * 0.032, radius * 0.92, radius * 0.012]} />
             <meshStandardMaterial color={PALETTE.hand} roughness={0.4} />
           </mesh>
         </group>
@@ -253,6 +254,7 @@ export function IllJustWaitScene({ live, hand }: { live: RefObject<Game>; hand: 
   )
   return (
     <>
+      <MinigameArt game="ill-just-wait" />
       <color attach="background" args={[background]} />
       <FixedCamera />
       <Lights />

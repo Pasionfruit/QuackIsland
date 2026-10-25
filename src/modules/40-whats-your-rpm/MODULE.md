@@ -122,3 +122,10 @@ each skip button.
   feed is drawn on the page.
 - No moving camera.
 - No sound of its own.
+
+
+## Procedural asset depth pass
+
+Uses the public `76-minigame-art` contract for whats your rpm scenery and lightly beveled existing box assets. Each scene supplies its own play bounds; decorative meshes ignore aiming rays and remain beyond the clear gameplay envelope. Game rules, collision, camera framing, player colours and controls are unchanged. Geometry is procedural, batched to at most three extra draws, with no added textures or lights.
+
+Visual review is pending. Check the actual game, obstacle silhouettes, aiming, the smallest supported window and an eight-player round. Compare themed props in `/src/modules/76-minigame-art/review/gallery.html#whats-your-rpm`. Existing screenshots and runtime measurements predate this pass.

@@ -131,3 +131,10 @@ For the new duck art and renderer budgets, run
 `node src/modules/72-tug-of-war/review/duck-check.mjs`.
 They require the local Vite/relay and Chrome, use separate temporary profiles,
 close their own browsers, and leave the existing servers running.
+
+
+## Procedural asset depth pass
+
+Uses the public `76-minigame-art` contract for tug of war scenery and lightly beveled existing box assets. Each scene supplies its own play bounds; decorative meshes ignore aiming rays and remain beyond the clear gameplay envelope. Game rules, collision, camera framing, player colours and controls are unchanged. Geometry is procedural, batched to at most three extra draws, with no added textures or lights.
+
+Visual review is pending. Check the actual game, obstacle silhouettes, aiming, the smallest supported window and an eight-player round. Compare themed props in `/src/modules/76-minigame-art/review/gallery.html#tug-of-war`. Existing screenshots and runtime measurements predate this pass.

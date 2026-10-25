@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Messy Maze in three dimensions, lit and dressed like the island.
  *
@@ -93,7 +94,7 @@ function Daylight() {
 const Floor = memo(function Floor() {
   return (
     <mesh position={[0, -SLAB / 2, 0]} receiveShadow>
-      <boxGeometry args={[HALF * 2, SLAB, HALF * 2]} />
+      <BeveledBox args={[HALF * 2, SLAB, HALF * 2]} />
       <meshStandardMaterial color={PALETTE.sand} roughness={0.95} />
     </mesh>
   )
@@ -124,7 +125,7 @@ const Walls = memo(function Walls({ maze }: { maze: Maze }) {
       castShadow
       receiveShadow
     >
-      <boxGeometry args={[1, 1, 1]} />
+      <BeveledBox args={[1, 1, 1]} />
       <meshStandardMaterial color={PALETTE.wall} roughness={0.9} />
     </instancedMesh>
   )
@@ -151,11 +152,11 @@ function SpinningPlatform({ platform, done }: { platform: Platform; done: boolea
           <meshStandardMaterial color={done ? PALETTE.platformDone : PALETTE.platform} roughness={0.6} />
         </mesh>
         <mesh position={[0, 0.15, 0]}>
-          <boxGeometry args={[radius * 1.8, 0.03, 0.28]} />
+          <BeveledBox args={[radius * 1.8, 0.03, 0.28]} />
           <meshStandardMaterial color={done ? PALETTE.stripeDone : PALETTE.stripe} roughness={0.5} />
         </mesh>
         <mesh position={[0, 0.15, 0]}>
-          <boxGeometry args={[0.28, 0.03, radius * 1.8]} />
+          <BeveledBox args={[0.28, 0.03, radius * 1.8]} />
           <meshStandardMaterial color={done ? PALETTE.stripeDone : PALETTE.stripe} roughness={0.5} />
         </mesh>
       </group>
@@ -243,6 +244,7 @@ export function MessyMazeScene({ race }: { race: Race }) {
 
   return (
     <>
+      <MinigameArt game="messy-maze" halfWidth={HALF} halfDepth={HALF}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.fog, 110, 300]} />
       <FixedCamera />

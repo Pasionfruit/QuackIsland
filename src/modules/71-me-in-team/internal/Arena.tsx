@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 import { useEffect, useMemo, useRef, type RefObject } from 'react'
 import { useThree } from '@react-three/fiber'
 import { Group, InstancedMesh, Object3D, PerspectiveCamera, Vector3 } from 'three'
@@ -75,20 +76,21 @@ export function Arena({ round, hands, advance }: { round: Round; hands: RefObjec
   const course = courseFor(round.seed)
   useGameFrame((_state, dt) => advance(Math.min(dt, .05)), PRIORITY.simulation)
   return <>
-    <mesh position={[0, -.25, 0]}><boxGeometry args={[HALF_WIDTH*2+.8, .5, HALF_LENGTH*2+.8]} /><meshStandardMaterial color="#e1ddc8" /></mesh>
+      <MinigameArt game="me-in-team" halfWidth={HALF_WIDTH+1} halfDepth={HALF_LENGTH+1}/>
+    <mesh position={[0, -.25, 0]}><BeveledBox args={[HALF_WIDTH*2+.8, .5, HALF_LENGTH*2+.8]} /><meshStandardMaterial color="#e1ddc8" /></mesh>
     {[-1, 1].map((side) => <group key={side}>
-      <mesh position={[side*(HALF_WIDTH+.2), .15, 0]}><boxGeometry args={[.4, .3, HALF_LENGTH*2+.8]} /><meshStandardMaterial color="#9abbb9" /></mesh>
-      <mesh position={[0, .15, side*(HALF_LENGTH+.2)]}><boxGeometry args={[HALF_WIDTH*2, .3, .4]} /><meshStandardMaterial color="#9abbb9" /></mesh>
+      <mesh position={[side*(HALF_WIDTH+.2), .15, 0]}><BeveledBox args={[.4, .3, HALF_LENGTH*2+.8]} /><meshStandardMaterial color="#9abbb9" /></mesh>
+      <mesh position={[0, .15, side*(HALF_LENGTH+.2)]}><BeveledBox args={[HALF_WIDTH*2, .3, .4]} /><meshStandardMaterial color="#9abbb9" /></mesh>
     </group>)}
     {course.obstacles.map((c, i) => <group key={i} position={[c.x, 0, c.z]}>
-      <mesh position={[0, c.h/2, 0]}><boxGeometry args={[c.w, c.h, c.d]} /><meshStandardMaterial color="#a9bdb8" /></mesh>
-      <mesh position={[0, c.h+.06, 0]}><boxGeometry args={[c.w+.1, .12, c.d+.1]} /><meshStandardMaterial color="#c2cfbf" /></mesh>
+      <mesh position={[0, c.h/2, 0]}><BeveledBox args={[c.w, c.h, c.d]} /><meshStandardMaterial color="#a9bdb8" /></mesh>
+      <mesh position={[0, c.h+.06, 0]}><BeveledBox args={[c.w+.1, .12, c.d+.1]} /><meshStandardMaterial color="#c2cfbf" /></mesh>
     </group>)}
     {course.checkpoints.map((p, i) => <Marker key={i} {...p} colour={['#dcaa68', '#d29184', '#87ada7'][i]} done={i < round.checkpoint} current={i === round.checkpoint} />)}
     <group position={[course.finish.x, 0, course.finish.z]}>
-      {[-2, 2].map((x) => <mesh key={x} position={[x, 1.8, 0]}><boxGeometry args={[.25, 3.6, .35]} /><meshStandardMaterial color="#6d9391" /></mesh>)}
-      <mesh position={[0, 3.5, 0]}><boxGeometry args={[4.3, .4, .35]} /><meshStandardMaterial color={round.checkpoint === 3 ? '#dbb46a' : '#799b98'} /></mesh>
-      <mesh position={[0, .02, 0]}><boxGeometry args={[4, .03, .6]} /><meshStandardMaterial color="#5c8585" /></mesh>
+      {[-2, 2].map((x) => <mesh key={x} position={[x, 1.8, 0]}><BeveledBox args={[.25, 3.6, .35]} /><meshStandardMaterial color="#6d9391" /></mesh>)}
+      <mesh position={[0, 3.5, 0]}><BeveledBox args={[4.3, .4, .35]} /><meshStandardMaterial color={round.checkpoint === 3 ? '#dbb46a' : '#799b98'} /></mesh>
+      <mesh position={[0, .02, 0]}><BeveledBox args={[4, .03, .6]} /><meshStandardMaterial color="#5c8585" /></mesh>
     </group>
     {round.players.filter((p) => !p.left).map((p, i) => <Character key={p.id} player={p} colour={p.role === 'solo' ? PALETTE[0] : PALETTE[(i % (PALETTE.length-1))+1]} mine={p.mine} />)}
     <Chains round={round} />

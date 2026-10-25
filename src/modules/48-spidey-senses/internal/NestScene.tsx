@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Spidey Senses in three dimensions, over your shoulder.
  *
@@ -134,7 +135,7 @@ function Cellar() {
       </mesh>
       {[0, 1, 2, 3].map((k) => (
         <mesh key={k} position={[Math.sin((k * Math.PI) / 2) * half, 3, Math.cos((k * Math.PI) / 2) * half]} rotation={[0, (k * Math.PI) / 2, 0]} receiveShadow>
-          <boxGeometry args={[half * 2, 6, 0.6]} />
+          <BeveledBox args={[half * 2, 6, 0.6]} />
           <meshStandardMaterial {...wall} />
         </mesh>
       ))}
@@ -211,7 +212,7 @@ function Trapdoor({ live }: { live: RefObject<Game> }) {
         [s + 0.1, 0, 0.2, s * 2],
       ].map(([x, z, w, d], i) => (
         <mesh key={i} position={[x, 0.04, z]} receiveShadow>
-          <boxGeometry args={[w, 0.08, d]} />
+          <BeveledBox args={[w, 0.08, d]} />
           <meshStandardMaterial color={PALETTE.iron} roughness={0.6} metalness={0.4} />
         </mesh>
       ))}
@@ -229,12 +230,12 @@ function Trapdoor({ live }: { live: RefObject<Game> }) {
       <group position={[0, 0.06, -s]}>
         <group ref={lid}>
           <mesh position={[0, 0.05, s]} castShadow receiveShadow>
-            <boxGeometry args={[s * 2, 0.1, s * 2]} />
+            <BeveledBox args={[s * 2, 0.1, s * 2]} />
             <meshStandardMaterial color={PALETTE.lid} roughness={0.9} />
           </mesh>
           {[-0.55, 0.55].map((z) => (
             <mesh key={z} position={[0, 0.11, s + z]}>
-              <boxGeometry args={[s * 2 + 0.02, 0.02, 0.16]} />
+              <BeveledBox args={[s * 2 + 0.02, 0.02, 0.16]} />
               <meshStandardMaterial color={PALETTE.iron} metalness={0.5} roughness={0.5} />
             </mesh>
           ))}
@@ -457,6 +458,7 @@ export function NestScene({ live }: { live: RefObject<Game> }) {
   )
   return (
     <>
+      <MinigameArt game="spidey-senses" halfWidth={CELLAR.half} halfDepth={CELLAR.half}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.dark, 14, 34]} />
       <ambientLight intensity={0.35} color="#8a7fa0" />

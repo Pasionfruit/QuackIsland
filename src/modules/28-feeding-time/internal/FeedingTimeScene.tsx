@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Feeding Time in three dimensions.
  *
@@ -248,7 +249,7 @@ function CrackerView({ cracker, live, colours }: { cracker: Cracker; live: RefOb
     <>
       <group ref={holder}>
         <mesh castShadow>
-          <boxGeometry args={[0.28, 0.06, 0.28]} />
+          <BeveledBox args={[0.28, 0.06, 0.28]} />
           <meshStandardMaterial color={PALETTE.cracker} roughness={0.8} />
         </mesh>
       </group>
@@ -361,6 +362,7 @@ export function FeedingTimeScene({ live, hands }: { live: RefObject<Game>; hands
   const crackers = pending ? [...game.crackers, pending] : game.crackers
   return (
     <>
+      <MinigameArt game="feeding-time" halfWidth={POND.radiusX+.5} halfDepth={10} center={[0,0,-7]}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.background, 60, 150]} />
       <FixedCamera />

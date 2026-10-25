@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Jackal in three dimensions, from each player's own point of view.
  *
@@ -182,7 +183,7 @@ function LaneView({ seed }: { seed: number }) {
   return (
     <group>
       <instancedMesh ref={boxes} args={[undefined, undefined, 256]} castShadow receiveShadow>
-        <boxGeometry args={[1, 1, 1]} />
+        <BeveledBox args={[1, 1, 1]} />
         <meshStandardMaterial roughness={0.85} />
       </instancedMesh>
       <instancedMesh ref={canopies} args={[undefined, undefined, 128]} castShadow>
@@ -191,7 +192,7 @@ function LaneView({ seed }: { seed: number }) {
       </instancedMesh>
       {/* The tower's platform: the small square the Sniper is confined to. */}
       <mesh position={[0, FIELD.towerHeight + 0.06, TOWER_Z]} castShadow receiveShadow>
-        <boxGeometry args={[FIELD.platformHalf * 2 + 0.6, 0.12, FIELD.platformHalf * 2 + 0.6]} />
+        <BeveledBox args={[FIELD.platformHalf * 2 + 0.6, 0.12, FIELD.platformHalf * 2 + 0.6]} />
         <meshStandardMaterial color={PALETTE.platform} roughness={0.7} />
       </mesh>
     </group>
@@ -313,6 +314,7 @@ export function JackalScene({ live, look, me }: { live: RefObject<Round>; look: 
 
   return (
     <>
+      <MinigameArt game="jackal" halfWidth={FIELD.halfWidth+1} halfDepth={FIELD.length/2+8}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.sky, 30, 150]} />
       <Daylight />

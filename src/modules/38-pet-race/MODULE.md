@@ -278,3 +278,10 @@ Not measured; the budgets in `pipeline.json` are unset. Drawn per frame:
 `layCourse` runs once a race. The pet rigs are rebuilt whenever somebody changes
 their pick, which during the choosing can be several times a second - hence
 `disposePet`.
+
+
+## Procedural asset depth pass
+
+Uses the public `76-minigame-art` contract for pet race scenery and lightly beveled existing box assets. Each scene supplies its own play bounds; decorative meshes ignore aiming rays and remain beyond the clear gameplay envelope. Game rules, collision, camera framing, player colours and controls are unchanged. Geometry is procedural, batched to at most three extra draws, with no added textures or lights.
+
+Visual review is pending. Check the actual game, obstacle silhouettes, aiming, the smallest supported window and an eight-player round. Compare themed props in `/src/modules/76-minigame-art/review/gallery.html#pet-race`. Existing screenshots and runtime measurements predate this pass.

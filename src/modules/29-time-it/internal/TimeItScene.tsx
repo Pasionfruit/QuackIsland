@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Time It in three dimensions.
  *
@@ -152,7 +153,7 @@ const Stage = memo(function Stage() {
         </mesh>
       </group>
       <mesh position={[0, STAGE.watchY / 2 - 0.2, STAGE.watchZ - 0.1]} castShadow>
-        <boxGeometry args={[0.6, STAGE.watchY - STAGE.watchRadius, 0.4]} />
+        <BeveledBox args={[0.6, STAGE.watchY - STAGE.watchRadius, 0.4]} />
         <meshStandardMaterial color={PALETTE.rim} roughness={0.4} metalness={0.4} />
       </mesh>
     </group>
@@ -189,7 +190,7 @@ function Dial({ live, colours }: { live: RefObject<Game>; colours: readonly stri
     <group position={[0, STAGE.watchY, STAGE.watchZ + 0.34]}>
       <group ref={hand}>
         <mesh position={[0, STAGE.watchRadius * 0.4, 0.02]}>
-          <boxGeometry args={[0.08, STAGE.watchRadius * 0.9, 0.03]} />
+          <BeveledBox args={[0.08, STAGE.watchRadius * 0.9, 0.03]} />
           <meshStandardMaterial color={PALETTE.hand} roughness={0.4} />
         </mesh>
       </group>
@@ -199,7 +200,7 @@ function Dial({ live, colours }: { live: RefObject<Game>; colours: readonly stri
       </mesh>
       <group ref={answer} visible={false}>
         <mesh position={[0, STAGE.watchRadius * 0.4, 0.04]}>
-          <boxGeometry args={[0.12, STAGE.watchRadius * 0.9, 0.03]} />
+          <BeveledBox args={[0.12, STAGE.watchRadius * 0.9, 0.03]} />
           <meshStandardMaterial color={PALETTE.target} roughness={0.4} emissive={PALETTE.target} emissiveIntensity={0.3} />
         </mesh>
       </group>
@@ -230,7 +231,7 @@ function Dial({ live, colours }: { live: RefObject<Game>; colours: readonly stri
               <meshBasicMaterial color={PALETTE.mark} />
             </mesh>
             <mesh position={[0, -0.35, 0]}>
-              <boxGeometry args={[0.3, 0.55, 0.05]} />
+              <BeveledBox args={[0.3, 0.55, 0.05]} />
               <meshBasicMaterial color={PALETTE.mark} />
             </mesh>
             <mesh position={[0, -0.95, 0]}>
@@ -300,6 +301,7 @@ export function TimeItScene({ live }: { live: RefObject<Game> }) {
   )
   return (
     <>
+      <MinigameArt game="time-it" />
       <color attach="background" args={[background]} />
       <FixedCamera />
       <Lights />

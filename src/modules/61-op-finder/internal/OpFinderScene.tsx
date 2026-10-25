@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * OP Finder in three dimensions: a line of racers, each with a progress bar
  * of their own floating over their head, and nothing to click on - the whole
@@ -73,12 +74,12 @@ function Racer({ player, x, colour }: { player: Player; x: number; colour: strin
     <group ref={holder}>
       <primitive object={avatar} />
       <mesh position={[0, BAR_Y, 0]}>
-        <boxGeometry args={[BAR_WIDTH, 0.12, 0.05]} />
+        <BeveledBox args={[BAR_WIDTH, 0.12, 0.05]} />
         <meshBasicMaterial color="#00000022" />
       </mesh>
       <group ref={fill} position={[0, BAR_Y, 0.01]}>
         <mesh>
-          <boxGeometry args={[BAR_WIDTH, 0.12, 0.05]} />
+          <BeveledBox args={[BAR_WIDTH, 0.12, 0.05]} />
           <meshBasicMaterial color={fillColour} />
         </mesh>
       </group>
@@ -99,6 +100,7 @@ export function OpFinderScene({ live }: { live: RefObject<Round> }) {
 
   return (
     <>
+      <MinigameArt game="op-finder" />
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.fog, 20, 60]} />
       <Daylight />

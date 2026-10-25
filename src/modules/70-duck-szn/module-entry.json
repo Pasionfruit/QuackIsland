@@ -2,16 +2,58 @@
   "id": "70-duck-szn",
   "title": "Duck Szn: a one-minute first-person hunter-versus-ducks game",
   "status": "in_progress",
-  "dependsOn": ["00-core", "02-player", "09-net", "15-minigames", "68-minigame-kit"],
-  "budgets": {"drawCallsMax": 100, "trianglesMax": 15000, "assetTrianglesDefault": 3000, "assetTextureMaxPx": 0},
-  "blockers": ["User requested edits stay inside the new module. Pipeline, catalogue and composition registration are deferred."],
-  "measured": {"drawCalls": 69, "triangles": 3828, "previewJsGzipKb": 327.87, "fps": 60},
-  "blocks": [
-    {"id": "70.1", "title": "Seeded marsh, roles and hunt rules", "status": "done"},
-    {"id": "70.2", "title": "Kit wire and arena rules", "status": "done"},
-    {"id": "70.3", "title": "Procedural scene, controls and HUD", "status": "done"},
-    {"id": "70.4", "title": "Standalone preview, tests and browser evidence", "status": "done"},
-    {"id": "70.5", "title": "Authorized pipeline/catalogue registration and two-key gate", "status": "pending"}
+  "dependsOn": [
+    "00-core",
+    "02-player",
+    "09-net",
+    "15-minigames",
+    "68-minigame-kit",
+    "76-minigame-art"
   ],
-  "gate": {"machine": {"status": "pending", "note": "npm run gate -- 70-duck-szn reports Unknown module; standalone validation is in MODULE.md"}, "human": {"status": "pending"}}
+  "budgets": {
+    "drawCallsMax": 100,
+    "trianglesMax": 15000,
+    "assetTrianglesDefault": 3000,
+    "assetTextureMaxPx": 0
+  },
+  "blockers": [
+    "User requested edits stay inside the new module. Pipeline, catalogue and composition registration are deferred."
+  ],
+  "measured": null,
+  "blocks": [
+    {
+      "id": "70.1",
+      "title": "Seeded marsh, roles and hunt rules",
+      "status": "done"
+    },
+    {
+      "id": "70.2",
+      "title": "Kit wire and arena rules",
+      "status": "done"
+    },
+    {
+      "id": "70.3",
+      "title": "Procedural scene, controls and HUD",
+      "status": "done"
+    },
+    {
+      "id": "70.4",
+      "title": "Standalone preview, tests and browser evidence",
+      "status": "done"
+    },
+    {
+      "id": "70.5",
+      "title": "Authorized pipeline/catalogue registration and two-key gate",
+      "status": "pending"
+    }
+  ],
+  "gate": {
+    "machine": {
+      "status": "pending",
+      "note": "npm run gate -- 70-duck-szn reports Unknown module; standalone validation is in MODULE.md"
+    },
+    "human": {
+      "status": "pending"
+    }
+  }
 }

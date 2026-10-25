@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Let Him Cook in three dimensions, lit and dressed like the island.
  *
@@ -155,15 +156,15 @@ const Kitchen = memo(function Kitchen() {
         </mesh>
       ))}
       <mesh position={[0, LAYOUT.top / 2 - 0.04, 0]} castShadow receiveShadow>
-        <boxGeometry args={[width, LAYOUT.top - 0.08, depth]} />
+        <BeveledBox args={[width, LAYOUT.top - 0.08, depth]} />
         <meshStandardMaterial color={PALETTE.counter} roughness={0.8} />
       </mesh>
       <mesh position={[0, LAYOUT.top - 0.04, 0]} receiveShadow>
-        <boxGeometry args={[width + 0.2, 0.08, depth + 0.2]} />
+        <BeveledBox args={[width + 0.2, 0.08, depth + 0.2]} />
         <meshStandardMaterial color={PALETTE.counterTop} roughness={0.7} />
       </mesh>
       <mesh position={[stove.x, stove.height / 2, stove.z]} castShadow receiveShadow>
-        <boxGeometry args={[stove.width, stove.height, stove.width]} />
+        <BeveledBox args={[stove.width, stove.height, stove.width]} />
         <meshStandardMaterial color={PALETTE.stove} roughness={0.5} metalness={0.2} />
       </mesh>
       <mesh position={[stove.x, (stove.height + LAYOUT.potTop) / 2, stove.z]} castShadow>
@@ -677,6 +678,7 @@ export function LetHimCookScene({ live, hands }: { live: RefObject<Game>; hands:
   const layout = `${game.id}:${game.recipe}:${game.phase === 'cooking' ? 'c' : 's'}`
   return (
     <>
+      <MinigameArt game="let-him-cook" />
       <color attach="background" args={[background]} />
       <FixedCamera />
       <Daylight />

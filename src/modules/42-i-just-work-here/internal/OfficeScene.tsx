@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * I Just Work Here in three dimensions, from above.
  *
@@ -240,11 +241,11 @@ const OfficeView = memo(function OfficeView({ seed }: { seed: number }) {
         <meshStandardMaterial color={PALETTE.outside} roughness={1} />
       </mesh>
       <instancedMesh ref={boxes} args={[undefined, undefined, 160]} castShadow receiveShadow>
-        <boxGeometry args={[1, 1, 1]} />
+        <BeveledBox args={[1, 1, 1]} />
         <meshStandardMaterial roughness={0.8} />
       </instancedMesh>
       <instancedMesh ref={screens} args={[undefined, undefined, 64]} castShadow>
-        <boxGeometry args={[1, 1, 1]} />
+        <BeveledBox args={[1, 1, 1]} />
         <meshStandardMaterial color={PALETTE.monitor} roughness={0.5} />
       </instancedMesh>
       <instancedMesh ref={leaves} args={[undefined, undefined, 32]} castShadow>
@@ -274,12 +275,12 @@ function HomeDesk({ index, live, colour }: { index: number; live: RefObject<Game
     <group>
       {/* The chair, pulled out a little. */}
       <mesh position={[cx, 0.25, front + side * 0.45]} castShadow>
-        <boxGeometry args={[0.55, 0.5, 0.5]} />
+        <BeveledBox args={[0.55, 0.5, 0.5]} />
         <meshStandardMaterial color={colour} roughness={0.7} />
       </mesh>
       {/* The nameplate, along the front edge of the desk. */}
       <mesh position={[cx, desk.block.height + 0.02, front - side * 0.05]}>
-        <boxGeometry args={[desk.block.x1 - desk.block.x0, 0.05, 0.1]} />
+        <BeveledBox args={[desk.block.x1 - desk.block.x0, 0.05, 0.1]} />
         <meshStandardMaterial color={colour} roughness={0.5} />
       </mesh>
       <mesh ref={beam} position={[cx, 3, (desk.block.z0 + desk.block.z1) / 2]} visible={false}>
@@ -637,6 +638,7 @@ export function OfficeScene({ live, aim }: { live: RefObject<Game>; aim: RefObje
   )
   return (
     <>
+      <MinigameArt game="i-just-work-here" halfWidth={OFFICE.halfX} halfDepth={OFFICE.halfZ}/>
       <color attach="background" args={[background]} />
       <hemisphereLight args={['#ffffff', '#8d9cab', 1.5]} />
       <directionalLight

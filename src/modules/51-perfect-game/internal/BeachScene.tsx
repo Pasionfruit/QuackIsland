@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Perfect Game in three dimensions, from behind the line.
  *
@@ -147,12 +148,12 @@ function Beach({ pointer }: { pointer: RefObject<PointerRef> }) {
       {[-1, 1].map((s) => (
         <group key={s} position={[s * (BEACH.halfX + WALL_THICK / 2), 0, (BEACH.near + BEACH.far) / 2]}>
           <mesh position={[0, WALL_HEIGHT / 2, 0]} castShadow receiveShadow>
-            <boxGeometry args={[WALL_THICK, WALL_HEIGHT, BEACH.near - BEACH.far]} />
+            <BeveledBox args={[WALL_THICK, WALL_HEIGHT, BEACH.near - BEACH.far]} />
             <meshStandardMaterial color={PALETTE.wall} roughness={0.85} />
           </mesh>
           {/* A cap along the top, a little proud, so the wall has an edge to catch the light. */}
           <mesh position={[-s * 0.05, WALL_HEIGHT + 0.05, 0]}>
-            <boxGeometry args={[WALL_THICK + 0.2, 0.1, BEACH.near - BEACH.far]} />
+            <BeveledBox args={[WALL_THICK + 0.2, 0.1, BEACH.near - BEACH.far]} />
             <meshStandardMaterial color={PALETTE.wallCap} roughness={0.7} />
           </mesh>
         </group>
@@ -392,6 +393,7 @@ export function BeachScene({ live, pointer }: { live: RefObject<Game>; pointer: 
   )
   return (
     <>
+      <MinigameArt game="perfect-game" halfWidth={BEACH.halfX} halfDepth={(BEACH.near-BEACH.far)/2} center={[0,0,(BEACH.near+BEACH.far)/2]}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.sky, 60, 170]} />
       <hemisphereLight args={['#ffffff', '#e8d3a6', 1.4]} />

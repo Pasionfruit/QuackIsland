@@ -1,3 +1,4 @@
+import { MinigameArt } from '../../76-minigame-art'
 /**
  * Make The Cut in three dimensions.
  *
@@ -376,6 +377,7 @@ export function MakeTheCutScene({ live, hands }: { live: RefObject<Game>; hands:
   )
   return (
     <>
+      <MinigameArt game="make-the-cut" />
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.background, 70, 160]} />
       <FixedCamera />

@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Synchronize Steps in three dimensions.
  *
@@ -144,13 +145,13 @@ const Staircase = memo(function Staircase({ lanes, colours }: { lanes: number; c
         const step = i + 1
         return (
           <mesh key={step} position={[stepX(step), stepY(step) / 2, 0]} castShadow receiveShadow>
-            <boxGeometry args={[STAIRS.tread, stepY(step), width]} />
+            <BeveledBox args={[STAIRS.tread, stepY(step), width]} />
             <meshStandardMaterial color={step % 2 === 0 ? PALETTE.stone : PALETTE.stoneDark} roughness={0.9} />
           </mesh>
         )
       })}
       <instancedMesh ref={treads} args={[undefined, undefined, TOWER.steps * lanes]} receiveShadow key={lanes}>
-        <boxGeometry args={[STAIRS.tread * 0.92, 0.03, STAIRS.lane * 0.86]} />
+        <BeveledBox args={[STAIRS.tread * 0.92, 0.03, STAIRS.lane * 0.86]} />
         <meshStandardMaterial roughness={0.8} />
       </instancedMesh>
       {Array.from({ length: TOWER.steps }, (_, i) => {
@@ -232,6 +233,7 @@ export function SynchronizeStepsScene({ live }: { live: RefObject<Game> }) {
   )
   return (
     <>
+      <MinigameArt game="synchronize-steps" halfWidth={TOWER.steps*STAIRS.tread/2+1} halfDepth={STAIRS.lane*4+.5}/>
       <color attach="background" args={[background]} />
       <FixedCamera lanes={Math.max(1, count)} />
       <Lights />

@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Musical Mayhem in three dimensions, lit and dressed like the island.
  *
@@ -161,7 +162,7 @@ function Speakers({ live }: { live: RefObject<Game> }) {
       ] as const).map(([x, z, ref], i) => (
         <group key={i} ref={ref} position={[x, 0, z]} rotation={[0, Math.atan2(-x, -z), 0]}>
           <mesh castShadow position={[0, 0.9, 0]}>
-            <boxGeometry args={[1.1, 1.8, 0.9]} />
+            <BeveledBox args={[1.1, 1.8, 0.9]} />
             <meshStandardMaterial color={PALETTE.speaker} roughness={0.7} />
           </mesh>
           <mesh position={[0, 1.2, 0.46]} rotation={[Math.PI / 2, 0, 0]}>
@@ -228,12 +229,12 @@ function Chair({ index, live }: { index: number; live: RefObject<Game> }) {
         <meshBasicMaterial color={PALETTE.glow} transparent opacity={0.6} side={DoubleSide} />
       </mesh>
       <mesh castShadow receiveShadow position={[0, SEAT.height, 0]}>
-        <boxGeometry args={[SEAT.width, SEAT.thickness, SEAT.width]} />
+        <BeveledBox args={[SEAT.width, SEAT.thickness, SEAT.width]} />
         <meshStandardMaterial color={PALETTE.chair} roughness={0.8} />
       </mesh>
       {/* The back is on the inside of the ring, so everybody sits facing out. */}
       <mesh castShadow position={[0, SEAT.height + SEAT.back / 2, -SEAT.width / 2 + SEAT.thickness / 2]}>
-        <boxGeometry args={[SEAT.width, SEAT.back, SEAT.thickness]} />
+        <BeveledBox args={[SEAT.width, SEAT.back, SEAT.thickness]} />
         <meshStandardMaterial color={PALETTE.chair} roughness={0.8} />
       </mesh>
       {([
@@ -326,6 +327,7 @@ export function MusicalMayhemScene({ live }: { live: RefObject<Game> }) {
   )
   return (
     <>
+      <MinigameArt game="musical-mayhem" halfWidth={FLOOR.radius} halfDepth={FLOOR.radius}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.background, 60, 190]} />
       <FixedCamera />

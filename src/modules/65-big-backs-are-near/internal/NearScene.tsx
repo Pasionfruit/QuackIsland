@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Big Backs are Near, in three dimensions, from each player's own point of
  * view.
@@ -152,7 +153,7 @@ function MazeView({ seed }: { seed: number }) {
   }, [blocks])
   return (
     <instancedMesh ref={boxes} args={[undefined, undefined, Math.max(1, blocks.length)]} castShadow receiveShadow>
-      <boxGeometry args={[1, 1, 1]} />
+      <BeveledBox args={[1, 1, 1]} />
       <meshStandardMaterial roughness={0.95} />
     </instancedMesh>
   )
@@ -211,6 +212,7 @@ export function NearScene({ live, look, me }: { live: RefObject<Round>; look: Re
 
   return (
     <>
+      <MinigameArt game="big-backs-are-near" halfWidth={MAZE.size*MAZE.cell/2+1} halfDepth={MAZE.size*MAZE.cell/2+1}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={iAmHunter ? [sky, 1.5, HUNTER.sightRadius] : [sky, 24, 140]} />
       <Daylight dim={iAmHunter} />

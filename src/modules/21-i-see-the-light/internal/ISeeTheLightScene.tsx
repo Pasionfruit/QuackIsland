@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * I See The Light in three dimensions, lit and dressed like the island.
  *
@@ -146,11 +147,11 @@ function TrafficLight({ live }: { live: RefObject<Race> }) {
         </mesh>
       ))}
       <mesh position={[0, TRACK.lightHeight + 1.1, 0]} castShadow>
-        <boxGeometry args={[span * 2 + 0.4, 0.32, 0.32]} />
+        <BeveledBox args={[span * 2 + 0.4, 0.32, 0.32]} />
         <meshStandardMaterial color={PALETTE.post} roughness={0.7} />
       </mesh>
       <mesh position={[0, TRACK.lightHeight - 0.2, 0]} castShadow>
-        <boxGeometry args={[1.9, 3.6, 0.9]} />
+        <BeveledBox args={[1.9, 3.6, 0.9]} />
         <meshStandardMaterial color={PALETTE.dark} roughness={0.6} />
       </mesh>
       <mesh position={[0, TRACK.lightHeight + 0.65, 0.47]}>
@@ -235,6 +236,7 @@ export function ISeeTheLightScene({ live }: { live: RefObject<Race> }) {
   )
   return (
     <>
+      <MinigameArt game="i-see-the-light" halfWidth={TRACK.lane*4+.6} halfDepth={TRACK.length/2+3}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.background, 70, 200]} />
       <FixedCamera />

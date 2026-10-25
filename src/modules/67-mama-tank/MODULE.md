@@ -340,3 +340,10 @@ Not measured; the budgets in `pipeline.json` are unset. Drawn per frame:
 - One hill mesh (a tapered cylinder).
 - A hull, a turret, a barrel and a muzzle-flash sphere per player.
 - One shadow-casting directional light, an ambient and a hemisphere light.
+
+
+## Procedural asset depth pass
+
+Uses the public `76-minigame-art` contract for mama tank scenery and lightly beveled existing box assets. Each scene supplies its own play bounds; decorative meshes ignore aiming rays and remain beyond the clear gameplay envelope. Game rules, collision, camera framing, player colours and controls are unchanged. Geometry is procedural, batched to at most three extra draws, with no added textures or lights.
+
+Visual review is pending. Check the actual game, obstacle silhouettes, aiming, the smallest supported window and an eight-player round. Compare themed props in `/src/modules/76-minigame-art/review/gallery.html#mama-tank`. Existing screenshots and runtime measurements predate this pass.

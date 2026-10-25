@@ -417,3 +417,10 @@ a few hundred distance checks a frame.
 The honest cost is the **second WebGL context**: the world's canvas is still
 alive behind the opaque minigame screen while a round is up. Worth revisiting
 if it shows up on a slow machine.
+
+
+## Procedural asset depth pass
+
+Uses the public `76-minigame-art` contract for zombie tag scenery and lightly beveled existing box assets. Each scene supplies its own play bounds; decorative meshes ignore aiming rays and remain beyond the clear gameplay envelope. Game rules, collision, camera framing, player colours and controls are unchanged. Geometry is procedural, batched to at most three extra draws, with no added textures or lights.
+
+Visual review is pending. Check the actual game, obstacle silhouettes, aiming, the smallest supported window and an eight-player round. Compare themed props in `/src/modules/76-minigame-art/review/gallery.html#zombie-tag`. Existing screenshots and runtime measurements predate this pass.

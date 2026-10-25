@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * What's Your RPM? in three dimensions: the race, as a running track.
  *
@@ -145,7 +146,7 @@ function Runner({ index, count, live, colour }: { index: number; count: number; 
         </group>
         <group position={[0, TRACK.phoneY, 0]}>
           <mesh castShadow>
-            <boxGeometry args={[0.5, 0.9, 0.06]} />
+            <BeveledBox args={[0.5, 0.9, 0.06]} />
             <meshStandardMaterial color={PALETTE.phone} roughness={0.3} metalness={0.4} />
           </mesh>
           <mesh position={[0, 0, 0.032]}>
@@ -153,7 +154,7 @@ function Runner({ index, count, live, colour }: { index: number; count: number; 
             <meshBasicMaterial ref={screen} color={PALETTE.line} toneMapped={false} />
           </mesh>
           <mesh position={[0, -TRACK.phoneY / 2 + 0.25, -0.02]}>
-            <boxGeometry args={[0.05, TRACK.phoneY - 0.95, 0.05]} />
+            <BeveledBox args={[0.05, TRACK.phoneY - 0.95, 0.05]} />
             <meshStandardMaterial color={colour} roughness={0.6} />
           </mesh>
         </group>
@@ -184,6 +185,7 @@ export function RpmScene({ live }: { live: RefObject<Game> }) {
   )
   return (
     <>
+      <MinigameArt game="whats-your-rpm" />
       <color attach="background" args={[background]} />
       <FixedCamera />
       <Lights />

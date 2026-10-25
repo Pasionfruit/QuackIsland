@@ -23,3 +23,10 @@ Scope blocker: main-dashboard integration requires a new catalogue id in
 `15-minigames`, which the user explicitly declined to authorize. Pipeline
 registration and composition edits are also left untouched under the request
 to keep changes inside the new module.
+
+
+## Procedural asset depth pass
+
+Uses the public `76-minigame-art` contract for trust me bro scenery and lightly beveled existing box assets. Each scene supplies its own play bounds; decorative meshes ignore aiming rays and remain beyond the clear gameplay envelope. Game rules, collision, camera framing, player colours and controls are unchanged. Geometry is procedural, batched to at most three extra draws, with no added textures or lights.
+
+Visual review is pending. Check the actual game, obstacle silhouettes, aiming, the smallest supported window and an eight-player round. Compare themed props in `/src/modules/76-minigame-art/review/gallery.html#trust-me-bro`. Existing screenshots and runtime measurements predate this pass.

@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * He's One Shot in three dimensions, through your own eyes.
  *
@@ -146,7 +147,7 @@ const ArenaView = memo(function ArenaView({ seed }: { seed: number }) {
         <meshStandardMaterial color={PALETTE.sandDark} roughness={1} />
       </mesh>
       <instancedMesh ref={boxes} args={[undefined, undefined, 128]} castShadow receiveShadow>
-        <boxGeometry args={[1, 1, 1]} />
+        <BeveledBox args={[1, 1, 1]} />
         <meshStandardMaterial roughness={0.85} />
       </instancedMesh>
     </group>
@@ -448,11 +449,11 @@ function Gun({ live, colours }: { live: RefObject<Game>; colours: readonly strin
     <group ref={rig}>
       <group ref={kick} scale={GUN_SCALE}>
         <mesh renderOrder={20}>
-          <boxGeometry args={[0.09, 0.13, 0.36]} />
+          <BeveledBox args={[0.09, 0.13, 0.36]} />
           <meshBasicMaterial color={PALETTE.gun} {...over} />
         </mesh>
         <mesh renderOrder={21} position={[0, 0.045, -0.02]}>
-          <boxGeometry args={[0.095, 0.03, 0.3]} />
+          <BeveledBox args={[0.095, 0.03, 0.3]} />
           <meshBasicMaterial color={colour} {...over} />
         </mesh>
         <mesh renderOrder={21} position={[0, 0.03, -0.26]} rotation={[Math.PI / 2, 0, 0]}>
@@ -460,7 +461,7 @@ function Gun({ live, colours }: { live: RefObject<Game>; colours: readonly strin
           <meshBasicMaterial color="#4a4652" {...over} />
         </mesh>
         <mesh renderOrder={20} position={[0, -0.11, 0.08]} rotation={[0.3, 0, 0]}>
-          <boxGeometry args={[0.07, 0.14, 0.08]} />
+          <BeveledBox args={[0.07, 0.14, 0.08]} />
           <meshBasicMaterial color={PALETTE.gun} {...over} />
         </mesh>
         <mesh ref={flash} renderOrder={22} position={[0, 0.03, -0.39]} visible={false}>
@@ -494,6 +495,7 @@ export function HesOneShotScene({ live, look }: { live: RefObject<Game>; look: R
   )
   return (
     <>
+      <MinigameArt game="hes-one-shot" halfWidth={ARENA.half} halfDepth={ARENA.half}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.sky, 40, 115]} />
       <hemisphereLight args={['#eef8ff', '#c9a36e', 1.3]} />

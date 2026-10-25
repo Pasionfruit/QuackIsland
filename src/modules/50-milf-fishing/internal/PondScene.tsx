@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * M.I.L.F (fishing) in three dimensions, from just behind you.
  *
@@ -183,13 +184,13 @@ function Dock({ count }: { count: number }) {
   return (
     <group>
       <mesh position={[0, DOCK - 0.08, 1.1]} castShadow receiveShadow>
-        <boxGeometry args={[half * 2, 0.16, 3]} />
+        <BeveledBox args={[half * 2, 0.16, 3]} />
         <meshStandardMaterial color={PALETTE.dock} roughness={0.9} />
       </mesh>
       {/* Board joins across it. */}
       {posts.map((x) => (
         <mesh key={`j${x}`} position={[x, DOCK + 0.005, 1.1]}>
-          <boxGeometry args={[0.04, 0.01, 3]} />
+          <BeveledBox args={[0.04, 0.01, 3]} />
           <meshStandardMaterial color={PALETTE.dockDark} />
         </mesh>
       ))}
@@ -371,6 +372,7 @@ export function PondScene({ live }: { live: RefObject<Game> }) {
   )
   return (
     <>
+      <MinigameArt game="milf-fishing" halfWidth={12} halfDepth={7} center={[0,0,-4]}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.sky, 40, 160]} />
       <hemisphereLight args={['#ffe2c0', '#2c4f60', 1.2]} />

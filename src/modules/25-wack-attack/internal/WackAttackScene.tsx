@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Wack-Attack in three dimensions.
  *
@@ -124,7 +125,7 @@ const Field = memo(function Field() {
       })}
       {posts.map(([x, z], i) => (
         <mesh key={i} position={[x, 0.45, z]} castShadow>
-          <boxGeometry args={[0.22, 0.9, 0.22]} />
+          <BeveledBox args={[0.22, 0.9, 0.22]} />
           <meshStandardMaterial color={PALETTE.fence} roughness={0.9} />
         </mesh>
       ))}
@@ -135,7 +136,7 @@ const Field = memo(function Field() {
         [FIELD.half + 0.3, 0, 0.12, side + 0.6],
       ].map(([x, z, w, d], i) => (
         <mesh key={i} position={[x, 0.7, z]} castShadow>
-          <boxGeometry args={[w, 0.12, d]} />
+          <BeveledBox args={[w, 0.12, d]} />
           <meshStandardMaterial color={PALETTE.fence} roughness={0.9} />
         </mesh>
       ))}
@@ -363,6 +364,7 @@ export function WackAttackScene({ live }: { live: RefObject<Game> }) {
   const moles = molesFor(game.seed).slice(Math.max(0, up.first), up.last + 1)
   return (
     <>
+      <MinigameArt game="wack-attack" halfWidth={FIELD.half} halfDepth={FIELD.half}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.background, 50, 120]} />
       <FixedCamera />

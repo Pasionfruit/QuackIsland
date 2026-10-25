@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Shanty Matrix in three dimensions, from above and behind.
  *
@@ -234,18 +235,18 @@ function Ship() {
       {/* The rails round the main deck. */}
       {posts.map(([x, z], i) => (
         <mesh key={i} position={[x, rail / 2, z]} castShadow>
-          <boxGeometry args={[0.16, rail, 0.16]} />
+          <BeveledBox args={[0.16, rail, 0.16]} />
           <meshStandardMaterial {...railMat} />
         </mesh>
       ))}
       {[-1, 1].map((s) => (
         <group key={s}>
           <mesh position={[s * (halfX + 0.1), rail, 0]} castShadow>
-            <boxGeometry args={[0.22, 0.14, halfZ * 2 + 0.4]} />
+            <BeveledBox args={[0.22, 0.14, halfZ * 2 + 0.4]} />
             <meshStandardMaterial {...railMat} />
           </mesh>
           <mesh position={[0, rail, s * (halfZ + 0.1)]} castShadow>
-            <boxGeometry args={[halfX * 2 + 0.4, 0.14, 0.22]} />
+            <BeveledBox args={[halfX * 2 + 0.4, 0.14, 0.22]} />
             <meshStandardMaterial {...railMat} />
           </mesh>
         </group>
@@ -253,7 +254,7 @@ function Ship() {
 
       {/* The forecastle, the mast and the flag, at the bow. */}
       <mesh position={[0, 0.5, -halfZ - 2]} castShadow receiveShadow>
-        <boxGeometry args={[10, 1, 3]} />
+        <BeveledBox args={[10, 1, 3]} />
         <meshStandardMaterial color={PALETTE.plankDark} roughness={0.9} />
       </mesh>
       <mesh position={[0, 7, bowZ]} castShadow>
@@ -277,7 +278,7 @@ function Ship() {
 
       {/* The quarterdeck and the wheel, at the stern. */}
       <mesh position={[0, 0.55, sternZ]} castShadow receiveShadow>
-        <boxGeometry args={[halfX * 2 + 1.2, 1.1, 2.6]} />
+        <BeveledBox args={[halfX * 2 + 1.2, 1.1, 2.6]} />
         <meshStandardMaterial color={PALETTE.plankDark} roughness={0.9} />
       </mesh>
       <group position={[0, 1.9, sternZ + 0.2]}>
@@ -287,12 +288,12 @@ function Ship() {
         </mesh>
         {[0, 1, 2, 3].map((k) => (
           <mesh key={k} rotation={[0, 0, (k * Math.PI) / 4]}>
-            <boxGeometry args={[1.5, 0.07, 0.07]} />
+            <BeveledBox args={[1.5, 0.07, 0.07]} />
             <meshStandardMaterial color={PALETTE.rail} />
           </mesh>
         ))}
         <mesh position={[0, -0.5, 0.2]}>
-          <boxGeometry args={[0.2, 1, 0.2]} />
+          <BeveledBox args={[0.2, 1, 0.2]} />
           <meshStandardMaterial color={PALETTE.hullDark} />
         </mesh>
       </group>
@@ -373,7 +374,7 @@ function Enemies() {
       {ships.map(({ angle, r }, i) => (
         <group key={i} position={[Math.cos(angle) * r, SEA_Y, Math.sin(angle) * r]} rotation={[0, -angle, 0]}>
           <mesh position={[0, 1, 0]}>
-            <boxGeometry args={[3, 2, 10]} />
+            <BeveledBox args={[3, 2, 10]} />
             <meshStandardMaterial color={PALETTE.hullDark} />
           </mesh>
           <mesh position={[0, 6, 0]}>
@@ -640,6 +641,7 @@ export function DeckScene({ live }: { live: RefObject<Game> }) {
   )
   return (
     <>
+      <MinigameArt game="shanty-matrix" halfWidth={DECK.halfX} halfDepth={DECK.halfZ}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.sky, 45, 140]} />
       <hemisphereLight args={['#fff6e6', '#2d6f95', 1.3]} />

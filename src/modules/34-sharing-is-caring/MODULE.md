@@ -280,3 +280,10 @@ the pill and two boost meshes (hidden unless boosting), the rocks two meshes eac
 (up to 32 rocks with eight players) - about a hundred and twenty draw calls with eight. One shadow-casting light.
 
 Like the other minigames, a **second WebGL context** while a round is up.
+
+
+## Procedural asset depth pass
+
+Uses the public `76-minigame-art` contract for sharing is caring scenery and lightly beveled existing box assets. Each scene supplies its own play bounds; decorative meshes ignore aiming rays and remain beyond the clear gameplay envelope. Game rules, collision, camera framing, player colours and controls are unchanged. Geometry is procedural, batched to at most three extra draws, with no added textures or lights.
+
+Visual review is pending. Check the actual game, obstacle silhouettes, aiming, the smallest supported window and an eight-player round. Compare themed props in `/src/modules/76-minigame-art/review/gallery.html#sharing-is-caring`. Existing screenshots and runtime measurements predate this pass.

@@ -174,3 +174,10 @@ world's canvas. A cup is three meshes, a face the pill, the table four; nine cup
 and eight faces is well under a hundred draw calls. One shadow-casting light.
 
 Like the other minigames, a **second WebGL context** while a game is up.
+
+
+## Procedural asset depth pass
+
+Uses the public `76-minigame-art` contract for find yourself scenery and lightly beveled existing box assets. Each scene supplies its own play bounds; decorative meshes ignore aiming rays and remain beyond the clear gameplay envelope. Game rules, collision, camera framing, player colours and controls are unchanged. Geometry is procedural, batched to at most three extra draws, with no added textures or lights.
+
+Visual review is pending. Check the actual game, obstacle silhouettes, aiming, the smallest supported window and an eight-player round. Compare themed props in `/src/modules/76-minigame-art/review/gallery.html#find-yourself`. Existing screenshots and runtime measurements predate this pass.

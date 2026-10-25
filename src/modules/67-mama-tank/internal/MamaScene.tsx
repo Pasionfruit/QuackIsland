@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Mama Tank in three dimensions, from each player's own point of view.
  *
@@ -153,11 +154,11 @@ function FieldView({ seed }: { seed: number }) {
   return (
     <group>
       <instancedMesh ref={walls} args={[undefined, undefined, Math.max(1, wallBlocks.length)]} castShadow receiveShadow>
-        <boxGeometry args={[1, 1, 1]} />
+        <BeveledBox args={[1, 1, 1]} />
         <meshStandardMaterial roughness={0.9} />
       </instancedMesh>
       <instancedMesh ref={rocks} args={[undefined, undefined, Math.max(1, rockBlocks.length)]} castShadow receiveShadow>
-        <boxGeometry args={[1, 1, 1]} />
+        <BeveledBox args={[1, 1, 1]} />
         <meshStandardMaterial roughness={1} />
       </instancedMesh>
     </group>
@@ -204,11 +205,11 @@ function TankView({ index, live, colours, role }: { index: number; live: RefObje
   return (
     <group ref={group}>
       <mesh position={[0, dims.height * 0.28, 0]} castShadow receiveShadow>
-        <boxGeometry args={[dims.radius * 1.7, dims.height * 0.55, dims.radius * 2.3]} />
+        <BeveledBox args={[dims.radius * 1.7, dims.height * 0.55, dims.radius * 2.3]} />
         <meshStandardMaterial color={colour} roughness={0.7} />
       </mesh>
       <mesh position={[0, dims.height * 0.62, 0]} castShadow receiveShadow>
-        <boxGeometry args={[dims.radius * 1.05, dims.height * 0.42, dims.radius * 1.15]} />
+        <BeveledBox args={[dims.radius * 1.05, dims.height * 0.42, dims.radius * 1.15]} />
         <meshStandardMaterial color={PALETTE.turret} roughness={0.6} />
       </mesh>
       <mesh ref={barrel} position={[0, dims.height * 0.62, -dims.radius * 0.5]}>
@@ -242,6 +243,7 @@ export function MamaScene({ live, look, me }: { live: RefObject<Round>; look: Re
 
   return (
     <>
+      <MinigameArt game="mama-tank" halfWidth={FIELD.half+FIELD.wallThickness} halfDepth={FIELD.half+FIELD.wallThickness}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.sky, 34, 150]} />
       <Daylight />

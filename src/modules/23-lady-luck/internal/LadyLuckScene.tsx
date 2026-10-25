@@ -1,3 +1,4 @@
+import { MinigameArt } from '../../76-minigame-art'
 /**
  * Lady Luck in three dimensions.
  *
@@ -307,6 +308,7 @@ export function LadyLuckScene({ live, hands }: { live: RefObject<Game>; hands: S
   )
   return (
     <>
+      <MinigameArt game="lady-luck" halfWidth={HALF.x} halfDepth={HALF.z}/>
       <color attach="background" args={[background]} />
       <directionalLight castShadow position={[-8, 30, 12]} intensity={2} color={PALETTE.sunColour} />
       <ambientLight intensity={0.6} color={PALETTE.ambientColour} />

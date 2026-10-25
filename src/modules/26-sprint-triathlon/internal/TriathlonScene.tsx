@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Sprint Triathlon in three dimensions.
  *
@@ -80,12 +81,12 @@ function Arch({ x, lanes, top }: { x: number; lanes: number; top: string }) {
     <group position={[x, 0, 0]}>
       {[-half, half].map((z) => (
         <mesh key={z} position={[0, 2, z]} castShadow>
-          <boxGeometry args={[0.3, 4, 0.3]} />
+          <BeveledBox args={[0.3, 4, 0.3]} />
           <meshStandardMaterial color={PALETTE.arch} roughness={0.8} />
         </mesh>
       ))}
       <mesh position={[0, 4.15, 0]} castShadow>
-        <boxGeometry args={[0.4, 0.7, half * 2 + 0.3]} />
+        <BeveledBox args={[0.4, 0.7, half * 2 + 0.3]} />
         <meshStandardMaterial color={top} roughness={0.7} />
       </mesh>
     </group>
@@ -206,7 +207,7 @@ const Bike = memo(function Bike({ wheels }: { wheels: RefObject<Group | null> })
             </mesh>
             {[0, Math.PI / 3, (Math.PI * 2) / 3].map((a) => (
               <mesh key={a} rotation={[a, 0, 0]}>
-                <boxGeometry args={[0.015, r * 2 - 0.04, 0.015]} />
+                <BeveledBox args={[0.015, r * 2 - 0.04, 0.015]} />
                 <meshStandardMaterial color={PALETTE.frame} roughness={0.4} metalness={0.5} />
               </mesh>
             ))}
@@ -222,7 +223,7 @@ const Bike = memo(function Bike({ wheels }: { wheels: RefObject<Group | null> })
       <Tube from={head} to={bars} />
       <Tube from={[-0.26, bars[1], bars[2]]} to={[0.26, bars[1], bars[2]]} radius={0.03} colour={PALETTE.wheel} />
       <mesh position={[saddle[0], saddle[1] + 0.03, saddle[2]]} castShadow>
-        <boxGeometry args={[0.14, 0.05, 0.28]} />
+        <BeveledBox args={[0.14, 0.05, 0.28]} />
         <meshStandardMaterial color={PALETTE.wheel} roughness={0.8} />
       </mesh>
     </group>
@@ -314,6 +315,7 @@ export function TriathlonScene({ live }: { live: RefObject<Race> }) {
   )
   return (
     <>
+      <MinigameArt game="sprint-triathlon" halfWidth={TRACK.leg*1.5+1} halfDepth={TRACK.lane*4+1}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.background, 80, 200]} />
       <FixedCamera />

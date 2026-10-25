@@ -1,3 +1,4 @@
+import { MinigameArt, BeveledBox } from '../../76-minigame-art'
 /**
  * Color Coded in three dimensions, over your shoulder.
  *
@@ -113,7 +114,7 @@ function Panels({ live }: { live: RefObject<Game> }) {
   })
   return (
     <instancedMesh ref={mesh} args={[undefined, undefined, GRID.size * GRID.size]} castShadow receiveShadow>
-      <boxGeometry args={[1, 1, 1]} />
+      <BeveledBox args={[1, 1, 1]} />
       <meshStandardMaterial roughness={0.55} />
     </instancedMesh>
   )
@@ -155,7 +156,7 @@ function Wheel({ live }: { live: RefObject<Game> }) {
       </mesh>
       {/* A post down to nothing, so it stands rather than floats. */}
       <mesh position={[0, -WHEEL_RADIUS - 4, -0.2]}>
-        <boxGeometry args={[0.8, 8, 0.4]} />
+        <BeveledBox args={[0.8, 8, 0.4]} />
         <meshStandardMaterial color={PALETTE.rim} />
       </mesh>
     </group>
@@ -246,6 +247,7 @@ export function ColorScene({ live, look }: { live: RefObject<Game>; look: RefObj
   )
   return (
     <>
+      <MinigameArt game="color-coded" halfWidth={HALF} halfDepth={HALF}/>
       <color attach="background" args={[background]} />
       <fog attach="fog" args={[PALETTE.sky, 35, 110]} />
       <hemisphereLight args={['#ffffff', '#bfe3f5', 1.5]} />
