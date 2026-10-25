@@ -116,11 +116,9 @@ up are always heard, so nothing is left held down when the screen closes.
   water deep enough to lift you off the bottom changes anything.
 - **You cannot jump while swimming**, and running is ignored in the water —
   `swimSpeed` is slower than a walk.
-- **You only lie flat to go somewhere.** `lean` runs 0 (upright) to 1 (flat)
-  at `PLAYER.leanRate` per second, and it targets 1 only while swimming *and*
-  holding a direction. Float still and the body stands up — that is treading
-  water, and it is what makes stopping in deep water look deliberate rather
-  than like a body face down in the sea.
+- **Swimming stays upright.** The legacy `lean` movement blend still targets
+  one while swimming with directional input, but the duck's swim tip is zero.
+  The local seated pose remains active while moving or floating still.
 - **Swimming and walking agree about which way the body points**, so wading
   ashore does not swing the body round for no visible reason.
 - **The swell never decides anything.** `surfaceAt` changes how the body sits
@@ -142,9 +140,8 @@ up are always heard, so nothing is left held down when the screen closes.
 
 - **No collision with anything but the ground.** There is nothing else in the
   world yet; when there is, that is a physics module's job.
-- **No swimming animation** — the body tips flat and translates. There are no
-  strokes, no wake, and nothing at the waterline.
-- **No diving and no treading water.** Swimming is horizontal only: you are held
+- **No swimming strokes or wake.** The duck uses a seated floating posture.
+- **No diving.** Swimming is horizontal only: you are held
   at the surface and cannot go under or climb out onto anything but the beach.
 - **No drowning, stamina, or any other state that could kill you.**
 - **No skeletal animation.** Three rigid meshes provide the body, movable head
@@ -317,10 +314,8 @@ that the seam is the right way round, and it is in both modules' review lists.
   the body on its own layer and enabling that layer on the light, which is a
   reach into `00-core` for a detail you only notice if you look for it.
 - Other players still see your body normally; the view is yours alone.
-- **The face points down while you swim**, because the body lies flat. See
-  `AVATAR.swimTip` above for the knob that changes it.
-- **The face is flat colour and does not move.** No blink, no expression, and
-  nothing that reacts to what you are doing.
+- Facial expressions and cursor-driven head look are supported; there is no
+  automatic blink animation.
 - The controller uses a fixed capsule and no ground friction, so stopping is
   instant. Fine for inspection, worth revisiting for game feel.
 
@@ -335,9 +330,9 @@ that the seam is the right way round, and it is in both modules' review lists.
 3. Join a lobby in a separate browser profile. Both players should be ducks
    in their own colours. Walk and look around; use the E emote wheel and check
    the other browser sees the chosen eyes/bill expression.
-4. Walk into deep water. The duck floats upright and leans slightly while
-   swimming. Walk out and check ground contact. A stun should still knock it
-   onto its back, and first-person view should hide the whole model.
+4. Walk into deep water. The duck should sit upright on the surface with its
+   feet tucked underneath. Walk ashore, hold Control to sit, and release it to
+   stand. A stun should still knock it onto its back, and first person hides it.
 5. Open several minigames from the dashboard. Their existing avatar calls
    should show ducks. Check colours, owner markers and head/held-item placement.
 6. Review the podium art for every placement: raised wings, happy/straight

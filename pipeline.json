@@ -218,8 +218,7 @@
         "66-lobby-pistols",
         "67-mama-tank",
         "68-minigame-kit",
-        "73-aura-debt",
-        "74-island-flora"
+        "73-aura-debt"
       ],
       "generation": 1,
       "contract": {
@@ -308,8 +307,7 @@
         "03-footprints",
         "04-water",
         "07-shore",
-        "12-rocks",
-        "74-island-flora"
+        "12-rocks"
       ],
       "generation": 1,
       "contract": {
@@ -1129,8 +1127,7 @@
         "60-volcano-map-landmarks",
         "62-volcano-minimap",
         "63-volcano-pause",
-        "66-lobby-pistols",
-        "74-island-flora"
+        "66-lobby-pistols"
       ],
       "generation": 1,
       "contract": {
@@ -1276,9 +1273,7 @@
         "00-core",
         "01-terrain"
       ],
-      "dependents": [
-        "74-island-flora"
-      ],
+      "dependents": [],
       "generation": 1,
       "contract": {
         "version": "0.1.0",
@@ -1600,8 +1595,7 @@
         "66-lobby-pistols",
         "67-mama-tank",
         "68-minigame-kit",
-        "73-aura-debt",
-        "74-island-flora"
+        "73-aura-debt"
       ],
       "generation": 1,
       "contract": {
@@ -6669,7 +6663,7 @@
     {
       "id": "74-island-flora",
       "title": "Private island oasis: palms, gardens, shaded retreats and paths",
-      "status": "in_progress",
+      "status": "ready_for_review",
       "dependsOn": [
         "00-core",
         "01-terrain",
@@ -6716,7 +6710,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-10-25T03:52:08.121Z"
+          "at": "2026-10-25T04:12:52.367Z"
         },
         "human": {
           "status": "pending"

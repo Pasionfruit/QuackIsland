@@ -29,8 +29,8 @@ export interface PlayerState {
   /** Holding the sit control on land. Missing on older externally created states. */
   sitting?: boolean
   /**
-   * 0 upright, 1 flat on the water. Eased rather than switched, so the body
-   * tips into a swim and stands back up instead of snapping between the two.
+   * Legacy swim movement blend: 0 still, 1 moving. Retained for existing
+   * consumers; the duck's seated floating posture stays upright.
    */
   lean: number
   /**
@@ -78,7 +78,7 @@ export const PLAYER = {
   swimDepth: 0.65,
   /** How far the body floats below the surface while swimming. */
   floatDepth: 0.18,
-  /** How quickly the body tips between standing and swimming, per second. */
+  /** How quickly the legacy swimming movement blend changes, per second. */
   leanRate: 3.4,
   /** Straight up, metres per second. Roughly a 1.6 m hop under this gravity. */
   jumpSpeed: 11,
