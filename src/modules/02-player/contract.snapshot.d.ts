@@ -8,6 +8,7 @@
 export { PLAYER, IDLE_INPUT, STUN, createPlayer, stepPlayer, stunFall, type PlayerState, type PlayerInput, type StepOptions, } from './internal/controller';
 export { AVATAR, armPoints, bodyPose, createAvatar, facePoints, setAvatarEmote, setAvatarHeadLook } from './internal/avatar';
 export { EMOTE_LABELS, FACE_EMOTES, getFaceEmote, isFaceEmote, setFaceEmote, useFaceEmote, type FaceEmote } from './internal/emote';
+export { claimPlayerInput, isPlayerInputLocked } from './internal/inputLock';
 export { PLAYER_COLOURS, getPlayerColour, isPlayerColour, setPlayerColour, usePlayerColour, } from './internal/colour';
 export { CAMERA_SENSITIVITY_DEFAULT, CAMERA_SENSITIVITY_MAX, CAMERA_SENSITIVITY_MIN, getCameraSensitivity, normaliseCameraSensitivity, setCameraSensitivity, useCameraSensitivity, } from './internal/sensitivity';
 export { VIEW, VIEW_MODES, clampPitch, getViewMode, lookDirection, placeCamera, setViewMode, toggleViewMode, useViewMode, type Placement, type RigState, type ViewMode, } from './internal/camera';

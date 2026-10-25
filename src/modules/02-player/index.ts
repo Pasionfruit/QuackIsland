@@ -21,6 +21,7 @@ export {
 export { AVATAR, armPoints, bodyPose, createAvatar, facePoints, setAvatarEmote, setAvatarHeadLook } from './internal/avatar'
 
 export { EMOTE_LABELS, FACE_EMOTES, getFaceEmote, isFaceEmote, setFaceEmote, useFaceEmote, type FaceEmote } from './internal/emote'
+export { claimPlayerInput, isPlayerInputLocked } from './internal/inputLock'
 
 export {
   PLAYER_COLOURS,

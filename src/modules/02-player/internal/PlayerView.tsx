@@ -29,6 +29,7 @@ import { advanceWalk, createWalkState, walkPose } from './walk'
 import { advanceFlap, createFlapState, flapPose } from './flap'
 import { createHeadCursor, cursorHeadLook, watchHeadCursor } from './headCursor'
 import { advanceRest, watchSitKeys } from './rest'
+import { isPlayerInputLocked, registerPlayerInputBlocker } from './inputLock'
 import { usePlayerColour } from './colour'
 import { useFaceEmote } from './emote'
 import { getCameraSensitivity } from './sensitivity'
@@ -303,17 +304,18 @@ export function Player({
 
   const blocked = useRef(inputBlocked)
   blocked.current = inputBlocked
+  useEffect(()=>registerPlayerInputBlocker(()=>!!blocked.current?.()),[])
 
   useEffect(() => watchHeadCursor(domElement, cursor.current,
-    () => !!freeLookNow.current?.() && !blocked.current?.()), [domElement])
-  useEffect(() => watchSitKeys(held => { keys.current.sit = held }, () => !blocked.current?.()), [])
+    () => !!freeLookNow.current?.() && !isPlayerInputLocked()), [domElement])
+  useEffect(() => watchSitKeys(held => { keys.current.sit = held }, () => !isPlayerInputLocked()), [])
 
   useEffect(() => {
     const set = (e: KeyboardEvent, down: boolean) => {
       const el = e.target as HTMLElement | null
       if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
       // Somebody else's keys: not ours to take, and not ours to swallow.
-      if (down && blocked.current?.()) return
+      if (down && isPlayerInputLocked()) return
       const k = keys.current
       switch (e.code) {
         case 'KeyW':
@@ -401,7 +403,7 @@ export function Player({
   useGameFrame((frame, delta) => {
     // While something else has the keyboard, let go of everything - a key held
     // as the screen opened must not keep walking the body behind it.
-    const inputIsBlocked = !!blocked.current?.()
+    const inputIsBlocked = isPlayerInputLocked()
     if (inputIsBlocked) {
       keys.current = { ...IDLE_INPUT }
       jumpEdge.current = false

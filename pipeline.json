@@ -219,8 +219,7 @@
         "67-mama-tank",
         "68-minigame-kit",
         "73-aura-debt",
-        "74-island-flora",
-        "75-lobby-casino"
+        "74-island-flora"
       ],
       "generation": 1,
       "contract": {
@@ -310,8 +309,7 @@
         "04-water",
         "07-shore",
         "12-rocks",
-        "74-island-flora",
-        "75-lobby-casino"
+        "74-island-flora"
       ],
       "generation": 1,
       "contract": {
@@ -441,7 +439,8 @@
         "64-jackal",
         "65-big-backs-are-near",
         "66-lobby-pistols",
-        "67-mama-tank"
+        "67-mama-tank",
+        "75-lobby-casino"
       ],
       "generation": 1,
       "contract": {
@@ -529,12 +528,17 @@
           "id": "02.17",
           "title": "Seated swimming pose and hold-Control land sitting",
           "status": "done"
+        },
+        {
+          "id": "02.18",
+          "title": "Approved public player input leases for casino panels",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-10-25T04:10:23.199Z"
+          "at": "2026-10-25T05:21:34.711Z"
         },
         "human": {
           "status": "pending"
@@ -1132,8 +1136,7 @@
         "62-volcano-minimap",
         "63-volcano-pause",
         "66-lobby-pistols",
-        "74-island-flora",
-        "75-lobby-casino"
+        "74-island-flora"
       ],
       "generation": 1,
       "contract": {
@@ -1280,8 +1283,7 @@
         "01-terrain"
       ],
       "dependents": [
-        "74-island-flora",
-        "75-lobby-casino"
+        "74-island-flora"
       ],
       "generation": 1,
       "contract": {
@@ -1605,8 +1607,7 @@
         "67-mama-tank",
         "68-minigame-kit",
         "73-aura-debt",
-        "74-island-flora",
-        "75-lobby-casino"
+        "74-island-flora"
       ],
       "generation": 1,
       "contract": {
@@ -6731,24 +6732,26 @@
     },
     {
       "id": "75-lobby-casino",
-      "title": "Central island casino lounge: blackjack, roulette, five-reel slots, baccarat and craps",
+      "title": "Playable central casino with fish, seashell and grape wagers",
       "status": "ready_for_review",
       "dependsOn": [
         "00-core",
         "01-terrain",
+        "02-player",
         "10-party",
+        "11-currency",
         "12-rocks",
-        "15-minigames"
+        "15-minigames",
+        "68-minigame-kit"
       ],
       "budgets": {
         "drawCallsMax": 16,
         "trianglesMax": 18000,
-        "bundleGzipKb": 24
+        "bundleGzipKb": 48
       },
       "nonGoals": [
         "No terrain edits, external models or AI-generated assets",
-        "No changes to frozen modules",
-        "Decorative lobby props only, as chosen by the user; no betting or game rules"
+        "No changes to frozen modules"
       ],
       "blocks": [
         {
@@ -6765,6 +6768,21 @@
           "id": "75.3",
           "title": "Registration, tests, gate and review notes",
           "status": "done"
+        },
+        {
+          "id": "75.4",
+          "title": "Seeded playable table rules and resource wager settlement",
+          "status": "done"
+        },
+        {
+          "id": "75.5",
+          "title": "Nearby table interaction, game screens and wallet integration",
+          "status": "done"
+        },
+        {
+          "id": "75.6",
+          "title": "Persistence, regression checks and review handoff",
+          "status": "done"
         }
       ],
       "blockers": [],
@@ -6775,7 +6793,7 @@
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-10-25T04:38:17.320Z"
+          "at": "2026-10-25T05:25:04.114Z"
         },
         "human": {
           "status": "pending"

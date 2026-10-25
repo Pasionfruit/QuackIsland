@@ -438,6 +438,22 @@ and hold Control until landing, then swim out from the beach. Check the tucked
 feet, seated belly, upright head, surface-following motion and return to a
 standing pose on shore. Visual review remains pending.
 
+## Public input leases
+
+`claimPlayerInput(owner)` returns an idempotent release function.
+`isPlayerInputLocked()` includes all outstanding leases and the composition
+root's existing `inputBlocked` callbacks. Screens can stop movement and head
+input without modifying the world composition root or stunning the duck.
+Held movement, jump and sit keys are cleared by the existing blocked-frame
+path. Each lease is independent, including repeated claims by the same owner;
+releasing one screen never unlocks another.
+
+The caller handles pointer-lock release and DOM focus and must release its
+lease on close or unmount. The casino uses this contract for its game panel.
+Tests cover stacked claims, repeated releases, external composition blocks,
+unregistration and recursive lock queries. Visual review: open a casino table
+while moving, close it, and confirm movement stops and resumes cleanly.
+
 ## Gate record
 
 Filled in when the human passes it.

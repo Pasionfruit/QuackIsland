@@ -1,5 +1,6 @@
 import { CanvasTexture, SRGBColorSpace } from 'three'
 import { CONVENTIONS, createRng } from '../../00-core'
+import { RED_NUMBERS } from './rules'
 
 export const ATLAS_SIZE=1024
 export const ATLAS_RECTS=[
@@ -30,12 +31,11 @@ export function casinoAtlas():CanvasTexture {
   })
   cell(1,c=>{
     title(c,'ROULETTE')
-    const reds=new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36])
     c.fillStyle='#42825e';c.fillRect(4,65,28,198);c.strokeRect(4,65,28,198)
     c.font='bold 20px Georgia';c.fillStyle=cream;c.fillText('0',18,164)
     for(let column=0;column<12;column++)for(let row=0;row<3;row++){
       const n=column*3+row+1,x=34+column*39,y=65+row*66
-      c.fillStyle=reds.has(n)?red:dark;c.fillRect(x,y,39,66);c.strokeRect(x,y,39,66)
+      c.fillStyle=RED_NUMBERS.has(n)?red:dark;c.fillRect(x,y,39,66);c.strokeRect(x,y,39,66)
       c.fillStyle=cream;c.font='bold 20px Georgia';c.fillText(String(n),x+19.5,y+33)
     }
     c.font='20px Georgia';c.fillText('EVEN    RED    BLACK    ODD',266,294)
@@ -51,12 +51,15 @@ export function casinoAtlas():CanvasTexture {
         c.fillStyle=red
         for(const shift of [-13,13]){c.beginPath();c.arc(cx+shift,cy+10,15,0,Math.PI*2);c.fill()}
         c.strokeStyle='#54834c';c.lineWidth=5;c.beginPath();c.moveTo(cx-13,cy-1);c.lineTo(cx,cy-29);c.lineTo(cx+13,cy-1);c.stroke()
-      }else if(symbol===1){c.fillStyle=red;c.font='bold 72px Georgia';c.fillText('7',cx,cy)}
+      }else if(symbol===1){
+        c.fillStyle='#c9983e';c.beginPath();c.arc(cx,cy-5,22,Math.PI,0);c.lineTo(cx+29,cy+22);c.lineTo(cx-29,cy+22);c.closePath();c.fill()
+        c.beginPath();c.arc(cx,cy+28,6,0,Math.PI*2);c.fill()
+      }
       else if(symbol===2){
         c.fillStyle='#c9983e';c.beginPath()
         for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?13:30;const px=cx+Math.cos(a)*r,py=cy+Math.sin(a)*r;if(i===0)c.moveTo(px,py);else c.lineTo(px,py)}
         c.closePath();c.fill()
-      }else{c.fillStyle=dark;c.fillRect(cx-35,cy-20,70,40);c.fillStyle=cream;c.font='bold 24px Georgia';c.fillText('BAR',cx,cy)}
+      }else{c.fillStyle=red;c.font='bold 72px Georgia';c.fillText('7',cx,cy)}
     }
     c.strokeStyle='#bc8d39';c.lineWidth=2;c.beginPath();c.moveTo(0,160);c.lineTo(512,160);c.stroke()
   })

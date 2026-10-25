@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { MeshBasicMaterial, MeshStandardMaterial } from 'three'
 import { sampleAt } from '../../01-terrain'
+import { claimPlayerInput } from '../../02-player'
 import { useParty } from '../../10-party'
 import { getSolidRocks } from '../../12-rocks'
 import { useMinigameScreen } from '../../15-minigames'
@@ -8,6 +9,7 @@ import { casinoAtlas } from './atlas'
 import { casinoGeometry } from './geometry'
 import { layoutCasino, stationMatrix } from './layout'
 import { casinoOverlayGeometry } from './overlays'
+import { CasinoInteraction } from './CasinoInteraction'
 
 export const getCasinoStations=()=>layoutCasino(sampleAt,getSolidRocks())
 
@@ -27,5 +29,6 @@ export function LobbyCasino(){
       <mesh geometry={geometry} material={material} castShadow receiveShadow/>
     </group>)}
     <mesh name="casino-printing" geometry={graphics} material={ink}/>
+    <CasinoInteraction stations={stations} enabled={party.phase!=='playing'&&screen.at==='closed'} lockInput={claimPlayerInput}/>
   </group>
 }
