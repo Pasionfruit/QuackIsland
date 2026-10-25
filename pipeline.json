@@ -217,7 +217,8 @@
         "65-big-backs-are-near",
         "66-lobby-pistols",
         "67-mama-tank",
-        "68-minigame-kit"
+        "68-minigame-kit",
+        "73-aura-debt"
       ],
       "generation": 1,
       "contract": {
@@ -1573,7 +1574,8 @@
         "65-big-backs-are-near",
         "66-lobby-pistols",
         "67-mama-tank",
-        "68-minigame-kit"
+        "68-minigame-kit",
+        "73-aura-debt"
       ],
       "generation": 1,
       "contract": {
@@ -6509,7 +6511,8 @@
         "61-op-finder",
         "64-jackal",
         "65-big-backs-are-near",
-        "67-mama-tank"
+        "67-mama-tank",
+        "73-aura-debt"
       ],
       "generation": 1,
       "contract": {
