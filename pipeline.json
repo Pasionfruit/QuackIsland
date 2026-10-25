@@ -383,7 +383,7 @@
       "id": "02-player",
       "phase": "P1",
       "title": "A body that walks the island with WASD and jumps",
-      "status": "ready_for_review",
+      "status": "in_progress",
       "dependsOn": [
         "00-core",
         "01-terrain"
@@ -514,6 +514,11 @@
         {
           "id": "02.15",
           "title": "Jump wing flaps and smooth lobby head tracking",
+          "status": "done"
+        },
+        {
+          "id": "02.16",
+          "title": "Unlocked lobby cursor drives smooth head gaze",
           "status": "done"
         }
       ],

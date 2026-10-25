@@ -393,6 +393,29 @@ from the front and side, land and jump again, walk off a ledge, and sweep the
 mouse left/right while walking. Check that head motion feels smooth and
 responsive. Visual review remains pending.
 
+## Cursor-driven lobby gaze
+
+Moving the unlocked cursor over the lobby canvas now turns the head without
+requiring a click, drag or camera rotation. Canvas-relative pointer coordinates
+drive a head target using the camera's actual screen-right axis, so the duck
+looks toward the appropriate side from front and rear views. The existing
+smooth head follower eases into that target. Leaving the canvas or losing
+window focus releases the gaze toward a neutral pose.
+
+Clicking still captures the mouse for camera control, and Escape releases it.
+While captured, head look follows the camera. The cursor listener respects
+blocked input and is removed when Player unmounts. `getPlayerLook` exposes the
+smoothed world-space cursor gaze for the existing lobby network publisher.
+
+The regression test sends real DOM mousemove events without a mouse-down,
+feeds their targets into the actual duck head, and checks left/right and
+up/down motion while the camera stays fixed. Tests also cover offset canvases,
+front/rear views, blocked input, leaving, blur, capture and listener cleanup.
+For visual review, release the mouse with Escape and move it over the lobby:
+the head should follow while the camera stays still. Click to capture, look
+around, release again, and check gaze with a second lobby player. Visual
+review remains pending.
+
 ## Gate record
 
 Filled in when the human passes it.

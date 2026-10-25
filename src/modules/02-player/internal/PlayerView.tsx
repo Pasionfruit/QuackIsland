@@ -27,6 +27,7 @@ import { clampPitch, getViewMode, placeCamera, toggleViewMode } from './camera'
 import { bodyPose, createAvatar, setAvatarEmote, setAvatarFlap, setAvatarWalk, smoothAvatarHeadLook } from './avatar'
 import { advanceWalk, createWalkState, walkPose } from './walk'
 import { advanceFlap, createFlapState, flapPose } from './flap'
+import { createHeadCursor, cursorHeadLook, watchHeadCursor } from './headCursor'
 import { usePlayerColour } from './colour'
 import { useFaceEmote } from './emote'
 import { getCameraSensitivity } from './sensitivity'
@@ -49,6 +50,7 @@ const PAN_LIMIT = 400
  * object the controller mutates, exposed read-only.
  */
 let live: PlayerState | null = null
+let cursorGaze: { yaw: number; pitch: number } | null = null
 
 export function getPlayerState(): Readonly<PlayerState> | null {
   return live
@@ -91,9 +93,9 @@ export function isStunned(): boolean {
   return (live?.stun ?? 0) > 0
 }
 
-/** The camera look that a networked avatar needs to turn and nod its face. */
+/** The visible lobby gaze, or camera look while using captured camera controls. */
 export function getPlayerLook(): { yaw: number; pitch: number } {
-  return { yaw: rig.yaw, pitch: rig.pitch }
+  return cursorGaze ? { ...cursorGaze } : { yaw: rig.yaw, pitch: rig.pitch }
 }
 
 /** Camera state, kept outside React so dragging costs no re-renders. */
@@ -199,6 +201,7 @@ export function Player({
   const jumpEdge = useRef(false)
   const walk = useRef(createWalkState())
   const flap = useRef(createFlapState())
+  const cursor = useRef(createHeadCursor())
 
   const bounds = useMemo(() => {
     const b = given ?? worldBounds()
@@ -207,9 +210,11 @@ export function Player({
 
   useEffect(() => {
     live = state
+    cursorGaze = null
     setCameraMode('player')
     return () => {
       live = null
+      cursorGaze = null
       setCameraMode('orbit')
     }
   }, [state])
@@ -297,6 +302,9 @@ export function Player({
   const blocked = useRef(inputBlocked)
   blocked.current = inputBlocked
 
+  useEffect(() => watchHeadCursor(domElement, cursor.current,
+    () => !!freeLookNow.current?.() && !blocked.current?.()), [domElement])
+
   useEffect(() => {
     const set = (e: KeyboardEvent, down: boolean) => {
       const el = e.target as HTMLElement | null
@@ -369,6 +377,7 @@ export function Player({
 
   const camWant = useMemo(() => new Vector3(), [])
   const camLook = useMemo(() => new Vector3(), [])
+  const screenRight = useMemo(() => new Vector3(), [])
 
   // The controller asks for the surface at a point, without a time; the time
   // is whatever frame we are in. Built once over a mutable slot rather than
@@ -386,7 +395,8 @@ export function Player({
   useGameFrame((frame, delta) => {
     // While something else has the keyboard, let go of everything - a key held
     // as the screen opened must not keep walking the body behind it.
-    if (blocked.current?.()) {
+    const inputIsBlocked = !!blocked.current?.()
+    if (inputIsBlocked) {
       keys.current = { ...IDLE_INPUT }
       jumpEdge.current = false
     }
@@ -435,9 +445,6 @@ export function Player({
     if (tilt.current) {
       tilt.current.rotation.x = tip * (Math.PI / 2)
     }
-    const headYaw = Math.atan2(Math.sin(rig.yaw - state.facing), Math.cos(rig.yaw - state.facing))
-    smoothAvatarHeadLook(avatar, headYaw, rig.pitch, delta)
-
     // Both views come out of one function, so they cannot end up disagreeing
     // about which way `yaw` points.
     if (getCameraMode() === 'player') {
@@ -449,6 +456,25 @@ export function Player({
       // this position made the screen trail behind a moving lobby player.
       camera.position.copy(camWant)
       camera.lookAt(camLook)
+    }
+
+    const cursorMode = !!freeLookNow.current?.() && document.pointerLockElement !== domElement
+    if (cursorMode) {
+      camera.updateMatrixWorld()
+      screenRight.setFromMatrixColumn(camera.matrixWorld, 0)
+      if (inputIsBlocked) cursor.current.active = false
+      const look = cursorHeadLook(cursor.current, state.facing, screenRight)
+      smoothAvatarHeadLook(avatar, look.yaw, look.pitch, delta)
+      const head = avatar.getObjectByName('avatar-head')
+      if (head) {
+        cursorGaze ??= { yaw: 0, pitch: 0 }
+        cursorGaze.yaw = state.facing + head.rotation.y
+        cursorGaze.pitch = head.rotation.x
+      }
+    } else {
+      const headYaw = Math.atan2(Math.sin(rig.yaw - state.facing), Math.cos(rig.yaw - state.facing))
+      smoothAvatarHeadLook(avatar, headYaw, rig.pitch, delta)
+      cursorGaze = null
     }
   }, PRIORITY.camera)
 
