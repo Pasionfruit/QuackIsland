@@ -28,6 +28,7 @@ import { bodyPose, createAvatar, setAvatarEmote, setAvatarFlap, setAvatarWalk, s
 import { advanceWalk, createWalkState, walkPose } from './walk'
 import { advanceFlap, createFlapState, flapPose } from './flap'
 import { createHeadCursor, cursorHeadLook, watchHeadCursor } from './headCursor'
+import { advanceRest, watchSitKeys } from './rest'
 import { usePlayerColour } from './colour'
 import { useFaceEmote } from './emote'
 import { getCameraSensitivity } from './sensitivity'
@@ -202,6 +203,7 @@ export function Player({
   const walk = useRef(createWalkState())
   const flap = useRef(createFlapState())
   const cursor = useRef(createHeadCursor())
+  const rest = useRef(0)
 
   const bounds = useMemo(() => {
     const b = given ?? worldBounds()
@@ -304,6 +306,7 @@ export function Player({
 
   useEffect(() => watchHeadCursor(domElement, cursor.current,
     () => !!freeLookNow.current?.() && !blocked.current?.()), [domElement])
+  useEffect(() => watchSitKeys(held => { keys.current.sit = held }, () => !blocked.current?.()), [])
 
   useEffect(() => {
     const set = (e: KeyboardEvent, down: boolean) => {
@@ -356,11 +359,14 @@ export function Player({
     }
     const kd = (e: KeyboardEvent) => set(e, true)
     const ku = (e: KeyboardEvent) => set(e, false)
+    const clear = () => { keys.current = { ...IDLE_INPUT }; jumpEdge.current = false }
     window.addEventListener('keydown', kd)
     window.addEventListener('keyup', ku)
+    window.addEventListener('blur', clear)
     return () => {
       window.removeEventListener('keydown', kd)
       window.removeEventListener('keyup', ku)
+      window.removeEventListener('blur', clear)
     }
   }, [])
 
@@ -414,8 +420,9 @@ export function Player({
       collide: solid.current,
     })
     advanceWalk(walk.current, Math.hypot(state.x - oldX, state.z - oldZ), delta,
-      state.grounded && !state.swimming && state.stun <= 0)
-    setAvatarWalk(avatar, walkPose(walk.current))
+      state.grounded && !state.swimming && !state.sitting && state.stun <= 0)
+    rest.current = advanceRest(rest.current, state, delta)
+    setAvatarWalk(avatar, walkPose(walk.current), rest.current)
     advanceFlap(flap.current, delta, {
       jumped: wasGrounded && input.jump && !state.grounded && state.vy > 0,
       grounded: state.grounded, swimming: state.swimming, stunned: state.stun > 0,

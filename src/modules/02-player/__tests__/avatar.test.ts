@@ -200,7 +200,7 @@ describe('how it sits in the water', () => {
     expect(tip).toBe(0)
   })
 
-  it('floats with a slight forward lean, keeping the duck head above the water', () => {
+  it('floats upright, keeping the duck head above the water', () => {
     const { rise, tip } = bodyPose(1, PLAYER.height, PLAYER.radius)
     expect(tip).toBeCloseTo(AVATAR.swimTip, 9)
     // A pill on its side floats a radius up, not half a body.
@@ -234,7 +234,7 @@ describe('how it sits in the water', () => {
     expect(Math.abs(both.tip)).toBeLessThanOrEqual(1)
 
     const mostlySwimming = bodyPose(0.9, PLAYER.height, PLAYER.radius, 0.03)
-    expect(mostlySwimming.tip).toBeCloseTo(0.9*AVATAR.swimTip, 9)
+    expect(mostlySwimming.tip).toBeCloseTo(-0.03, 9)
   })
 
   it('is unchanged for everything that never heard of a stun', () => {

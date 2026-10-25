@@ -522,12 +522,17 @@
           "id": "02.16",
           "title": "Unlocked lobby cursor drives smooth head gaze",
           "status": "done"
+        },
+        {
+          "id": "02.17",
+          "title": "Seated swimming pose and hold-Control land sitting",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-10-25T03:40:40.833Z"
+          "at": "2026-10-25T04:10:23.199Z"
         },
         "human": {
           "status": "pending"
@@ -537,7 +542,7 @@
       "freeze": null,
       "nonGoals": [
         "No collision with anything but the ground - there is nothing else yet",
-        "No swimming; below sea level you simply walk the seabed",
+        "No diving, stamina or underwater movement; swimming stays at the surface",
         "No skeletal animation rig; procedural duck body, head and expression meshes",
         "No first-person view, no mouse look",
         "No physics engine - gravity and a ground snap, nothing more"
@@ -6663,8 +6668,8 @@
     },
     {
       "id": "74-island-flora",
-      "title": "Procedural palms, grass patches and coconuts on the lobby island",
-      "status": "ready_for_review",
+      "title": "Private island oasis: palms, gardens, shaded retreats and paths",
+      "status": "in_progress",
       "dependsOn": [
         "00-core",
         "01-terrain",
@@ -6673,9 +6678,9 @@
         "15-minigames"
       ],
       "budgets": {
-        "drawCallsMax": 6,
-        "trianglesMax": 100000,
-        "bundleGzipKb": 16
+        "drawCallsMax": 12,
+        "trianglesMax": 120000,
+        "bundleGzipKb": 24
       },
       "nonGoals": [
         "No changes to terrain, rocks or frozen modules",
@@ -6695,6 +6700,11 @@
         {
           "id": "74.3",
           "title": "Scene registration, gate and review notes",
+          "status": "done"
+        },
+        {
+          "id": "74.4",
+          "title": "Private oasis nooks, flowers and stepping-stone paths",
           "status": "done"
         }
       ],

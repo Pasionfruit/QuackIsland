@@ -26,6 +26,8 @@ export interface PlayerState {
   speed: number
   /** Floating rather than walking: the sea bed here is too deep to stand on. */
   swimming: boolean
+  /** Holding the sit control on land. Missing on older externally created states. */
+  sitting?: boolean
   /**
    * 0 upright, 1 flat on the water. Eased rather than switched, so the body
    * tips into a swim and stands back up instead of snapping between the two.
@@ -55,6 +57,8 @@ export interface PlayerInput {
   jump: boolean
   /** Hold to run. */
   run: boolean
+  /** Hold to sit on land; swimming retains its movement controls. */
+  sit?: boolean
   /**
    * Where the camera is looking, in radians, such that forward is
    * `(sin(yaw), cos(yaw))`. Movement is relative to this, so the player always
@@ -71,9 +75,9 @@ export const PLAYER = {
   /** Metres per second in the water. Slower than a walk, as it should be. */
   swimSpeed: 6.5,
   /** Water this deep or deeper is out of your depth, and you swim. */
-  swimDepth: 1.35,
+  swimDepth: 0.65,
   /** How far the body floats below the surface while swimming. */
-  floatDepth: 0.55,
+  floatDepth: 0.18,
   /** How quickly the body tips between standing and swimming, per second. */
   leanRate: 3.4,
   /** Straight up, metres per second. Roughly a 1.6 m hop under this gravity. */
@@ -106,6 +110,7 @@ export const IDLE_INPUT: PlayerInput = {
   right: false,
   jump: false,
   run: false,
+  sit: false,
   cameraYaw: 0,
 }
 
@@ -119,6 +124,7 @@ export function createPlayer(x: number, z: number, groundAt: (x: number, z: numb
     grounded: true,
     speed: 0,
     swimming: false,
+    sitting: false,
     lean: 0,
     stun: 0,
     stunFor: 0,
@@ -259,7 +265,8 @@ export function stepPlayer(
       state.stunFor = 0
     }
   }
-  const taking = state.stun <= 0
+  const resting = !!input.sit && state.grounded && !state.swimming
+  const taking = state.stun <= 0 && !resting
 
   const fwd = taking ? (input.forward ? 1 : 0) - (input.back ? 1 : 0) : 0
   const side = taking ? (input.right ? 1 : 0) - (input.left ? 1 : 0) : 0
@@ -373,5 +380,6 @@ export function stepPlayer(
   const leanStep = PLAYER.leanRate * step
   state.lean += Math.max(-leanStep, Math.min(leanStep, wantLean - state.lean))
 
+  state.sitting = !!input.sit && state.grounded && !state.swimming && state.stun <= 0
   return state
 }

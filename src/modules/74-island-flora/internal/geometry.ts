@@ -6,7 +6,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { CONVENTIONS, createRng } from '../../00-core'
 
 /** Merge vertex-coloured primitives into one draw per scenery kind. */
-function sculpt() {
+export function sculpt() {
   const pieces: BufferGeometry[] = []
   const add = (source: BufferGeometry, colour: string, position = new Vector3(), scale = new Vector3(1,1,1), rotation = new Quaternion()) => {
     const geometry = source.index ? source.toNonIndexed() : source.clone()

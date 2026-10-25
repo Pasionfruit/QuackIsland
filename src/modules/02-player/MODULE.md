@@ -12,10 +12,11 @@ Player settings tab has a saved 20%–300% sensitivity control that applies to
 every mouse-look path. It resolves height through `01-terrain`, so it stands on
 exactly the ground being drawn.
 
-Walk into the sea and it **swims**: past a certain depth the body tips flat,
-floats at the surface, turns to face the way it is going, and stands back up
-when it reaches the shallows. Stop swimming and it stands upright where it is,
-treading water.
+Walk into the sea and it **swims**: the duck sits upright on the surface with
+its feet tucked underneath, turning toward its movement. It remains seated
+when floating still and stands again on returning to shallow ground. Hold
+either **Control** key on land to sit; release it to stand. Sitting pauses
+walking and jumping while camera and head-look controls remain available.
 
 All of the movement is pure arithmetic in `internal/controller.ts` with no
 three.js in it, so how the player moves is tested in Node rather than by eye.
@@ -244,10 +245,10 @@ two zombies landing on the same player cannot cut each other's short.
 
 ## How far it tips when it swims
 
-`lean` still comes from the movement controller, but `AVATAR.swimTip` is 0.12:
-the duck floats nearly upright with a slight forward lean instead of pitching
-its head into the water. `bodyPose` applies the same placement to local and
-remote ducks. Stuns can still tip the body fully onto its back.
+`lean` remains a movement blend in the controller for existing consumers, but
+`AVATAR.swimTip` is zero: swimming never pitches the duck's head into the water.
+The local resting blend tucks the feet and lowers the belly into a seated
+pose. Stuns can still tip the body fully onto its back.
 
 ## First and third person
 
@@ -415,6 +416,32 @@ For visual review, release the mouse with Escape and move it over the lobby:
 the head should follow while the camera stays still. Click to capture, look
 around, release again, and check gaze with a second lobby player. Visual
 review remains pending.
+
+## Seated swimming and hold-Control sitting
+
+The duck begins floating at 0.65 metres of water depth and follows the water
+surface with its foot origin 0.18 metres below it. The local pose folds both
+feet back under the feathers and lowers the belly by 0.16 metres, keeping the
+head upright and above water. Movement and floating still use the same seated
+pose; WASD swimming remains available even with Control held.
+
+`PlayerInput.sit` and `PlayerState.sitting` are optional additions for older
+callers. Holding either Control key while grounded stops walking and jumping;
+releasing both stands up. Pressing Control in the air waits for landing rather
+than suspending gravity. Swimming and stuns take precedence. The pose eases
+in and out, using the existing foot morphs and three draw calls. Camera and
+collision dimensions remain controlled by the original movement capsule.
+
+The Control listener respects text fields and blocked input and clears on
+blur, visibility changes and unmount. Tests cover both Control keys together,
+release, text input, gravity, land contact, upright buoyancy and swimming while
+Control is held. These sitting morphs are driven by the local Player; adding
+a ground-sit flag to multiplayer avatar playback is a separate transport task.
+
+Human review: hold Control on dry ground, try WASD and Space, release it, jump
+and hold Control until landing, then swim out from the beach. Check the tucked
+feet, seated belly, upright head, surface-following motion and return to a
+standing pose on shore. Visual review remains pending.
 
 ## Gate record
 

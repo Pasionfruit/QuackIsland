@@ -71,7 +71,7 @@ export const AVATAR = {
    *
    * A duck stays almost upright, leaning slightly into its swim.
    */
-  swimTip: 0.12,
+  swimTip: 0,
 
   /**
    * The arms: one capsule a side, and where they hang.
@@ -294,15 +294,17 @@ export function setAvatarFlap(avatar: Group, pose: { spread: number; raised: num
 }
 
 /** Local locomotion stays cosmetic: no movement, camera, or shared geometry edits. */
-export function setAvatarWalk(avatar: Group, pose: WalkPose): void {
+export function setAvatarWalk(avatar: Group, pose: WalkPose, seated = 0): void {
   const torso = avatar.getObjectByName('duck-body') as Mesh | undefined
   const weights = torso?.morphTargetInfluences
   if (weights) {
-    weights[0] = pose.leftStride; weights[1] = pose.rightStride
-    weights[2] = pose.leftLift; weights[3] = pose.rightLift
+    weights[0] = pose.leftStride * (1-seated) - seated*.4
+    weights[1] = pose.rightStride * (1-seated) - seated*.4
+    weights[2] = pose.leftLift * (1-seated) + seated*1.08
+    weights[3] = pose.rightLift * (1-seated) + seated*1.08
   }
-  avatar.rotation.z = pose.roll
-  avatar.position.y = pose.rise
+  avatar.rotation.z = pose.roll * (1-seated)
+  avatar.position.y = pose.rise * (1-seated) - seated*.16
 }
 
 /** Replaces the one face mesh's shared geometry with the requested expression. */
