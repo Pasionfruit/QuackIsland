@@ -194,7 +194,7 @@ export function Player({
   // chosen in settings, and a fresh body painted the new one when you change it.
   const colour = usePlayerColour()
   const emote = useFaceEmote()
-  const avatar = useMemo(() => createAvatar(colour), [colour])
+  const avatar = useMemo(() => createAvatar(colour,{automaticAnimation:false}), [colour])
 
   useEffect(() => setAvatarEmote(avatar, emote), [avatar, emote])
 

@@ -1,0 +1,6 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Shared duck animation review</title>
+<style>body{margin:0;background:#142329;color:#efe8d7;font:14px system-ui,sans-serif}header{padding:20px 24px}h1{margin:0;font-size:21px}p{color:#b7c9c4;margin:7px 0}.labels{display:grid;grid-template-columns:repeat(4,1fr);text-align:center;font-weight:700;color:#e5cc8f}canvas{display:block;width:100vw;height:calc(100vh - 140px)}footer{position:fixed;bottom:8px;left:20px;color:#acbdb7;font-size:11px}</style></head>
+<body><header><h1>Shared minigame duck animations</h1><p>These use unmodified createAvatar callers and automatic render hooks. Cameras follow each duck's game-owned movement.</p></header>
+<div class="labels"><span>Walk</span><span>Run</span><span>Running jump</span><span>Idle</span></div><canvas id="review"></canvas><footer>Check alternating feet, faster run cadence, jump flaps, landing and idle. No gameplay controls are added.</footer>
+<script type="module" src="./minigame-animation.ts"></script></body></html>

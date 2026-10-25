@@ -33,7 +33,7 @@ three.js in it, so how the player moves is tested in Node rather than by eye.
 | `clampPitch(mode, pitch)` | Keeps the pitch inside what a view can cope with |
 | `VIEW`, `VIEW_MODES`, `RigState`, `Placement`, `ViewMode` | The shapes above |
 | `AVATAR` | The body's look: colours, where the face sits, how far it tips |
-| `createAvatar(colour?)` | One body, feet on `y = 0`, facing +Z, over shared geometry. The colour is for anything needing to tell bodies apart — see `16-zombie-tag` |
+| `createAvatar(colour?, options?)` | One duck, feet on `y = 0`, facing +Z, over shared geometry. Movement animation is automatic by default |
 | `facePoints()` | Where each piece of the face sits on the body. Pure |
 | `armPoints()` | Where each arm hangs and how far it swings out. Pure |
 | `bodyPose(lean, height, radius, fall?)` | How high the middle rides and how far it tips, swimming or knocked over. Pure |
@@ -187,7 +187,7 @@ jaw and nostrils, eyes with highlights, a pale breast, folded wings with feather
 tips, a raised tail fan and three-toed webbed feet. Player colours tint the
 feathers while feet and bill stay orange. There are no downloads or model assets.
 
-`createAvatar(colour?)` still returns an independent `Group`, facing +Z with
+`createAvatar(colour?, options?)` returns an independent `Group`, facing +Z with
 feet at y=0 and a neutral height of 1.8 metres. The controller, collision radius,
 movement, camera height and network packet shape keep their existing contracts.
 The longer bill and tail are cosmetic and do not enlarge gameplay hitboxes.
@@ -354,8 +354,8 @@ Four relative morph targets move the feet and short legs within the existing
 body mesh. Geometry and materials remain cached and shared, while each duck
 has independent morph influences. The avatar still costs three draw calls
 and stays below the existing triangle limit. No rig, model or asset download
-is needed. This update drives the local Player component; remote players and
-minigame consumers keep their existing playback behavior.
+is needed. The local Player supplies exact controller state. Shared minigame
+and remote avatars also animate from their game-owned transforms.
 
 Validation includes alternating foot positions, toe clearance throughout the
 cycle, shared-geometry isolation, frame-rate consistency, running cadence and
@@ -489,3 +489,49 @@ runtime errors. Source audit confirms all remaining `createAvatar` consumers
 receive the shared duck. Character-specific capsule placeholders in the newer
 game scenes and podium have been replaced; other animal species and vehicles
 retain their gameplay identities. No human PASS or commit has been created.
+
+## Shared minigame movement animation
+
+`createAvatar()` now automatically animates walking, running and jump wing
+flaps from its world movement. The existing shared-builder consumers in 40
+minigame modules, plus remote lobby ducks, inherit this behavior. Parent-group
+movement, rotated adapters, scaled ducks and bots are supported. Games keep
+their existing movement and jump controls; this adds the corresponding poses.
+
+An inner `avatar-motion` group contains cosmetic bob, roll and seated offsets.
+The game-owned root position, rotation and scale remain untouched, so collision,
+facing and jump trajectories keep their existing behavior. Mesh render hooks
+advance each duck once per renderer frame across shadow and colour passes.
+The three meshes, cached geometry and materials still have the same draw cost.
+
+The motion observer distinguishes rising jumps from shallow ramps and tiny
+bobs, settles on landing (including higher platforms), suppresses gait while
+fallen, and resets after teleports or long rendering gaps. Stationary ducks
+settle without their own cosmetic movement feeding back into the observer.
+
+Controllers with exact state can use `createAvatar(colour,
+{ automaticAnimation: false })` and call the public
+`updateAvatarAnimation(duck, delta, motion?)`. `AvatarMotion` optionally supplies
+`speed` in world metres per second, `grounded`, `jumped`, `swimming`, `stunned`,
+`sitting` and `paused`. Call once per simulation frame; `jumped` is a takeoff
+edge. The lobby's local player opts out because its existing controller already
+drives exact gait, swimming, sitting and flap state. Vehicle poses and other
+custom actors retain their game-specific animations.
+
+Machine coverage includes walk/run cadence, independent ducks, parent movement,
+scale, protected gameplay transforms, 15/30/60/120 Hz gait, jump and landing,
+ramps, teleports, idle settling, explicit state, pause, automatic opt-out and
+shadow/colour callback deduplication. Human visual approval remains pending.
+
+With Vite running, open
+`/src/modules/02-player/review/minigame-animation.html` to compare walking,
+running, a running jump and idle ducks using the actual automatic render hooks.
+Then check existing minigame movement and jumps in the application, including
+bots and remote ducks. Confirm feet settle, wings flap during jumps, and game
+controls and trajectories feel unchanged. No browser was connected for this
+session, so this preview has not been visually verified.
+
+Validation for this change: `npm run gate -- 02-player` exits 0 with 2,931
+tests across 284 files, typecheck, production build, boundaries, frozen files,
+frozen contracts and bundle budget checks. The standalone animation preview
+also builds with Vite. Module status is `ready_for_review`; human PASS is pending.

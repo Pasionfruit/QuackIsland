@@ -13,6 +13,7 @@ import { PLAYER } from './controller'
 import { type FaceEmote } from './emote'
 import { duckBody, duckExpression, duckHead } from './duckGeometry'
 import type { WalkPose } from './walk'
+import { bindAvatarAnimation, type AvatarOptions } from './animation'
 
 export const AVATAR = {
   bodyColour: '#e0563f',
@@ -232,7 +233,7 @@ function skinFor(colour: string) {
  * world only ever has red ones, but a minigame full of them needs a colour per
  * player. Geometry is cached per colour, and expressions are shared globally.
  */
-export function createAvatar(colour: string = AVATAR.bodyColour): Group {
+export function createAvatar(colour: string = AVATAR.bodyColour, options:AvatarOptions = {}): Group {
   const { faces, ink } = parts()
   const {body,head:headGeometry,material:skin} = skinFor(colour)
 
@@ -262,9 +263,14 @@ export function createAvatar(colour: string = AVATAR.bodyColour): Group {
   head.add(smile)
 
   const avatar = new Group()
-  avatar.add(torso)
-  avatar.add(head)
+  const visual = new Group()
+  visual.name = 'avatar-motion'
+  visual.add(torso,head)
+  avatar.add(visual)
   avatar.name = 'avatar'
+  bindAvatarAnimation(avatar,visual,[torso,skull,smile],(walk,flap,seated)=>{
+    setAvatarWalk(avatar,walk,seated);setAvatarFlap(avatar,flap)
+  },options.automaticAnimation!==false)
   return avatar
 }
 
@@ -282,7 +288,8 @@ export function smoothAvatarHeadLook(avatar: Group, yaw: number, pitch: number, 
   const blend = 1 - Math.exp(-10 * Math.min(delta, .1))
   head.rotation.x += (Math.max(-1.35, Math.min(1.35, pitch)) - head.rotation.x) * blend
   head.rotation.y += (Math.max(-1.35, Math.min(1.35, yaw)) - head.rotation.y) * blend
-  head.rotation.z += (-avatar.rotation.z * .55 - head.rotation.z) * blend
+  const roll=avatar.rotation.z+(avatar.getObjectByName('avatar-motion')?.rotation.z??0)
+  head.rotation.z += (-roll * .55 - head.rotation.z) * blend
 }
 
 /** Wings share the body mesh, but every duck owns its own flap weights. */
@@ -303,8 +310,9 @@ export function setAvatarWalk(avatar: Group, pose: WalkPose, seated = 0): void {
     weights[2] = pose.leftLift * (1-seated) + seated*1.08
     weights[3] = pose.rightLift * (1-seated) + seated*1.08
   }
-  avatar.rotation.z = pose.roll * (1-seated)
-  avatar.position.y = pose.rise * (1-seated) - seated*.16
+  const visual=avatar.getObjectByName('avatar-motion')??avatar
+  visual.rotation.z = pose.roll * (1-seated)
+  visual.position.y = pose.rise * (1-seated) - seated*.16
 }
 
 /** Replaces the one face mesh's shared geometry with the requested expression. */
