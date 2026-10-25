@@ -24,8 +24,9 @@ import {
   type PlayerState,
 } from './controller'
 import { clampPitch, getViewMode, placeCamera, toggleViewMode } from './camera'
-import { bodyPose, createAvatar, setAvatarEmote, setAvatarHeadLook, setAvatarWalk } from './avatar'
+import { bodyPose, createAvatar, setAvatarEmote, setAvatarFlap, setAvatarWalk, smoothAvatarHeadLook } from './avatar'
 import { advanceWalk, createWalkState, walkPose } from './walk'
+import { advanceFlap, createFlapState, flapPose } from './flap'
 import { usePlayerColour } from './colour'
 import { useFaceEmote } from './emote'
 import { getCameraSensitivity } from './sensitivity'
@@ -197,6 +198,7 @@ export function Player({
   const keys = useRef<PlayerInput>({ ...IDLE_INPUT })
   const jumpEdge = useRef(false)
   const walk = useRef(createWalkState())
+  const flap = useRef(createFlapState())
 
   const bounds = useMemo(() => {
     const b = given ?? worldBounds()
@@ -394,7 +396,7 @@ export function Player({
 
     clock.current = frame.clock.elapsedTime
     still.current = SEA_LEVEL + tideAt(getDayTime())
-    const oldX = state.x, oldZ = state.z
+    const oldX = state.x, oldZ = state.z, wasGrounded = state.grounded
     stepPlayer(state, input, delta, ground.current, {
       bounds,
       seaLevel: still.current,
@@ -404,6 +406,11 @@ export function Player({
     advanceWalk(walk.current, Math.hypot(state.x - oldX, state.z - oldZ), delta,
       state.grounded && !state.swimming && state.stun <= 0)
     setAvatarWalk(avatar, walkPose(walk.current))
+    advanceFlap(flap.current, delta, {
+      jumped: wasGrounded && input.jump && !state.grounded && state.vy > 0,
+      grounded: state.grounded, swimming: state.swimming, stunned: state.stun > 0,
+    })
+    setAvatarFlap(avatar, flapPose(flap.current))
 
     // Shared with every remote body, so they cannot sit at different heights.
     // The fall is the whole of the stun animation - see `stunFall`.
@@ -429,7 +436,7 @@ export function Player({
       tilt.current.rotation.x = tip * (Math.PI / 2)
     }
     const headYaw = Math.atan2(Math.sin(rig.yaw - state.facing), Math.cos(rig.yaw - state.facing))
-    setAvatarHeadLook(avatar, headYaw, rig.pitch)
+    smoothAvatarHeadLook(avatar, headYaw, rig.pitch, delta)
 
     // Both views come out of one function, so they cannot end up disagreeing
     // about which way `yaw` points.

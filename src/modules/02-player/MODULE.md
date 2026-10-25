@@ -368,6 +368,31 @@ walk against a rock, jump, swim and use an emote while moving. Check the feet
 from the front and side, and confirm the camera stays steady. Visual review
 of this animation is pending; no new browser screenshots are claimed.
 
+## Jump flaps and head tracking
+
+A ground jump now starts a four-beat-per-second wing flap. Both wings extend
+from their shoulders and alternate between spread and raised poses throughout
+the jump, including descent. They blend closed after landing, entering water
+or being stunned. Walking off an edge alone does not start a flap. Two extra
+relative morph targets rotate the existing wing geometry and normals; walking
+and wing animation have independent per-avatar weights and still use the same
+three meshes and shared materials.
+
+Local head yaw and pitch ease toward the camera target rather than snapping
+to each mouse sample. Easing is independent of frame rate, retains the existing
+1.35-radian limits, and partially counteracts the body's walking roll. The
+public immediate head-placement helper remains available to existing callers;
+the local Player uses the smoother internally.
+
+Tests exercise actual wing extension, foot isolation, independent ducks,
+jump/fall distinction, landing/swim/stun settling, frame-rate consistency and
+head convergence without overshoot. Geometry silhouette checks measure visible
+vertices because the conservative animation bounds now include extended wings.
+Human review: jump while idle and running, inspect the upstroke and downstroke
+from the front and side, land and jump again, walk off a ledge, and sweep the
+mouse left/right while walking. Check that head motion feels smooth and
+responsive. Visual review remains pending.
+
 ## Gate record
 
 Filled in when the human passes it.

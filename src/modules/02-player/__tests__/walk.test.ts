@@ -31,7 +31,7 @@ describe('lobby duck locomotion', () => {
     expect(head.position.y).toBe(headY)
     expect(head.rotation.y).toBe(.7)
     expect(otherBody.geometry).toBe(body.geometry)
-    expect(otherBody.morphTargetInfluences).toEqual([0, 0, 0, 0])
+    expect(otherBody.morphTargetInfluences).toEqual([0, 0, 0, 0, 0, 0])
     expect(other.rotation.z).toBe(0)
   })
 
@@ -80,7 +80,7 @@ describe('lobby duck locomotion', () => {
       setAvatarWalk(duck, walkPose(gait))
       expect(duck.position.y).toBe(0)
       expect(duck.rotation.z).toBeCloseTo(0, 9)
-      expect((duck.getObjectByName('duck-body') as Mesh).morphTargetInfluences).toEqual([0, -0, 0, 0])
+      expect((duck.getObjectByName('duck-body') as Mesh).morphTargetInfluences).toEqual([0, -0, 0, 0, 0, 0])
     }
   })
 })

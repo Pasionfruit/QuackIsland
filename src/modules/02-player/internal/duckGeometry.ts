@@ -17,8 +17,8 @@ function sculpt(gait = false) {
     if(gait)made.setAttribute('gaitLeg',new Float32BufferAttribute(new Float32Array(count).fill(leg),1))
     pieces.push(made)
   }
-  function oval(tint: Color|string, position: [number,number,number], scale: [number,number,number], rotation: [number,number,number]=[0,0,0], segments=8,rings=5) {
-    add(new SphereGeometry(1,segments,rings),tint,position,scale,rotation)
+  function oval(tint: Color|string, position: [number,number,number], scale: [number,number,number], rotation: [number,number,number]=[0,0,0], segments=8,rings=5, part=0) {
+    add(new SphereGeometry(1,segments,rings),tint,position,scale,rotation,part)
   }
   function finish(name:string) {
     const geometry=mergeGeometries(pieces)
@@ -38,8 +38,8 @@ export function duckBody(colour:string):BufferGeometry {
   oval('#fff0cc',[0,.7,.36],[.33,.34,.23],[0,0,0],10,6)
   oval(body,[0,1.06,.3],[.23,.35,.25],[.18,0,0],10,6)
   for(const side of [-1,1]) {
-    oval(wing,[side*.37,.72,-.02],[.145,.28,.43],[.24,0,side*.18],8,5)
-    for(let i=0;i<3;i++)oval(i%2 ? feather : wing,[side*(.425-i*.025),.62+i*.075,.21+i*.065],[.075,.105,.22],[.38,-side*.15,0],6,3)
+    oval(wing,[side*.37,.72,-.02],[.145,.28,.43],[.24,0,side*.18],8,5,side*2)
+    for(let i=0;i<3;i++)oval(i%2 ? feather : wing,[side*(.425-i*.025),.62+i*.075,.21+i*.065],[.075,.105,.22],[.38,-side*.15,0],6,3,side*2)
     add(new CylinderGeometry(.05,.065,.2,6),'#e69435',[side*.21,.17,.08],[1,1,1],[0,0,0],side)
     const foot=new Shape()
     const outline=[[-.08,-.1],[.08,-.1],[.12,.04],[.205,.25],[.12,.3],[.055,.255],[0,.34],[-.055,.255],[-.145,.3],[-.2,.235],[-.1,.04]]
@@ -49,21 +49,37 @@ export function duckBody(colour:string):BufferGeometry {
   for(const i of [-1,0,1])oval(i===0 ? feather : wing,[i*.13,.83,-.62],[.13,.12,.32],[.48,-i*.2,0],6,3)
   const geometry=finish('duck-body')
   const legs=geometry.getAttribute('gaitLeg'), count=legs.count
-  const targets=Array.from({length:4},()=>new Float32Array(count*3))
+  const positions=geometry.getAttribute('position'), normals=geometry.getAttribute('normal')
+  const targets=Array.from({length:6},()=>new Float32Array(count*3))
+  const normalTargets=Array.from({length:6},()=>new Float32Array(count*3))
   for(let i=0;i<count;i++) {
     const side=legs.getX(i)
     if(side===0)continue
-    const leg=side<0 ? 0 : 1
-    targets[leg][i*3+2]=.28
-    targets[leg+2][i*3+1]=.17
+    if(Math.abs(side)===1) {
+      const leg=side<0 ? 0 : 1
+      targets[leg][i*3+2]=.28
+      targets[leg+2][i*3+1]=.17
+    } else {
+      // Both wings rotate out from their shoulders, retaining their feather tips.
+      const sign=Math.sign(side), x=positions.getX(i)-sign*.34, y=positions.getY(i)-.88
+      const nx=normals.getX(i), ny=normals.getY(i)
+      for(const [target,angle] of [[4,1.25],[5,2.35]]) {
+        const c=Math.cos(angle*sign),s=Math.sin(angle*sign)
+        targets[target][i*3]=c*x-s*y-x
+        targets[target][i*3+1]=s*x+c*y-y
+        normalTargets[target][i*3]=c*nx-s*ny-nx
+        normalTargets[target][i*3+1]=s*nx+c*ny-ny
+      }
+    }
   }
   // Relative, per-mesh influences keep the shared body/material and three draws.
   geometry.morphTargetsRelative=true
   geometry.morphAttributes.position=targets.map((values,i)=>{
     const attribute=new Float32BufferAttribute(values,3)
-    attribute.name=['left-stride','right-stride','left-lift','right-lift'][i]
+    attribute.name=['left-stride','right-stride','left-lift','right-lift','wings-spread','wings-raised'][i]
     return attribute
   })
+  geometry.morphAttributes.normal=normalTargets.map(values=>new Float32BufferAttribute(values,3))
   geometry.deleteAttribute('gaitLeg')
   geometry.computeBoundingBox();geometry.computeBoundingSphere()
   return geometry

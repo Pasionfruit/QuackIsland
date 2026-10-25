@@ -11,7 +11,8 @@ import { FACE_EMOTES } from '../internal/emote'
  * the real thing and measure it.
  */
 
-const boxOf = (o: object) => new Box3().setFromObject(o as never)
+// Measure the visible pose: animation bounds also enclose fully extended wings.
+const boxOf = (o: object) => new Box3().setFromObject(o as never, true)
 
 function meshes(o: ReturnType<typeof createAvatar>): Mesh[] {
   const found: Mesh[] = []

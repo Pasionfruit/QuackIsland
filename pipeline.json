@@ -510,12 +510,17 @@
           "id": "02.14",
           "title": "Procedural lobby duck walk and run gait with settling feet",
           "status": "done"
+        },
+        {
+          "id": "02.15",
+          "title": "Jump wing flaps and smooth lobby head tracking",
+          "status": "done"
         }
       ],
       "gate": {
         "machine": {
           "status": "green",
-          "at": "2026-10-25T03:24:43.408Z"
+          "at": "2026-10-25T03:31:48.068Z"
         },
         "human": {
           "status": "pending"

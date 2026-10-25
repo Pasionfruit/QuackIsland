@@ -275,6 +275,24 @@ export function setAvatarHeadLook(avatar: Group, yaw: number, pitch: number): vo
   head.rotation.set(Math.max(-1.35, Math.min(1.35, pitch)), Math.max(-1.35,Math.min(1.35,yaw)), 0)
 }
 
+/** Local look follows the mouse smoothly while absorbing some walking roll. */
+export function smoothAvatarHeadLook(avatar: Group, yaw: number, pitch: number, delta: number): void {
+  const head = avatar.getObjectByName('avatar-head')
+  if (!head || !Number.isFinite(delta) || delta <= 0) return
+  const blend = 1 - Math.exp(-10 * Math.min(delta, .1))
+  head.rotation.x += (Math.max(-1.35, Math.min(1.35, pitch)) - head.rotation.x) * blend
+  head.rotation.y += (Math.max(-1.35, Math.min(1.35, yaw)) - head.rotation.y) * blend
+  head.rotation.z += (-avatar.rotation.z * .55 - head.rotation.z) * blend
+}
+
+/** Wings share the body mesh, but every duck owns its own flap weights. */
+export function setAvatarFlap(avatar: Group, pose: { spread: number; raised: number }): void {
+  const body = avatar.getObjectByName('duck-body') as Mesh | undefined
+  if (!body?.morphTargetInfluences) return
+  body.morphTargetInfluences[4] = pose.spread
+  body.morphTargetInfluences[5] = pose.raised
+}
+
 /** Local locomotion stays cosmetic: no movement, camera, or shared geometry edits. */
 export function setAvatarWalk(avatar: Group, pose: WalkPose): void {
   const torso = avatar.getObjectByName('duck-body') as Mesh | undefined
